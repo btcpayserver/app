@@ -43,23 +43,23 @@ namespace Comrade.Photino
                     }
                     else
                     {
-                        double zoomx = (double) e.Width / ((Size) size).Width * 100;
-                        double zoomy = (double) e.Height / ((Size) size).Height * 100;
-                        double zoom = Math.Min(zoomx, zoomy);
+                        var zoomx = (double) e.Width / ((Size) size).Width * 100;
+                        var zoomy = (double) e.Height / ((Size) size).Height * 100;
+                        var zoom = Math.Min(zoomx, zoomy);
                         if (zoom < 75 && lastAcceptedSize is not null)
                         {
-                            window.SetSize(lastAcceptedSize.Value);
+                            window!.SetSize(lastAcceptedSize.Value);
                         }
                         else
                         {
-                            lastAcceptedSize = window.Size;
+                            lastAcceptedSize = window!.Size;
                             window.SetZoom((int) zoom);
                         }
                     }
                 }
                 catch (Exception exc)
                 {
-                    Console.WriteLine(e);
+                    // ignored
                 }
             };
             AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
