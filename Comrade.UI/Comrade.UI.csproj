@@ -17,6 +17,7 @@
         <PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="5.8.0" />
         <PackageReference Include="Havit.Blazor.Components.Web.Bootstrap" Version="3.2.15" />
         <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="7.0.5" />
+        <PackageReference Include="MudBlazor" Version="6.3.0" />
     </ItemGroup>
 
     <ItemGroup>

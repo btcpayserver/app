@@ -1,4 +1,4 @@
-﻿@page "/"
+﻿@page "/Counter"
 
 @using Comrade.UI.Features.Counter
 @using Fluxor
@@ -8,12 +8,9 @@
 <h1>Counter</h1>
 
 <HxProgressIndicator InProgress="@CounterState.Value.Loading">
-
-<p role="status">Current count: @CounterState.Value.ClickCount</p>
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+  <p role="status">Current count: @CounterState.Value.ClickCount</p>
+  <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
 </HxProgressIndicator>
-
-
 
 @code {
     [Inject]
@@ -26,5 +23,4 @@
     {
         Dispatcher.Dispatch(new CounterState.IncrementCounterAction());
     }
-
 }
