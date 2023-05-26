@@ -10,14 +10,13 @@
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(e => DrawerToggle())"/>
         <MudText Typo="Typo.h5" Class="ml-3">BTCPay Comrade</MudText>
-        <MudSpacer/>
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End"/>
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <MudNavMenu>
             <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
             <MudNavLink Href="/Counter" Match="NavLinkMatch.Prefix">Counter</MudNavLink>
-            <MudSwitch @bind-Checked="@_isDarkMode" Color="Color.Primary" Class="ma-4" T="bool" Label="Toggle Light/Dark Mode"/>
+            <MudSpacer/>
+            <MudSwitch @bind-Checked="@_isDarkMode" Color="Color.Primary" Class="ma-4" T="bool" Label="Dark Mode"/>
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
@@ -56,5 +55,23 @@
         return Task.CompletedTask;
     }
 
-    private readonly MudTheme _theme = new();
+    private readonly MudTheme _theme = new ()
+    {
+        Typography = new Typography
+        {
+            Default = new Default
+            {
+                FontFamily = new[] { "Open Sans", "Helvetica Neue", "Arial", "sans-serif" }
+            }
+        },
+        Palette = new PaletteLight
+        {
+            Primary = Colors.Green.Default,
+            Secondary = Colors.Green.Accent4,
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = Colors.Blue.Lighten1
+        }
+    };
 }
