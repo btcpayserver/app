@@ -8,9 +8,11 @@ public record CounterState(int ClickCount, bool Loading = false)
     public CounterState() : this(0)
     {
     }
-    
+
     public record IncrementCounterAction(int IncrementBy = 1);
+
     protected record IncrementedCounterAction(int IncrementBy);
+
     public record LoadingAction(bool Loading);
 
     protected class IncrementCounterActionEffect : Effect<IncrementCounterAction>
@@ -28,7 +30,7 @@ public record CounterState(int ClickCount, bool Loading = false)
     {
         public override CounterState Reduce(CounterState state, IncrementedCounterAction action)
         {
-            return new CounterState(ClickCount: state.ClickCount + action.IncrementBy);
+            return new CounterState(state.ClickCount + action.IncrementBy);
         }
     }
 
@@ -36,8 +38,7 @@ public record CounterState(int ClickCount, bool Loading = false)
     {
         public override CounterState Reduce(CounterState state, LoadingAction action)
         {
-            return state with {Loading = action.Loading};
+            return state with { Loading = action.Loading };
         }
     }
 }
-

@@ -6,70 +6,69 @@ using MudBlazor.Services;
 using Photino.Blazor;
 using PhotinoNET;
 
-namespace Comrade.Photino
+namespace Comrade.Photino;
+
+public static class Program
 {
-    public static class Program
+    [STAThread]
+    private static void Main(string[] args)
     {
-        [STAThread]
-        static void Main(string[] args)
+        var appBuilder = PhotinoBlazorAppBuilder.CreateDefault(args);
+        appBuilder.Services.ConfigureUIServices();
+        appBuilder.Services.AddLogging();
+        appBuilder.Services.AddMudServices();
+        appBuilder.RootComponents.Add<App>("app");
+        appBuilder.RootComponents.Add<HeadOutlet>("head::after");
+
+        var app = appBuilder.Build();
+
+        // customize window.
+        app.MainWindow
+            .SetResizable(true)
+            .SetZoom(0)
+            // .SetIconFile("favicon.ico")
+            .SetTitle("Comrade");
+
+        app.MainWindow.Center();
+        Size? size = null;
+        Size? lastAcceptedSize = null;
+
+        app.MainWindow.WindowSizeChangedHandler += (sender, e) =>
         {
-            var appBuilder = PhotinoBlazorAppBuilder.CreateDefault(args);
-            appBuilder.Services.ConfigureUIServices();
-            appBuilder.Services.AddLogging();
-            appBuilder.Services.AddMudServices();
-            appBuilder.RootComponents.Add<App>("app");
-            appBuilder.RootComponents.Add<HeadOutlet>("head::after");
-
-            var app = appBuilder.Build();
-
-            // customize window.
-            app.MainWindow
-                .SetResizable(true)
-                .SetZoom(0)
-                // .SetIconFile("favicon.ico")
-                .SetTitle("Comrade");
-
-            app.MainWindow.Center();
-            Size? size = null;
-            Size? lastAcceptedSize = null;
-
-            app.MainWindow.WindowSizeChangedHandler += (sender, e) =>
+            try
             {
-                try
-                {
-                    PhotinoWindow? window = sender as PhotinoWindow;
+                var window = sender as PhotinoWindow;
 
-                    if (size == null)
+                if (size == null)
+                {
+                    size = e;
+                }
+                else
+                {
+                    var zoomx = (double)e.Width / ((Size)size).Width * 100;
+                    var zoomy = (double)e.Height / ((Size)size).Height * 100;
+                    var zoom = Math.Min(zoomx, zoomy);
+                    if (zoom < 75 && lastAcceptedSize is not null)
                     {
-                        size = e;
+                        window!.SetSize(lastAcceptedSize.Value);
                     }
                     else
                     {
-                        var zoomx = (double) e.Width / ((Size) size).Width * 100;
-                        var zoomy = (double) e.Height / ((Size) size).Height * 100;
-                        var zoom = Math.Min(zoomx, zoomy);
-                        if (zoom < 75 && lastAcceptedSize is not null)
-                        {
-                            window!.SetSize(lastAcceptedSize.Value);
-                        }
-                        else
-                        {
-                            lastAcceptedSize = window!.Size;
-                            window.SetZoom((int) zoom);
-                        }
+                        lastAcceptedSize = window!.Size;
+                        window.SetZoom((int)zoom);
                     }
                 }
-                catch (Exception exc)
-                {
-                    // ignored
-                }
-            };
-            AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
+            }
+            catch (Exception exc)
             {
-                app.MainWindow.ShowMessage("Fatal exception", error.ExceptionObject.ToString());
-            };
+                // ignored
+            }
+        };
+        AppDomain.CurrentDomain.UnhandledException += (sender, error) =>
+        {
+            app.MainWindow.ShowMessage("Fatal exception", error.ExceptionObject.ToString());
+        };
 
-            app.Run();
-        }
+        app.Run();
     }
 }

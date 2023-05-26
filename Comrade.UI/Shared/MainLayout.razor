@@ -1,38 +1,60 @@
 ﻿@inherits LayoutComponentBase
-<HxMessageBoxHost />
-<HxMessenger  />
+<HxMessageBoxHost/>
+<HxMessenger/>
 <PageTitle>Comrade</PageTitle>
-<MudThemeProvider/>
+<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="_theme"/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 
 <MudLayout>
-  <MudAppBar Elevation="1">
-      <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(e => DrawerToggle())"/>
-      <MudText Typo="Typo.h5" Class="ml-3">BTCPay Comrade</MudText>
-      <MudSpacer />
-      <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" />
-  </MudAppBar>
-  <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-    <MudNavMenu>
-      <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
-      <MudNavLink Href="/Counter" Match="NavLinkMatch.Prefix">Counter</MudNavLink>
-    </MudNavMenu>
-  </MudDrawer>
-  <MudMainContent>
-    <div class="page">
-      <main class="content px-4">
-        @Body
-      </main>
-    </div>
-  </MudMainContent>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(e => DrawerToggle())"/>
+        <MudText Typo="Typo.h5" Class="ml-3">BTCPay Comrade</MudText>
+        <MudSpacer/>
+        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End"/>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <MudNavMenu>
+            <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+            <MudNavLink Href="/Counter" Match="NavLinkMatch.Prefix">Counter</MudNavLink>
+            <MudSwitch @bind-Checked="@_isDarkMode" Color="Color.Primary" Class="ma-4" T="bool" Label="Toggle Light/Dark Mode"/>
+        </MudNavMenu>
+    </MudDrawer>
+    <MudMainContent>
+        <div class="page">
+            <main class="content px-4">
+                @Body
+            </main>
+        </div>
+    </MudMainContent>
 </MudLayout>
 
 @code {
-  bool _drawerOpen;
+    private MudThemeProvider _mudThemeProvider;
+    private bool _isDarkMode;
+    bool _drawerOpen;
 
-  void DrawerToggle()
-  {
-    _drawerOpen = !_drawerOpen;
-  }
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            await _mudThemeProvider.WatchSystemPreference(OnSystemPreferenceChanged);
+            StateHasChanged();
+        }
+    }
+
+    private Task OnSystemPreferenceChanged(bool newValue)
+    {
+        _isDarkMode = newValue;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private readonly MudTheme _theme = new();
 }
