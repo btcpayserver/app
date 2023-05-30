@@ -1,16 +1,14 @@
 ﻿using Fluxor;
-using Havit.Blazor.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using MudBlazor.Services;
 
 namespace Comrade.UI;
 
 public static class StartupExtensions
 {
-    public static IServiceCollection ConfigureUIServices(this IServiceCollection serviceCollection)
+    public static IServiceCollection AddComradeUIServices(this IServiceCollection serviceCollection)
     {
-        serviceCollection.AddHxServices();
-        serviceCollection.AddHxMessenger();
-        serviceCollection.AddHxMessageBoxHost();
+        serviceCollection.AddMudServices();
         serviceCollection.AddFluxor(options =>
         {
             options.ScanAssemblies(typeof(App).Assembly);

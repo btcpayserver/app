@@ -1,8 +1,8 @@
 ﻿using System.Drawing;
+using Comrade.Core;
 using Comrade.UI;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
-using MudBlazor.Services;
 using Photino.Blazor;
 using PhotinoNET;
 
@@ -14,9 +14,9 @@ public static class Program
     private static void Main(string[] args)
     {
         var appBuilder = PhotinoBlazorAppBuilder.CreateDefault(args);
-        appBuilder.Services.ConfigureUIServices();
+        appBuilder.Services.AddComradeUIServices();
+        appBuilder.Services.ConfigureComradeCore();
         appBuilder.Services.AddLogging();
-        appBuilder.Services.AddMudServices();
         appBuilder.RootComponents.Add<App>("app");
         appBuilder.RootComponents.Add<HeadOutlet>("head::after");
 

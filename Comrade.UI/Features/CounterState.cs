@@ -1,6 +1,6 @@
 ﻿using Fluxor;
 
-namespace Comrade.UI.Features.Counter;
+namespace Comrade.UI.Features;
 
 [FeatureState]
 public record CounterState(int ClickCount, bool Loading = false)

@@ -10,26 +10,18 @@
     <Version>1.0.0</Version>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Photino.Blazor" Version="2.6.0"/>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Update="wwwroot\**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Comrade.UI\Comrade.UI.csproj"/>
-  </ItemGroup>
-  <ItemGroup>
-    <_ContentIncludedByDefault Remove="wwwroot\vendors\bootstrap\bootstrap.js"/>
-    <_ContentIncludedByDefault Remove="wwwroot\vendors\bootstrap\btcpayserver-bootstrap.css"/>
-    <_ContentIncludedByDefault Remove="wwwroot\vendors\bootstrap\btcpayserver-main.css"/>
-    <_ContentIncludedByDefault Remove="wwwroot\vendors\bootstrap\btcpayserver-variables.css"/>
-  </ItemGroup>
-  <ItemGroup>
-    <MauiAsset Include="wwwroot\index.html"/>
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Photino.Blazor" Version="2.6.0" />
+    </ItemGroup>
+    <ItemGroup>
+        <Content Update="wwwroot\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\Comrade.Core\Comrade.Core.csproj" />
+      <ProjectReference Include="..\Comrade.UI\Comrade.UI.csproj" />
+    </ItemGroup>
 
 
 </Project>

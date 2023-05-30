@@ -1,3 +1,5 @@
+
+using Comrade.Core;
 using Comrade.UI;
 using MudBlazor.Services;
 
@@ -6,8 +8,8 @@ builder.WebHost.UseWebRoot("wwwroot");
 builder.WebHost.UseStaticWebAssets();
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddMudServices();
-builder.Services.ConfigureUIServices();
+builder.Services.AddComradeUIServices();
+builder.Services.ConfigureComradeCore();
 
 var app = builder.Build();
 
