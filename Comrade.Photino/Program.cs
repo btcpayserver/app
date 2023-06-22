@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using Comrade.Core;
+using Comrade.Desktop;
 using Comrade.UI;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,14 +14,15 @@ public static class Program
     [STAThread]
     private static void Main(string[] args)
     {
-        var appBuilder = PhotinoBlazorAppBuilder.CreateDefault(args);
-        appBuilder.Services.AddComradeUIServices();
-        appBuilder.Services.ConfigureComradeCore();
-        appBuilder.Services.AddLogging();
-        appBuilder.RootComponents.Add<App>("app");
-        appBuilder.RootComponents.Add<HeadOutlet>("head::after");
+        var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
+        builder.Services.AddComradeUIServices();
+        builder.Services.ConfigureComradeCore();
+        builder.Services.ConfigureComradeDesktop();
+        builder.Services.AddLogging();
+        builder.RootComponents.Add<App>("app");
+        builder.RootComponents.Add<HeadOutlet>("head::after");
 
-        var app = appBuilder.Build();
+        var app = builder.Build();
 
         // customize window.
         app.MainWindow

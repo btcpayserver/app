@@ -1,5 +1,6 @@
 
 using Comrade.Core;
+using Comrade.Desktop;
 using Comrade.UI;
 using MudBlazor.Services;
 
@@ -10,7 +11,9 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddComradeUIServices();
 builder.Services.ConfigureComradeCore();
+builder.Services.ConfigureComradeDesktop();
 
+builder.Services.AddLogging();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
