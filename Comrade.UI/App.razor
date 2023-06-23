@@ -1,4 +1,7 @@
-﻿<Fluxor.Blazor.Web.StoreInitializer/>
+﻿@using Comrade.UI.Features
+@using Fluxor
+@using Comrade.Core
+<Fluxor.Blazor.Web.StoreInitializer/>
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
@@ -11,3 +14,20 @@
         </LayoutView>
     </NotFound>
 </Router>
+@code{
+
+    [Inject]
+    private IState<RootState> RootState { get; set; } = null!;
+    [Inject]
+    private Starter Starter { get; set; } = null!;
+    [Inject]
+    public IDispatcher Dispatcher { get; set; } = null!;
+    
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Dispatcher.Dispatch(new RootState.LoadingAction(true));
+        Starter.Loaded.Task.ContinueWith(_ => Dispatcher.Dispatch(new RootState.ConfigLoadedAction(Starter.Config)));
+    }
+
+}

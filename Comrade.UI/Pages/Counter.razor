@@ -6,10 +6,16 @@
 
 <h1>Counter</h1>
 
-<HxProgressIndicator InProgress="@CounterState.Value.Loading">
-    <p role="status">Current count: @CounterState.Value.ClickCount</p>
-    <button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
-</HxProgressIndicator>
+@if(CounterState.Value.Loading)
+{
+    <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+}
+else
+{
+    <MudText>Current count: @CounterState.Value.ClickCount</MudText>
+    
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="IncrementCount">Increment</MudButton>
+}
 
 @code {
 

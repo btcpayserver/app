@@ -1,0 +1,35 @@
+﻿@using System.Linq.Expressions
+@implements IDisposable
+@{
+    var messages = EditContext.GetValidationMessages(For);
+    foreach (var message in messages)
+    {
+        <MudText Color="Color.Error">@message</MudText>
+    }
+}
+
+@code {
+
+    [CascadingParameter]
+    public EditContext EditContext{ get; set; }
+
+    [Parameter]
+    public Expression<Func<object>> For { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        EditContext.OnValidationStateChanged += EditContextOnOnValidationStateChanged;
+    }
+
+    private void EditContextOnOnValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        EditContext.OnValidationStateChanged -= EditContextOnOnValidationStateChanged;
+    }
+
+}

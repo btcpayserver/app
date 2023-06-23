@@ -1,0 +1,95 @@
+﻿@using System.Linq.Expressions
+@implements IDisposable
+<EditForm EditContext="EditContext" OnSubmit="OnSubmit"  @attributes="@InputAttributes">
+    
+    @ChildContent
+</EditForm>
+
+@code {
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object> InputAttributes { get; set; }
+    
+    [Parameter]
+    public object Model { get; set; }
+
+    [Parameter]
+    public Func<Task>? Validate { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    public EditContext EditContext { get; set; }
+
+    private void EditContextOnOnValidationRequested(object? sender, ValidationRequestedEventArgs e)
+    {
+        MessageStore.Clear();
+    }
+
+    private void EditContextOnOnFieldChanged(object? sender, FieldChangedEventArgs e)
+    {
+        if (!EditContext.GetValidationMessages(e.FieldIdentifier).Any()) return;
+        MessageStore.Clear(e.FieldIdentifier);
+        EditContext.NotifyValidationStateChanged();
+    }
+
+    [Parameter]
+    public EventCallback OnValidSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback OnInvalidSubmit { get; set; }
+
+    public ValidationMessageStore MessageStore { get; set; }
+
+    public void NotifyFieldChanged(Expression<Func<object>> field)
+    {
+        EditContext.NotifyFieldChanged(FieldIdentifier.Create(field));
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        EditContext = new EditContext(Model);
+        MessageStore = new ValidationMessageStore(EditContext);
+        EditContext.OnFieldChanged += EditContextOnOnFieldChanged;
+        EditContext.OnValidationRequested += EditContextOnOnValidationRequested;
+        EditContext.OnValidationStateChanged += EditContextOnOnValidationStateChanged;
+    }
+
+    private void EditContextOnOnValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    private async Task OnSubmit(EditContext obj)
+    {
+        EditContext.Validate();
+        if(Validate is not null)
+            await Validate.Invoke();
+        
+        if (Invalid)
+        {
+            await OnInvalidSubmit.InvokeAsync();
+        }
+        else
+        {
+            await OnValidSubmit.InvokeAsync();
+        }
+    }
+
+    public bool Invalid => EditContext.GetValidationMessages().Any();
+
+    public async Task Submit()
+    {
+        await OnSubmit(EditContext);
+    }
+
+    public void Dispose()
+    {
+        EditContext.OnFieldChanged -= EditContextOnOnFieldChanged;
+        EditContext.OnValidationRequested -= EditContextOnOnValidationRequested;
+        EditContext.OnValidationStateChanged -= EditContextOnOnValidationStateChanged;
+    }
+
+}

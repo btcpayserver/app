@@ -1,0 +1,51 @@
+﻿@page "/pair"
+@using System.ComponentModel.DataAnnotations
+@using Comrade.Core
+@inject NavigationManager NavigationManager
+
+<PageTitle>@Title</PageTitle>
+<MudContainer Class="mt-16" MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">@Title</MudText>
+
+    <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="StartPair">
+        <MudTextField T="string" Label="Pairing URL" Value="PairingUrl" For="() => PairingUrl"/>
+        <MudErrorMessage For="() => PairingUrl"></MudErrorMessage>
+        <MudGrid Justify="Justify.Center">
+            <MudItem>
+                <MudButton Size="Size.Large" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" Disabled="_validationEditContext.Invalid">Submit</MudButton>
+            </MudItem>
+        </MudGrid>
+    </ValidationEditContext>
+</MudContainer>
+
+
+@code {
+        private const string Title = "Pair with your BTCPay Server";
+    private ValidationEditContext _validationEditContext { get; set; }
+
+    [Inject]
+    public Starter Starter { get; set; }
+
+    [Inject]
+    public IHttpClientFactory HttpClientFactory { get; set; }
+
+    [Url]
+    private string PairingUrl { get; set; }
+
+    private async Task StartPair()
+    {
+        try
+        {
+            var client = HttpClientFactory.CreateClient();
+            var response = await client.GetAsync(PairingUrl);
+            response.EnsureSuccessStatusCode();
+        }
+        catch (Exception e)
+        {
+            _validationEditContext.MessageStore.Add(() => PairingUrl, "Pairing url is not valid");
+        }
+    }
+
+
+
+}

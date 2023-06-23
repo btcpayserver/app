@@ -11,6 +11,7 @@ public static class StartupExtensions
         serviceCollection.AddMudServices();
         serviceCollection.AddFluxor(options =>
         {
+            options.UseRouting();
             options.ScanAssemblies(typeof(App).Assembly);
 #if DEBUG
             options.UseReduxDevTools();
