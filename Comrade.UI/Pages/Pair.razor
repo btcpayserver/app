@@ -1,16 +1,16 @@
 ﻿@page "/pair"
 @using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Json
 @using Comrade.Core
-@inject NavigationManager NavigationManager
-
+@using Comrade.UI.Features
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 <PageTitle>@Title</PageTitle>
 <MudContainer Class="mt-16" MaxWidth="MaxWidth.Medium">
     <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">@Title</MudText>
-
     <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="StartPair">
-        <MudTextField T="string" Label="Pairing URL" Value="PairingUrl" For="() => PairingUrl"/>
+        <MudTextField  Label="Pairing URL" @bind-Value="PairingUrl" For="() => PairingUrl"/>
         <MudErrorMessage For="() => PairingUrl"></MudErrorMessage>
-        <MudGrid Justify="Justify.Center">
+        <MudGrid Justify="Justify.Center"  Class="mt-4" >
             <MudItem>
                 <MudButton Size="Size.Large" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" Disabled="_validationEditContext.Invalid">Submit</MudButton>
             </MudItem>
@@ -22,14 +22,19 @@
 @code {
         private const string Title = "Pair with your BTCPay Server";
     private ValidationEditContext _validationEditContext { get; set; }
-
+    //
+    // [Inject]
+    // public ComradeConfigManager ComradeManager { get; set; }
     [Inject]
-    public Starter Starter { get; set; }
+    public IDispatcher Dispatcher { get; set; }
+    
 
     [Inject]
     public IHttpClientFactory HttpClientFactory { get; set; }
+    [Inject]
+    public IState<RootState> State { get; set; }
 
-    [Url]
+    [Required][Url]
     private string PairingUrl { get; set; }
 
     private async Task StartPair()
@@ -39,6 +44,18 @@
             var client = HttpClientFactory.CreateClient();
             var response = await client.GetAsync(PairingUrl);
             response.EnsureSuccessStatusCode();
+            var result = await response.Content.ReadFromJsonAsync<PairSuccessResult>();
+            if (result == null)
+            {
+                _validationEditContext.MessageStore.Add(() => PairingUrl, "Pairing was not successful");
+                return;
+            }
+            Dispatcher.Dispatch(new RootState.PairConfigLoadedAction(new BTCPayPairConfig()
+            {
+                PairingResult = result,
+                PairingInstanceUri = PairingUrl
+            }));
+            
         }
         catch (Exception e)
         {

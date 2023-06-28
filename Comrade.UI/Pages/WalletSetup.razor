@@ -1,0 +1,105 @@
+﻿@page "/wallet/setup"
+@using System.ComponentModel.DataAnnotations
+@using Comrade.UI.Features
+@using NBitcoin
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+<PageTitle>@Title</PageTitle>
+<MudContainer Class="mt-16" MaxWidth="MaxWidth.Medium">
+    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">@Title</MudText>
+    <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="Submit">
+<MudTextField
+                @bind-Value="Seed"
+                HelperText="Mnemonic Seed"
+                Variant="Variant.Filled"
+                AdornmentIcon="@Icons.Material.Filled.Refresh"
+                Adornment="Adornment.End"
+                OnAdornmentClick="GenerateSeed"
+                For="() => Seed"/>
+<MudErrorMessage For="() => Seed"></MudErrorMessage>
+@if (Xpub is not null)
+{
+    <MudText>Computed xpub: @Xpub</MudText>
+}
+@if (State.Value.PairConfig.PairingResult.ExistingWallet is not null)
+{
+    
+    <MudText>Paired BTCPay store xpub:  State.Value.PairConfig.PairingResult.ExistingWallet</MudText>
+    @if (Xpub is not null && State.Value.PairConfig.PairingResult.ExistingWallet !=Xpub)
+    {
+        
+        <MudCheckBox Label="Confirm different xpub" @bind-Checked="ConfirmDifferentXpub" />
+    }
+}
+        <MudGrid Justify="Justify.Center" Class="mt-4">
+            <MudItem>
+                <MudButton Size="Size.Large" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" Disabled="_validationEditContext.Invalid">Configure</MudButton>
+            </MudItem>
+        </MudGrid>
+    </ValidationEditContext>
+</MudContainer>
+
+
+@code {
+
+    public bool IsSameAsPairedWallet => State.Value.PairConfig.PairingResult.ExistingWalletSeed == Seed;
+    public string? Xpub => ExtKey?.ToString();
+    public BitcoinExtKey? ExtKey 
+    {
+        get
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(Seed))
+                {
+                    return null;
+                }
+                var mnemonic = new Mnemonic(Seed);
+                return mnemonic.DeriveExtKey().Derive(new KeyPath("m/84'/0'/0'")).GetWif(State.Value.PairConfig.PairingResult.ParsedNetwork);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+        
+    }
+
+
+    [Required]
+    private string Seed { get; set; }
+    private bool ConfirmDifferentXpub { get; set; }
+        private const string Title = "Wallet setup";
+    private ValidationEditContext _validationEditContext { get; set; }
+
+    [Inject]
+    public IDispatcher Dispatcher { get; set; }
+
+    [Inject]
+    public IHttpClientFactory HttpClientFactory { get; set; }
+
+    [Inject]
+    public IState<RootState> State { get; set; }
+
+    protected override Task OnInitializedAsync()
+    {
+        
+        Seed = State.Value.WalletConfig?.Seed ?? State.Value.PairConfig.PairingResult.ExistingWalletSeed;
+        return base.OnInitializedAsync();
+    }
+
+
+
+    private void GenerateSeed()
+    {
+        Seed = new Mnemonic(Wordlist.English).ToString();
+    }
+
+    private Task Submit()
+    {
+        if(State.Value.PairConfig.PairingResult.ExistingWallet is not null && Xpub != State.Value.PairConfig.PairingResult.ExistingWallet && ConfirmDifferentXpub)
+        {
+            _validationEditContext.MessageStore.Add(() => ConfirmDifferentXpub, "You must confirm that you want to use a different wallet than the one paired with BTCPay");
+        }
+    }
+
+}

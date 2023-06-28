@@ -1,12 +1,11 @@
 ﻿@page "/firstrun"
-@inject NavigationManager NavigationManager
 
 <PageTitle>@Title</PageTitle>
 
 <MudContainer Class="mt-16" MaxWidth="MaxWidth.Medium">
     <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">@Title</MudText>
 
-    <MudGrid Justify="Justify.Center">
+    <MudGrid Justify="Justify.Center" Class="mt-4" >
         <MudItem>
             <MudButton Size="Size.Large" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" Href="@Routes.Pair">Pair</MudButton>
         </MudItem>

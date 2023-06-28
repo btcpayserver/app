@@ -1,6 +1,4 @@
 ﻿@inherits LayoutComponentBase
-<HxMessageBoxHost/>
-<HxMessenger/>
 <PageTitle>Comrade</PageTitle>
 <MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="_theme"/>
 <MudDialogProvider/>
@@ -33,6 +31,7 @@
     {
         _drawerOpen = !_drawerOpen;
     }
+    
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

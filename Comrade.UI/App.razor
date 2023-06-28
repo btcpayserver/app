@@ -1,6 +1,7 @@
 ﻿@using Comrade.UI.Features
 @using Fluxor
 @using Comrade.Core
+@implements IDisposable
 <Fluxor.Blazor.Web.StoreInitializer/>
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
@@ -14,20 +15,46 @@
         </LayoutView>
     </NotFound>
 </Router>
+
 @code{
 
     [Inject]
     private IState<RootState> RootState { get; set; } = null!;
+
     [Inject]
-    private Starter Starter { get; set; } = null!;
+    private ComradeConfigManager ComradeManager { get; set; } = null!;
+
     [Inject]
     public IDispatcher Dispatcher { get; set; } = null!;
-    
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
         Dispatcher.Dispatch(new RootState.LoadingAction(true));
-        Starter.Loaded.Task.ContinueWith(_ => Dispatcher.Dispatch(new RootState.ConfigLoadedAction(Starter.Config)));
+        ComradeManager.PairConfigUpdated += OnPairConfigUpdated;
+        ComradeManager.WalletConfigUpdated += OnWalletConfigUpdated;
+        ComradeManager.Loaded.Task.ContinueWith(_ =>
+        {
+            Dispatcher.Dispatch(new RootState.LoadingAction(false));
+            Dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(ComradeManager.WalletConfig));
+            Dispatcher.Dispatch(new RootState.PairConfigLoadedAction(ComradeManager.PairConfig));
+        });
+    }
+    
+    private void OnWalletConfigUpdated(object? sender, WalletConfig? e)
+    {
+        Dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(ComradeManager.WalletConfig));
+    }
+
+    private void OnPairConfigUpdated(object? sender, BTCPayPairConfig? e)
+    {
+        Dispatcher.Dispatch(new RootState.PairConfigLoadedAction(ComradeManager.PairConfig));
+    }
+
+    public void Dispose()
+    {
+        ComradeManager.PairConfigUpdated -= OnPairConfigUpdated;
+        ComradeManager.WalletConfigUpdated -= OnWalletConfigUpdated;
     }
 
 }
