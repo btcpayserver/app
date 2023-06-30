@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <Platforms>AnyCPU;x64</Platforms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <OutputType>WinExe</OutputType>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Photino.Blazor" Version="2.6.0" />
+    </ItemGroup>
+    <ItemGroup>
+        <Content Update="wwwroot\**">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
+      <ProjectReference Include="..\BTCPayApp.Desktop\BTCPayApp.Desktop.csproj" />
+      <ProjectReference Include="..\BTCPayApp.UI\BTCPayApp.UI.csproj" />
+    </ItemGroup>
+
+
+</Project>

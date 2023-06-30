@@ -1,0 +1,72 @@
+﻿@inherits LayoutComponentBase
+<PageTitle>BTCPayApp</PageTitle>
+<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="_theme"/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
+
+<MudLayout>
+    <MudAppBar Elevation="1">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(e => DrawerToggle())"/>
+        <MudText Typo="Typo.h5" Class="ml-3">BTCPay BTCPayApp</MudText>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <MudNavMenu>
+            <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+            <MudNavLink Href="/Counter" Match="NavLinkMatch.Prefix">Counter</MudNavLink>
+            <MudSpacer/>
+            <MudSwitch @bind-Checked="@_isDarkMode" Color="Color.Primary" Class="ma-4" T="bool" Label="Dark Mode"/>
+        </MudNavMenu>
+    </MudDrawer>
+    <MudMainContent>
+       @Body
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private MudThemeProvider _mudThemeProvider;
+    private bool _isDarkMode;
+    bool _drawerOpen;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+    
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            await _mudThemeProvider.WatchSystemPreference(OnSystemPreferenceChanged);
+            StateHasChanged();
+        }
+    }
+
+    private Task OnSystemPreferenceChanged(bool newValue)
+    {
+        _isDarkMode = newValue;
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    private readonly MudTheme _theme = new ()
+    {
+        Typography = new Typography
+        {
+            Default = new Default
+            {
+                FontFamily = new[] { "Open Sans", "Helvetica Neue", "Arial", "sans-serif" }
+            }
+        },
+        Palette = new PaletteLight
+        {
+            Primary = Colors.Green.Default,
+            Secondary = Colors.Green.Accent4,
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = Colors.Blue.Lighten1
+        }
+    };
+}

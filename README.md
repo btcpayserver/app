@@ -1,1 +1,1 @@
-# Comrade
+# BTCPayApp

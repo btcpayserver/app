@@ -1,0 +1,60 @@
+﻿@using BTCPayApp.UI.Features
+@using Fluxor
+@using BTCPayApp.Core
+@implements IDisposable
+<Fluxor.Blazor.Web.StoreInitializer/>
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
+        <FocusOnNavigate RouteData="@routeData" Selector="h1"/>
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
+
+@code{
+
+    [Inject]
+    private IState<RootState> RootState { get; set; } = null!;
+
+    [Inject]
+    private BTCPayAppConfigManager BTCPayAppManager { get; set; } = null!;
+
+    [Inject]
+    public IDispatcher Dispatcher { get; set; } = null!;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        Dispatcher.Dispatch(new RootState.LoadingAction(true));
+        BTCPayAppManager.PairConfigUpdated += OnPairConfigUpdated;
+        BTCPayAppManager.WalletConfigUpdated += OnWalletConfigUpdated;
+        BTCPayAppManager.Loaded.Task.ContinueWith(_ =>
+        {
+            Dispatcher.Dispatch(new RootState.LoadingAction(false));
+            Dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(BTCPayAppManager.WalletConfig));
+            Dispatcher.Dispatch(new RootState.PairConfigLoadedAction(BTCPayAppManager.PairConfig));
+        });
+    }
+    
+    private void OnWalletConfigUpdated(object? sender, WalletConfig? e)
+    {
+        Dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(BTCPayAppManager.WalletConfig));
+    }
+
+    private void OnPairConfigUpdated(object? sender, BTCPayPairConfig? e)
+    {
+        Dispatcher.Dispatch(new RootState.PairConfigLoadedAction(BTCPayAppManager.PairConfig));
+    }
+
+    public void Dispose()
+    {
+        BTCPayAppManager.PairConfigUpdated -= OnPairConfigUpdated;
+        BTCPayAppManager.WalletConfigUpdated -= OnWalletConfigUpdated;
+    }
+
+}
