@@ -1,9 +1,55 @@
-﻿using BTCPayApp.Core.Contracts;
+﻿using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Contracts;
 using Microsoft.Extensions.Hosting;
 
 namespace BTCPayApp.Core;
 
 
+public class BTCPayConnection: IHostedService
+{
+    private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
+
+    public BTCPayConnection(BTCPayAppConfigManager btcPayAppConfigManager)
+    {
+        _btcPayAppConfigManager = btcPayAppConfigManager;
+    }
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        
+        _btcPayAppConfigManager.PairConfigUpdated += OnPairConfigUpdated;
+        return Task.CompletedTask;
+    }
+
+    private void OnPairConfigUpdated(object? sender, BTCPayPairConfig? e)
+    {
+        if (e?.PairingInstanceUri is not null && e.PairingResult.Key is not null)
+            _ = StartOrReplace();
+        else
+            _ = Kill();
+    }
+
+    private async Task Kill()
+    {
+        
+    }
+    
+    
+    private async Task StartOrReplace()
+    {
+        
+    }
+
+
+
+
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        
+        _btcPayAppConfigManager.PairConfigUpdated -= OnPairConfigUpdated;
+        return Task.CompletedTask;
+    }
+}
 
 public class BTCPayAppConfigManager : IHostedService
 {

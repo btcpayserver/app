@@ -1,5 +1,6 @@
 ﻿@page "/wallet/setup"
 @using System.ComponentModel.DataAnnotations
+@using BTCPayApp.Core
 @using BTCPayApp.UI.Features
 @using NBitcoin
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -23,7 +24,7 @@
 @if (State.Value.PairConfig.PairingResult.ExistingWallet is not null)
 {
     
-    <MudText>Paired BTCPay store xpub:  State.Value.PairConfig.PairingResult.ExistingWallet</MudText>
+    <MudText>Paired BTCPay store xpub:  @State.Value.PairConfig.PairingResult.ExistingWallet</MudText>
     @if (Xpub is not null && State.Value.PairConfig.PairingResult.ExistingWallet !=Xpub)
     {
         
@@ -42,7 +43,7 @@
 @code {
 
     public bool IsSameAsPairedWallet => State.Value.PairConfig.PairingResult.ExistingWalletSeed == Seed;
-    public string? Xpub => ExtKey?.ToString();
+    public string? Xpub => ExtKey?.Neuter().ToString();
     public BitcoinExtKey? ExtKey 
     {
         get
@@ -96,10 +97,25 @@
 
     private async Task Submit()
     {
-        if(State.Value.PairConfig.PairingResult.ExistingWallet is not null && Xpub != State.Value.PairConfig.PairingResult.ExistingWallet && ConfirmDifferentXpub)
+        if (ExtKey is null)
+        {
+            _validationEditContext.MessageStore.Add(() => Seed, "Invalid seed");
+            return;
+        }
+        if(State.Value.PairConfig.PairingResult.ExistingWallet is not null && Xpub != State.Value.PairConfig.PairingResult.ExistingWallet && !ConfirmDifferentXpub)
         {
             _validationEditContext.MessageStore.Add(() => ConfirmDifferentXpub, "You must confirm that you want to use a different wallet than the one paired with BTCPay");
         }
+        if (!_validationEditContext.EditContext.Validate())
+        {
+            return;
+        }
+        Dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(new WalletConfig()
+        {
+            Seed = Seed
+        }));
+        
+        
     }
 
 }

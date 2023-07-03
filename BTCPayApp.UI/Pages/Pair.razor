@@ -41,6 +41,8 @@
     {
         try
         {
+            Dispatcher.Dispatch(new RootState.LoadingAction(true));
+
             var client = HttpClientFactory.CreateClient();
             var response = await client.GetAsync(PairingUrl);
             response.EnsureSuccessStatusCode();
@@ -50,17 +52,25 @@
                 _validationEditContext.MessageStore.Add(() => PairingUrl, "Pairing was not successful");
                 return;
             }
-            Dispatcher.Dispatch(new RootState.PairConfigLoadedAction(new BTCPayPairConfig()
+            else
             {
-                PairingResult = result,
-                PairingInstanceUri = PairingUrl
-            }));
-            
+                Dispatcher.Dispatch(new RootState.PairConfigLoadedAction(new BTCPayPairConfig()
+                {
+                    PairingResult = result,
+                    PairingInstanceUri = PairingUrl
+                }));
+            }
         }
         catch (Exception e)
         {
             _validationEditContext.MessageStore.Add(() => PairingUrl, "Pairing url is not valid");
         }
+        finally
+        {
+            
+            Dispatcher.Dispatch(new RootState.LoadingAction(false));
+        }
+        _validationEditContext.EditContext.Validate();
     }
 
 
