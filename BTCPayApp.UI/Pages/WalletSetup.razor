@@ -55,7 +55,7 @@
                     return null;
                 }
                 var mnemonic = new Mnemonic(Seed);
-                return mnemonic.DeriveExtKey().Derive(new KeyPath("m/84'/0'/0'")).GetWif(State.Value.PairConfig.PairingResult.ParsedNetwork);
+                return mnemonic.DeriveExtKey().Derive(new KeyPath("m/84'/0'/0'")).GetWif(State.Value.PairConfig.PairingResult.ParseNetwork());
             }
             catch
             {
