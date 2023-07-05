@@ -2,6 +2,7 @@
 using System.Text.Json;
 using BTCPayApp.Core.Contracts;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BTCPayApp.Desktop;
@@ -82,16 +83,25 @@ public class DesktopConfigProvider : IConfigProvider
 
 public class DesktopDataDirectoryProvider : IDataDirectoryProvider
 {
-    public Task<string> GetAppDataDirectory()
+    private readonly IConfiguration _configuration;
+
+    public DesktopDataDirectoryProvider(IConfiguration configuration)
     {
-        return Task.FromResult(GetDirectory("BTCPayApp"));
+        _configuration = configuration;
+    }
+    public virtual Task<string> GetAppDataDirectory()
+    {
+        
+        var dirName = _configuration.GetValue<string>("BTCPAYAPP_DIRNAME", "BTCPayApp");
+        return Task.FromResult(GetDirectory(dirName));
     }
 
-    private static string GetDirectory(
+    private string GetDirectory(
         string appDirectory)
     {
-        var environmentVariable1 = Environment.GetEnvironmentVariable("HOME");
-        var environmentVariable2 = Environment.GetEnvironmentVariable("APPDATA");
+        
+        var environmentVariable1 = _configuration.GetValue<string>("HOME");
+        var environmentVariable2 = _configuration.GetValue<string>("APPDATA");
         string str;
         if (!string.IsNullOrEmpty(environmentVariable1) && string.IsNullOrEmpty(environmentVariable2))
             str = Path.Combine(environmentVariable1, "." + appDirectory.ToLowerInvariant());

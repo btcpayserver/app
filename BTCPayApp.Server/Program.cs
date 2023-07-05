@@ -2,9 +2,9 @@
 using BTCPayApp.Core;
 using BTCPayApp.Desktop;
 using BTCPayApp.UI;
-using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 builder.WebHost.UseWebRoot("wwwroot");
 builder.WebHost.UseStaticWebAssets();
 builder.Services.AddRazorPages();

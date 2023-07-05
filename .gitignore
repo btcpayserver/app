@@ -12,3 +12,5 @@ BTCPayApp.Core/obj
 BTCPayApp.Desktop/obj
 BTCPayApp.Desktop/bin
 BTCPayApp.Desktop/obj
+**/bin
+**/obj
