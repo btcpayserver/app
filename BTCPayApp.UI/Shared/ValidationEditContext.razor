@@ -1,15 +1,19 @@
 ﻿@using System.Linq.Expressions
 @implements IDisposable
-<EditForm EditContext="EditContext" OnSubmit="OnSubmit"  @attributes="@InputAttributes">
-    <DataAnnotationsValidator />
-    @ChildContent
+<EditForm EditContext="EditContext" OnSubmit="OnSubmit" @attributes="@InputAttributes">
+    <DataAnnotationsValidator/>
+    <CascadingValue Value="MessageStore">
+        <CascadingValue Value="this">
+            @ChildContent
+        </CascadingValue>
+    </CascadingValue>
 </EditForm>
 
 @code {
 
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object> InputAttributes { get; set; }
-    
+
     [Parameter]
     public object Model { get; set; }
 
@@ -23,7 +27,6 @@
 
     private void EditContextOnOnValidationRequested(object? sender, ValidationRequestedEventArgs e)
     {
-        MessageStore.Clear();
     }
 
     private void EditContextOnOnFieldChanged(object? sender, FieldChangedEventArgs e)
@@ -64,10 +67,10 @@
 
     private async Task OnSubmit(EditContext obj)
     {
-        EditContext.Validate();
-        if(Validate is not null)
+        if (Validate is not null)
             await Validate.Invoke();
-        
+        EditContext.Validate();
+
         if (Invalid)
         {
             await OnInvalidSubmit.InvokeAsync();

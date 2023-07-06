@@ -1,59 +1,13 @@
-﻿using BTCPayApp.CommonServer;
-using BTCPayApp.Core.Contracts;
+﻿using BTCPayApp.Core.Contracts;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace BTCPayApp.Core;
-
-
-public class BTCPayConnection: IHostedService
-{
-    private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
-
-    public BTCPayConnection(BTCPayAppConfigManager btcPayAppConfigManager)
-    {
-        _btcPayAppConfigManager = btcPayAppConfigManager;
-    }
-    public Task StartAsync(CancellationToken cancellationToken)
-    {
-        
-        _btcPayAppConfigManager.PairConfigUpdated += OnPairConfigUpdated;
-        return Task.CompletedTask;
-    }
-
-    private void OnPairConfigUpdated(object? sender, BTCPayPairConfig? e)
-    {
-        if (e?.PairingInstanceUri is not null && e.PairingResult.Key is not null)
-            _ = StartOrReplace();
-        else
-            _ = Kill();
-    }
-
-    private async Task Kill()
-    {
-        
-    }
-    
-    
-    private async Task StartOrReplace()
-    {
-        
-    }
-
-
-
-
-
-    public Task StopAsync(CancellationToken cancellationToken)
-    {
-        
-        _btcPayAppConfigManager.PairConfigUpdated -= OnPairConfigUpdated;
-        return Task.CompletedTask;
-    }
-}
 
 public class BTCPayAppConfigManager : IHostedService
 {
     private readonly IConfigProvider _configProvider;
+    private readonly ILogger<BTCPayAppConfigManager> _logger;
 
     public event EventHandler<BTCPayPairConfig?>? PairConfigUpdated;
     public event EventHandler<WalletConfig?>? WalletConfigUpdated;
@@ -61,9 +15,10 @@ public class BTCPayAppConfigManager : IHostedService
     private TaskCompletionSource _walletConfigLoaded = new();
     public TaskCompletionSource Loaded { get; private set; } = new();
 
-    public BTCPayAppConfigManager(IConfigProvider configProvider)
+    public BTCPayAppConfigManager(IConfigProvider configProvider, ILogger<BTCPayAppConfigManager> logger)
     {
         _configProvider = configProvider;
+        _logger = logger;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)

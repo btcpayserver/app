@@ -47,34 +47,8 @@
         get => State.Value.SelectedTheme;
         set => Dispatcher.Dispatch(new UIState.ThemeSelectedAction(value));
     }
-
-    bool _drawerOpen;
-
-    void DrawerToggle()
-    {
-        _drawerOpen = !_drawerOpen;
-    }
-
-    protected override Task OnInitializedAsync()
-    {
-        return base.OnInitializedAsync();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            
-            Dispatcher.Dispatch(new UIState.SystemPreferenceLoadedAction((await _mudThemeProvider.GetSystemPreference())? "dark": "light"));
-            await _mudThemeProvider.WatchSystemPreference(OnSystemPreferenceChanged);
-            StateHasChanged();
-        }
-    }
-
-    private async Task OnSystemPreferenceChanged(bool newValue)
-    {
-        Dispatcher.Dispatch(new UIState.SystemPreferenceLoadedAction((await _mudThemeProvider.GetSystemPreference())? "dark": "light"));
-    }
+    
+    
 
     private readonly MudTheme _theme = new ()
     {
@@ -95,4 +69,20 @@
             Primary = Colors.Blue.Lighten1
         }
     };
+
+    bool _drawerOpen;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Dispatcher.Dispatch(new UIState.SystemPreferenceLoadedAction((await _mudThemeProvider.GetSystemPreference())? "dark": "light"));
+            await _mudThemeProvider.WatchSystemPreference(async b => Dispatcher.Dispatch(new UIState.SystemPreferenceLoadedAction((await _mudThemeProvider.GetSystemPreference())? "dark": "light")));
+        }
+    }
 }

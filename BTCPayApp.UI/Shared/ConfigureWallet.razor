@@ -1,0 +1,89 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using NBitcoin
+@implements IDisposable
+
+<MudTextField
+    Value="Seed"
+    ValueChanged="SeedChanged"
+    HelperText="Mnemonic Seed"
+    Variant="Variant.Filled"
+    AdornmentIcon="@Icons.Material.Filled.Refresh"
+    Adornment="Adornment.End"
+    OnAdornmentClick="GenerateSeed"
+    For="() => Seed"/>
+<MudErrorMessage For="() => Seed"></MudErrorMessage>
+<MudText>@XPub</MudText>
+
+@code {
+
+    [CascadingParameter]
+    public ValidationEditContext ValidationEditContext { get; set; }
+
+    [Parameter]
+    [Required]
+    public string Seed
+    {
+        get => _seed;
+        set
+        {
+            _seed = value;
+            try
+            {
+
+                Mnemonic = new Mnemonic(Seed);
+            }
+            catch (Exception e)
+            {
+                Mnemonic = null;
+            }
+            
+        }
+    }
+
+    [Parameter]
+    public EventCallback<string> SeedChanged { get; set; }
+
+    public string? XPub
+    {
+        get
+        {
+            if (Mnemonic == null) return null;
+            return Mnemonic.DeriveExtKey().Derive(new KeyPath("m/84'/0'/0'")).Neuter().ToString(Network.Main);
+        }
+    }
+
+
+    protected override void OnParametersSet()
+    {
+        ValidationEditContext.EditContext.OnValidationRequested += OnEditContextOnOnValidationRequested;
+        base.OnParametersSet();
+    }
+
+    public void Dispose()
+    {
+        ValidationEditContext.EditContext.OnValidationRequested -= OnEditContextOnOnValidationRequested;
+    }
+
+    private void GenerateSeed()
+    {
+        SeedChanged.InvokeAsync(new Mnemonic(Wordlist.English, WordCount.Twelve).ToString());
+        ValidationEditContext.EditContext.NotifyFieldChanged(FieldIdentifier.Create(() => Seed));
+    }
+
+    private void OnEditContextOnOnValidationRequested(object sender, ValidationRequestedEventArgs eventArgs)
+    {
+        if (string.IsNullOrEmpty(Seed)) return;
+        try
+        {
+            ValidationEditContext.MessageStore.Clear(() => Seed);
+            Mnemonic = new Mnemonic(Seed);
+        }
+        catch (Exception e)
+        {
+            ValidationEditContext.MessageStore.Add(() => Seed, e.Message);
+        }
+    }
+
+    public Mnemonic Mnemonic { get; private set; }
+    private string _seed;
+}
