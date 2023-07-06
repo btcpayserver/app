@@ -13,12 +13,26 @@ using Xunit.Sdk;
 
 namespace BTCPayApp.Tests;
 
-class BTCPayAppTestServer : WebApplicationFactory<Program>
+
+
+class BTCPayAppTestServer : BaseWebApplicationFactory<Program>
 {
-    private IHost? _host;
-    private readonly ITestOutputHelper _output;
-    private readonly Dictionary<string, string> _config;
-    private readonly Task _playwrightInstallTask;
+    public BTCPayAppTestServer(ITestOutputHelper output, bool newDir = true, Dictionary<string, string>? config = null) : base(output, config)
+    {
+        if (newDir)
+        {
+            _config.AddOrReplace("BTCPAYAPP_DIRNAME", "btcpayserver-test-" + RandomUtils.GetUInt32());
+        }
+    }
+}
+
+class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
+
+{
+    protected IHost? _host;
+    protected readonly ITestOutputHelper _output;
+    protected readonly Dictionary<string, string> _config;
+    protected readonly Task _playwrightInstallTask;
 
     public string ServerAddress
     {
@@ -33,17 +47,14 @@ class BTCPayAppTestServer : WebApplicationFactory<Program>
         }
     }
 
-    public BTCPayAppTestServer(ITestOutputHelper output, bool newDir = true, Dictionary<string, string>? config = null)
+    public BaseWebApplicationFactory(ITestOutputHelper output,  Dictionary<string, string>? config = null)
     {
         _output = output;
 
         _config = config ?? new();
-        if (newDir)
-        {
-            _config.AddOrReplace("BTCPAYAPP_DIRNAME", "btcpayserver-test-" + RandomUtils.GetUInt32());
-        }
+        
 
-        _playwrightInstallTask = Task.Run(InstallPlaywright);
+        _playwrightInstallTask ??= Task.Run(InstallPlaywright);
     }
 
     public class LifetimeBridge

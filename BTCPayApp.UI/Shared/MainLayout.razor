@@ -1,6 +1,11 @@
-﻿@inherits LayoutComponentBase
+﻿@using BTCPayApp.UI.Features
+@using BTCPayApp.Core.Contracts
+@inherits LayoutComponentBase
+@inject IState<UIState> State
+@inject IConfigProvider ConfigProvider
+@inject IDispatcher Dispatcher
 <PageTitle>BTCPayApp</PageTitle>
-<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@_isDarkMode" Theme="_theme"/>
+<MudThemeProvider @ref="@_mudThemeProvider" IsDarkMode="@(State.Value.EffectiveTheme == "dark")" Theme="_theme"/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 
@@ -14,7 +19,18 @@
             <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
             <MudNavLink Href="/Counter" Match="NavLinkMatch.Prefix">Counter</MudNavLink>
             <MudSpacer/>
-            <MudSwitch @bind-Checked="@_isDarkMode" Color="Color.Primary" Class="ma-4" T="bool" Label="Dark Mode"/>
+            
+            <MudSelect @bind-Value="@ThemeMode" Label="Theme" Variant="Variant.Outlined">
+                <MudSelectItem Value="@("system")">
+                    <MudIcon Icon="@Icons.Material.Filled.Settings" Title="System" Size="Size.Small" /> System
+                </MudSelectItem>
+                <MudSelectItem Value="@("light")">
+                    <MudIcon Icon="@Icons.Material.Filled.LightMode" Title="Light" Size="Size.Small" /> Light
+                </MudSelectItem>
+                <MudSelectItem Value="@("dark")">
+                    <MudIcon Icon="@Icons.Material.Filled.Nightlight" Title="Dark" Size="Size.Small" /> Dark
+                </MudSelectItem>
+            </MudSelect>
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
@@ -23,31 +39,41 @@
 </MudLayout>
 
 @code {
+
     private MudThemeProvider _mudThemeProvider;
-    private bool _isDarkMode;
+
+    private string ThemeMode
+    {
+        get => State.Value.SelectedTheme;
+        set => Dispatcher.Dispatch(new UIState.ThemeSelectedAction(value));
+    }
+
     bool _drawerOpen;
 
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
     }
-    
+
+    protected override Task OnInitializedAsync()
+    {
+        return base.OnInitializedAsync();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            _isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            
+            Dispatcher.Dispatch(new UIState.SystemPreferenceLoadedAction((await _mudThemeProvider.GetSystemPreference())? "dark": "light"));
             await _mudThemeProvider.WatchSystemPreference(OnSystemPreferenceChanged);
             StateHasChanged();
         }
     }
 
-    private Task OnSystemPreferenceChanged(bool newValue)
+    private async Task OnSystemPreferenceChanged(bool newValue)
     {
-        _isDarkMode = newValue;
-        StateHasChanged();
-        return Task.CompletedTask;
+        Dispatcher.Dispatch(new UIState.SystemPreferenceLoadedAction((await _mudThemeProvider.GetSystemPreference())? "dark": "light"));
     }
 
     private readonly MudTheme _theme = new ()
