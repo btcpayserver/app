@@ -1,11 +1,9 @@
 ﻿@using BTCPayApp.UI.Features
-@using BTCPayApp.Core.Contracts
 @inherits LayoutComponentBase
 @inject IState<UIState> State
-@inject IConfigProvider ConfigProvider
 @inject IDispatcher Dispatcher
 <PageTitle>BTCPayApp</PageTitle>
-<MudThemeProvider @ref="@_mudThemeProvider" IsDarkMode="@(State.Value.EffectiveTheme == "dark")" Theme="_theme"/>
+<MudThemeProvider @ref="@_mudThemeProvider" IsDarkMode="@(State.Value.EffectiveTheme == "dark")" Theme="Constants.Theme"/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 
@@ -17,7 +15,6 @@
     <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <MudNavMenu>
             <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
-            <MudNavLink Href="/Counter" Match="NavLinkMatch.Prefix">Counter</MudNavLink>
             <MudSpacer/>
             
             <MudSelect @bind-Value="@ThemeMode" Label="Theme" Variant="Variant.Outlined">
@@ -47,36 +44,11 @@
         get => State.Value.SelectedTheme;
         set => Dispatcher.Dispatch(new UIState.ThemeSelectedAction(value));
     }
-    
-    
-
-    private readonly MudTheme _theme = new ()
-    {
-        Typography = new Typography
-        {
-            Default = new Default
-            {
-                FontFamily = new[] { "Open Sans", "Helvetica Neue", "Arial", "sans-serif" }
-            }
-        },
-        Palette = new PaletteLight
-        {
-            Primary = Colors.Green.Default,
-            Secondary = Colors.Green.Accent4,
-        },
-        PaletteDark = new PaletteDark
-        {
-            Primary = Colors.Blue.Lighten1
-        }
-    };
-
     bool _drawerOpen;
-
     void DrawerToggle()
     {
         _drawerOpen = !_drawerOpen;
     }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)

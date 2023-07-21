@@ -40,7 +40,7 @@ public class DesktopConfigProvider : IConfigProvider
     {
         _configDir = directoryProvider.GetAppDataDirectory().ContinueWith(task =>
         {
-          var res =  Path.Combine(task.Result, "config.json");
+          var res =  Path.Combine(task.Result, "config");
           Directory.CreateDirectory(res);
           return res;
         });

@@ -1,0 +1,82 @@
+﻿@using BTCPayServer.Client
+@using BTCPayServer.Client.Models
+@implements IDisposable
+
+@if (Loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
+}
+<MudList Clickable="true" SelectedValue="SelectedStoreId" SelectedValueChanged="OnSelectedValue" Disabled="Disabled">
+    @if (Loading)
+    {
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave"/>
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave"/>
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave"/>
+    }
+    else if(Stores is not null)
+    {
+        foreach (var store in Stores)
+        {
+            <MudListItem Value="store.Id">@store.Name</MudListItem>
+        }
+
+        <MudListItem OnClickHandlerPreventDefault="true" OnClick="OnCreateStore" Disabled="Disabled">Create store</MudListItem>
+    }
+</MudList>
+
+@code {
+
+    [Parameter]
+    public bool Disabled { get; set; }
+    [Parameter]
+    public string? SelectedStoreId { get; set; }
+
+    [Parameter]
+    public EventCallback<string> SelectedStoreIdChanged { get; set; }
+
+    [Parameter]
+    public EventCallback OnCreateStore { get; set; }
+
+    [Parameter]
+    public Uri Uri { get; set; }
+
+    [Parameter]
+    public string Key { get; set; }
+
+    private bool Loading { get; set; }
+    private CancellationTokenSource? _cts;
+    private IEnumerable<StoreData>? Stores { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        _ = LoadStores();
+    }
+
+    private async Task LoadStores()
+    {
+        try
+        {
+            _cts = new CancellationTokenSource();
+            Loading = true;
+            var client = new BTCPayServerClient(Uri, Key);
+            Stores = await client.GetStores(_cts.Token);
+        }
+        finally
+        {
+            Loading = false;
+        }
+    }
+
+
+    private void OnSelectedValue(object obj)
+    {
+        SelectedStoreId = obj as string;
+        SelectedStoreIdChanged.InvokeAsync(SelectedStoreId);
+    }
+
+    public void Dispose()
+    {
+        _cts?.Dispose();
+    }
+}

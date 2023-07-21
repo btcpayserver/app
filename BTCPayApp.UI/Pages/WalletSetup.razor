@@ -1,112 +1,38 @@
 ﻿@page "/wallet/setup"
-@using System.ComponentModel.DataAnnotations
-@using BTCPayApp.Core
+@inject IDispatcher Dispatcher
+@inject BTCPayConnection BTCPayConnection
+@inject IState<RootState> State
 @using BTCPayApp.UI.Features
+@using BTCPayApp.Core
+@using BTCPayServer.Client.Models
+@using NBitcoin
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
-<PageTitle>@Title</PageTitle>
+<PageTitle>Wallet setup</PageTitle>
 <MudContainer Class="mt-16" MaxWidth="MaxWidth.Medium">
-    <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">@Title</MudText>
-    <ValidationEditContext Model="this" @ref="ValidationEditContext" OnValidSubmit="Submit">
-
-        <ConfigureWallet @bind-Seed="Seed" @ref="configureWallet"></ConfigureWallet>
-        @if (State.Value.PairConfig?.PairingResult?.ExistingWallet is not null)
-        {
-            @if (NeedConfirmation)
-            {
-                
-                <MudCheckBox Label="Confirm different xpub" @bind-Checked="ConfirmDifferentXpub" For="() => ConfirmDifferentXpub"/>
-                
-                <MudText>Paired BTCPay store xpub: @State.Value.PairConfig.PairingResult.ExistingWallet</MudText>
-            }
-            
-            <MudCheckBox Label="Set paired wallet to same wallet" @bind-Checked="SetStoreWallet" For="() => SetStoreWallet"/>
-        }
-        <MudGrid Justify="Justify.Center" Class="mt-4">
-            <MudItem>
-                <MudButton Size="Size.Large" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" Disabled="ValidationEditContext.Invalid">Configure</MudButton>
-            </MudItem>
-        </MudGrid>
-    </ValidationEditContext>
+    <BTCPayServerOnchainWalletConfigure ConfiguredWallet="@State.Value.PairConfig?.PairingResult?.ExistingWallet" IsConfiguredWalletHot="@(State.Value.PairConfig?.PairingResult?.ExistingWalletSeed is not null)"  OnConfigurationChosen="Callback"></BTCPayServerOnchainWalletConfigure>
 </MudContainer>
-
-
 @code {
-
-    ConfigureWallet? configureWallet;
-    private ValidationEditContext? _validationEditContext;
-    private string? _seed;
-    public bool NeedConfirmation => State.Value.PairConfig?.PairingResult?.ExistingWallet is not null && configureWallet?.XPub is not null && configureWallet.XPub != State.Value.PairConfig.PairingResult.ExistingWallet;
-
-    private string? Seed
+    private async Task Callback(BTCPayServerOnchainWalletConfigure.ChosenConfiguration obj)
     {
-        get => _seed;
-        set
+        var kp = new KeyPath("m/84'/0'/0'");
+        var mKey = new Mnemonic(obj.Mnemonic).DeriveExtKey();
+        var xpub = mKey.Derive(kp).Neuter().ToString(Network.Main);
+        if (obj is {UseExisting: false,SetStore: true})
         {
-            _seed = value;
-            ConfirmDifferentXpub = false;
-        }
-    }
-    private const string Title = "Wallet setup";
-    private bool ConfirmDifferentXpub { get; set; }
-    private bool SetStoreWallet { get; set; }
-
-    private ValidationEditContext? ValidationEditContext
-    {
-        get => _validationEditContext;
-        set
-        {
-            if (value is not null && _validationEditContext is null)
+            await BTCPayConnection.Client.UpdateStoreOnChainPaymentMethod(State.Value.PairConfig.PairingResult.StoreId, "BTC", new UpdateOnChainPaymentMethodRequest()
             {
-                value.EditContext.OnValidationRequested += EditContextOnOnValidationRequested;
-            }
-            _validationEditContext = value;
-        }
-    }
-
-    [Inject]
-    public IDispatcher Dispatcher { get; set; }
-
-    [Inject]
-    public IHttpClientFactory HttpClientFactory { get; set; }
-
-    [Inject]
-    public IState<RootState> State { get; set; }
-
-    protected override Task OnInitializedAsync()
-    {
-        Seed ??= State.Value.WalletConfig?.Seed ?? State.Value.PairConfig?.PairingResult?.ExistingWalletSeed;
-        return base.OnInitializedAsync();
-    }
-
-
-    private void EditContextOnOnValidationRequested(object? sender, ValidationRequestedEventArgs e)
-    {
-        if (NeedConfirmation && !ConfirmDifferentXpub)
-        {
-            ValidationEditContext.MessageStore.Add(() => ConfirmDifferentXpub, "You must confirm that you want to use a different wallet than the one paired with BTCPay");
-        }
-        else if (!NeedConfirmation)
-        {
-            ValidationEditContext.MessageStore.Clear(() => ConfirmDifferentXpub);
-        }
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (ValidationEditContext != null) ValidationEditContext.EditContext.OnValidationRequested -= EditContextOnOnValidationRequested;
-        base.Dispose(disposing);
-    }
-
-    private async Task Submit()
-    {
-        if (!ValidationEditContext.EditContext.Validate())
-        {
-            return;
+                Enabled = true,
+                DerivationScheme = xpub,
+                AccountKeyPath = new RootedKeyPath(mKey, kp)
+            });
         }
         Dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(new WalletConfig()
         {
-            Seed = Seed
+            Mnemonic = obj.Mnemonic,
+            DerivationPath = kp.ToString(),
+            StandaloneMode = false
         }));
-    }
 
+
+    }
 }

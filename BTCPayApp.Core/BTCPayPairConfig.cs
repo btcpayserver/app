@@ -8,11 +8,19 @@ public class BTCPayPairConfig
     public PairSuccessResult? PairingResult { get; set; }
 
     public string? PairingInstanceUri { get; set; }
+    
 
 }
 
 public class WalletConfig
 {
-    public string? Seed { get; set; }
-    
+    public string? Mnemonic { get; set; }
+    public string? DerivationPath { get; set; }
+    public bool StandaloneMode { get; set; } = false;
+}
+
+
+public class BTCPayConfig
+{
+    public BTCPayPairConfig[] Pairings { get; set; }
 }

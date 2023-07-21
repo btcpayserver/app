@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using MudBlazor.Services;
 
 namespace BTCPayApp.UI;
-
 public static class StartupExtensions
 {
     public static IServiceCollection AddBTCPayAppUIServices(this IServiceCollection serviceCollection)
@@ -18,7 +17,6 @@ public static class StartupExtensions
 #endif
             options.AddMiddleware<UIStateMiddleware>();
         });
-
         return serviceCollection;
     }
 }

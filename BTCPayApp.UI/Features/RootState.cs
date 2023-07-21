@@ -3,13 +3,15 @@ using BTCPayApp.UI.Pages;
 using Fluxor;
 using Fluxor.Blazor.Web.Middlewares.Routing;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace BTCPayApp.UI.Features;
 
 [FeatureState]
-public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig? WalletConfig)
+public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig? WalletConfig,
+    HubConnectionState? BTCPayServerConnectionState)
 {
-    public RootState() : this(true, null, null)
+    public RootState() : this(true, null, null, null)
     {
     }
 
@@ -20,11 +22,19 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
 
     public record LoadingAction(bool Loading);
 
+    protected class LoadingReducer : Reducer<RootState, LoadingAction>
+    {
+        public override RootState Reduce(RootState state, LoadingAction action)
+        {
+            return state with {Loading = action.Loading};
+        }
+    }
+
     protected class PairConfigLoadedReducer : Reducer<RootState, PairConfigLoadedAction>
     {
         public override RootState Reduce(RootState state, PairConfigLoadedAction action)
         {
-            return new RootState(false, action.Config, state.WalletConfig);
+            return state with {Loading = false, PairConfig = action.Config};
         }
     }
 
@@ -32,21 +42,29 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
     {
         public override RootState Reduce(RootState state, WalletConfigLoadedAction action)
         {
-            return new RootState(false, state.PairConfig, action.Config);
+            return state with {Loading = false, WalletConfig = action.Config};
+        }
+    }
+
+    protected class BTCPayConnectionUpdatedReducer : Reducer<RootState, BTCPayConnectionUpdatedAction>
+    {
+        public override RootState Reduce(RootState state, BTCPayConnectionUpdatedAction action)
+        {
+            return state with {Loading = false, BTCPayServerConnectionState = action.ConnectionState};
         }
     }
 
     protected class PairConfigLoadedActionEffect : Effect<PairConfigLoadedAction>
     {
         private readonly NavigationManager _navigationManager;
-        private readonly BTCPayAppConfigManager _BTCPayAppConfigManager;
+        private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
         private readonly IState<RootState> _state;
 
         public PairConfigLoadedActionEffect(NavigationManager navigationManager,
             BTCPayAppConfigManager btcPayAppConfigManager, IState<RootState> state)
         {
             _navigationManager = navigationManager;
-            _BTCPayAppConfigManager = btcPayAppConfigManager;
+            _btcPayAppConfigManager = btcPayAppConfigManager;
             _state = state;
         }
 
@@ -54,48 +72,50 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
         {
             switch (action.Config?.PairingResult)
             {
+                //if no wallet and no pair configured, go to the start page
                 case null when _state.Value.WalletConfig is null && !_navigationManager.Uri.EndsWith(Routes.Pair):
                     dispatcher.Dispatch(new GoAction(Routes.FirstRun));
                     break;
-                case null when _state.Value.WalletConfig is not null &&
+                //if wallet is configured and no pair, go to the pair page
+                case null when _state.Value.WalletConfig?.StandaloneMode is not true &&
                                !_navigationManager.Uri.EndsWith(Routes.Pair):
                     dispatcher.Dispatch(new GoAction(Routes.Pair));
                     break;
+                //if wallet is not configured and pair is configured, go to the wallet page
                 case not null when _state.Value.WalletConfig is null &&
-                                   !_navigationManager.Uri.EndsWith(Routes.WalletSetup):
-                    dispatcher.Dispatch(new GoAction(Routes.WalletSetup));
-                    break;
-                case not null when _state.Value.WalletConfig is not null &&
                                    !_navigationManager.Uri.EndsWith(Routes.WalletSetup):
                     dispatcher.Dispatch(new GoAction(Routes.WalletSetup));
                     break;
             }
 
-            await _BTCPayAppConfigManager.UpdateConfig(action.Config);
+            await _btcPayAppConfigManager.UpdateConfig(action.Config);
         }
     }
 
 
-    protected class WalletConfigLoadedActionEffect : Effect<RootState.WalletConfigLoadedAction>
+    protected class WalletConfigLoadedActionEffect : Effect<WalletConfigLoadedAction>
     {
         private readonly NavigationManager _navigationManager;
-        private readonly BTCPayAppConfigManager _BTCPayAppConfigManager;
+        private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
         private readonly IState<RootState> _state;
 
         public WalletConfigLoadedActionEffect(NavigationManager navigationManager,
-            BTCPayAppConfigManager BTCPayAppConfigManager, IState<RootState> state)
+            BTCPayAppConfigManager btcPayAppConfigManager, IState<RootState> state)
         {
             _navigationManager = navigationManager;
-            _BTCPayAppConfigManager = BTCPayAppConfigManager;
+            _btcPayAppConfigManager = btcPayAppConfigManager;
             _state = state;
         }
 
-        public override async Task HandleAsync(RootState.WalletConfigLoadedAction action, IDispatcher dispatcher)
+        public override async Task HandleAsync(WalletConfigLoadedAction action, IDispatcher dispatcher)
         {
             if (action.Config is null && _state.Value.PairConfig is not null &&
                 !_navigationManager.Uri.EndsWith(Routes.WalletSetup))
                 dispatcher.Dispatch(new GoAction(Routes.FirstRun));
-            await _BTCPayAppConfigManager.UpdateConfig(action.Config);
+            
+            await _btcPayAppConfigManager.UpdateConfig(action.Config);
         }
     }
+
+    public record BTCPayConnectionUpdatedAction(HubConnectionState? ConnectionState);
 }

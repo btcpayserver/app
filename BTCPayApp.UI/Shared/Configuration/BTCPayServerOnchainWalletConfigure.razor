@@ -1,0 +1,159 @@
+﻿@using System.ComponentModel.DataAnnotations
+@using NBitcoin
+@* if there is a configured wallet, and it is hot, ask if the user would like to import and use that within the app *@
+@* if there is a configured wallet, and it is not hot, ask if the user would like to provide the seed to the app *@
+@* if there is no configured wallet, ask if the user would like to create a new wallet *@
+@* if the user would like to create a new wallet, ask if the user would like to import it into BTCPayServer store as a hot or cold wallet *@
+
+@if (ConfiguredWallet is not null)
+{
+    @if (IsConfiguredWalletHot)
+    {
+        <MudText>Your BTCPay Server store already has an onchain hot wallet configured. Would you like to:</MudText>
+    }
+    else
+    {
+        <MudText>Your BTCPay Server store already has an onchain watch-only wallet configured. Would you like to:</MudText>
+    }
+}
+
+<ValidationEditContext Model="this" @ref="_validationEditContext" Validate="Validate" OnValidSubmit="OnSubmit">
+    <MudRadioGroup Label="Wallet Creation Options" @bind-Value="SelectedOption" For="() => SelectedOption">
+        @foreach (var option in Options)
+        {
+            <MudRadio T="string" Value="@option.Key">@option.Value</MudRadio>
+        }
+    </MudRadioGroup>
+ 
+    @if (IsMnemonicRequired)
+    {
+        <MudTextField
+            bind-Value="Mnemonic"
+            HelperText="Mnemonic Seed"
+            Variant="Variant.Filled"
+            AdornmentIcon="@Icons.Material.Filled.Refresh"
+            Adornment="Adornment.End"
+            OnAdornmentClick="GenerateSeed"
+            For="() => Mnemonic"/>
+    }
+
+    <MudButton ButtonType="ButtonType.Submit">Continue</MudButton>
+</ValidationEditContext>
+
+
+@code {
+
+    [Parameter]
+    public string? ConfiguredWallet { get; set; }
+
+    [Parameter]
+    public bool IsConfiguredWalletHot { get; set; }
+
+    private bool IsMnemonicRequired
+    {
+        get { return new[] {"use-configured-wallet",  "create-wallet", "create-wallet-separate"}.Contains(SelectedOption); }
+    }
+
+    private Dictionary<string, string> Options
+    {
+        get
+        {
+            var result = new Dictionary<string, string>();
+            var warningPrefix = "";
+            if (ConfiguredWallet is not null)
+            {
+                if (IsConfiguredWalletHot)
+                {
+                    result.Add("use-configured-hot-wallet", "Import the configured hot wallet");
+                }
+
+                result.Add("use-configured-wallet", "Import the configured wallet but store the keys on app");
+                warningPrefix = "⚠️ Your BTCPay Server store wallet will be overwritten! ⚠️ ";
+            }
+
+            result.Add("create-wallet", $"Create a new wallet to use on BTCPay Server and store the keys on app {warningPrefix}");
+            result.Add("create-wallet-separate", "Create a new wallet to be used only on app");
+            return result;
+        }
+    }
+
+    [Required]
+    private string? SelectedOption { get; set; }
+
+    private string Mnemonic
+    {
+        get => _mnemonic;
+        set
+        {
+            _mnemonic = value;
+            _validationEditContext.NotifyFieldChanged(() => Mnemonic);
+        }
+    }
+
+
+    private ValidationEditContext _validationEditContext;
+    private string _mnemonic;
+
+    private async Task Validate()
+    {
+        if (SelectedOption is null)
+        {
+            _validationEditContext.MessageStore.Add(() => SelectedOption!, "Please select an option");
+            return;
+        }
+
+        Mnemonic? mnemonic = null;
+
+        string? xpub = null;
+        if (IsMnemonicRequired)
+        {
+            if (Mnemonic is null)
+            {
+                _validationEditContext.MessageStore.Add(() => Mnemonic!, "Please provide the matching mnemonic for the wallet");
+
+                return;
+            }
+            try
+            {
+                mnemonic = new Mnemonic(Mnemonic);
+            }
+            catch (Exception e)
+            {
+                _validationEditContext.MessageStore.Add(() => Mnemonic!, "Invalid mnemonic");
+                return;
+            }
+
+            var kp = new KeyPath("m/84'/0'/0'");
+
+            xpub = mnemonic.DeriveExtKey().Derive(kp).Neuter().ToString(Network.Main);
+        }
+        if (SelectedOption == "use-configured-wallet")
+        {
+    //this is super simplistic. We should be asking for the derivation path,passphrase, have a network configured in the app, etc.
+            if (ConfiguredWallet != xpub)
+            {
+                _validationEditContext.MessageStore.Add(() => Mnemonic!, "The mnemonic provided does not match the configured wallet");
+                return;
+            }
+        }
+    }
+
+    [Parameter]
+    public EventCallback<ChosenConfiguration> OnConfigurationChosen { get; set; }
+
+    private void OnSubmit()
+    {
+        var useExisting = SelectedOption == "use-configured-wallet" || SelectedOption == "use-configured-hot-wallet";
+        var setStore = SelectedOption != "create-wallet-separate";
+        OnConfigurationChosen.InvokeAsync(new ChosenConfiguration(useExisting, setStore, Mnemonic));
+    }
+    
+    
+    private void GenerateSeed()
+    {
+        Mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve).ToString();
+    }
+
+    public record ChosenConfiguration(bool UseExisting, bool SetStore, string Mnemonic);
+
+}

@@ -1,4 +1,5 @@
 ﻿using BTCPayApp.CommonServer;
+using BTCPayServer.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,14 +11,19 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
 {
     private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
     private readonly ILogger<BTCPayConnection> _logger;
+    private readonly IHttpClientFactory _httpClientFactory;
     private IDisposable? _subscription;
     private IBTCPayAppServerHub? _hubProxy;
+    public BTCPayServerClient? Client { get; set; }
     public HubConnection? Connection { get; private set; }
+    public event EventHandler? ConnectionChanged;
+    
 
-    public BTCPayConnection(BTCPayAppConfigManager btcPayAppConfigManager, ILogger<BTCPayConnection> logger)
+    public BTCPayConnection(BTCPayAppConfigManager btcPayAppConfigManager, ILogger<BTCPayConnection> logger, IHttpClientFactory httpClientFactory)
     {
         _btcPayAppConfigManager = btcPayAppConfigManager;
         _logger = logger;
+        _httpClientFactory = httpClientFactory;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -73,6 +79,8 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
         if (Connection is not null)
             await Connection.StopAsync();
         Connection = null;
+        Client = null;
+        ConnectionChanged?.Invoke(this, EventArgs.Empty);
         _subscription?.Dispose();
         _hubProxy = null;
     }
@@ -89,10 +97,13 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
             })
             .WithAutomaticReconnect()
             .Build();
+        Client = new BTCPayServerClient(new Uri(_btcPayAppConfigManager.PairConfig!.PairingInstanceUri),
+            _btcPayAppConfigManager.PairConfig!.PairingResult.Key, _httpClientFactory.CreateClient("btcpayserver"));
 
-
+        ConnectionChanged?.Invoke(this, EventArgs.Empty);
         _subscription = Connection.Register<IBTCPayAppServerClient>(this);
         _hubProxy = Connection.CreateHubProxy<IBTCPayAppServerHub>();
+        
     }
 
 
@@ -123,18 +134,21 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
 
     public Task OnClosed(Exception? exception)
     {
+        ConnectionChanged?.Invoke(this, EventArgs.Empty);
         _logger.LogError(exception, "OnClosed");
         return Task.CompletedTask;
     }
 
     public Task OnReconnected(string? connectionId)
     {
+        ConnectionChanged?.Invoke(this, EventArgs.Empty);
         _logger.LogInformation($"OnReconnected: {connectionId}");
         return Task.CompletedTask;
     }
 
     public Task OnReconnecting(Exception? exception)
     {
+        ConnectionChanged?.Invoke(this, EventArgs.Empty);
         _logger.LogError(exception, "OnReconnecting");
         return Task.CompletedTask;
     }

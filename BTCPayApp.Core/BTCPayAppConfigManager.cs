@@ -30,7 +30,7 @@ public class BTCPayAppConfigManager : IHostedService
         {
             await Task.WhenAll(_pairConfigLoaded.Task, _walletConfigLoaded.Task);
             Loaded.TrySetResult();
-        });
+        }, cancellationToken);
         
         return Task.CompletedTask;
     }
