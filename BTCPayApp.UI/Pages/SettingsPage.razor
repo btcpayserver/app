@@ -1,0 +1,19 @@
+﻿@page "/settings"
+@using BTCPayApp.UI.Features
+@inject IState<UIState> UiState
+@inject IDispatcher Dispatcher
+
+<PageTitle>Settings</PageTitle>
+<MudContainer Fixed="true">
+    <Settings Theme="@UiState.Value.SelectedTheme" OnThemeChange="SetTheme" />
+</MudContainer>
+
+@code {
+    private Task SetTheme(string theme)
+    {
+        Dispatcher.Dispatch(new UIState.ApplyTheme(theme));
+        StateHasChanged();
+        return Task.CompletedTask;
+    }
+}
+

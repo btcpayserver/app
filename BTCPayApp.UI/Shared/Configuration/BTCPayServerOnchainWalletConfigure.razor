@@ -24,7 +24,6 @@
             <MudRadio T="string" Value="@option.Key">@option.Value</MudRadio>
         }
     </MudRadioGroup>
- 
     @if (IsMnemonicRequired)
     {
         <MudTextField
@@ -36,13 +35,10 @@
             OnAdornmentClick="GenerateSeed"
             For="() => Mnemonic"/>
     }
-
     <MudButton ButtonType="ButtonType.Submit">Continue</MudButton>
 </ValidationEditContext>
 
-
 @code {
-
     [Parameter]
     public string? ConfiguredWallet { get; set; }
 
@@ -89,7 +85,6 @@
             _validationEditContext.NotifyFieldChanged(() => Mnemonic);
         }
     }
-
 
     private ValidationEditContext _validationEditContext;
     private string _mnemonic;
@@ -147,13 +142,11 @@
         var setStore = SelectedOption != "create-wallet-separate";
         OnConfigurationChosen.InvokeAsync(new ChosenConfiguration(useExisting, setStore, Mnemonic));
     }
-    
-    
+
     private void GenerateSeed()
     {
         Mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve).ToString();
     }
 
     public record ChosenConfiguration(bool UseExisting, bool SetStore, string Mnemonic);
-
 }

@@ -5,33 +5,34 @@ namespace BTCPayApp.UI.Features;
 [FeatureState]
 public class UIState
 {
-    public string SelectedTheme { get; set; } = "system";
-    public string EffectiveTheme { get; set; } = "dark";
-    public string SystemTheme { get; set; } = "dark";
+    public string SelectedTheme { get; set; } = Constants.SystemTheme;
+    public string SystemTheme { get; set; } = Constants.LightTheme;
+    public bool IsDarkMode { get; set; } = false;
 
-    public record SystemPreferenceLoadedAction(string theme);
-    public record ThemeSelectedAction(string theme);
-    
+    public record ApplySystemPreference(string Theme);
+    public record ApplyTheme(string Theme);
+
     [ReducerMethod]
-    public static UIState Reduce(UIState state, SystemPreferenceLoadedAction action)
+    public static UIState Reduce(UIState state, ApplySystemPreference action)
     {
-        return new UIState()
+        var effectiveTheme = state.SelectedTheme == Constants.SystemTheme ? action.Theme : state.SelectedTheme;
+        return new UIState
         {
-            SystemTheme = action.theme,
+            SystemTheme = action.Theme,
             SelectedTheme = state.SelectedTheme,
-            EffectiveTheme = state.SelectedTheme != "system" ? state.EffectiveTheme: action.theme
+            IsDarkMode = effectiveTheme == Constants.DarkTheme
         };
     }
+
     [ReducerMethod]
-    public static UIState Reduce(UIState state, ThemeSelectedAction action)
+    public static UIState Reduce(UIState state, ApplyTheme action)
     {
-        return new UIState()
+        var effectiveTheme = action.Theme == Constants.SystemTheme ? state.SystemTheme : action.Theme;
+        return new UIState
         {
             SystemTheme = state.SystemTheme,
-            SelectedTheme = action.theme,
-            EffectiveTheme = action.theme == "system" ? state.SystemTheme: action.theme
+            SelectedTheme = action.Theme,
+            IsDarkMode = effectiveTheme == Constants.DarkTheme
         };
     }
-
-
 }

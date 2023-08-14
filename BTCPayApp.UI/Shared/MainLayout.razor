@@ -1,60 +1,58 @@
 ﻿@using BTCPayApp.UI.Features
-@inherits LayoutComponentBase
-@inject IState<UIState> State
+@using BTCPayApp.UI.Pages
+@inherits Fluxor.Blazor.Web.Components.FluxorLayout
+@inject IState<UIState> UiState
 @inject IDispatcher Dispatcher
-<PageTitle>BTCPayApp</PageTitle>
-<MudThemeProvider @ref="@_mudThemeProvider" IsDarkMode="@(State.Value.EffectiveTheme == "dark")" Theme="Constants.Theme"/>
+
+<PageTitle>BTCPay Server</PageTitle>
+<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@UiState.Value.IsDarkMode" Theme="Constants.Theme"/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 
 <MudLayout>
     <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@(e => DrawerToggle())"/>
-        <MudText Typo="Typo.h5" Class="ml-3">BTCPay BTCPayApp</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle"/>
+        <MudText Typo="Typo.h5" Class="ml-3">BTCPay Server</MudText>
     </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+    <MudDrawer @bind-Open="_isDrawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <MudNavMenu>
-            <MudNavLink Href="/" Match="NavLinkMatch.All">Dashboard</MudNavLink>
-            <MudSpacer/>
-            
-            <MudSelect @bind-Value="@ThemeMode" Label="Theme" Variant="Variant.Outlined">
-                <MudSelectItem Value="@("system")">
-                    <MudIcon Icon="@Icons.Material.Filled.Settings" Title="System" Size="Size.Small" /> System
-                </MudSelectItem>
-                <MudSelectItem Value="@("light")">
-                    <MudIcon Icon="@Icons.Material.Filled.LightMode" Title="Light" Size="Size.Small" /> Light
-                </MudSelectItem>
-                <MudSelectItem Value="@("dark")">
-                    <MudIcon Icon="@Icons.Material.Filled.Nightlight" Title="Dark" Size="Size.Small" /> Dark
-                </MudSelectItem>
-            </MudSelect>
+            <MudNavLink Href="@Routes.FirstRun" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+            <MudNavLink Href="@Routes.Settings" Match="NavLinkMatch.All">Settings</MudNavLink>
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
-       @Body
+        <p>selected: @UiState.Value.SelectedTheme - is dark: @UiState.Value.IsDarkMode - system: @UiState.Value.SystemTheme</p>
+
+        @Body
     </MudMainContent>
 </MudLayout>
 
 @code {
-
     private MudThemeProvider _mudThemeProvider;
 
-    private string ThemeMode
-    {
-        get => State.Value.SelectedTheme;
-        set => Dispatcher.Dispatch(new UIState.ThemeSelectedAction(value));
-    }
-    bool _drawerOpen;
+    private bool _isDrawerOpen;
+
     void DrawerToggle()
     {
-        _drawerOpen = !_drawerOpen;
+        _isDrawerOpen = !_isDrawerOpen;
     }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            Dispatcher.Dispatch(new UIState.SystemPreferenceLoadedAction((await _mudThemeProvider.GetSystemPreference())? "dark": "light"));
-            await _mudThemeProvider.WatchSystemPreference(async b => Dispatcher.Dispatch(new UIState.SystemPreferenceLoadedAction((await _mudThemeProvider.GetSystemPreference())? "dark": "light")));
+            var isDarkMode = await _mudThemeProvider.GetSystemPreference();
+            await ApplySystemPreference(isDarkMode);
+            await _mudThemeProvider.WatchSystemPreference(ApplySystemPreference);
+            StateHasChanged();
         }
+    }
+
+    private Task ApplySystemPreference(bool isDarkMode)
+    {
+        var systemTheme = isDarkMode ? Constants.DarkTheme : Constants.LightTheme;
+        Dispatcher.Dispatch(new UIState.ApplySystemPreference(systemTheme));
+        StateHasChanged();
+        return Task.CompletedTask;
     }
 }

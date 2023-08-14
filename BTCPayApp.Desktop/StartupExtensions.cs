@@ -27,7 +27,7 @@ public class DesktopSecureConfigProvider: DesktopConfigProvider, ISecureConfigPr
     {
         _dataProtector = dataProtectionProvider.CreateProtector("SecureConfig");
     }
-    
+
     protected override Task<string> ReadFromRaw(string str) => Task.FromResult(_dataProtector.Unprotect(str));
     protected override Task<string> WriteFromRaw(string str) => Task.FromResult(_dataProtector.Protect(str));
 }
@@ -45,7 +45,7 @@ public class DesktopConfigProvider : IConfigProvider
           return res;
         });
     }
-    
+
     public async Task<T?> Get<T>(string key)
     {
         var dir = Path.Combine(await _configDir, key);
@@ -55,7 +55,6 @@ public class DesktopConfigProvider : IConfigProvider
         }
         var raw = await File.ReadAllTextAsync(dir);
         return JsonSerializer.Deserialize<T>(await ReadFromRaw(raw));
-
     }
 
     protected virtual Task<string> ReadFromRaw(string str) => Task.FromResult(str);
@@ -91,7 +90,7 @@ public class DesktopDataDirectoryProvider : IDataDirectoryProvider
     }
     public virtual Task<string> GetAppDataDirectory()
     {
-        
+
         var dirName = _configuration.GetValue<string>("BTCPAYAPP_DIRNAME", "BTCPayApp");
         return Task.FromResult(GetDirectory(dirName));
     }
@@ -99,7 +98,7 @@ public class DesktopDataDirectoryProvider : IDataDirectoryProvider
     private string GetDirectory(
         string appDirectory)
     {
-        
+
         var environmentVariable1 = _configuration.GetValue<string>("HOME");
         var environmentVariable2 = _configuration.GetValue<string>("APPDATA");
         string str;

@@ -92,7 +92,6 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
         }
     }
 
-
     protected class WalletConfigLoadedActionEffect : Effect<WalletConfigLoadedAction>
     {
         private readonly NavigationManager _navigationManager;
@@ -112,7 +111,7 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
             if (action.Config is null && _state.Value.PairConfig is not null &&
                 !_navigationManager.Uri.EndsWith(Routes.WalletSetup))
                 dispatcher.Dispatch(new GoAction(Routes.FirstRun));
-            
+
             await _btcPayAppConfigManager.UpdateConfig(action.Config);
         }
     }

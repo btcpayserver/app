@@ -1,20 +1,17 @@
 ﻿@page "/pair"
-@inject IDispatcher Dispatcher 
+@inject IDispatcher Dispatcher
 @using BTCPayApp.Core
 @using BTCPayApp.UI.Features
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
 <PageTitle>Pair with your BTCPay Server</PageTitle>
 <MudContainer Class="mt-16" MaxWidth="MaxWidth.Medium">
     <PairBTCPayServer OnPair="OnPair"></PairBTCPayServer>
 </MudContainer>
 
-
 @code {
-
-
     private void OnPair(BTCPayPairConfig obj)
     {
         Dispatcher.Dispatch(new RootState.PairConfigLoadedAction(obj));
     }
-
 }

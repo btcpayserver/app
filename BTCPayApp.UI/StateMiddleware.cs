@@ -5,13 +5,15 @@ using Fluxor;
 
 namespace BTCPayApp.UI;
 
-public class UIStateMiddleware : Middleware
+public class StateMiddleware : Middleware
 {
     private readonly IConfigProvider _configProvider;
     private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
     private readonly BTCPayConnection _btcPayConnection;
 
-    public UIStateMiddleware(IConfigProvider configProvider, BTCPayAppConfigManager btcPayAppConfigManager, BTCPayConnection btcPayConnection)
+    private const string UiStateConfigKey = "uistate";
+
+    public StateMiddleware(IConfigProvider configProvider, BTCPayAppConfigManager btcPayAppConfigManager, BTCPayConnection btcPayConnection)
     {
         _configProvider = configProvider;
         _btcPayAppConfigManager = btcPayAppConfigManager;
@@ -22,7 +24,7 @@ public class UIStateMiddleware : Middleware
     {
         if (store.Features.TryGetValue(typeof(UIState).FullName, out var uiStateFeature))
         {
-            var existing = await _configProvider.Get<UIState>("uistate");
+            var existing = await _configProvider.Get<UIState>(UiStateConfigKey);
             if (existing is not null)
             {
                 uiStateFeature.RestoreState(existing);
@@ -30,7 +32,7 @@ public class UIStateMiddleware : Middleware
 
             uiStateFeature.StateChanged += async (sender, args) =>
             {
-                await _configProvider.Set("uistate", (UIState) uiStateFeature.GetState());
+                await _configProvider.Set(UiStateConfigKey, (UIState)uiStateFeature.GetState());
             };
         }
 

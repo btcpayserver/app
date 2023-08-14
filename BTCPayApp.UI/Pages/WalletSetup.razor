@@ -7,10 +7,15 @@
 @using BTCPayServer.Client.Models
 @using NBitcoin
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
 <PageTitle>Wallet setup</PageTitle>
 <MudContainer Class="mt-16" MaxWidth="MaxWidth.Medium">
-    <BTCPayServerOnchainWalletConfigure ConfiguredWallet="@State.Value.PairConfig?.PairingResult?.ExistingWallet" IsConfiguredWalletHot="@(State.Value.PairConfig?.PairingResult?.ExistingWalletSeed is not null)"  OnConfigurationChosen="Callback"></BTCPayServerOnchainWalletConfigure>
+    <BTCPayServerOnchainWalletConfigure
+        ConfiguredWallet="@State.Value.PairConfig?.PairingResult?.ExistingWallet"
+        IsConfiguredWalletHot="@(State.Value.PairConfig?.PairingResult?.ExistingWalletSeed is not null)"
+        OnConfigurationChosen="Callback" />
 </MudContainer>
+
 @code {
     private async Task Callback(BTCPayServerOnchainWalletConfigure.ChosenConfiguration obj)
     {
@@ -32,7 +37,5 @@
             DerivationPath = kp.ToString(),
             StandaloneMode = false
         }));
-
-
     }
 }

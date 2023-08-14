@@ -2,6 +2,7 @@
 @using BTCPayApp.CommonServer
 @using BTCPayApp.Core
 @using System.Net.Http.Json
+
 @if (Loading)
 {
     <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
@@ -9,7 +10,6 @@
 <MudText Typo="Typo.h3" Align="Align.Center" GutterBottom="true">Pair with BTCPay Server</MudText>
 @if (Result is null)
 {
-    
     <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="StartPair">
         <MudTextField Label="Pairing URL" @bind-Value="PairingUrl" For="() => PairingUrl"/>
         <MudErrorMessage For="() => PairingUrl"></MudErrorMessage>
@@ -19,12 +19,11 @@
             </MudItem>
         </MudGrid>
     </ValidationEditContext>
-    
-}else if (Result.StoreId is null)
-{
-    <BTCPayServerStoreSelector Key="@Result.Key" Uri="@PairingUrl"  bind-SelectedStoreId="SelectedStoreId" ></BTCPayServerStoreSelector>
 }
-
+else if (Result.StoreId is null)
+{
+    <BTCPayServerStoreSelector Key="@Result.Key" Uri="@(new Uri(PairingUrl))"  bind-SelectedStoreId="SelectedStoreId" ></BTCPayServerStoreSelector>
+}
 
 @code {
 
@@ -37,7 +36,7 @@
             if (_selectedStoreId is not null)
             {
                 Result!.StoreId = _selectedStoreId;
-                OnPair.InvokeAsync(new BTCPayPairConfig()
+                OnPair.InvokeAsync(new BTCPayPairConfig
                 {
                     PairingResult = Result,
                     PairingInstanceUri = PairingUrl
@@ -48,14 +47,14 @@
 
     private bool Loading { get; set; }
     private ValidationEditContext _validationEditContext { get; set; }
-private PairSuccessResult? Result { get; set; }
+    private PairSuccessResult? Result { get; set; }
+
     [Inject]
     public IHttpClientFactory HttpClientFactory { get; set; }
 
     [Required]
     [Url]
     private string PairingUrl { get; set; }
-
 
     [Parameter]
     public EventCallback<BTCPayPairConfig> OnPair { get; set; }
@@ -76,14 +75,14 @@ private PairSuccessResult? Result { get; set; }
             }
             else if(Result.StoreId is not null)
             {
-                await OnPair.InvokeAsync(new BTCPayPairConfig()
+                await OnPair.InvokeAsync(new BTCPayPairConfig
                 {
                     PairingResult = Result,
                     PairingInstanceUri = PairingUrl
                 });
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             _validationEditContext.MessageStore.Add(() => PairingUrl, "Pairing url is not valid");
         }
@@ -92,7 +91,6 @@ private PairSuccessResult? Result { get; set; }
             Loading = false;
         }
     }
-
 
     private string? _selectedStoreId;
 }

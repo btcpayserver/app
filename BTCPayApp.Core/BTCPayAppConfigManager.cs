@@ -15,6 +15,9 @@ public class BTCPayAppConfigManager : IHostedService
     private TaskCompletionSource _walletConfigLoaded = new();
     public TaskCompletionSource Loaded { get; private set; } = new();
 
+    public BTCPayPairConfig? PairConfig { get; private set; }
+    public WalletConfig? WalletConfig { get; private set; }
+
     public BTCPayAppConfigManager(IConfigProvider configProvider, ILogger<BTCPayAppConfigManager> logger)
     {
         _configProvider = configProvider;
@@ -25,13 +28,13 @@ public class BTCPayAppConfigManager : IHostedService
     {
         _ = LoadPairConfig();
         _ = LoadWalletConfig();
-        
+
         Task.Run(async () =>
         {
             await Task.WhenAll(_pairConfigLoaded.Task, _walletConfigLoaded.Task);
             Loaded.TrySetResult();
         }, cancellationToken);
-        
+
         return Task.CompletedTask;
     }
 
@@ -47,7 +50,6 @@ public class BTCPayAppConfigManager : IHostedService
         WalletConfigUpdated?.Invoke(this, WalletConfig);
         _walletConfigLoaded.TrySetResult();
     }
-
 
     public async Task UpdateConfig(BTCPayPairConfig? config)
     {
@@ -65,9 +67,6 @@ public class BTCPayAppConfigManager : IHostedService
         WalletConfig = config;
         WalletConfigUpdated?.Invoke(this, WalletConfig);
     }
-
-    public BTCPayPairConfig? PairConfig { get; private set; }
-    public WalletConfig? WalletConfig { get; private set; }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {

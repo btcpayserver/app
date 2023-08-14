@@ -15,7 +15,7 @@ public static class StartupExtensions
 #if DEBUG
             options.UseReduxDevTools();
 #endif
-            options.AddMiddleware<UIStateMiddleware>();
+            options.AddMiddleware<StateMiddleware>();
         });
         return serviceCollection;
     }
