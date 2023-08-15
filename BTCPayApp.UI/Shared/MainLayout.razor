@@ -21,8 +21,6 @@
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
-        <p>selected: @UiState.Value.SelectedTheme - is dark: @UiState.Value.IsDarkMode - system: @UiState.Value.SystemTheme</p>
-
         @Body
     </MudMainContent>
 </MudLayout>
@@ -44,7 +42,6 @@
             var isDarkMode = await _mudThemeProvider.GetSystemPreference();
             await ApplySystemPreference(isDarkMode);
             await _mudThemeProvider.WatchSystemPreference(ApplySystemPreference);
-            StateHasChanged();
         }
     }
 
@@ -52,7 +49,6 @@
     {
         var systemTheme = isDarkMode ? Constants.DarkTheme : Constants.LightTheme;
         Dispatcher.Dispatch(new UIState.ApplySystemPreference(systemTheme));
-        StateHasChanged();
         return Task.CompletedTask;
     }
 }

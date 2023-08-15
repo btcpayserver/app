@@ -12,7 +12,6 @@
     private Task SetTheme(string theme)
     {
         Dispatcher.Dispatch(new UIState.ApplyTheme(theme));
-        StateHasChanged();
         return Task.CompletedTask;
     }
 }
