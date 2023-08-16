@@ -1,7 +1,7 @@
 ﻿using Android.App;
 using Android.Runtime;
 
-namespace BTCPayApp.Maui;
+namespace BTCPayApp.Maui.Platforms.Android;
 
 [Application]
 public class MainApplication : MauiApplication

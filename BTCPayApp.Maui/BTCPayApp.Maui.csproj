@@ -2,6 +2,8 @@
 
     <PropertyGroup>
         <TargetFrameworks>net7.0-ios;net7.0-android;</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net7.0-android;</TargetFrameworks>
+
         <OutputType>Exe</OutputType>
         <RootNamespace>BTCPayApp.Maui</RootNamespace>
         <UseMaui>true</UseMaui>
@@ -10,7 +12,7 @@
         <EnableDefaultCssItems>false</EnableDefaultCssItems>
 
         <!-- Display name -->
-        <ApplicationTitle>BTCPayApp.Maui</ApplicationTitle>
+        <ApplicationTitle>BTCPay Server</ApplicationTitle>
 
         <!-- App Identifier -->
         <ApplicationId>org.btcpayserver.BTCPayApp.maui</ApplicationId>
@@ -26,14 +28,13 @@
 
     <ItemGroup>
         <!-- App Icon -->
-        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appicon.svg" Color="#FFFFFF" />
 
         <!-- Splash Screen -->
-        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#512BD4" BaseSize="128,128" />
+        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#FFFFFF" />
 
         <!-- Images -->
         <MauiImage Include="Resources\Images\*" />
-        <MauiImage Update="Resources\Images\dotnet_bot.svg" BaseSize="168,208" />
 
         <!-- Custom Fonts -->
         <MauiFont Include="Resources\Fonts\*" />
@@ -47,11 +48,13 @@
       <ProjectReference Include="..\BTCPayApp.UI\BTCPayApp.UI.csproj" />
     </ItemGroup>
 
+    <!--    
     <ItemGroup>
       <Content Include="..\BTCPayApp.UI\wwwroot\index.html">
         <Link>wwwroot\index.html</Link>
       </Content>
     </ItemGroup>
+    -->
 
     <ItemGroup>
       <PackageReference Include="Xamarin.Essentials" Version="1.7.7" />

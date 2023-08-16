@@ -78,8 +78,6 @@ public class DesktopConfigProvider : IConfigProvider
     }
 }
 
-
-
 public class DesktopDataDirectoryProvider : IDataDirectoryProvider
 {
     private readonly IConfiguration _configuration;
@@ -90,7 +88,6 @@ public class DesktopDataDirectoryProvider : IDataDirectoryProvider
     }
     public virtual Task<string> GetAppDataDirectory()
     {
-
         var dirName = _configuration.GetValue<string>("BTCPAYAPP_DIRNAME", "BTCPayApp");
         return Task.FromResult(GetDirectory(dirName));
     }
@@ -98,7 +95,6 @@ public class DesktopDataDirectoryProvider : IDataDirectoryProvider
     private string GetDirectory(
         string appDirectory)
     {
-
         var environmentVariable1 = _configuration.GetValue<string>("HOME");
         var environmentVariable2 = _configuration.GetValue<string>("APPDATA");
         string str;

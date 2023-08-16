@@ -13,8 +13,6 @@ using Xunit.Sdk;
 
 namespace BTCPayApp.Tests;
 
-
-
 class BTCPayAppTestServer : BaseWebApplicationFactory<Program>
 {
     public BTCPayAppTestServer(ITestOutputHelper output, bool newDir = true, Dictionary<string, string>? config = null) : base(output, config)
@@ -27,7 +25,6 @@ class BTCPayAppTestServer : BaseWebApplicationFactory<Program>
 }
 
 class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
-
 {
     protected IHost? _host;
     protected readonly ITestOutputHelper _output;
@@ -52,14 +49,14 @@ class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
         _output = output;
 
         _config = config ?? new();
-        
+
 
         _playwrightInstallTask ??= Task.Run(InstallPlaywright);
     }
 
     public class LifetimeBridge
     {
-        
+
         public LifetimeBridge(IHostApplicationLifetime  lifetime, IServer server, TaskCompletionSource<string[]> tcs )
         {
             lifetime.ApplicationStarted.Register(() =>
@@ -140,7 +137,7 @@ class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
         {
             Headless = false,
         });
-        
+
         return await Browser.NewContextAsync(new BrowserNewContextOptions());
     }
 

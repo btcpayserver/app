@@ -29,7 +29,7 @@ public static class Program
             .SetResizable(true)
             .SetZoom(0)
             // .SetIconFile("favicon.ico")
-            .SetTitle("BTCPayApp");
+            .SetTitle("BTCPay Server");
 
         app.MainWindow.Center();
         Size? size = null;
