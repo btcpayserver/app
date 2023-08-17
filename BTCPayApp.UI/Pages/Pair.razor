@@ -5,9 +5,8 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Pair with your BTCPay Server</PageTitle>
-<MudContainer Class="mt-16" MaxWidth="MaxWidth.Medium">
-    <PairBTCPayServer OnPair="OnPair"></PairBTCPayServer>
-</MudContainer>
+
+<PairBTCPayServer OnPair="OnPair"></PairBTCPayServer>
 
 @code {
     private void OnPair(BTCPayPairConfig obj)

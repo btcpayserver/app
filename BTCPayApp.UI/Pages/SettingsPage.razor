@@ -4,9 +4,8 @@
 @inject IDispatcher Dispatcher
 
 <PageTitle>Settings</PageTitle>
-<MudContainer Fixed="true">
-    <Settings Theme="@UiState.Value.SelectedTheme" OnThemeChange="SetTheme" />
-</MudContainer>
+
+<Settings Theme="@UiState.Value.SelectedTheme" OnThemeChange="SetTheme" />
 
 @code {
     private Task SetTheme(string theme)

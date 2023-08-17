@@ -2,6 +2,7 @@
 
 public static class Routes
 {
+    public const string Dashboard = "/";
     public const string FirstRun = "/firstrun";
     public const string Settings = "/settings";
     public const string Pair = "/pair";

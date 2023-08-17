@@ -5,9 +5,9 @@ namespace BTCPayApp.UI.Features;
 [FeatureState]
 public class UIState
 {
-    public string SelectedTheme { get; set; } = Constants.SystemTheme;
-    public string SystemTheme { get; set; } = Constants.LightTheme;
-    public bool IsDarkMode { get; set; } = false;
+    public string SelectedTheme { get; init; } = Constants.SystemTheme;
+    private string SystemTheme { get; init; } = Constants.LightTheme;
+    public bool IsDarkMode { get; set; }
 
     public record ApplySystemPreference(string Theme);
     public record ApplyTheme(string Theme);

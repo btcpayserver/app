@@ -7,7 +7,7 @@
     <NotFound>
         <PageTitle>Not found</PageTitle>
         <LayoutView Layout="@typeof(MainLayout)">
-            <p role="alert">Sorry, there's nothing at this address.</p>
+            <MudAlert Severity="Severity.Warning">This page does not exist.</MudAlert>
         </LayoutView>
     </NotFound>
 </Router>

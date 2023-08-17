@@ -1,6 +1,7 @@
 ﻿@using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Pages
 @inherits Fluxor.Blazor.Web.Components.FluxorLayout
+@inject IState<RootState> RootState
 @inject IState<UIState> UiState
 @inject IDispatcher Dispatcher
 
@@ -12,16 +13,20 @@
 <MudLayout>
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle"/>
-        <MudText Typo="Typo.h5" Class="ml-3">BTCPay Server</MudText>
+        <MudImage Src="_content/BTCPayApp.UI/img/logo.svg" Height="24" Alt="BTCPay Server" Class="ml-3" />
+        <MudText Typo="Typo.h6" Class="ml-3">BTCPay Server</MudText>
     </MudAppBar>
     <MudDrawer @bind-Open="_isDrawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
         <MudNavMenu>
-            <MudNavLink Href="@Routes.FirstRun" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+            <MudNavLink Href="@Routes.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
             <MudNavLink Href="@Routes.Settings" Match="NavLinkMatch.All">Settings</MudNavLink>
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
-        @Body
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" Class="@(RootState.Value.Loading ? null : "invisible")"/>
+        <MudContainer Fixed="true" Class="py-4">
+            @Body
+        </MudContainer>
     </MudMainContent>
 </MudLayout>
 

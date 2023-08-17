@@ -1,0 +1,31 @@
+﻿@page "/"
+@using BTCPayApp.UI.Features
+@inject IState<RootState> State
+
+<PageTitle>BTCPay Server</PageTitle>
+
+@if (!State.Value.Loading)
+{
+    @if (State.Value.WalletConfig is not null)
+    {
+        <MudAlert Severity="Severity.Success">Your wallet is configured.</MudAlert>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Error">Your wallet is not configured — <a href="@Routes.WalletSetup">set up a wallet</a>.</MudAlert>
+    }
+    @if (State.Value.PairConfig is not null)
+    {
+        <MudAlert Severity="Severity.Success">Your BTCPay Server is paired. Connection status is: @ConnectionStatus</MudAlert>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Error">No BTCPay Server paired — <a href="@Routes.Pair">configure connection</a>.</MudAlert>
+    }
+
+    <MudAlert Severity="Severity.Normal">Lightning Node: @State.Value.LightningNodeState</MudAlert>
+}
+
+@code {
+    private string ConnectionStatus => State.Value.BTCPayServerConnectionState?.ToString() ?? "Not connected";
+}
