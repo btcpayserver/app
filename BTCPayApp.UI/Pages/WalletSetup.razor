@@ -10,6 +10,8 @@
 
 <PageTitle>Wallet Setup</PageTitle>
 
+<MudText Typo="Typo.h5" Class="mb-4">Wallet Setup</MudText>
+
 <BTCPayServerOnchainWalletConfigure
     ConfiguredWallet="@State.Value.PairConfig?.PairingResult?.ExistingWallet"
     IsConfiguredWalletHot="@(State.Value.PairConfig?.PairingResult?.ExistingWalletSeed is not null)"

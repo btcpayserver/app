@@ -4,6 +4,8 @@
 
 <PageTitle>BTCPay Server</PageTitle>
 
+<MudText Typo="Typo.h5" Class="mb-4">Dashboard</MudText>
+
 @if (!State.Value.Loading)
 {
     @if (State.Value.WalletConfig is not null)
@@ -13,13 +15,12 @@
     else
     {
         <MudAlert Severity="Severity.Error">
-            Your wallet is not configured.
-            <MudButton Href="@Routes.WalletSetup"
-                       Variant="Variant.Filled"
-                       EndIcon="@Icons.Custom.Brands.GitHub"
-                       Color="Color.Primary">
-                Set up a wallet
-            </MudButton>
+            <div class="d-flex align-center justify-space-between gap-3">
+                Your wallet is not configured.
+                <MudButton Href="@Routes.WalletSetup" Variant="Variant.Text" Color="Color.Error" Size="Size.Small">
+                    Set up a wallet
+                </MudButton>
+            </div>
         </MudAlert>
     }
     @if (State.Value.PairConfig is not null)
@@ -28,7 +29,14 @@
     }
     else
     {
-        <MudAlert Severity="Severity.Error">No BTCPay Server paired — <a href="@Routes.Pair">configure connection</a>.</MudAlert>
+        <MudAlert Severity="Severity.Error">
+            <div class="d-flex align-center justify-space-between gap-3">
+                No BTCPay Server paired.
+                <MudButton Href="@Routes.Pair" Variant="Variant.Text" Color="Color.Error" Size="Size.Small">
+                    Configure connection
+                </MudButton>
+            </div>
+        </MudAlert>
     }
 
     <MudAlert Severity="Severity.Normal">Lightning Node: @State.Value.LightningNodeState</MudAlert>

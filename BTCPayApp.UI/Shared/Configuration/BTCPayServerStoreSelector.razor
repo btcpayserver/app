@@ -25,9 +25,9 @@
 </MudList>
 
 @code {
-
     [Parameter]
     public bool Disabled { get; set; }
+
     [Parameter]
     public string? SelectedStoreId { get; set; }
 
@@ -38,7 +38,7 @@
     public EventCallback OnCreateStore { get; set; }
 
     [Parameter]
-    public Uri Uri { get; set; }
+    public string Url { get; set; }
 
     [Parameter]
     public string Key { get; set; }
@@ -59,7 +59,7 @@
         {
             _cts = new CancellationTokenSource();
             Loading = true;
-            var client = new BTCPayServerClient(Uri, Key);
+            var client = new BTCPayServerClient(new Uri(Url), Key);
             Stores = await client.GetStores(_cts.Token);
         }
         finally
@@ -67,7 +67,6 @@
             Loading = false;
         }
     }
-
 
     private void OnSelectedValue(object obj)
     {

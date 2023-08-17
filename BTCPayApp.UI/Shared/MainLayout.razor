@@ -16,15 +16,15 @@
         <MudImage Src="_content/BTCPayApp.UI/img/logo.svg" Height="24" Alt="BTCPay Server" Class="ml-3" />
         <MudText Typo="Typo.h6" Class="ml-3">BTCPay Server</MudText>
     </MudAppBar>
-    <MudDrawer @bind-Open="_isDrawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
-        <MudNavMenu>
-            <MudNavLink Href="@Routes.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
-            <MudNavLink Href="@Routes.Settings" Match="NavLinkMatch.All">Settings</MudNavLink>
+    <MudDrawer @bind-Open="_isDrawerOpen" ClipMode="DrawerClipMode.Always" Class="py-5">
+        <MudNavMenu Color="Color.Success" Bordered="true">
+            <MudNavLink Href="@Routes.Dashboard" Icon="@Icons.Material.Filled.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+            <MudNavLink Href="@Routes.Settings" Icon="@Icons.Material.Filled.Settings" Match="NavLinkMatch.All">Settings</MudNavLink>
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" Class="@(RootState.Value.Loading ? null : "invisible")"/>
-        <MudContainer Fixed="true" Class="py-4">
+        <MudContainer Fixed="true" Class="py-5">
             @Body
         </MudContainer>
     </MudMainContent>
