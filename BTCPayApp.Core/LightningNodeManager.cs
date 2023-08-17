@@ -93,7 +93,7 @@ public class LightningNodeManager: IHostedService
         NodeKey = nodeKey;
         
         State = LightningNodeState.WaitingForBackend;
-        while(_configManager.WalletConfig?.StandaloneMode is true && _connection.Connection?.State is not HubConnectionState.Connected)
+        while(_configManager.WalletConfig?.StandaloneMode is not true && _connection.Connection?.State is not HubConnectionState.Connected)
         {
             await Task.Delay(500);
         }

@@ -78,7 +78,7 @@ else if (Result.StoreId is null)
                 await OnPair.InvokeAsync(new BTCPayPairConfig
                 {
                     PairingResult = Result,
-                    PairingInstanceUri = PairingUrl
+                    PairingInstanceUri = PairingUrl.Substring(0, PairingUrl.IndexOf("/btcpayapp"))
                 });
             }
         }
