@@ -2,31 +2,33 @@
 @using BTCPayApp.UI.Features
 @inject IState<RootState> State
 
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 <PageTitle>BTCPay</PageTitle>
+@if (State.Value.Loading)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
+}
 <MudContainer Fixed="true">
-    @if (State.Value.Loading)
+
+    @if (State.Value.WalletConfig is not null)
     {
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
+        <MudAlert Severity="Severity.Success">Wallet configured</MudAlert>
     }
     else
     {
-        if (State.Value.WalletConfig is not null)
-        {
-            <MudAlert Severity="Severity.Success">Wallet configured</MudAlert>
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Error">Wallet NOT configured. <a href="@Routes.WalletSetup">Configure</a> </MudAlert>
-        }
-        if (State.Value.PairConfig is not null)
-        {
-            <MudAlert Severity="Severity.Success">BTCPay configured. Connection status is: @ConnectionStatus</MudAlert>
-        }
-        else
-        {
-            <MudAlert Severity="Severity.Error">BTCPay NOT configured. <a href="@Routes.Pair">Configure</a></MudAlert>
-        }
+        <MudAlert Severity="Severity.Error">Wallet NOT configured. <a href="@Routes.WalletSetup">Configure</a> </MudAlert>
     }
+    @if (State.Value.PairConfig is not null)
+    {
+        <MudAlert Severity="Severity.Success">BTCPay configured. Connection status is: @ConnectionStatus</MudAlert>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Error">BTCPay NOT configured. <a href="@Routes.Pair">Configure</a></MudAlert>
+    }
+
+    <MudAlert Severity="Severity.Normal">Lightning Node: @State.Value.LightningNodeState</MudAlert>
+
 </MudContainer>
 
 @code {

@@ -16,8 +16,3 @@ public class WalletConfig
     public bool StandaloneMode { get; set; } = false;
 }
 
-
-public class BTCPayConfig
-{
-    public BTCPayPairConfig[] Pairings { get; set; }
-}

@@ -10,14 +10,19 @@ public class StateMiddleware : Middleware
     private readonly IConfigProvider _configProvider;
     private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
     private readonly BTCPayConnection _btcPayConnection;
+    private readonly LightningNodeManager _lightningNodeManager;
 
     private const string UiStateConfigKey = "uistate";
 
-    public StateMiddleware(IConfigProvider configProvider, BTCPayAppConfigManager btcPayAppConfigManager, BTCPayConnection btcPayConnection)
+    public StateMiddleware(IConfigProvider configProvider, 
+        BTCPayAppConfigManager btcPayAppConfigManager, 
+        BTCPayConnection btcPayConnection, 
+        LightningNodeManager lightningNodeManager)
     {
         _configProvider = configProvider;
         _btcPayAppConfigManager = btcPayAppConfigManager;
         _btcPayConnection = btcPayConnection;
+        _lightningNodeManager = lightningNodeManager;
     }
 
     public override async Task InitializeAsync(IDispatcher dispatcher, IStore store)
@@ -56,5 +61,7 @@ public class StateMiddleware : Middleware
         });
         _btcPayConnection.ConnectionChanged += (sender, args) =>
             dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(_btcPayConnection.Connection?.State));
+        _lightningNodeManager.StateChanged += (sender, args) =>
+            dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(args));
     }
 }

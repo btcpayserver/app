@@ -10,10 +10,13 @@ public static class StartupExtensions
         serviceCollection.AddHttpClient();
         serviceCollection.AddSingleton<BTCPayConnection>();
         serviceCollection.AddSingleton<BTCPayAppConfigManager>();
+        serviceCollection.AddSingleton<LightningNodeManager>();
         serviceCollection.AddSingleton<IHostedService>(provider =>
             provider.GetRequiredService<BTCPayAppConfigManager>());
         serviceCollection.AddSingleton<IHostedService>(provider =>
             provider.GetRequiredService<BTCPayConnection>());
+        serviceCollection.AddSingleton<IHostedService>(provider =>
+            provider.GetRequiredService<LightningNodeManager>());
         return serviceCollection;
     }
 }

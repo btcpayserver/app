@@ -9,9 +9,9 @@ namespace BTCPayApp.UI.Features;
 
 [FeatureState]
 public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig? WalletConfig,
-    HubConnectionState? BTCPayServerConnectionState)
+    HubConnectionState? BTCPayServerConnectionState, LightningNodeState LightningNodeState)
 {
-    public RootState() : this(true, null, null, null)
+    public RootState() : this(true, null, null, null, LightningNodeState.NotConfigured)
     {
     }
 
@@ -51,6 +51,14 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
         public override RootState Reduce(RootState state, BTCPayConnectionUpdatedAction action)
         {
             return state with {Loading = false, BTCPayServerConnectionState = action.ConnectionState};
+        }
+    }
+
+    protected class LightningNodeStateUpdatedReducer : Reducer<RootState, LightningNodeStateUpdatedAction>
+    {
+        public override RootState Reduce(RootState state, LightningNodeStateUpdatedAction action)
+        {
+            return state with {Loading = false, LightningNodeState = action.State};
         }
     }
 
@@ -111,10 +119,15 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
             if (action.Config is null && _state.Value.PairConfig is not null &&
                 !_navigationManager.Uri.EndsWith(Routes.WalletSetup))
                 dispatcher.Dispatch(new GoAction(Routes.FirstRun));
+            
+            if (action.Config is not null && _state.Value.PairConfig is not null &&
+                _navigationManager.Uri.EndsWith(Routes.WalletSetup))
+                dispatcher.Dispatch(new GoAction(Routes.Splash));
 
             await _btcPayAppConfigManager.UpdateConfig(action.Config);
         }
     }
 
     public record BTCPayConnectionUpdatedAction(HubConnectionState? ConnectionState);
+    public record LightningNodeStateUpdatedAction(LightningNodeState State);
 }

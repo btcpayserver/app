@@ -7,4 +7,5 @@ public static class Routes
     public const string Pair = "/pair";
     public const string Standalone = "/standalone";
     public const string WalletSetup = "/wallet/setup";
+    public const string Splash = "/";
 }
