@@ -18,10 +18,10 @@
 }
 
 <ValidationEditContext Model="this" @ref="_validationEditContext" Validate="Validate" OnValidSubmit="OnSubmit">
-    <MudRadioGroup Label="Wallet Creation Options" @bind-Value="SelectedOption" For="() => SelectedOption">
+    <MudRadioGroup Label="Wallet Creation Options" @bind-SelectedOption="@SelectedOption" For="() => SelectedOption">
         @foreach (var option in Options)
         {
-            <MudRadio T="string" Value="@option.Key">@option.Value</MudRadio>
+            <MudRadio T="string" Option="@option.Key">@option.Value</MudRadio>
         }
     </MudRadioGroup>
     @if (IsMnemonicRequired)
@@ -148,5 +148,5 @@
         Mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve).ToString();
     }
 
-    public record ChosenConfiguration(bool UseExisting, bool SetStore, string Mnemonic);
+    public record ChosenConfiguration(bool UseExisting, bool SetStore, string? Mnemonic);
 }
