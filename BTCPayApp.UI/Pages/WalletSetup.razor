@@ -18,20 +18,23 @@
 @code {
     private async Task Callback(BTCPayServerOnchainWalletConfigure.ChosenConfiguration obj)
     {
+        var config = State.Value.PairConfig;
+        if (config is null) return;
+
         var kp = new KeyPath("m/84'/0'/0'");
-        var seed = new Mnemonic(obj.Mnemonic ?? State.Value.PairConfig.PairingResult.ExistingWalletSeed);
+        var seed = new Mnemonic(obj.Mnemonic ?? config.PairingResult.ExistingWalletSeed);
         var mKey = seed.DeriveExtKey();
         var xpub = mKey.Derive(kp).Neuter().ToString(Network.Main);
-        if (obj is {UseExisting: false,SetStore: true})
+        if (obj is { UseExisting: false, SetStore: true })
         {
-            await BTCPayConnection.Client.UpdateStoreOnChainPaymentMethod(State.Value.PairConfig.PairingResult.StoreId, "BTC", new UpdateOnChainPaymentMethodRequest()
+            await BTCPayConnection.Client.UpdateStoreOnChainPaymentMethod(config.PairingResult.StoreId, "BTC", new UpdateOnChainPaymentMethodRequest
             {
                 Enabled = true,
                 DerivationScheme = xpub,
                 AccountKeyPath = new RootedKeyPath(mKey, kp)
             });
         }
-        Dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(new WalletConfig()
+        Dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(new WalletConfig
         {
             Mnemonic = seed.ToString(),
             DerivationPath = kp.ToString(),

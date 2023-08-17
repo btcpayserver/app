@@ -12,7 +12,15 @@
     }
     else
     {
-        <MudAlert Severity="Severity.Error">Your wallet is not configured — <a href="@Routes.WalletSetup">set up a wallet</a>.</MudAlert>
+        <MudAlert Severity="Severity.Error">
+            Your wallet is not configured.
+            <MudButton Href="@Routes.WalletSetup"
+                       Variant="Variant.Filled"
+                       EndIcon="@Icons.Custom.Brands.GitHub"
+                       Color="Color.Primary">
+                Set up a wallet
+            </MudButton>
+        </MudAlert>
     }
     @if (State.Value.PairConfig is not null)
     {

@@ -60,7 +60,7 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
                 }
                 else
                 {
-                    
+
                     InvokeConnectionChange();
                     await Task.Delay(5000);
                 }
@@ -117,7 +117,6 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
         InvokeConnectionChange();
         _subscription = Connection.Register<IBTCPayAppServerClient>(this);
         _hubProxy = Connection.CreateHubProxy<IBTCPayAppServerHub>();
-        
     }
 
 
@@ -130,7 +129,7 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
 
     public Task<string> ClientMethod1(string user, string message)
     {
-        _logger.LogInformation($"ClientMethod1: {user}, {message}");
+        _logger.LogInformation("ClientMethod1: {User}, {Message}", user, message);
         return Task.FromResult($"[Success] Call ClientMethod1 : {user}, {message}");
     }
 
@@ -142,7 +141,7 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
 
     public Task<string> ClientMethod3(string user, string message, CancellationToken cancellationToken)
     {
-        _logger.LogInformation($"ClientMethod3: {user}, {message}");
+        _logger.LogInformation("ClientMethod3: {User}, {Message}", user, message);
         return Task.FromResult($"[Success] Call ClientMethod3 : {user}, {message}");
     }
 
@@ -156,7 +155,7 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
     public Task OnReconnected(string? connectionId)
     {
         InvokeConnectionChange();
-        _logger.LogInformation($"OnReconnected: {connectionId}");
+        _logger.LogInformation("OnReconnected: {ConnectionId}", connectionId);
         return Task.CompletedTask;
     }
 
@@ -164,6 +163,18 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
     {
         InvokeConnectionChange();
         _logger.LogError(exception, "OnReconnecting");
+        return Task.CompletedTask;
+    }
+
+    public Task OnTransactionDetected(string txid)
+    {
+        _logger.LogInformation("OnTransactionDetected: {Txid}", txid);
+        return Task.CompletedTask;
+    }
+
+    public Task NewBlock(string block)
+    {
+        _logger.LogInformation("NewBlock: {Block}", block);
         return Task.CompletedTask;
     }
 }
