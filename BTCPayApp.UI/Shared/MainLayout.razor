@@ -1,12 +1,12 @@
 ﻿@using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Pages
 @inherits Fluxor.Blazor.Web.Components.FluxorLayout
-@inject IState<RootState> RootState
-@inject IState<UIState> UiState
+@inject IStateSelection<RootState, bool> LoadingStateSelection
+@inject IStateSelection<UIState, bool> DarkModeStateSelection
 @inject IDispatcher Dispatcher
 
 <PageTitle>BTCPay Server</PageTitle>
-<MudThemeProvider @ref="@_mudThemeProvider" @bind-IsDarkMode="@UiState.Value.IsDarkMode" Theme="Constants.Theme"/>
+<MudThemeProvider @ref="@_mudThemeProvider" IsDarkMode="@DarkModeStateSelection.Value" Theme="Constants.Theme"/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 
@@ -23,7 +23,7 @@
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" Class="@(RootState.Value.Loading.Count > 0 ? null : "invisible")"/>
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" Class="@(RootState.Value.Count > 0 ? null : "invisible")"/>
         <MudContainer Fixed="true" Class="py-5">
             @Body
         </MudContainer>
@@ -38,6 +38,13 @@
     void DrawerToggle()
     {
         _isDrawerOpen = !_isDrawerOpen;
+    }
+
+    protected override void OnInitialized()
+    {
+        LoadingStateSelection.Select(state => state.Value.Loading);
+        DarkModeStateSelection.Select(state => state.IsDarkMode);
+        base.OnInitialized();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
