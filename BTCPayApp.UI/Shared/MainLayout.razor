@@ -23,7 +23,7 @@
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" Class="@(RootState.Value.Loading ? null : "invisible")"/>
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" Class="@(RootState.Value.Loading.Count > 0 ? null : "invisible")"/>
         <MudContainer Fixed="true" Class="py-5">
             @Body
         </MudContainer>

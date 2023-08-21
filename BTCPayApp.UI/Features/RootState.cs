@@ -8,10 +8,17 @@ using Microsoft.AspNetCore.SignalR.Client;
 namespace BTCPayApp.UI.Features;
 
 [FeatureState]
-public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig? WalletConfig,
+public record RootState(HashSet<RootState.LoadingHandles> Loading, BTCPayPairConfig? PairConfig, WalletConfig? WalletConfig,
     HubConnectionState? BTCPayServerConnectionState, LightningNodeState LightningNodeState)
 {
-    public RootState() : this(true, null, null, null, LightningNodeState.NotConfigured)
+    public enum LoadingHandles
+    {
+        UiState,
+        PairConfig,
+        WalletConfig
+    }
+
+    public RootState() : this(new HashSet<LoadingHandles>(), null, null, null, LightningNodeState.NotConfigured)
     {
     }
 
@@ -19,14 +26,16 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
 
     public record WalletConfigLoadedAction(WalletConfig? Config);
 
-
-    public record LoadingAction(bool Loading);
+    public record LoadingAction(LoadingHandles LoadingHandle, bool IsLoading);
 
     protected class LoadingReducer : Reducer<RootState, LoadingAction>
     {
         public override RootState Reduce(RootState state, LoadingAction action)
         {
-            return state with {Loading = action.Loading};
+            var loading = state.Loading;
+            var handle = action.LoadingHandle;
+            _ = action.IsLoading ? loading.Add(handle) : loading.Remove(handle);
+            return state with { Loading = loading };
         }
     }
 
@@ -34,7 +43,7 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
     {
         public override RootState Reduce(RootState state, PairConfigLoadedAction action)
         {
-            return state with {Loading = false, PairConfig = action.Config};
+            return state with { PairConfig = action.Config };
         }
     }
 
@@ -42,7 +51,7 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
     {
         public override RootState Reduce(RootState state, WalletConfigLoadedAction action)
         {
-            return state with {Loading = false, WalletConfig = action.Config};
+            return state with { WalletConfig = action.Config };
         }
     }
 
@@ -50,7 +59,7 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
     {
         public override RootState Reduce(RootState state, BTCPayConnectionUpdatedAction action)
         {
-            return state with {Loading = false, BTCPayServerConnectionState = action.ConnectionState};
+            return state with { BTCPayServerConnectionState = action.ConnectionState };
         }
     }
 
@@ -58,7 +67,7 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
     {
         public override RootState Reduce(RootState state, LightningNodeStateUpdatedAction action)
         {
-            return state with {Loading = false, LightningNodeState = action.State};
+            return state with { LightningNodeState = action.State };
         }
     }
 
@@ -84,11 +93,13 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
                 case null when _state.Value.WalletConfig is null && !_navigationManager.Uri.EndsWith(Routes.Pair):
                     dispatcher.Dispatch(new GoAction(Routes.FirstRun));
                     break;
+
                 //if wallet is configured and no pair, go to the pair page
                 case null when _state.Value.WalletConfig?.StandaloneMode is not true &&
                                !_navigationManager.Uri.EndsWith(Routes.Pair):
                     dispatcher.Dispatch(new GoAction(Routes.Pair));
                     break;
+
                 //if wallet is not configured and pair is configured, go to the wallet page
                 case not null when _state.Value.WalletConfig is null &&
                                    !_navigationManager.Uri.EndsWith(Routes.WalletSetup):
@@ -119,7 +130,7 @@ public record RootState(bool Loading, BTCPayPairConfig? PairConfig, WalletConfig
             if (action.Config is null && _state.Value.PairConfig is not null &&
                 !_navigationManager.Uri.EndsWith(Routes.WalletSetup))
                 dispatcher.Dispatch(new GoAction(Routes.FirstRun));
-            
+
             if (action.Config is not null && _state.Value.PairConfig is not null &&
                 _navigationManager.Uri.EndsWith(Routes.WalletSetup))
                 dispatcher.Dispatch(new GoAction(Routes.Splash));

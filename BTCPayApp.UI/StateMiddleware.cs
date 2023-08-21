@@ -14,9 +14,9 @@ public class StateMiddleware : Middleware
 
     private const string UiStateConfigKey = "uistate";
 
-    public StateMiddleware(IConfigProvider configProvider, 
-        BTCPayAppConfigManager btcPayAppConfigManager, 
-        BTCPayConnection btcPayConnection, 
+    public StateMiddleware(IConfigProvider configProvider,
+        BTCPayAppConfigManager btcPayAppConfigManager,
+        BTCPayConnection btcPayConnection,
         LightningNodeManager lightningNodeManager)
     {
         _configProvider = configProvider;
@@ -29,16 +29,17 @@ public class StateMiddleware : Middleware
     {
         if (store.Features.TryGetValue(typeof(UIState).FullName, out var uiStateFeature))
         {
+            dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.UiState, true));
             var existing = await _configProvider.Get<UIState>(UiStateConfigKey);
             if (existing is not null)
             {
                 uiStateFeature.RestoreState(existing);
             }
-
             uiStateFeature.StateChanged += async (sender, args) =>
             {
                 await _configProvider.Set(UiStateConfigKey, (UIState)uiStateFeature.GetState());
             };
+            dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.UiState, false));
         }
 
         await base.InitializeAsync(dispatcher, store);
@@ -48,20 +49,28 @@ public class StateMiddleware : Middleware
 
     private void ListenIn(IDispatcher dispatcher)
     {
-        dispatcher.Dispatch(new RootState.LoadingAction(true));
-        _btcPayAppConfigManager.PairConfigUpdated +=
-            (_, config) => dispatcher.Dispatch(new RootState.PairConfigLoadedAction(config));
+        _btcPayAppConfigManager.PairConfigUpdated += (_, config) =>
+            dispatcher.Dispatch(new RootState.PairConfigLoadedAction(config));
+
         _btcPayAppConfigManager.WalletConfigUpdated += (_, config) =>
             dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(config));
-        _ = _btcPayAppConfigManager.Loaded.Task.ContinueWith(_ =>
-        {
-            dispatcher.Dispatch(new RootState.LoadingAction(false));
-            dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(_btcPayAppConfigManager.WalletConfig));
-            dispatcher.Dispatch(new RootState.PairConfigLoadedAction(_btcPayAppConfigManager.PairConfig));
-        });
+
         _btcPayConnection.ConnectionChanged += (sender, args) =>
             dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(_btcPayConnection.Connection?.State));
+
         _lightningNodeManager.StateChanged += (sender, args) =>
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(args));
+
+        dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.WalletConfig, true));
+        dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.PairConfig, true));
+
+        _ = _btcPayAppConfigManager.Loaded.Task.ContinueWith(_ =>
+        {
+            dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(_btcPayAppConfigManager.WalletConfig));
+            dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.WalletConfig, false));
+
+            dispatcher.Dispatch(new RootState.PairConfigLoadedAction(_btcPayAppConfigManager.PairConfig));
+            dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.PairConfig, false));
+        });
     }
 }

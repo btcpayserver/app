@@ -18,6 +18,9 @@ public class BTCPayAppConfigManager : IHostedService
     public BTCPayPairConfig? PairConfig { get; private set; }
     public WalletConfig? WalletConfig { get; private set; }
 
+    private const string PairConfigKey = "pairconfig";
+    private const string WalletConfigKey = "walletconfig";
+
     public BTCPayAppConfigManager(IConfigProvider configProvider, ILogger<BTCPayAppConfigManager> logger)
     {
         _configProvider = configProvider;
@@ -40,13 +43,14 @@ public class BTCPayAppConfigManager : IHostedService
 
     private async Task LoadPairConfig()
     {
-        PairConfig = await _configProvider.Get<BTCPayPairConfig>("pairconfig");
+        PairConfig = await _configProvider.Get<BTCPayPairConfig>(PairConfigKey);
         PairConfigUpdated?.Invoke(this, PairConfig);
         _pairConfigLoaded.TrySetResult();
     }
+
     private async Task LoadWalletConfig()
     {
-        WalletConfig = await _configProvider.Get<WalletConfig>("walletconfig");
+        WalletConfig = await _configProvider.Get<WalletConfig>(WalletConfigKey);
         WalletConfigUpdated?.Invoke(this, WalletConfig);
         _walletConfigLoaded.TrySetResult();
     }
@@ -55,15 +59,16 @@ public class BTCPayAppConfigManager : IHostedService
     {
         if (config == PairConfig)
             return;
-        await _configProvider.Set("pairconfig", config);
+        await _configProvider.Set(PairConfigKey, config);
         PairConfig = config;
         PairConfigUpdated?.Invoke(this, PairConfig);
     }
+
     public async Task UpdateConfig(WalletConfig? config)
     {
         if (config == WalletConfig)
             return;
-        await _configProvider.Set("walletconfig", config);
+        await _configProvider.Set(WalletConfigKey, config);
         WalletConfig = config;
         WalletConfigUpdated?.Invoke(this, WalletConfig);
     }

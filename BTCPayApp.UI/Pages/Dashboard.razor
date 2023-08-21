@@ -6,41 +6,47 @@
 
 <MudText Typo="Typo.h5" Class="mb-4">Dashboard</MudText>
 
-@if (!State.Value.Loading)
+@if (State.Value.WalletConfig is not null)
 {
-    @if (State.Value.WalletConfig is not null)
-    {
-        <MudAlert Severity="Severity.Success">Your wallet is configured.</MudAlert>
-    }
-    else
-    {
-        <MudAlert Severity="Severity.Error">
-            <div class="d-flex align-center justify-space-between gap-3">
-                Your wallet is not configured.
-                <MudButton Href="@Routes.WalletSetup" Variant="Variant.Text" Color="Color.Error" Size="Size.Small">
-                    Set up a wallet
-                </MudButton>
-            </div>
-        </MudAlert>
-    }
-    @if (State.Value.PairConfig is not null)
-    {
-        <MudAlert Severity="Severity.Success">Your BTCPay Server is paired. Connection status is: @ConnectionStatus</MudAlert>
-    }
-    else
-    {
-        <MudAlert Severity="Severity.Error">
-            <div class="d-flex align-center justify-space-between gap-3">
-                No BTCPay Server paired.
-                <MudButton Href="@Routes.Pair" Variant="Variant.Text" Color="Color.Error" Size="Size.Small">
-                    Configure connection
-                </MudButton>
-            </div>
-        </MudAlert>
-    }
-
-    <MudAlert Severity="Severity.Normal">Lightning Node: @State.Value.LightningNodeState</MudAlert>
+    <MudAlert Severity="Severity.Success">Your wallet is configured.</MudAlert>
 }
+else if (State.Value.Loading.Contains(RootState.LoadingHandles.WalletConfig))
+{
+    <MudAlert Severity="Severity.Info">Wallet configuration loading.</MudAlert>
+}
+else
+{
+    <MudAlert Severity="Severity.Error">
+        <div class="d-flex align-center justify-space-between gap-3">
+            Your wallet is not configured.
+            <MudButton Href="@Routes.WalletSetup" Variant="Variant.Text" Color="Color.Error" Size="Size.Small">
+                Set up a wallet
+            </MudButton>
+        </div>
+    </MudAlert>
+}
+
+@if (State.Value.PairConfig is not null)
+{
+    <MudAlert Severity="Severity.Success">Your BTCPay Server is paired. Connection status is: @ConnectionStatus</MudAlert>
+}
+else if (State.Value.Loading.Contains(RootState.LoadingHandles.PairConfig))
+{
+    <MudAlert Severity="Severity.Info">Pairing configuration loading.</MudAlert>
+}
+else
+{
+    <MudAlert Severity="Severity.Error">
+        <div class="d-flex align-center justify-space-between gap-3">
+            No BTCPay Server paired.
+            <MudButton Href="@Routes.Pair" Variant="Variant.Text" Color="Color.Error" Size="Size.Small">
+                Configure connection
+            </MudButton>
+        </div>
+    </MudAlert>
+}
+
+<MudAlert Severity="Severity.Normal">Lightning Node: @State.Value.LightningNodeState</MudAlert>
 
 @code {
     private string ConnectionStatus => State.Value.BTCPayServerConnectionState?.ToString() ?? "Not connected";
