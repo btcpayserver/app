@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using BTCPayApp.CommonServer;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace BTCPayApp.Core;
@@ -9,6 +10,7 @@ public static class StartupExtensions
     {
         serviceCollection.AddHttpClient();
         serviceCollection.AddSingleton<BTCPayConnection>();
+        serviceCollection.AddSingleton<IBTCPayAppServerClient,BTCPayAppServerClient>();
         serviceCollection.AddSingleton<BTCPayAppConfigManager>();
         serviceCollection.AddSingleton<LightningNodeManager>();
         serviceCollection.AddSingleton<IHostedService>(provider =>

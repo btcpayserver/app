@@ -23,7 +23,7 @@
 }
 else if (Result.StoreId is null)
 {
-    <BTCPayServerStoreSelector Key="@Result.Key" Url="@PairingUrl" bind-SelectedStoreId="SelectedStoreId" />
+    <BTCPayServerStoreSelector Key="@Result.Key" Url="@PairingUrl" bind-SelectedStoreId="SelectedStoreId" OnCreateStore="CreateStore" />
 }
 
 @code {
@@ -94,4 +94,10 @@ else if (Result.StoreId is null)
     }
 
     private string? _selectedStoreId;
+
+    private Task CreateStore()
+    {
+        throw new NotImplementedException();
+    }
+
 }

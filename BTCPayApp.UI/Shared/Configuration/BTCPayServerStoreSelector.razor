@@ -6,25 +6,45 @@
 {
     <MudProgressLinear Color="Color.Primary" Indeterminate="true"/>
 }
-<MudList Clickable="true" SelectedValue="SelectedStoreId" SelectedValueChanged="OnSelectedValue" Disabled="Disabled">
+<MudList
+    Clickable="true"
+    SelectedValue="SelectedStoreId"
+    SelectedValueChanged="OnSelectedValue" Disabled="@(Disabled || SelectedStoreId == "create-new-store")">
+
+    <MudListItem Value="null">Select store</MudListItem>
     @if (Loading)
     {
         <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave"/>
         <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave"/>
         <MudSkeleton SkeletonType="SkeletonType.Rectangle" Animation="Animation.Wave"/>
     }
-    else if(Stores is not null)
+    else if (Stores is not null)
     {
         foreach (var store in Stores)
         {
             <MudListItem Value="store.Id">@store.Name</MudListItem>
         }
 
-        <MudListItem OnClickHandlerPreventDefault="true" OnClick="OnCreateStore" Disabled="Disabled">Create store</MudListItem>
+        <MudListItem OnClickHandlerPreventDefault="true" @Value="create-new-store">Create store</MudListItem>
     }
 </MudList>
+@if (SelectedStoreId == "create-new-store")
+{
+    <MudPaper>
+        <MudTextField Label="Store name" @bind-Value="NewStoreName" />
+        <MudButtonGroup>
+            <MudButton Color="Color.Primary" OnClick="CreateStore" Disabled="(string.IsNullOrEmpty(NewStoreName) || Loading || Disabled )">Create</MudButton>
+            <MudButton Color="Color.Secondary" OnClick="CancelStoreCreation">Cancel</MudButton>
+        </MudButtonGroup>
+    </MudPaper>
+   
+}
 
 @code {
+
+    
+
+    public string? NewStoreName { get; set; }
     [Parameter]
     public bool Disabled { get; set; }
 
@@ -33,10 +53,6 @@
 
     [Parameter]
     public EventCallback<string> SelectedStoreIdChanged { get; set; }
-
-    [Parameter]
-    public EventCallback OnCreateStore { get; set; }
-
     [Parameter]
     public string Url { get; set; }
 
@@ -57,10 +73,9 @@
     {
         try
         {
-            _cts = new CancellationTokenSource();
             Loading = true;
             var client = new BTCPayServerClient(new Uri(Url), Key);
-            Stores = await client.GetStores(_cts.Token);
+            Stores = await client.GetStores();
         }
         finally
         {
@@ -78,4 +93,29 @@
     {
         _cts?.Dispose();
     }
+
+    private void CancelStoreCreation()
+    {
+        SelectedStoreId = null;
+    }
+
+    private async Task CreateStore()
+    {
+        try
+        {
+            Loading = true;
+            var client = new BTCPayServerClient(new Uri(Url), Key);
+            var store =  await client.CreateStore(new CreateStoreRequest()
+            {
+                Name = NewStoreName
+            });
+            await LoadStores();
+            SelectedStoreId = store.Id;
+        }
+        finally
+        {
+            Loading = false;
+        }
+    }
+
 }

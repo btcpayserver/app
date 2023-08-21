@@ -7,13 +7,42 @@ using TypedSignalR.Client;
 
 namespace BTCPayApp.Core;
 
-public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConnectionObserver
+public class BTCPayAppServerClient : IBTCPayAppServerClient
+{
+    private readonly ILogger<BTCPayAppServerClient> _logger;
+
+    public BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger)
+    {
+        _logger = logger;
+    }
+    
+    public Task TransactionDetected(string txid)
+    {
+        _logger.LogInformation("OnTransactionDetected: {Txid}", txid);
+        OnTransactionDetected?.Invoke(this, txid);
+        return Task.CompletedTask;
+    }
+
+    public Task NewBlock(string block)
+    {
+        _logger.LogInformation("NewBlock: {block}", block);
+        OnNewBlock?.Invoke(this, block);
+        return Task.CompletedTask;
+    }
+    
+    
+    public event EventHandler<string>? OnNewBlock;
+    public event EventHandler<string>? OnTransactionDetected;
+}
+
+public class BTCPayConnection : IHostedService, IHubConnectionObserver
 {
     private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
     private readonly ILogger<BTCPayConnection> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IBTCPayAppServerClient _btcPayAppServerClient;
     private IDisposable? _subscription;
-    private IBTCPayAppServerHub? _hubProxy;
+    public  IBTCPayAppServerHub? HubProxy { get; private set; }
     public BTCPayServerClient? Client { get; set; }
     public HubConnection? Connection { get; private set; }
     public event EventHandler? ConnectionChanged;
@@ -27,11 +56,16 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
             ConnectionChanged?.Invoke(this, EventArgs.Empty);
         }
     }
-    public BTCPayConnection(BTCPayAppConfigManager btcPayAppConfigManager, ILogger<BTCPayConnection> logger, IHttpClientFactory httpClientFactory)
+
+    public BTCPayConnection(BTCPayAppConfigManager btcPayAppConfigManager,
+        ILogger<BTCPayConnection> logger,
+        IHttpClientFactory httpClientFactory,
+        IBTCPayAppServerClient btcPayAppServerClient)
     {
         _btcPayAppConfigManager = btcPayAppConfigManager;
         _logger = logger;
         _httpClientFactory = httpClientFactory;
+        _btcPayAppServerClient = btcPayAppServerClient;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -53,7 +87,7 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
                 if (Connection is not null && Connection.State == HubConnectionState.Disconnected)
                 {
                     _logger.LogInformation("Connecting to BTCPayServer...");
-                    var startTsk =  Connection.StartAsync();
+                    var startTsk = Connection.StartAsync();
                     InvokeConnectionChange();
                     await startTsk;
                     InvokeConnectionChange();
@@ -96,7 +130,7 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
         Client = null;
         InvokeConnectionChange();
         _subscription?.Dispose();
-        _hubProxy = null;
+        HubProxy = null;
     }
 
 
@@ -115,8 +149,8 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
             _btcPayAppConfigManager.PairConfig!.PairingResult.Key, _httpClientFactory.CreateClient("btcpayserver"));
 
         InvokeConnectionChange();
-        _subscription = Connection.Register<IBTCPayAppServerClient>(this);
-        _hubProxy = Connection.CreateHubProxy<IBTCPayAppServerHub>();
+        _subscription = Connection.Register(_btcPayAppServerClient);
+        HubProxy = Connection.CreateHubProxy<IBTCPayAppServerHub>();
     }
 
 
@@ -125,24 +159,6 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
         _btcPayAppConfigManager.PairConfigUpdated -= OnPairConfigUpdated;
         _btcPayAppConfigManager.WalletConfigUpdated -= OnWalletConfigUpdated;
         return Task.CompletedTask;
-    }
-
-    public Task<string> ClientMethod1(string user, string message)
-    {
-        _logger.LogInformation("ClientMethod1: {User}, {Message}", user, message);
-        return Task.FromResult($"[Success] Call ClientMethod1 : {user}, {message}");
-    }
-
-    public Task ClientMethod2()
-    {
-        _logger.LogInformation($"ClientMethod2");
-        return Task.CompletedTask;
-    }
-
-    public Task<string> ClientMethod3(string user, string message, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("ClientMethod3: {User}, {Message}", user, message);
-        return Task.FromResult($"[Success] Call ClientMethod3 : {user}, {message}");
     }
 
     public Task OnClosed(Exception? exception)
@@ -163,18 +179,6 @@ public class BTCPayConnection : IHostedService, IBTCPayAppServerClient, IHubConn
     {
         InvokeConnectionChange();
         _logger.LogError(exception, "OnReconnecting");
-        return Task.CompletedTask;
-    }
-
-    public Task OnTransactionDetected(string txid)
-    {
-        _logger.LogInformation("OnTransactionDetected: {Txid}", txid);
-        return Task.CompletedTask;
-    }
-
-    public Task NewBlock(string block)
-    {
-        _logger.LogInformation("NewBlock: {Block}", block);
         return Task.CompletedTask;
     }
 }

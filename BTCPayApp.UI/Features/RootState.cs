@@ -15,7 +15,8 @@ public record RootState(HashSet<RootState.LoadingHandles> Loading, BTCPayPairCon
     {
         UiState,
         PairConfig,
-        WalletConfig
+        WalletConfig,
+        TransactionState
     }
 
     public RootState() : this(new HashSet<LoadingHandles>(), null, null, null, LightningNodeState.NotConfigured)
