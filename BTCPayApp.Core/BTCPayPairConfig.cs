@@ -13,6 +13,6 @@ public class WalletConfig
 {
     public string? Mnemonic { get; set; }
     public string? DerivationPath { get; set; }
-    public bool StandaloneMode { get; set; } = false;
+    public bool StandaloneMode { get; set; }
 }
 

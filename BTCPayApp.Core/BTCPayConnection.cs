@@ -15,12 +15,17 @@ public class BTCPayAppServerClient : IBTCPayAppServerClient
     {
         _logger = logger;
     }
-    
+
     public Task TransactionDetected(string txid)
     {
         _logger.LogInformation("OnTransactionDetected: {Txid}", txid);
         OnTransactionDetected?.Invoke(this, txid);
         return Task.CompletedTask;
+    }
+
+    Task IBTCPayAppServerClient.OnTransactionDetected(string txid)
+    {
+        throw new NotImplementedException();
     }
 
     public Task NewBlock(string block)
@@ -29,8 +34,8 @@ public class BTCPayAppServerClient : IBTCPayAppServerClient
         OnNewBlock?.Invoke(this, block);
         return Task.CompletedTask;
     }
-    
-    
+
+
     public event EventHandler<string>? OnNewBlock;
     public event EventHandler<string>? OnTransactionDetected;
 }

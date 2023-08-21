@@ -1,0 +1,82 @@
+﻿@using BTCPayApp.UI.Pages
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<MudCarousel Class="mud-width-full" Style="height:400px" ShowArrows="@false" ShowBullets="@true" EnableSwipeGesture="@true" AutoCycle="@false" @bind-SelectedIndex="@Step" TData="object">
+    <MudCarouselItem Transition="@Transition.Slide">
+        <div class="d-flex flex-column gap-4" style="height:calc(100% - 4rem)">
+            <MudIcon Class="mx-auto my-auto" Icon="@Icons.Material.Filled.Wallet" Color="@Color.Primary" Size="@Size.Large" />
+            <MudText Typo="Typo.h5" Align="Align.Center">Welcome To BTCPay Server</MudText>
+            <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
+                Free and open-source bitcoin point of sale. No fees, no third-party.
+                All payments go through your node, running on your phone!
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => GoToStep(1))">Next</MudButton>
+        </div>
+    </MudCarouselItem>
+    <MudCarouselItem Transition="@Transition.Slide">
+        <div class="d-flex flex-column gap-4" style="height:calc(100% - 4rem)">
+            <MudIcon Class="mx-auto my-auto" Icon="@Icons.Material.Filled.Lock" Color="@Color.Primary" Size="@Size.Large" />
+            <MudText Typo="Typo.h5" Align="Align.Center">Keep your wallet and bitcoin secure, accounting and refunding</MudText>
+            <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
+                Cloud backups, enhanced accounting functionality and ability to easily refund your customers
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => GoToStep(2))">Next</MudButton>
+        </div>
+    </MudCarouselItem>
+    <MudCarouselItem Transition="@Transition.Slide">
+        <div class="d-flex flex-column gap-4" style="height:calc(100% - 4rem)">
+            <MudIcon Class="mx-auto my-auto" Icon="@Icons.Material.Filled.AutoAwesome" Color="@Color.Primary" Size="@Size.Large" />
+            <MudText Typo="Typo.h5" Align="Align.Center">Start Accepting Bitcoin Payments</MudText>
+            <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
+                With 0% Fees & No Third-party
+            </MudText>
+            <MudButton Size="Size.Large" Variant="Variant.Filled" Color="Color.Primary" Href="@Routes.Pair" id="btn-pair">Pair with BTCPay Server</MudButton>
+            <MudButton Size="Size.Large" Variant="Variant.Filled" Color="Color.Primary" Href="@Routes.Standalone" Disabled="true" id="btn-standalone">Use standalone</MudButton>
+        </div>
+    </MudCarouselItem>
+</MudCarousel>
+
+@*@if (Step == 0)
+{
+    <MudText Typo="Typo.h5" Align="Align.Center">Welcome To BTCPay Server</MudText>
+    <MudText Align="Align.Center">
+        Free and open-source bitcoin point of sale. No fees, no third-party.
+        All payments go through your node, running on your phone!
+    </MudText>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => GoToStep(1))">Next</MudButton>
+}
+else if (Step == 1)
+{
+    <MudText Typo="Typo.h5" Align="Align.Center">Keep your wallet and bitcoin secure, accounting and refunding</MudText>
+    <MudText Align="Align.Center">
+        Cloud backups, enhanced accounting functionality and ability to easily refund your customers
+    </MudText>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => GoToStep(2))">Next</MudButton>
+}
+else
+{
+    <MudText Typo="Typo.h5" Align="Align.Center">Start Accepting Bitcoin Payments</MudText>
+    <MudText Typo="Typo.subtitle1" Align="Align.Center">With 0% Fees & No Third-party</MudText>
+
+    <MudGrid Justify="Justify.Center" Class="mt-4">
+        <MudItem>
+            <MudButton Size="Size.Large" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" Href="@Routes.Pair" id="btn-pair">Pair with BTCPay Server</MudButton>
+        </MudItem>
+        <MudItem>
+            <MudButton Size="Size.Large" Variant="Variant.Filled" Color="Color.Primary" Class="ml-auto" Disabled="true" Href="@Routes.Standalone" id="btn-standalone">Use standalone</MudButton>
+        </MudItem>
+    </MudGrid>
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => GoToStep(1))">Next</MudButton>
+}*@
+
+@code {
+    private int Step { get; set; } = 0;
+
+    void GoToStep(int step)
+    {
+        Step = step;
+    }
+}

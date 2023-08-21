@@ -6,20 +6,19 @@ namespace BTCPayApp.Core;
 
 public class BTCPayAppConfigManager : IHostedService
 {
+    private const string PairConfigKey = "pairconfig";
+    private const string WalletConfigKey = "walletconfig";
+
     private readonly IConfigProvider _configProvider;
     private readonly ILogger<BTCPayAppConfigManager> _logger;
+    private readonly TaskCompletionSource _pairConfigLoaded = new();
+    private readonly TaskCompletionSource _walletConfigLoaded = new();
 
     public event EventHandler<BTCPayPairConfig?>? PairConfigUpdated;
     public event EventHandler<WalletConfig?>? WalletConfigUpdated;
-    private TaskCompletionSource _pairConfigLoaded = new();
-    private TaskCompletionSource _walletConfigLoaded = new();
     public TaskCompletionSource Loaded { get; private set; } = new();
-
     public BTCPayPairConfig? PairConfig { get; private set; }
     public WalletConfig? WalletConfig { get; private set; }
-
-    private const string PairConfigKey = "pairconfig";
-    private const string WalletConfigKey = "walletconfig";
 
     public BTCPayAppConfigManager(IConfigProvider configProvider, ILogger<BTCPayAppConfigManager> logger)
     {

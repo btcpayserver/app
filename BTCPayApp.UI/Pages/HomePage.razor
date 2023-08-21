@@ -1,0 +1,24 @@
+﻿@page "/"
+@using BTCPayApp.UI.Features
+@inject IState<RootState> State
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>BTCPay Server</PageTitle>
+
+@if (IsInitialized && !IsLoading)
+{
+    if (State.Value.PairConfig is null && State.Value.WalletConfig is null)
+    {
+        <Onboarding />
+    }
+    else
+    {
+        <Dashboard />
+    }
+}
+
+@code {
+    private bool IsInitialized => State.Value.PairConfigRequested && State.Value.WalletConfigRequested;
+    private bool IsLoading => State.Value.Loading.Contains(RootState.LoadingHandles.PairConfig) ||
+                              State.Value.Loading.Contains(RootState.LoadingHandles.WalletConfig);
+}

@@ -42,6 +42,8 @@ public class StateMiddleware : Middleware
             dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.UiState, false));
         }
 
+
+
         await base.InitializeAsync(dispatcher, store);
 
         ListenIn(dispatcher);
@@ -61,8 +63,15 @@ public class StateMiddleware : Middleware
         _lightningNodeManager.StateChanged += (sender, args) =>
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(args));
 
-        dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.WalletConfig, true));
-        dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.PairConfig, true));
+        if (_btcPayAppConfigManager.PairConfig is null)
+            dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.PairConfig, true));
+        else
+            dispatcher.Dispatch(new RootState.PairConfigLoadedAction(_btcPayAppConfigManager.PairConfig));
+
+        if (_btcPayAppConfigManager.WalletConfig is null)
+            dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.WalletConfig, true));
+        else
+            dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(_btcPayAppConfigManager.WalletConfig));
 
         _ = _btcPayAppConfigManager.Loaded.Task.ContinueWith(_ =>
         {

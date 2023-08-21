@@ -1,0 +1,25 @@
+﻿@page "/pair"
+@inject IDispatcher Dispatcher
+@using BTCPayApp.Core
+@using BTCPayApp.UI.Features
+@using Fluxor.Blazor.Web.Middlewares.Routing
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>Pair with your BTCPay Server</PageTitle>
+
+<MudText Typo="Typo.h5" Class="mb-4">Pair with your BTCPay Server</MudText>
+<MudText>Find the pairing URL on the Lightning Node connection page of your BTCPay Server store.</MudText>
+
+<PairBTCPayServer OnPair="OnPair"></PairBTCPayServer>
+
+@code {
+    private void OnPair(BTCPayPairConfig result)
+    {
+        Dispatcher.Dispatch(new RootState.PairConfigLoadedAction(result));
+
+        if (result.PairingResult is not null)
+        {
+            Dispatcher.Dispatch(new GoAction(Routes.Home));
+        }
+    }
+}
