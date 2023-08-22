@@ -1,12 +1,16 @@
 ﻿@using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Pages
+@using BTCPayApp.Core.Contracts
 @inherits Fluxor.Blazor.Web.Components.FluxorLayout
 @inject IStateSelection<RootState, HashSet<RootState.LoadingHandles>> LoadingStateSelection
 @inject IStateSelection<UIState, bool> DarkModeStateSelection
 @inject IDispatcher Dispatcher
+@inject IConfigProvider ConfigProvider
+@inject ISystemThemeProvider SystemThemeProvider
+@inject IStore Store
 
 <PageTitle>BTCPay Server</PageTitle>
-<MudThemeProvider @ref="@_mudThemeProvider" IsDarkMode="@DarkModeStateSelection.Value" Theme="Constants.Theme"/>
+<MudThemeProvider @ref="@_mudThemeProvider" IsDarkMode="@(_darkMode??DarkModeStateSelection.Value)" Theme="Constants.Theme"/>
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 
@@ -40,27 +44,39 @@
         _isDrawerOpen = !_isDrawerOpen;
     }
 
-    protected override void OnInitialized()
+    private bool? _darkMode;
+
+    protected override async Task OnInitializedAsync()
     {
         LoadingStateSelection.Select(state => state.Loading);
         DarkModeStateSelection.Select(state => state.IsDarkMode);
-        base.OnInitialized();
+        if (_darkMode is null && !Store.Initialized.IsCompleted)
+        {
+            var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
+            if (state != null)
+            {
+                _darkMode = state.IsDarkMode;
+                _ = Store.Initialized.ContinueWith(task => _darkMode = null);
+            }
+        }
+
+        await base.OnInitializedAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            var isDarkMode = await _mudThemeProvider.GetSystemPreference();
-            await ApplySystemPreference(isDarkMode);
-            await _mudThemeProvider.WatchSystemPreference(ApplySystemPreference);
+            if (SystemThemeProvider is MudBlazorThemeProvider mudThemeProvider)
+                mudThemeProvider.MudThemeProvider = _mudThemeProvider;
+            ApplySystemPreference(this, await _mudThemeProvider.GetSystemPreference());
+            SystemThemeProvider.SystemThemeChanged += ApplySystemPreference;
         }
     }
 
-    private Task ApplySystemPreference(bool isDarkMode)
+    private void ApplySystemPreference(object? sender, bool isDarkMode)
     {
         var systemTheme = isDarkMode ? Constants.DarkTheme : Constants.LightTheme;
         Dispatcher.Dispatch(new UIState.ApplySystemPreference(systemTheme));
-        return Task.CompletedTask;
     }
 }

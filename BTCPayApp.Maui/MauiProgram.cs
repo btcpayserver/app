@@ -25,6 +25,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDataDirectoryProvider, XamarinDataDirectoryProvider>();
         builder.Services.AddSingleton<IConfigProvider, XamarinEssentialsConfigProvider>();
         builder.Services.AddSingleton<ISecureConfigProvider, XamarinEssentialsSecureConfigProvider>();
+        builder.Services.AddSingleton<ISystemThemeProvider, XamarinSystemThemeProvider>();
         return builder.Build();
     }
 }

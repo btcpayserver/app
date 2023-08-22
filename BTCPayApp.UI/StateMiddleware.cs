@@ -12,7 +12,7 @@ public class StateMiddleware : Middleware
     private readonly BTCPayConnection _btcPayConnection;
     private readonly LightningNodeManager _lightningNodeManager;
 
-    private const string UiStateConfigKey = "uistate";
+    public const string UiStateConfigKey = "uistate";
 
     public StateMiddleware(IConfigProvider configProvider,
         BTCPayAppConfigManager btcPayAppConfigManager,
