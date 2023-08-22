@@ -42,8 +42,6 @@ public class StateMiddleware : Middleware
             dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.UiState, false));
         }
 
-
-
         await base.InitializeAsync(dispatcher, store);
 
         ListenIn(dispatcher);
@@ -80,6 +78,8 @@ public class StateMiddleware : Middleware
 
             dispatcher.Dispatch(new RootState.PairConfigLoadedAction(_btcPayAppConfigManager.PairConfig));
             dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.PairConfig, false));
+
+            dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(_btcPayConnection.Connection?.State));
         });
     }
 }

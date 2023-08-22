@@ -14,7 +14,17 @@
 }
 else if (State.Value.PairConfig is not null)
 {
-    <MudAlert Severity="@ConnectionSeverity">Your BTCPay Server is paired. Connection status is @ConnectionStatus</MudAlert>
+    <MudAlert Severity="@ConnectionSeverity">
+        <div class="d-flex align-center justify-space-between gap-3">
+            Your BTCPay Server is paired. Connection status is @ConnectionStatus.
+            @if (State.Value.BTCPayServerConnectionState == HubConnectionState.Disconnected)
+            {
+                <MudButton Href="@Routes.Pair" Variant="Variant.Text" Color="Color.Error" Size="Size.Small">
+                    Configure connection
+                </MudButton>
+            }
+        </div>
+    </MudAlert>
 }
 else
 {
@@ -98,7 +108,7 @@ else
 </MudPaper>
 
 @code {
-    private string ConnectionStatus => State.Value.BTCPayServerConnectionState?.ToString() ?? "not connected";
+    private string ConnectionStatus => State.Value.BTCPayServerConnectionState?.ToString().ToLowerInvariant() ?? "not connected";
 
     private Severity ConnectionSeverity => State.Value.BTCPayServerConnectionState switch {
         HubConnectionState.Disconnected => Severity.Warning,
@@ -111,7 +121,7 @@ else
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return base.OnAfterRenderAsync(firstRender);
-        if (State.Value.BTCPayServerConnectionState is not  HubConnectionState.Connected)
+        if (State.Value.BTCPayServerConnectionState is not HubConnectionState.Connected)
             Dispatcher.Dispatch(new OnChainTransactionsState.LoadTransactionsAction(true));
         return base.OnAfterRenderAsync(firstRender);
     }

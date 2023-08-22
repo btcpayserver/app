@@ -23,18 +23,12 @@ public class BTCPayAppServerClient : IBTCPayAppServerClient
         return Task.CompletedTask;
     }
 
-    Task IBTCPayAppServerClient.OnTransactionDetected(string txid)
-    {
-        throw new NotImplementedException();
-    }
-
     public Task NewBlock(string block)
     {
         _logger.LogInformation("NewBlock: {block}", block);
         OnNewBlock?.Invoke(this, block);
         return Task.CompletedTask;
     }
-
 
     public event EventHandler<string>? OnNewBlock;
     public event EventHandler<string>? OnTransactionDetected;
@@ -99,7 +93,6 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
                 }
                 else
                 {
-
                     InvokeConnectionChange();
                     await Task.Delay(5000);
                 }
@@ -138,7 +131,6 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
         HubProxy = null;
     }
 
-
     private async Task StartOrReplace()
     {
         await Kill();
@@ -157,7 +149,6 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
         _subscription = Connection.Register(_btcPayAppServerClient);
         HubProxy = Connection.CreateHubProxy<IBTCPayAppServerHub>();
     }
-
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
