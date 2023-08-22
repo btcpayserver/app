@@ -19,7 +19,8 @@ public record RootState(
         UiState,
         PairConfig,
         WalletConfig,
-        TransactionState
+        TransactionState,
+        LightningState
     }
 
     public RootState() : this(new HashSet<LoadingHandles>(), null, null, null, LightningNodeState.NotConfigured, false, false)

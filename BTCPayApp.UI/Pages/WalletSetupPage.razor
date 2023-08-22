@@ -29,12 +29,14 @@
         var xpub = mKey.Derive(kp).Neuter().ToString(Network.Main);
         if (obj is { UseExisting: false, SetStore: true })
         {
+            Dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.WalletConfig, true));
             await BTCPayConnection.Client.UpdateStoreOnChainPaymentMethod(config.PairingResult.StoreId, "BTC", new UpdateOnChainPaymentMethodRequest
             {
                 Enabled = true,
                 DerivationScheme = xpub,
                 AccountKeyPath = new RootedKeyPath(mKey, kp)
             });
+            Dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.WalletConfig, false));
         }
         Dispatcher.Dispatch(new RootState.WalletConfigLoadedAction(new WalletConfig
         {

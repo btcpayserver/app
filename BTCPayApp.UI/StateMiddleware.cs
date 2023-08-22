@@ -61,6 +61,9 @@ public class StateMiddleware : Middleware
         _lightningNodeManager.StateChanged += (sender, args) =>
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(args));
 
+        if (_lightningNodeManager.State is not LightningNodeState.Connected)
+            dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.LightningState, true));
+
         if (_btcPayAppConfigManager.PairConfig is null)
             dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.PairConfig, true));
         else
@@ -78,6 +81,9 @@ public class StateMiddleware : Middleware
 
             dispatcher.Dispatch(new RootState.PairConfigLoadedAction(_btcPayAppConfigManager.PairConfig));
             dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.PairConfig, false));
+
+            dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(_lightningNodeManager.State));
+            dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.LightningState, false));
 
             dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(_btcPayConnection.Connection?.State));
         });

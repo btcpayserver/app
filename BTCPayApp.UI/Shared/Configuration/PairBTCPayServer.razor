@@ -2,6 +2,9 @@
 @using BTCPayApp.CommonServer
 @using BTCPayApp.Core
 @using System.Net.Http.Json
+@using BTCPayApp.UI.Features
+@inject IDispatcher Dispatcher
+@inject IState<RootState> State
 
 @if (Result is null)
 {
@@ -12,10 +15,6 @@
             <MudItem>
                 <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="_validationEditContext.Invalid">
                     Submit
-                    @if (Loading)
-                    {
-                        <MudProgressCircular Color="Color.Inherit" Size="Size.Small" Indeterminate="true"/>
-                    }
                 </MudButton>
             </MudItem>
         </MudGrid>
@@ -45,7 +44,6 @@ else if (Result.StoreId is null)
         }
     }
 
-    private bool Loading { get; set; }
     private ValidationEditContext _validationEditContext { get; set; }
     private PairSuccessResult? Result { get; set; }
 
@@ -63,9 +61,8 @@ else if (Result.StoreId is null)
     {
         try
         {
-            Loading = true;
-
             var client = HttpClientFactory.CreateClient();
+            Dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.PairConfig, true));
             var response = await client.GetAsync(PairingUrl);
             response.EnsureSuccessStatusCode();
             Result = await response.Content.ReadFromJsonAsync<PairSuccessResult>();
@@ -89,7 +86,7 @@ else if (Result.StoreId is null)
         }
         finally
         {
-            Loading = false;
+            Dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.PairConfig, false));
         }
     }
 
@@ -99,5 +96,4 @@ else if (Result.StoreId is null)
     {
         throw new NotImplementedException();
     }
-
 }

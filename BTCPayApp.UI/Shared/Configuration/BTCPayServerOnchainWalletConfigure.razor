@@ -7,21 +7,33 @@
 
 @if (ConfiguredWallet is not null)
 {
-    @if (IsConfiguredWalletHot)
-    {
-        <MudText>Your BTCPay Server store already has an onchain hot wallet configured. Would you like to:</MudText>
-    }
-    else
-    {
-        <MudText>Your BTCPay Server store already has an onchain watch-only wallet configured. Would you like to:</MudText>
-    }
+    <MudAlert Severity="Severity.Warning" Class="mb-4">
+        @if (IsConfiguredWalletHot)
+        {
+            <MudText>Your BTCPay Server store already has an onchain hot wallet configured.</MudText>
+        }
+        else
+        {
+            <MudText>Your BTCPay Server store already has an onchain watch-only wallet configured.</MudText>
+        }
+    </MudAlert>
 }
 
 <ValidationEditContext Model="this" @ref="_validationEditContext" Validate="Validate" OnValidSubmit="OnSubmit">
-    <MudRadioGroup Label="Wallet Creation Options" @bind-SelectedOption="@SelectedOption" For="() => SelectedOption">
+    <MudRadioGroup Label="Wallet Creation Options" Class="mb-4" @bind-SelectedOption="@SelectedOption" For="() => SelectedOption">
         @foreach (var option in Options)
         {
-            <MudRadio T="string" Option="@option.Key">@option.Value</MudRadio>
+            <div>
+                <MudRadio T="string" Option="@option.Key" Class="align-start">
+                    <div class="d-flex flex-wrap gap-3 pt-3">
+                        <MudText>@option.Value.Item1</MudText>
+                        @if (option.Value.Item2)
+                        {
+                            <MudChip Variant="Variant.Text" Color="Color.Warning" Size="Size.Small" Class="ma-0">Your existing wallet will be overwritten!</MudChip>
+                        }
+                    </div>
+                </MudRadio>
+            </div>
         }
     </MudRadioGroup>
     @if (IsMnemonicRequired)
@@ -29,13 +41,15 @@
         <MudTextField
             @bind-Value="Mnemonic"
             HelperText="Mnemonic Seed"
-            Variant="Variant.Filled"
+            Variant="Variant.Outlined"
             AdornmentIcon="@Icons.Material.Filled.Refresh"
             Adornment="Adornment.End"
             OnAdornmentClick="GenerateSeed"
             For="() => Mnemonic"/>
     }
-    <MudButton ButtonType="ButtonType.Submit">Continue</MudButton>
+    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="_validationEditContext.Invalid" Class="mt-3">
+        Continue
+    </MudButton>
 </ValidationEditContext>
 
 @code {
@@ -50,25 +64,25 @@
         get { return new[] {"use-configured-wallet",  "create-wallet", "create-wallet-separate"}.Contains(SelectedOption); }
     }
 
-    private Dictionary<string, string> Options
+    private Dictionary<string, (string, bool)> Options
     {
         get
         {
-            var result = new Dictionary<string, string>();
-            var warningPrefix = "";
+            var result = new Dictionary<string, (string, bool)>();
+            var hasWarning = false;
             if (ConfiguredWallet is not null)
             {
                 if (IsConfiguredWalletHot)
                 {
-                    result.Add("use-configured-hot-wallet", "Import the configured hot wallet");
+                    result.Add("use-configured-hot-wallet", ("Import the configured hot wallet", false));
                 }
 
-                result.Add("use-configured-wallet", "Import the configured wallet but store the keys on app");
-                warningPrefix = "⚠️ Your BTCPay Server store wallet will be overwritten! ⚠️ ";
+                result.Add("use-configured-wallet", ("Import the configured wallet but store the keys on app", false));
+                hasWarning = true;
             }
 
-            result.Add("create-wallet", $"Create a new wallet to use on BTCPay Server and store the keys on app {warningPrefix}");
-            result.Add("create-wallet-separate", "Create a new wallet to be used only on app");
+            result.Add("create-wallet", ("Create a new wallet to use on BTCPay Server and store the keys on app", hasWarning));
+            result.Add("create-wallet-separate", ("Create a new wallet to be used only on app", false));
             return result;
         }
     }
