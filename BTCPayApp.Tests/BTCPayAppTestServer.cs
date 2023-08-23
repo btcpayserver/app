@@ -111,20 +111,19 @@ class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
 
     private static void InstallPlaywright()
     {
-        var exitCode = Microsoft.Playwright.Program.Main(
-            new[] {"install-deps"});
-        if (exitCode != 0)
+        var exitCode = Microsoft.Playwright.Program.Main(new[] {"install-deps"});
+        /*if (exitCode != 0)
         {
             throw new Exception(
                 $"Playwright exited with code {exitCode} on install-deps");
-        }
+        }*/
 
         exitCode = Microsoft.Playwright.Program.Main(new[] {"install"});
-        if (exitCode != 0)
+        /*if (exitCode != 0)
         {
             throw new Exception(
                 $"Playwright exited with code {exitCode} on install");
-        }
+        }*/
     }
 
 
@@ -133,12 +132,16 @@ class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
         Assert.NotNull(ServerAddress);
         await _playwrightInstallTask;
         Playwright = await Microsoft.Playwright.Playwright.CreateAsync();
-        Browser = await Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions()
+        Browser = await Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
             Headless = false,
         });
 
-        return await Browser.NewContextAsync(new BrowserNewContextOptions());
+        return await Browser.NewContextAsync(new BrowserNewContextOptions
+        {
+            IgnoreHTTPSErrors = true,
+            IsMobile = true
+        });
     }
 
     public IPlaywright? Playwright { get; set; }

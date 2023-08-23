@@ -11,7 +11,7 @@ public class UnitTest1
     {
         _testOutputHelper = testOutputHelper;
     }
-    
+
     [Fact]
     public async Task Test1()
     {
@@ -20,13 +20,18 @@ public class UnitTest1
         await page.GotoAsync(factory.ServerAddress);
         factory.Eventually(() =>
         {
-            Assert.EndsWith(Routes.FirstRun, page.Url);
+            Assert.EndsWith(Routes.Home, page.Url);
         });
-        await (await page.QuerySelectorAsync("#btn-pair")).ClickAsync();
+
+        Thread.Sleep(3000);
+        var carousel = await page.QuerySelectorAsync("#OnboardingCarousel");
+        await (await carousel.QuerySelectorAsync("[aria-label='3']")).ClickAsync();
+        Thread.Sleep(3000);
+        await (await page.QuerySelectorAsync("#PairButton")).ClickAsync();
         factory.Eventually(() =>
         {
             Assert.EndsWith(Routes.Pair, page.Url);
         });
-        
+
     }
 }
