@@ -1,0 +1,161 @@
+﻿@using BTCPayApp.UI.Pages
+@using BTCPayApp.UI.Shared
+@using Microsoft.AspNetCore.Components
+@using MudBlazor
+@using System.Globalization
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@layout SimpleLayout
+
+<HeadContent>
+    <link href="./_content/BTCPayApp.UI/css/keypad.css" rel="stylesheet"/>
+</HeadContent>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="py-5">
+    <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="HandleSubmit" Class="d-flex flex-column gap-4 my-auto">
+        <input id="posdata" type="hidden" name="posdata" v-model="posdata">
+        <input class="form-control" type="hidden" name="amount" v-model="totalNumeric">
+
+        <div ref="display" class="d-flex flex-column align-items-center px-4 mb-auto">
+            <div class="fw-semibold text-muted" id="Currency">EUR</div>
+            <div class="fw-bold lh-sm" ref="amount" v-bind:style="{ fontSize: `${fontSize}px` }" id="Amount">@FormatCurrency(Amount, false)</div>
+            @if (!string.IsNullOrEmpty(Calculation) && EnableDiscount || EnableTips)
+            {
+                <div class="text-muted text-center mt-2" id="Calculation">@Calculation</div>
+            }
+        </div>
+        @if (Modes.Count > 1)
+        {
+            <div id="ModeTabs" class="tab-content mb-n2">
+                @if (EnableDiscount)
+                {
+                    <div id="Mode-Discount" class="tab-pane fade px-2" :class="{ show: mode === 'discount', active: mode === 'discount' }" role="tabpanel" aria-labelledby="ModeTablist-Discount">
+                        <div class="h4 fw-semibold text-muted text-center" id="Discount">
+                            <span class="h3 text-body me-1">@DiscountPercent%</span> discount
+                        </div>
+                    </div>
+                }
+                @if (EnableTips)
+                {
+                    <div id="Mode-Tip" class="tab-pane fade px-2" :class="{ show: mode === 'tip', active: mode === 'tip' }" role="tabpanel" aria-labelledby="ModeTablist-Tip">
+                        <div class="btcpay-pills d-flex flex-wrap align-items-center justify-content-center gap-2">
+                            @if (CustomTipPercentages.Count > 0)
+                            {
+                                <MudButton Variant="Variant.Filled" DisableElevation="true" Class="btcpay-pill" id="Tip-Custom" @onclick="() => { TipPercent = null; }">
+                                    @if (Tip > 0)
+                                    {
+                                        @FormatCurrency(Tip, true)
+                                    }
+                                    else
+                                    {
+                                        <span>Custom</span>
+                                    }
+                                </MudButton>
+                                @foreach (var percentage in CustomTipPercentages)
+                                {
+                                    <MudButton Variant="Variant.Filled" DisableElevation="true" Class=@PillClass(percentage == TipPercent) @onclick="() => { TipPercent = percentage; }">
+                                        @percentage%
+                                    </MudButton>
+                                }
+                            }
+                            else
+                            {
+                                <div class="h5 fw-semibold text-muted text-center">
+                                    Amount@(Tip > 0 ? $": {Tip}" : null)
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+            <div id="ModeTablist" class="nav btcpay-pills align-items-center justify-content-center mb-n2 pb-1" role="tablist" v-if="modes.length > 1">
+                <template v-for="m in modes" :key="m.value">
+                    <input :id="`ModeTablist-${m.type}`" name="mode" :value="m.type" type="radio" role="tab" data-bs-toggle="pill" :data-bs-target="`#Mode-${m.type}`" :disabled="m.type != 'amount' && amountNumeric == 0" :aria-controls="`Mode-${m.type}`" :aria-selected="mode === m.type" :checked="mode === m.type" v-on:click="mode = m.type">
+                    <label :for="`ModeTablist-${m.type}`">{{ m.title }}</label>
+                </template>
+            </div>
+        }
+        <div class="keypad">
+            @foreach(var key in Keys)
+            {
+                @if (key == "del")
+                {
+                    <MudIconButton DisableElevation="true" Variant="Variant.Outlined" Icon="@BTCPayIcons.CaretRight" aria-label="delete" data-key="@key"/>
+                }
+                else
+                {
+                    <MudButton DisableElevation="true" @onclick="() => KeyPressed(key)" data-key="@key">
+                        @key
+                    </MudButton>
+                }
+            }
+        </div>
+        <div class="actions px-4 gap-4">
+            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Secondary" @onclick="@Clear">Clear</MudButton>
+            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Primary" Disabled="Loading" data-testid="ChargeButton">
+                @if (Loading)
+                {
+                    <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true"/>
+                }
+                else
+                {
+                    <span>Charge</span>
+                }
+            </MudButton>
+        </div>
+    </ValidationEditContext>
+</MudContainer>
+
+
+@code {
+    private ValidationEditContext _validationEditContext { get; set; }
+
+    public string? Calculation { get; set; }
+    public bool EnableDiscount { get; set; } = true;
+    public bool EnableTips { get; set; } = true;
+    public bool Loading { get; set; }
+    public double Amount { get; set; }
+    public double Tip { get; set; }
+    public double Discount { get; set; }
+    public int? TipPercent { get; set; }
+    public float DiscountPercent { get; set; }
+    public List<int> CustomTipPercentages { get; set; } = new () { 5, 10, 21 };
+
+    public static readonly List<string> Keys = new() { "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "del" };
+
+    public string Mode { get; set; } = "Amount";
+
+    public List<string> Modes
+    {
+        get
+        {
+            var modes = new List<string> { "Amount" };
+            if (EnableDiscount) modes.Add("Discount");
+            if (EnableTips) modes.Add("Tips");
+            return modes;
+        }
+    }
+
+
+    private void KeyPressed(string key)
+    {
+    }
+
+    private void HandleSubmit()
+    {
+    }
+
+    private void Clear()
+    {
+    }
+
+    private string FormatCurrency(double value, bool b)
+    {
+        return value.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private string PillClass(bool isActive)
+    {
+        return $"btcpay-pill{(isActive ? " active" : "")}";
+
+    }
+}

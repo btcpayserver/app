@@ -15,7 +15,7 @@ public static class Constants
         {
             public static MudColor Primary { get; } = "#51B13E";
             public static MudColor Secondary { get; } = "#CEDC21";
-            public static MudColor Tertiary { get; } = "#1E7A44";
+            public static string Tertiary { get; } = "#1E7A44";
             public static MudColor Dark { get; } = "#0F3B21";
         }
 
@@ -104,6 +104,14 @@ public static class Constants
             Default = new Default
             {
                 FontFamily = new[] { "Open Sans", "Helvetica Neue", "Arial", "sans-serif" }
+            },
+            Button = new Button
+            {
+                FontSize = "1rem",
+                FontWeight = 600,
+                LineHeight = 1.6,
+                LetterSpacing = null,
+                TextTransform = "none"
             }
         },
         Palette = new PaletteLight
@@ -111,8 +119,9 @@ public static class Constants
             Black  = Colors.Black,
             White  = Colors.White,
             Primary = Colors.Primary500,
+            PrimaryDarken = Colors.Brand.Tertiary,
             PrimaryContrastText = Colors.White,
-            Secondary = Colors.White,
+            Secondary = Colors.Primary500,
             SecondaryContrastText = Colors.Primary500,
             Tertiary = Colors.Light500,
             TertiaryContrastText = Colors.White,
@@ -153,8 +162,9 @@ public static class Constants
             Black  = Colors.Black,
             White  = Colors.White,
             Primary = Colors.Primary500,
+            PrimaryDarken = Colors.Brand.Tertiary,
             PrimaryContrastText = Colors.White,
-            Secondary = Colors.White,
+            Secondary = Colors.Dark900,
             SecondaryContrastText = Colors.Primary500,
             Tertiary = Colors.Dark500,
             TertiaryContrastText = Colors.Black,

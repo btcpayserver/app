@@ -23,6 +23,8 @@
     <MudDrawer @bind-Open="_isDrawerOpen" ClipMode="DrawerClipMode.Always" Class="py-5">
         <MudNavMenu Color="Color.Success" Bordered="true">
             <MudNavLink Href="@Routes.Home" Icon="@BTCPayIcons.Home" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+            <MudNavLink Href="@Routes.WalletSetup" Icon="@Icons.Material.Filled.AccountBalanceWallet" Match="NavLinkMatch.All">Wallet</MudNavLink>
+            <MudNavLink Href="@Routes.PointOfSale" Icon="@BTCPayIcons.Pointofsale" Match="NavLinkMatch.All">Point Of Sale</MudNavLink>
             <MudNavLink Href="@Routes.Settings" Icon="@BTCPayIcons.Settings" Match="NavLinkMatch.All">Settings</MudNavLink>
         </MudNavMenu>
     </MudDrawer>

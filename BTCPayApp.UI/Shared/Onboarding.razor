@@ -10,7 +10,7 @@
                 No fees, no third-party.
                 All payments go through your node, running on your phone!
             </MudText>
-            <MudButton Size="Size.Large" Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => GoToStep(1))">Next</MudButton>
+            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Primary" OnClick="@(() => GoToStep(1))">Next</MudButton>
         </MudContainer>
     </MudCarouselItem>
     <MudCarouselItem Transition="@Transition.Slide">
@@ -20,7 +20,7 @@
             <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
                 Cloud backups, enhanced accounting functionality and ability to easily refund your customers
             </MudText>
-            <MudButton Size="Size.Large" Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => GoToStep(2))">Next</MudButton>
+            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Primary" OnClick="@(() => GoToStep(2))">Next</MudButton>
         </MudContainer>
     </MudCarouselItem>
     <MudCarouselItem Transition="@Transition.Slide">
@@ -30,8 +30,8 @@
             <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
                 Free and open-source bitcoin point of sale. With 0% Fees & No Third-party.
             </MudText>
-            <MudButton Size="Size.Large" Variant="Variant.Filled" Color="Color.Primary" Href="@Routes.Pair" data-testid="PairButton">Pair with BTCPay Server</MudButton>
-            <MudButton Size="Size.Large" Variant="Variant.Filled" Color="Color.Primary" Href="@Routes.Standalone" Disabled="true" data-testid="StandaloneButton">Use standalone</MudButton>
+            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Primary" Href="@Routes.Pair" data-testid="PairButton">Pair with BTCPay Server</MudButton>
+            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Primary" Href="@Routes.Standalone" Disabled="true" data-testid="StandaloneButton">Use standalone</MudButton>
         </MudContainer>
     </MudCarouselItem>
 </MudCarousel>
