@@ -111,21 +111,8 @@ class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
 
     private static void InstallPlaywright()
     {
-        var exitCode = Microsoft.Playwright.Program.Main(new[] {"install-deps"});
-        /*if (exitCode != 0)
-        {
-            throw new Exception(
-                $"Playwright exited with code {exitCode} on install-deps");
-        }*/
-
-        exitCode = Microsoft.Playwright.Program.Main(new[] {"install"});
-        /*if (exitCode != 0)
-        {
-            throw new Exception(
-                $"Playwright exited with code {exitCode} on install");
-        }*/
+        Microsoft.Playwright.Program.Main(new[] {"install", "--with-deps"});
     }
-
 
     public async Task<IBrowserContext> InitializeAsync()
     {
