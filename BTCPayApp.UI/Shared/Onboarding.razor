@@ -4,7 +4,7 @@
 <MudCarousel Class="mx-auto" ShowArrows="@false" AutoCycle="@false" @bind-SelectedIndex="@Step" TData="object" id="OnboardingCarousel">
     <MudCarouselItem Transition="@Transition.Slide">
         <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex flex-column gap-4" Style="height:calc(100% - 4rem)">
-            <MudIcon Class="mx-auto my-auto" Icon="@Icons.Material.Filled.Wallet" Color="@Color.Primary" Size="@Size.Large"/>
+            <MudIcon Class="mx-auto my-auto" Icon="@BTCPayIcons.LogoBtcpay" Color="@Color.Primary" Size="@Size.Large"/>
             <MudText Typo="Typo.h5" Align="Align.Center">Welcome To BTCPay Server</MudText>
             <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
                 No fees, no third-party.
@@ -15,7 +15,7 @@
     </MudCarouselItem>
     <MudCarouselItem Transition="@Transition.Slide">
         <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex flex-column gap-4" Style="height:calc(100% - 4rem)">
-            <MudIcon Class="mx-auto my-auto" Icon="@Icons.Material.Filled.Lock" Color="@Color.Primary" Size="@Size.Large" />
+            <MudIcon Class="mx-auto my-auto" Icon="@BTCPayIcons.Key" Color="@Color.Primary" Size="@Size.Large" />
             <MudText Typo="Typo.h5" Align="Align.Center">Keep your wallet and bitcoin secure</MudText>
             <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
                 Cloud backups, enhanced accounting functionality and ability to easily refund your customers
@@ -25,7 +25,7 @@
     </MudCarouselItem>
     <MudCarouselItem Transition="@Transition.Slide">
         <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex flex-column gap-4" Style="height:calc(100% - 4rem)">
-            <MudIcon Class="mx-auto my-auto" Icon="@Icons.Material.Filled.AutoAwesome" Color="@Color.Primary" Size="@Size.Large" />
+            <MudIcon Class="mx-auto my-auto" Icon="@BTCPayIcons.Pointofsale" Color="@Color.Primary" Size="@Size.Large" />
             <MudText Typo="Typo.h5" Align="Align.Center">Start Accepting Bitcoin Payments</MudText>
             <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
                 Free and open-source bitcoin point of sale. With 0% Fees & No Third-party.

@@ -3,15 +3,9 @@
 
 <MudGrid Justify="Justify.Center">
     <MudSelect @bind-Value="@ThemeMode" Label="Theme" Variant="Variant.Outlined">
-        <MudSelectItem Value="@Constants.SystemTheme">
-            <MudIcon Icon="@Icons.Material.Filled.Settings" Title="System" Size="Size.Small"/> System
-        </MudSelectItem>
-        <MudSelectItem Value="@Constants.LightTheme">
-            <MudIcon Icon="@Icons.Material.Filled.LightMode" Title="Light" Size="Size.Small"/> Light
-        </MudSelectItem>
-        <MudSelectItem Value="@Constants.DarkTheme">
-            <MudIcon Icon="@Icons.Material.Filled.Nightlight" Title="Dark" Size="Size.Small"/> Dark
-        </MudSelectItem>
+        <MudSelectItem Value="@Constants.SystemTheme">System</MudSelectItem>
+        <MudSelectItem Value="@Constants.LightTheme">Light</MudSelectItem>
+        <MudSelectItem Value="@Constants.DarkTheme">Dark</MudSelectItem>
     </MudSelect>
 </MudGrid>
 

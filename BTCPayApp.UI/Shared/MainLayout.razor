@@ -16,14 +16,14 @@
 
 <MudLayout>
     <MudAppBar Elevation="1">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle"/>
+        <MudIconButton Icon="@BTCPayIcons.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle"/>
         <MudImage Src="_content/BTCPayApp.UI/img/logo.svg" Height="24" Alt="BTCPay Server" Class="ml-3" />
         <MudText Typo="Typo.h6" Class="ml-3">BTCPay Server</MudText>
     </MudAppBar>
     <MudDrawer @bind-Open="_isDrawerOpen" ClipMode="DrawerClipMode.Always" Class="py-5">
         <MudNavMenu Color="Color.Success" Bordered="true">
-            <MudNavLink Href="@Routes.Home" Icon="@Icons.Material.Filled.Dashboard" Match="NavLinkMatch.All">Dashboard</MudNavLink>
-            <MudNavLink Href="@Routes.Settings" Icon="@Icons.Material.Filled.Settings" Match="NavLinkMatch.All">Settings</MudNavLink>
+            <MudNavLink Href="@Routes.Home" Icon="@BTCPayIcons.Home" Match="NavLinkMatch.All">Dashboard</MudNavLink>
+            <MudNavLink Href="@Routes.Settings" Icon="@BTCPayIcons.Settings" Match="NavLinkMatch.All">Settings</MudNavLink>
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
