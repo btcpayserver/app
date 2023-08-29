@@ -103,7 +103,52 @@ public static class Constants
         {
             Default = new Default
             {
-                FontFamily = new[] { "Open Sans", "Helvetica Neue", "Arial", "sans-serif" }
+                FontFamily = new[] { "Open Sans", "Helvetica Neue", "Arial", "sans-serif" },
+                FontSize = "16px",
+                LineHeight = 1.6,
+                LetterSpacing = "0"
+            },
+            H1 = new H1
+            {
+                FontSize = "calc(1.34375rem + 1.125vw)",
+                FontWeight = 700,
+                LineHeight = 1.2,
+                LetterSpacing = "0"
+            },
+            H2 = new H2
+            {
+                FontSize = "calc(1.3rem + 0.6vw)",
+                FontWeight = 700,
+                LineHeight = 1.2,
+                LetterSpacing = "0"
+            },
+            H3 = new H3
+            {
+                FontSize = "calc(1.27813rem + 0.3375vw)",
+                FontWeight = 700,
+                LineHeight = 1.2,
+                LetterSpacing = "0"
+            },
+            H4 = new H4
+            {
+                FontSize = "calc(1.25625rem + 0.075vw)",
+                FontWeight = 700,
+                LineHeight = 1.2,
+                LetterSpacing = "0"
+            },
+            H5 = new H5
+            {
+                FontSize = "1.09375rem",
+                FontWeight = 700,
+                LineHeight = 1.2,
+                LetterSpacing = "0"
+            },
+            H6 = new H6
+            {
+                FontSize = "0.875rem",
+                FontWeight = 700,
+                LineHeight = 1.2,
+                LetterSpacing = "0"
             },
             Button = new Button
             {
