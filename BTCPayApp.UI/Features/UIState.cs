@@ -1,4 +1,5 @@
 ﻿using Fluxor;
+using Microsoft.JSInterop;
 
 namespace BTCPayApp.UI.Features;
 
@@ -9,11 +10,12 @@ public class UIState
     private string SystemTheme { get; init; } = Constants.LightTheme;
     public bool IsDarkMode { get; set; }
 
-    public record ApplySystemPreference(string Theme);
-    public record ApplyTheme(string Theme);
+    public record ApplyUserTheme(string Theme);
+    public record SetSystemPreference(string Theme);
+    public record SetUserTheme(string Theme);
 
     [ReducerMethod]
-    public static UIState Reduce(UIState state, ApplySystemPreference action)
+    public static UIState Reduce(UIState state, SetSystemPreference action)
     {
         var effectiveTheme = state.SelectedTheme == Constants.SystemTheme ? action.Theme : state.SelectedTheme;
         return new UIState
@@ -25,7 +27,7 @@ public class UIState
     }
 
     [ReducerMethod]
-    public static UIState Reduce(UIState state, ApplyTheme action)
+    public static UIState Reduce(UIState state, SetUserTheme action)
     {
         var effectiveTheme = action.Theme == Constants.SystemTheme ? state.SystemTheme : action.Theme;
         return new UIState
@@ -34,5 +36,24 @@ public class UIState
             SelectedTheme = action.Theme,
             IsDarkMode = effectiveTheme == Constants.DarkTheme
         };
+    }
+
+    public class UIEffects
+    {
+        private readonly IJSRuntime _jsRuntime;
+
+        public UIEffects(IJSRuntime jsRuntime)
+        {
+            _jsRuntime = jsRuntime;
+        }
+
+        [EffectMethod]
+        public async Task ApplyUserThemeEffect(ApplyUserTheme action, IDispatcher dispatcher)
+        {
+            // store
+            dispatcher.Dispatch(new SetUserTheme(action.Theme));
+            // ui
+            await _jsRuntime.InvokeVoidAsync("setTheme", action.Theme);
+        }
     }
 }

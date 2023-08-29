@@ -17,8 +17,10 @@
 <MudLayout>
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@BTCPayIcons.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle"/>
-        <MudImage Src="_content/BTCPayApp.UI/img/logo.svg" Height="24" Alt="BTCPay Server" Class="ml-3" />
-        <MudText Typo="Typo.h6" Class="ml-3">BTCPay Server</MudText>
+        <MudLink Href="@Routes.Home" Underline="Underline.None" Color="Color.Inherit" Class="d-flex align-center ml-2">
+            <MudImage Src="_content/BTCPayApp.UI/img/logo.svg" Height="24" Alt="BTCPay Server" />
+            <MudText Typo="Typo.h6" Class="ml-3">BTCPay Server</MudText>
+        </MudLink>
     </MudAppBar>
     <MudDrawer @bind-Open="_isDrawerOpen" ClipMode="DrawerClipMode.Always" Class="py-5">
         <MudNavMenu Color="Color.Success" Bordered="true">
@@ -29,7 +31,7 @@
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" Class="@(LoadingStateSelection.Value.Count > 0 ? null : "invisible")"/>
+        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" Class="@(LoadingStateSelection.Value.Any() ? null : "invisible")"/>
         <MudContainer Fixed="true" Class="py-5">
             @Body
         </MudContainer>
@@ -52,16 +54,19 @@
     {
         LoadingStateSelection.Select(state => state.Loading);
         DarkModeStateSelection.Select(state => state.IsDarkMode);
-        if (_darkMode is null && !Store.Initialized.IsCompleted)
+        var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
+        if (state != null)
         {
-            var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
-            if (state != null)
+            if (_darkMode is null && !Store.Initialized.IsCompleted)
             {
                 _darkMode = state.IsDarkMode;
-                _ = Store.Initialized.ContinueWith(task => _darkMode = null);
+                _ = Store.Initialized.ContinueWith(_ => _darkMode = null);
+            }
+            if (!string.IsNullOrEmpty(state.SelectedTheme))
+            {
+                Dispatcher.Dispatch(new UIState.ApplyUserTheme(state.SelectedTheme));
             }
         }
-
         await base.OnInitializedAsync();
     }
 
@@ -79,6 +84,6 @@
     private void ApplySystemPreference(object? sender, bool isDarkMode)
     {
         var systemTheme = isDarkMode ? Constants.DarkTheme : Constants.LightTheme;
-        Dispatcher.Dispatch(new UIState.ApplySystemPreference(systemTheme));
+        Dispatcher.Dispatch(new UIState.SetSystemPreference(systemTheme));
     }
 }

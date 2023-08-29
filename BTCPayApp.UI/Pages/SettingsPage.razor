@@ -8,13 +8,5 @@
 
 <MudText Typo="Typo.h5" Class="mb-8">Settings</MudText>
 
-<Settings Theme="@UiState.Value.SelectedTheme" OnThemeChange="SetTheme" />
-
-@code {
-    private Task SetTheme(string theme)
-    {
-        Dispatcher.Dispatch(new UIState.ApplyTheme(theme));
-        return Task.CompletedTask;
-    }
-}
+<Settings Theme="@UiState.Value.SelectedTheme" OnThemeChange="theme => Dispatcher.Dispatch(new UIState.ApplyUserTheme(theme))" />
 

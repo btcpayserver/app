@@ -1,7 +1,6 @@
 :root {
 }
 
-.mud-icon-button,
 .mud-button-text {
   --btcpay-btn-disabled-opacity: 0.65;
 
@@ -12,16 +11,13 @@
   padding: var(--btcpay-btn-padding-y) var(--btcpay-btn-padding-x) !important;
 }
 
-.mud-icon-button:hover,
 .mud-button-text:hover,
-.mud-icon-button:focus-visible,
 .mud-button-text:focus-visible {
   color: var(--btcpay-btn-hover-color) !important;
   background-color: var(--btcpay-btn-hover-bg) !important;
   border-color: var(--btcpay-btn-hover-border-color) !important;
 }
 
-.mud-icon-button:disabled,
 .mud-button-text:disabled {
   color: var(--btcpay-btn-disabled-color) !important;
   background-color: var(--btcpay-btn-disabled-bg) !important;
@@ -45,7 +41,7 @@
   --btcpay-btn-disabled-bg: var(--btcpay-primary);
   --btcpay-btn-disabled-border-color: var(--btcpay-primary-border);
 }
-.mud-icon-button.mud-button-outlined,
+
 .mud-button-text-default,
 .mud-button-text-secondary,
 .mud-button-filled-secondary {
@@ -64,7 +60,6 @@
   --btcpay-btn-disabled-border-color: var(--btcpay-secondary-border);
 }
 
-.mud-icon-button-size-large,
 .mud-button-text-size-large {
   --btcpay-btn-padding-y: 1rem;
   --btcpay-btn-padding-x: 2rem;
@@ -72,7 +67,6 @@
   --btcpay-btn-border-radius: var(--btcpay-border-radius-l);
 }
 
-.mud-icon-button-size-medium,
 .mud-button-text-size-medium {
   --btcpay-btn-padding-x: 1.5rem;
   --btcpay-btn-padding-y: 0.5rem;
@@ -80,7 +74,6 @@
   --btcpay-btn-border-radius: var(--btcpay-border-radius);
 }
 
-.mud-icon-button-size-small,
 .mud-button-text-size-small {
   --btcpay-btn-padding-y: 0.5rem;
   --btcpay-btn-padding-x: 1.5rem;
