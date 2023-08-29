@@ -3,6 +3,7 @@
 @using Microsoft.AspNetCore.Components
 @using MudBlazor
 @using System.Globalization
+@using org.ldk.structs
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @layout SimpleLayout
 
@@ -10,18 +11,15 @@
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="py-5">
     <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="HandleSubmit" Class="d-flex flex-column gap-4 my-auto">
-        <input id="posdata" type="hidden" name="posdata" v-model="posdata">
-        <input class="form-control" type="hidden" name="amount" v-model="totalNumeric">
-
-        <div ref="display" class="d-flex flex-column align-items-center px-4 mb-auto">
-            <div class="fw-semibold text-muted" id="Currency">EUR</div>
-            <div class="fw-bold lh-sm" ref="amount" v-bind:style="{ fontSize: `${fontSize}px` }" id="Amount">@FormatCurrency(Amount, false)</div>
+        <div class="d-flex flex-column align-center px-4 mb-auto">
+            <MudText Typo="Typo.overline" Color="Color.Tertiary" Class="fw-semibold">@Currency</MudText>
+            <MudText Typo="Typo.h1" Class="mb-4" Style="@AmountStyle">@FormatCurrency(Amount, false)</MudText>
             @if (!string.IsNullOrEmpty(Calculation) && EnableDiscount || EnableTips)
             {
-                <div class="text-muted text-center mt-2" id="Calculation">@Calculation</div>
+                <MudText Typo="Typo.overline" Color="Color.Secondary" Class="text-muted text-center mt-2" id="Calculation">@Calculation</MudText>
             }
         </div>
-        @if (Modes.Count > 1)
+        @if (false && Modes.Count > 1)
         {
             <div id="ModeTabs" class="tab-content mb-n2">
                 @if (EnableDiscount)
@@ -38,7 +36,7 @@
                         <div class="btcpay-pills d-flex flex-wrap align-items-center justify-content-center gap-2">
                             @if (CustomTipPercentages.Count > 0)
                             {
-                                <MudButton Variant="Variant.Filled" DisableElevation="true" Class="btcpay-pill" id="Tip-Custom" @onclick="() => { TipPercent = null; }">
+                                <MudButton Variant="Variant.Filled" DisableElevation="true" Class="btcpay-pill" OnClick="() => { TipPercent = null; }">
                                     @if (Tip > 0)
                                     {
                                         @FormatCurrency(Tip, true)
@@ -50,7 +48,7 @@
                                 </MudButton>
                                 @foreach (var percentage in CustomTipPercentages)
                                 {
-                                    <MudButton Variant="Variant.Filled" DisableElevation="true" Class=@PillClass(percentage == TipPercent) @onclick="() => { TipPercent = percentage; }">
+                                    <MudButton Variant="Variant.Filled" DisableElevation="true" Class=@PillClass(percentage == TipPercent) OnClick="() => { TipPercent = percentage; }">
                                         @percentage%
                                     </MudButton>
                                 }
@@ -65,12 +63,13 @@
                     </div>
                 }
             </div>
-            <div id="ModeTablist" class="nav btcpay-pills align-items-center justify-content-center mb-n2 pb-1" role="tablist" v-if="modes.length > 1">
-                <template v-for="m in modes" :key="m.value">
-                    <input :id="`ModeTablist-${m.type}`" name="mode" :value="m.type" type="radio" role="tab" data-bs-toggle="pill" :data-bs-target="`#Mode-${m.type}`" :disabled="m.type != 'amount' && amountNumeric == 0" :aria-controls="`Mode-${m.type}`" :aria-selected="mode === m.type" :checked="mode === m.type" v-on:click="mode = m.type">
-                    <label :for="`ModeTablist-${m.type}`">{{ m.title }}</label>
-                </template>
-            </div>
+            <MudChipSet Mandatory="true" Class="d-flex align-center justify-center ">
+                @foreach (var mode in Modes)
+                {
+                    var isActive = SelectedMode == mode;
+                    <MudChip Variant="isActive ? Variant.Filled : Variant.Outlined" Color="Color.Secondary" Disabled="@(mode != "Amount" && Amount == 0)" OnClick="() => { SelectedMode = mode; }">@mode</MudChip>
+                }
+            </MudChipSet>
         }
         <div class="keypad">
             @foreach(var key in Keys)
@@ -107,20 +106,22 @@
 @code {
     private ValidationEditContext _validationEditContext { get; set; }
 
-    public string? Calculation { get; set; }
     public bool EnableDiscount { get; set; } = true;
     public bool EnableTips { get; set; } = true;
     public bool Loading { get; set; }
+    public string Currency { get; set; } = "USD";
+    private int Divisibility { get; set; } = 2;
+    private string DisplayAmount { get; set; } = string.Empty;
     public double Amount { get; set; }
     public double Tip { get; set; }
     public double Discount { get; set; }
-    public int? TipPercent { get; set; }
-    public float DiscountPercent { get; set; }
+    public double? TipPercent { get; set; }
+    public double DiscountPercent { get; set; }
     public List<int> CustomTipPercentages { get; set; } = new () { 5, 10, 21 };
 
     public static readonly List<string> Keys = new() { "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "del" };
 
-    public string Mode { get; set; } = "Amount";
+    public string SelectedMode { get; set; } = "Amount";
 
     public List<string> Modes
     {
@@ -133,9 +134,68 @@
         }
     }
 
+    public string AmountStyle
+    {
+        get
+        {
+            var fs = 64; // TODO: Calculate based on width
+            return $"font-size:{fs}px";
+        }
+    }
+
+    public string Calculation
+    {
+        get
+        {
+            return "";
+        }
+    }
 
     private void KeyPressed(string key)
     {
+        switch (SelectedMode) {
+            case "Amount":
+                DisplayAmount = ApplyKeyToValue(key, DisplayAmount);
+                Amount = double.Parse(DisplayAmount, CultureInfo.InvariantCulture);
+                break;
+            case "Discount":
+                var discount = ApplyKeyToValue(key, DiscountPercent.ToString(CultureInfo.InvariantCulture));
+                DiscountPercent = double.Parse(discount, CultureInfo.InvariantCulture);
+                break;
+            case "Tips":
+                var tipPercent = ApplyKeyToValue(key, (TipPercent ?? 0).ToString(CultureInfo.InvariantCulture));
+                TipPercent = double.Parse(tipPercent, CultureInfo.InvariantCulture);
+                break;
+            default:
+                throw new Exception("Invalid mode");
+        };
+    }
+
+    private string ApplyKeyToValue (string key, string value) {
+        if (string.IsNullOrEmpty(value) || value == "0") {
+            value = "";
+        }
+        switch (key) {
+            case "del":
+                if (string.IsNullOrEmpty(value)) return "0";
+                value = value[..^1];
+                value = string.IsNullOrEmpty(value) ? "0" : value;
+                break;
+            case ".":
+                if (!value.Contains(".")) { // Only add decimal point if it doesn't exist yet
+                    value += ".";
+                }
+                break;
+            default:
+                value += key;
+                var decimalIndex = value.IndexOf(".", StringComparison.Ordinal);
+                if (decimalIndex != -1 && value.Length - decimalIndex - 1  > Divisibility) {
+                    value = value.Replace(".", "");
+                    value = $"{value[..^Divisibility]}.{value[^Divisibility..]}";
+                }
+                break;
+        }
+        return value;
     }
 
     private void HandleSubmit()
@@ -144,16 +204,20 @@
 
     private void Clear()
     {
+        Amount = Tip = Discount = DiscountPercent = 0;
+        DisplayAmount = string.Empty;
+        TipPercent = null;
+        SelectedMode = "Amount";
     }
 
     private string FormatCurrency(double value, bool b)
     {
-        return value.ToString(CultureInfo.InvariantCulture);
+        var formatted = value.ToString("C", CultureInfo.InvariantCulture);
+        return formatted[1..] + (b ? $" {Currency}" : "");
     }
 
     private string PillClass(bool isActive)
     {
         return $"btcpay-pill{(isActive ? " active" : "")}";
-
     }
 }

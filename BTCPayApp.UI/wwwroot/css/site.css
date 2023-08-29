@@ -13,3 +13,12 @@
     min-height: 380px;
   }
 }
+
+::-moz-focus-inner {
+  padding: 0;
+  border-style: none;
+}
+
+.fw-semibold {
+  font-weight: var(--btcpay-font-weight-semibold);
+}
