@@ -6,9 +6,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @layout SimpleLayout
 
-<HeadContent>
-    <link href="./_content/BTCPayApp.UI/css/keypad.css" rel="stylesheet"/>
-</HeadContent>
+<link href="./_content/BTCPayApp.UI/css/keypad.css" rel="stylesheet"/>
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="py-5">
     <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="HandleSubmit" Class="d-flex flex-column gap-4 my-auto">
@@ -77,16 +75,16 @@
         <div class="keypad">
             @foreach(var key in Keys)
             {
-                @if (key == "del")
-                {
-                    <MudIconButton DisableElevation="true" Variant="Variant.Outlined" Icon="@BTCPayIcons.CaretRight" aria-label="delete" data-key="@key"/>
-                }
-                else
-                {
-                    <MudButton DisableElevation="true" @onclick="() => KeyPressed(key)" data-key="@key">
+                <MudButton DisableElevation="true" @onclick="() => KeyPressed(key)" data-key="@key">
+                    @if (key == "del")
+                    {
+                        <MudIcon Icon="@BTCPayIcons.CaretRight" aria-label="delete"/>
+                    }
+                    else
+                    {
                         @key
-                    </MudButton>
-                }
+                    }
+                </MudButton>
             }
         </div>
         <div class="actions px-4 gap-4">

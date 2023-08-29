@@ -27,7 +27,7 @@
   border-radius: 0 !important;
   color: var(--btcpay-body-text) !important;
 }
-.keypad button[data-key="del"] svg {
+.keypad button[data-key="del"] svg.mud-svg-icon {
   width: 2.25rem;
   height: 2.25rem;
   transform: rotate(180deg);
