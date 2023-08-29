@@ -1,20 +1,7 @@
-﻿@using BTCPayApp.UI.Features
-@using BTCPayApp.UI.Pages
-@using BTCPayApp.Core.Contracts
-@inherits Fluxor.Blazor.Web.Components.FluxorLayout
-@inject IStateSelection<RootState, HashSet<RootState.LoadingHandles>> LoadingStateSelection
-@inject IStateSelection<UIState, bool> DarkModeStateSelection
-@inject IDispatcher Dispatcher
-@inject IConfigProvider ConfigProvider
-@inject ISystemThemeProvider SystemThemeProvider
-@inject IStore Store
+﻿@using BTCPayApp.UI.Pages
+@inherits LayoutComponentBase
 
-<PageTitle>BTCPay Server</PageTitle>
-<MudThemeProvider @ref="@_mudThemeProvider" IsDarkMode="@(_darkMode??DarkModeStateSelection.Value)" Theme="Constants.Theme"/>
-<MudDialogProvider/>
-<MudSnackbarProvider/>
-
-<MudLayout>
+<LayoutBase>
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@BTCPayIcons.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle"/>
         <MudLink Href="@Routes.Home" Underline="Underline.None" Color="Color.Inherit" Class="d-flex align-center ml-2">
@@ -31,59 +18,17 @@
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent>
-        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Size="Size.Small" Class="@(LoadingStateSelection.Value.Any() ? null : "invisible")"/>
         <MudContainer Fixed="true" Class="py-5">
             @Body
         </MudContainer>
     </MudMainContent>
-</MudLayout>
+</LayoutBase>
 
 @code {
-    private MudThemeProvider _mudThemeProvider;
-
     private bool _isDrawerOpen;
 
     void DrawerToggle()
     {
         _isDrawerOpen = !_isDrawerOpen;
-    }
-
-    private bool? _darkMode;
-
-    protected override async Task OnInitializedAsync()
-    {
-        LoadingStateSelection.Select(state => state.Loading);
-        DarkModeStateSelection.Select(state => state.IsDarkMode);
-        var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
-        if (state != null)
-        {
-            if (_darkMode is null && !Store.Initialized.IsCompleted)
-            {
-                _darkMode = state.IsDarkMode;
-                _ = Store.Initialized.ContinueWith(_ => _darkMode = null);
-            }
-            if (!string.IsNullOrEmpty(state.SelectedTheme))
-            {
-                Dispatcher.Dispatch(new UIState.ApplyUserTheme(state.SelectedTheme));
-            }
-        }
-        await base.OnInitializedAsync();
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            if (SystemThemeProvider is MudBlazorThemeProvider mudThemeProvider)
-                mudThemeProvider.MudThemeProvider = _mudThemeProvider;
-            ApplySystemPreference(this, await _mudThemeProvider.GetSystemPreference());
-            SystemThemeProvider.SystemThemeChanged += ApplySystemPreference;
-        }
-    }
-
-    private void ApplySystemPreference(object? sender, bool isDarkMode)
-    {
-        var systemTheme = isDarkMode ? Constants.DarkTheme : Constants.LightTheme;
-        Dispatcher.Dispatch(new UIState.SetSystemPreference(systemTheme));
     }
 }
