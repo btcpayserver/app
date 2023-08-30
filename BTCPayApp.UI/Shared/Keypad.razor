@@ -9,8 +9,8 @@
 
 <link href="./_content/BTCPayApp.UI/css/keypad.css" rel="stylesheet"/>
 
-<MudContainer MaxWidth="MaxWidth.Small" Class="py-5">
-    <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="HandleSubmit" Class="d-flex flex-column gap-4 my-auto">
+<MudContainer MaxWidth="MaxWidth.Small">
+    <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="HandleSubmit" Class="d-flex flex-column gap-4 py-5" Style="min-height:90vh">
         <div class="d-flex flex-column align-center px-4 mb-auto">
             <MudText Typo="Typo.overline" Color="Color.Tertiary" Class="fw-semibold">@Currency</MudText>
             <MudText Typo="Typo.h1" Class="mb-4" Style="@AmountStyle">@FormatCurrency(Amount, false)</MudText>
@@ -101,7 +101,6 @@
         </div>
     </ValidationEditContext>
 </MudContainer>
-
 
 @code {
     private ValidationEditContext _validationEditContext { get; set; }

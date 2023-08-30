@@ -3,7 +3,9 @@ using BTCPayApp.Core;
 using BTCPayApp.Desktop;
 using BTCPayApp.UI;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Photino.Blazor;
 using PhotinoNET;
 
@@ -15,6 +17,12 @@ public static class Program
     private static void Main(string[] args)
     {
         var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
+        builder.Services.TryAddSingleton<IConfiguration>(_ =>
+        {
+            var configBuilder = new ConfigurationBuilder();
+            configBuilder.AddEnvironmentVariables();
+            return configBuilder.Build();
+        });
         builder.Services.AddBTCPayAppUIServices();
         builder.Services.ConfigureBTCPayAppCore();
         builder.Services.ConfigureBTCPayAppDesktop();
@@ -28,7 +36,6 @@ public static class Program
         app.MainWindow
             .SetResizable(true)
             .SetZoom(0)
-            // .SetIconFile("favicon.ico")
             .SetTitle("BTCPay Server");
 
         app.MainWindow.Center();
