@@ -2,10 +2,12 @@
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 using NBitcoin;
+using uniffi.ldk_node;
+using Network = uniffi.ldk_node.Network;
 
 namespace BTCPayApp.Core;
 
-public enum LightningNodeState 
+public enum LightningNodeState
 {
     NotConfigured,
     Bootstrapping,
@@ -17,7 +19,7 @@ public enum LightningNodeState
 }
 public class LightningNodeManager: IHostedService
 {
-    
+
     private readonly BTCPayConnection _connection;
     private readonly BTCPayAppConfigManager _configManager;
     private LightningNodeState _state = LightningNodeState.NotConfigured;
@@ -40,23 +42,32 @@ public class LightningNodeManager: IHostedService
 
 
     public LightningNodeManager(
-        BTCPayConnection connection, 
+        BTCPayConnection connection,
         BTCPayAppConfigManager configManager)
     {
         _connection = connection;
         _configManager = configManager;
     }
-    
+
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _configManager.WalletConfigUpdated += OnWalletConfigUpdated;
-        
+
         _configManager.Loaded.Task.ContinueWith(_ =>
         {
             if (_configManager.WalletConfig is not null)
             {
                 OnWalletConfigUpdated(this, _configManager.WalletConfig);
             }
+
+            var builder = new Builder();
+            builder.SetNetwork(Network.TESTNET);
+            builder.SetEsploraServer("https://blockstream.info/testnet/api");
+            builder.SetGossipSourceRgs("https://rapidsync.lightningdevkit.org/testnet/snapshot");
+
+            var node = builder.Build();
+            node.Start();
+
         }, cancellationToken);
         return Task.CompletedTask;
     }
@@ -74,7 +85,7 @@ public class LightningNodeManager: IHostedService
             return;
         }
         var newMnemonic = new Mnemonic(e.Mnemonic).DeriveExtKey().Derive(new KeyPath(e.DerivationPath));
-        if (NodeKey is not null && newMnemonic.Equals(NodeKey)) 
+        if (NodeKey is not null && newMnemonic.Equals(NodeKey))
         {
             return;
         }
@@ -91,16 +102,16 @@ public class LightningNodeManager: IHostedService
         State = LightningNodeState.Bootstrapping;
         await Task.Delay(3000);
         NodeKey = nodeKey;
-        
+
         State = LightningNodeState.WaitingForBackend;
         while(_configManager.WalletConfig?.StandaloneMode is not true && _connection.Connection?.State is not HubConnectionState.Connected)
         {
             await Task.Delay(500);
         }
         State = LightningNodeState.Starting;
-        await Task.Delay(3000); 
+        await Task.Delay(3000);
         State = LightningNodeState.Connected;
-        
+
     }
 
     private async Task KillNode()
