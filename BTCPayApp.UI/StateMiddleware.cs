@@ -61,7 +61,7 @@ public class StateMiddleware : Middleware
         _lightningNodeManager.StateChanged += (sender, args) =>
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(args));
 
-        if (_lightningNodeManager.State is not LightningNodeState.Connected)
+        if (_lightningNodeManager.State is not LightningNodeState.Running)
             dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.LightningState, true));
 
         if (_btcPayAppConfigManager.PairConfig is null)

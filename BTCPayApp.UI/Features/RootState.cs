@@ -27,11 +27,12 @@ public record RootState(
     {
     }
 
-    public record PairConfigLoadedAction(BTCPayPairConfig? Config);
-
-    public record WalletConfigLoadedAction(WalletConfig? Config);
-
     public record LoadingAction(LoadingHandles LoadingHandle, bool IsLoading);
+    public record PairConfigLoadedAction(BTCPayPairConfig? Config);
+    public record WalletConfigLoadedAction(WalletConfig? Config);
+    public record WalletConfigChangeRequestedAction(WalletConfig Config);
+    public record BTCPayConnectionUpdatedAction(HubConnectionState? ConnectionState);
+    public record LightningNodeStateUpdatedAction(LightningNodeState State);
 
     protected class LoadingReducer : Reducer<RootState, LoadingAction>
     {
@@ -108,6 +109,26 @@ public record RootState(
         }
     }
 
-    public record BTCPayConnectionUpdatedAction(HubConnectionState? ConnectionState);
-    public record LightningNodeStateUpdatedAction(LightningNodeState State);
+    protected class WalletConfigChangeRequestedActionEffect : Effect<WalletConfigChangeRequestedAction>
+    {
+        private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
+        private readonly LightningNodeManager _lightningNodeManager;
+
+        public WalletConfigChangeRequestedActionEffect(
+            BTCPayAppConfigManager btcPayAppConfigManager,
+            LightningNodeManager lightningNodeManager)
+        {
+            _btcPayAppConfigManager = btcPayAppConfigManager;
+            _lightningNodeManager = lightningNodeManager;
+        }
+
+        public override async Task HandleAsync(WalletConfigChangeRequestedAction action, IDispatcher dispatcher)
+        {
+            var result = await _lightningNodeManager.RunNode(action.Config);
+            if (result)
+            {
+                await _btcPayAppConfigManager.UpdateConfig(action.Config);
+            }
+        }
+    }
 }

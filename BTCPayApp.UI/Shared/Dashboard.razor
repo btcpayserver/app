@@ -130,17 +130,14 @@ else
     private string LightningStatus => State.Value.LightningNodeState switch {
 
         LightningNodeState.NotConfigured => "not configured",
-        LightningNodeState.WaitingForBackend => "waiting for the backend",
-        LightningNodeState.ShuttingDown => "shutting down",
+        LightningNodeState.NotRunning => "not running",
         LightningNodeState.Error => "in error state",
         _ => State.Value.LightningNodeState.ToString().ToLowerInvariant()
     };
 
     private Severity LightningSeverity => State.Value.LightningNodeState switch {
-        LightningNodeState.Bootstrapping => Severity.Info,
         LightningNodeState.Starting => Severity.Info,
-        LightningNodeState.WaitingForBackend => Severity.Info,
-        LightningNodeState.Connected => Severity.Success,
+        LightningNodeState.Running => Severity.Success,
         LightningNodeState.Error => Severity.Error,
         _ => Severity.Warning
         };

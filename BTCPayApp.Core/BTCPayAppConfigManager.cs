@@ -10,7 +10,6 @@ public class BTCPayAppConfigManager : IHostedService
     private const string WalletConfigKey = "walletconfig";
 
     private readonly IConfigProvider _configProvider;
-    private readonly ILogger<BTCPayAppConfigManager> _logger;
     private readonly TaskCompletionSource _pairConfigLoaded = new();
     private readonly TaskCompletionSource _walletConfigLoaded = new();
 
@@ -20,10 +19,9 @@ public class BTCPayAppConfigManager : IHostedService
     public BTCPayPairConfig? PairConfig { get; private set; }
     public WalletConfig? WalletConfig { get; private set; }
 
-    public BTCPayAppConfigManager(IConfigProvider configProvider, ILogger<BTCPayAppConfigManager> logger)
+    public BTCPayAppConfigManager(IConfigProvider configProvider)
     {
         _configProvider = configProvider;
-        _logger = logger;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)

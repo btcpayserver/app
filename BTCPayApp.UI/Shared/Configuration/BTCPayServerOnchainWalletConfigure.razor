@@ -138,7 +138,7 @@
         }
         if (SelectedOption == "use-configured-wallet")
         {
-    //this is super simplistic. We should be asking for the derivation path,passphrase, have a network configured in the app, etc.
+            //this is super simplistic. We should be asking for the derivation path, passphrase, have a network configured in the app, etc.
             if (ConfiguredWallet != xpub)
             {
                 _validationEditContext.MessageStore.Add(() => Mnemonic!, "The mnemonic provided does not match the configured wallet");
