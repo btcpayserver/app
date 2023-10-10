@@ -1,6 +1,5 @@
 ﻿using BTCPayApp.Core.Contracts;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 
 namespace BTCPayApp.Core;
 
@@ -24,18 +23,16 @@ public class BTCPayAppConfigManager : IHostedService
         _configProvider = configProvider;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         _ = LoadPairConfig();
         _ = LoadWalletConfig();
 
-        Task.Run(async () =>
+        await Task.Run(async () =>
         {
             await Task.WhenAll(_pairConfigLoaded.Task, _walletConfigLoaded.Task);
             Loaded.TrySetResult();
         }, cancellationToken);
-
-        return Task.CompletedTask;
     }
 
     private async Task LoadPairConfig()

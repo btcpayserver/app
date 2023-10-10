@@ -14,14 +14,15 @@ public class StateMiddleware : Middleware
 
     public const string UiStateConfigKey = "uistate";
 
-    public StateMiddleware(IConfigProvider configProvider,
-        BTCPayAppConfigManager btcPayAppConfigManager,
+    public StateMiddleware(
+        IConfigProvider configProvider,
         BTCPayConnection btcPayConnection,
+        BTCPayAppConfigManager btcPayAppConfigManager,
         LightningNodeManager lightningNodeManager)
     {
         _configProvider = configProvider;
-        _btcPayAppConfigManager = btcPayAppConfigManager;
         _btcPayConnection = btcPayConnection;
+        _btcPayAppConfigManager = btcPayAppConfigManager;
         _lightningNodeManager = lightningNodeManager;
     }
 

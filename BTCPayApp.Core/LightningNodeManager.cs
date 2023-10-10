@@ -77,7 +77,7 @@ public class LightningNodeManager : IHostedService
             State = LightningNodeState.Running;
             return true;
         }
-        catch (Exception)
+        catch (Exception e)
         {
             State = LightningNodeState.Error;
             return false;
