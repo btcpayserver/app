@@ -1,8 +1,3 @@
-.public-page-wrap {
-  max-width: 560px;
-  overflow: hidden;
-}
-
 /* modes */
 #ModeTabs {
   min-height: 2.75rem;
@@ -13,25 +8,22 @@
   display: grid;
   grid-template-columns: repeat(3, 1fr);
 }
-.keypad button {
+.keypad .btn {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
   position: relative;
+  border-radius: 0;
   font-weight: var(--btcpay-font-weight-semibold);
   font-size: 24px;
   min-height: 3.5rem;
   height: 8vh;
   max-height: 6rem;
-  padding: 0 !important;
-  border-radius: 0 !important;
-  color: var(--btcpay-body-text) !important;
+  color: var(--btcpay-body-text);
 }
-.keypad button[data-key="del"] svg.mud-svg-icon {
-  width: 2.25rem;
-  height: 2.25rem;
-  transform: rotate(180deg);
-  transform-origin: center;
+.keypad .btn[data-key="+"] {
+  font-size: 2.25em;
 }
 .btcpay-pills label,
 .btn-secondary.rounded-pill {
@@ -41,55 +33,28 @@
 
 /* make borders collapse by shifting rows and columns by 1px */
 /* second column */
-.keypad button:nth-child(3n-1) {
+.keypad .btn:nth-child(3n-1) {
   margin-left: -1px;
 }
 /* third column */
-.keypad button:nth-child(3n) {
+.keypad .btn:nth-child(3n) {
   margin-left: -1px;
 }
 /* from second row downwards */
-.keypad button:nth-child(n+4) {
+.keypad .btn:nth-child(n+4) {
   margin-top: -1px;
 }
 /* ensure highlighted button is topmost */
-.keypad button:hover,
-.keypad button:focus,
-.keypad button:active {
+.keypad .btn:hover,
+.keypad .btn:focus,
+.keypad .btn:active {
   z-index: 1;
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.actions button {
-  flex:  1 1 50%;
 }
 
 #Calculation {
   min-height: 1.5rem;
 }
 
-@media (max-height: 700px) {
-  .store-header {
-    display: none !important;
-  }
-}
-@media (max-width: 575px) {
-  .public-page-wrap {
-    padding-right: 0;
-    padding-left: 0;
-  }
-  .keypad {
-    margin-left: -1px;
-    margin-right: -1px;
-  }
-  .store-footer {
-    display: none !important;
-  }
-}
 /* fix sticky hover effect on mobile browsers */
 @media (hover: none) {
   .keypad .btn-secondary:hover,

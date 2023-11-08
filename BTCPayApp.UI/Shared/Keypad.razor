@@ -1,222 +1,302 @@
-﻿@using BTCPayApp.UI.Pages
-@using BTCPayApp.UI.Shared
-@using Microsoft.AspNetCore.Components
-@using MudBlazor
-@using System.Globalization
-@using org.ldk.structs
-@inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@layout SimpleLayout
-
-<link href="./_content/BTCPayApp.UI/css/keypad.css" rel="stylesheet"/>
-
-<MudContainer MaxWidth="MaxWidth.Small">
-    <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="HandleSubmit" Class="d-flex flex-column gap-4 py-5" Style="min-height:90vh">
-        <div class="d-flex flex-column align-center px-4 mb-auto">
-            <MudText Typo="Typo.overline" Color="Color.Tertiary" Class="fw-semibold">@Currency</MudText>
-            <MudText Typo="Typo.h1" Class="mb-4" Style="@AmountStyle">@FormatCurrency(Amount, false)</MudText>
-            @if (!string.IsNullOrEmpty(Calculation) && EnableDiscount || EnableTips)
+﻿@using Newtonsoft.Json.Linq
+<form class="d-flex flex-column gap-4" @onsubmit="Submit">
+    <div ref="display" class="d-flex flex-column align-items-center px-4 mb-auto">
+        <div class="fw-semibold text-muted" id="Currency">@CurrencyCode</div>
+        <div class="fw-bold lh-sm" style="font-size:@(FontSize + "px")" id="Amount">@FormatCurrency(GetTotal(), false)</div>
+        <div class="text-muted text-center mt-2" id="Calculation">@Calculation(Model)</div>
+    </div>
+    @if (IsDiscountEnabled || IsTipEnabled)
+    {
+        <div id="ModeTabs" class="tab-content mb-n2">
+            @if (IsDiscountEnabled)
             {
-                <MudText Typo="Typo.overline" Color="Color.Secondary" Class="text-muted text-center mt-2" id="Calculation">@Calculation</MudText>
+                <div class="tab-pane fade px-2 @(Mode == InputMode.Discount ? "show active" : "")" role="tabpanel" aria-labelledby="ModeTablist-Discount">
+                    <div class="h4 fw-semibold text-muted text-center" id="Discount">
+                        <span class="h3 text-body me-1">@Model.DiscountPercent%</span> discount
+                    </div>
+                </div>
+            }
+            @if (IsTipEnabled)
+            {
+                var tip = GetTip();
+                <div class="tab-pane fade px-2 @(Mode == InputMode.Tip ? "show active" : "")" role="tabpanel" aria-labelledby="ModeTablist-Tip">
+                    <div class="btcpay-pills d-flex flex-wrap align-items-center justify-content-center gap-2">
+                        @if (CustomTipPercentages != null)
+                        {
+                            <button
+                                id="Tip-Custom"
+                                type="button"
+                                class="btcpay-pill @(Model.TipPercent == null ? "active" : "")"
+                                @onclick="() => Model.TipPercent = null">
+                                @(Model.Tip is > 0 ? FormatCurrency(Model.Tip.Value, true) : "Custom")
+                            </button>
+                            @foreach(var percentage in CustomTipPercentages)
+                            {
+                                <button
+                                    type="button"
+                                    id="Tip-@percentage"
+                                    class="btcpay-pill @(Model.TipPercent == percentage ? "active" : "")"
+                                    @onclick="() => Model.TipPercent = percentage">
+                                    @percentage%
+                                </button>
+                            }
+                        }
+                        else
+                        {
+                            <div class="h5 fw-semibold text-muted text-center">
+                                Amount@(tip > 0 ? $": {FormatCurrency(tip, true)}" : "")
+                            </div>
+                        }
+                    </div>
+                </div>
             }
         </div>
-        @if (false && Modes.Count > 1)
+        <div id="ModeTablist" class="nav btcpay-pills align-items-center justify-content-center mb-n2 pb-1" role="tablist">
+            @foreach (var mode in GetModes())
+            {
+                <input id="ModeTablist-@mode" name="mode" value="@mode" type="radio" role="tab"
+                       aria-controls="Mode-@mode" aria-selected="@(Mode == mode ? "true" : "false")"
+                       data-bs-toggle="pill" data-bs-target="#Mode-@mode"
+                       checked="@(Mode == mode)"
+                       disabled="@(Mode != InputMode.Amount && GetAmount() is 0)"
+                       @onclick="() => Mode = mode">
+                <label for="ModeTablist-@mode">@mode</label>
+            }
+        </div>
+    }
+    <div class="keypad">
+        @foreach (var key in Keys)
         {
-            <div id="ModeTabs" class="tab-content mb-n2">
-                @if (EnableDiscount)
-                {
-                    <div id="Mode-Discount" class="tab-pane fade px-2" :class="{ show: mode === 'discount', active: mode === 'discount' }" role="tabpanel" aria-labelledby="ModeTablist-Discount">
-                        <div class="h4 fw-semibold text-muted text-center" id="Discount">
-                            <span class="h3 text-body me-1">@DiscountPercent%</span> discount
-                        </div>
-                    </div>
-                }
-                @if (EnableTips)
-                {
-                    <div id="Mode-Tip" class="tab-pane fade px-2" :class="{ show: mode === 'tip', active: mode === 'tip' }" role="tabpanel" aria-labelledby="ModeTablist-Tip">
-                        <div class="btcpay-pills d-flex flex-wrap align-items-center justify-content-center gap-2">
-                            @if (CustomTipPercentages.Count > 0)
-                            {
-                                <MudButton Variant="Variant.Filled" DisableElevation="true" Class="btcpay-pill" OnClick="() => { TipPercent = null; }">
-                                    @if (Tip > 0)
-                                    {
-                                        @FormatCurrency(Tip, true)
-                                    }
-                                    else
-                                    {
-                                        <span>Custom</span>
-                                    }
-                                </MudButton>
-                                @foreach (var percentage in CustomTipPercentages)
-                                {
-                                    <MudButton Variant="Variant.Filled" DisableElevation="true" Class=@PillClass(percentage == TipPercent) OnClick="() => { TipPercent = percentage; }">
-                                        @percentage%
-                                    </MudButton>
-                                }
-                            }
-                            else
-                            {
-                                <div class="h5 fw-semibold text-muted text-center">
-                                    Amount@(Tip > 0 ? $": {Tip}" : null)
-                                </div>
-                            }
-                        </div>
-                    </div>
-                }
-            </div>
-            <MudChipSet Mandatory="true" Class="d-flex align-center justify-center ">
-                @foreach (var mode in Modes)
-                {
-                    var isActive = SelectedMode == mode;
-                    <MudChip Variant="isActive ? Variant.Filled : Variant.Outlined" Color="Color.Secondary" Disabled="@(mode != "Amount" && Amount == 0)" OnClick="() => { SelectedMode = mode; }">@mode</MudChip>
-                }
-            </MudChipSet>
+            <button disabled="@(key == '+' && Mode != InputMode.Amount)" @onclick="@(e => KeyPress(key))" @onclick:preventDefault @ondblclick="@(e => DoublePress(key))" type="button" class="btn btn-secondary btn-lg" data-key="@key">@key</button>
         }
-        <div class="keypad">
-            @foreach(var key in Keys)
-            {
-                <MudButton DisableElevation="true" @onclick="() => KeyPressed(key)" data-key="@key">
-                    @if (key == "del")
-                    {
-                        <MudIcon Icon="@BTCPayIcons.CaretRight" aria-label="delete"/>
-                    }
-                    else
-                    {
-                        @key
-                    }
-                </MudButton>
+    </div>
+    <button class="btn btn-lg btn-primary mx-3" type="submit" disabled="@IsSubmitting" id="pay-button">
+        @if (IsSubmitting)
+        {
+            <div class="spinner-border spinner-border-sm" role="status">
+                <span class="sr-only">Loading...</span>
+            </div>
+        }
+        else
+        {
+            <span>Charge</span>
+        }
+    </button>
+</form>
+
+@code {
+	[Parameter]
+	public string? CurrencyCode { get; set; }
+    [Parameter]
+    public string? CurrencySymbol { get; set; }
+    [Parameter]
+    public int CurrencyDivisibility { get; set; }
+    [Parameter]
+    public bool IsDiscountEnabled { get; set; }
+    [Parameter]
+    public bool IsTipEnabled { get; set; }
+    [Parameter]
+    public int[]? CustomTipPercentages { get; set; }
+
+    private bool IsSubmitting { get; set; }
+
+    const int DefaultFontSize = 64;
+    static char[] Keys = { '1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '+' };
+    private int FontSize { get; set; } = DefaultFontSize;
+
+    public enum InputMode
+    {
+        Amount,
+        Discount,
+        Tip
+    }
+
+    private InputMode Mode { get; set; } = InputMode.Amount;
+
+    public class KeypadModel
+    {
+        public List<decimal> Amounts { get; set; } = new ();
+        public int? DiscountPercent { get; set; }
+        public int? TipPercent { get; set; }
+        public decimal? Tip { get; set; }
+    }
+
+    private KeypadModel Model { get; set; } = new ();
+
+    private void Submit()
+    {
+        IsSubmitting = true;
+    }
+
+    private void KeyPress(char key = '1')
+    {
+        if (Mode == InputMode.Amount) {
+            var lastIndex = Model.Amounts.Count - 1;
+            var lastAmount = Model.Amounts[lastIndex];
+            if (key == 'C') {
+                if (lastAmount == 0 && lastIndex == 0) {
+                    // clear completely
+                    Clear();
+                } else if (lastAmount == 0) {
+                    // remove latest value
+                    Model.Amounts.RemoveAt(lastIndex);
+                } else {
+                    // clear latest value
+                    Model.Amounts[lastIndex] = 0;
+                }
+            } else if (key == '+' && lastAmount != 0) {
+                Model.Amounts.Add(0);
+            } else { // Is a digit
+                Model.Amounts[lastIndex] = ApplyKeyToValue(key, lastAmount, CurrencyDivisibility);
             }
-        </div>
-        <div class="actions px-4 gap-4">
-            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Secondary" @onclick="@Clear">Clear</MudButton>
-            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Primary" Disabled="Loading" data-testid="ChargeButton">
-                @if (Loading)
+        } else {
+            if (key == 'C') {
+                if (Mode == InputMode.Tip)
                 {
-                    <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true"/>
+                    Model.Tip = null;
+                    Model.TipPercent = null;
                 }
                 else
                 {
-                    <span>Charge</span>
+                    Model.DiscountPercent = null;
                 }
-            </MudButton>
-        </div>
-    </ValidationEditContext>
-</MudContainer>
-
-@code {
-    private ValidationEditContext _validationEditContext { get; set; }
-
-    public bool EnableDiscount { get; set; } = true;
-    public bool EnableTips { get; set; } = true;
-    public bool Loading { get; set; }
-    public string Currency { get; set; } = "USD";
-    private int Divisibility { get; set; } = 2;
-    private string DisplayAmount { get; set; } = string.Empty;
-    public double Amount { get; set; }
-    public double Tip { get; set; }
-    public double Discount { get; set; }
-    public double? TipPercent { get; set; }
-    public double DiscountPercent { get; set; }
-    public List<int> CustomTipPercentages { get; set; } = new () { 5, 10, 21 };
-
-    public static readonly List<string> Keys = new() { "1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "del" };
-
-    public string SelectedMode { get; set; } = "Amount";
-
-    public List<string> Modes
-    {
-        get
-        {
-            var modes = new List<string> { "Amount" };
-            if (EnableDiscount) modes.Add("Discount");
-            if (EnableTips) modes.Add("Tips");
-            return modes;
+            } else {
+                var divisibility = Mode == InputMode.Tip ? CurrencyDivisibility : 0;
+                if (Mode == InputMode.Tip)
+                {
+                    Model.Tip = ApplyKeyToValue(key, Model.Tip ?? 0, divisibility);
+                    Model.TipPercent = null;
+                }
+                else
+                {
+                    Model.DiscountPercent = (int)ApplyKeyToValue(key, Model.DiscountPercent ?? 0, divisibility);
+                }
+            }
         }
     }
 
-    public string AmountStyle
+    public decimal ApplyKeyToValue(char key, decimal value, int divisibility)
     {
-        get
-        {
-            var fs = 64; // TODO: Calculate based on width
-            return $"font-size:{fs}px";
+        var val = value is 0 ? "" : Formatted(value, divisibility);
+        val = (val + key)
+            .Replace(".", "")
+            .PadLeft(divisibility, '0');
+            //.Replace(new Regex("(\\d*)(\\d{{divisibility}})", "\\1.\\2");
+        return decimal.Parse(val);
+    }
+
+    public void DoublePress(char key)
+    {
+        if (key == 'C') {
+            Clear();
         }
     }
 
-    public string Calculation
+    public void Clear()
     {
-        get
-        {
-            return "";
-        }
+        Model.Amounts.Clear();
+        Model.DiscountPercent = null;
+        Model.TipPercent = null;
+        Model.Tip = null;
+        Mode = InputMode.Amount;
     }
 
-    private void KeyPressed(string key)
+    private JObject GetData()
     {
-        switch (SelectedMode) {
-            case "Amount":
-                DisplayAmount = ApplyKeyToValue(key, DisplayAmount);
-                Amount = double.Parse(DisplayAmount, CultureInfo.InvariantCulture);
-                break;
-            case "Discount":
-                var discount = ApplyKeyToValue(key, DiscountPercent.ToString(CultureInfo.InvariantCulture));
-                DiscountPercent = double.Parse(discount, CultureInfo.InvariantCulture);
-                break;
-            case "Tips":
-                var tipPercent = ApplyKeyToValue(key, (TipPercent ?? 0).ToString(CultureInfo.InvariantCulture));
-                TipPercent = double.Parse(tipPercent, CultureInfo.InvariantCulture);
-                break;
-            default:
-                throw new Exception("Invalid mode");
+        var data = new JObject
+        {
+            ["subTotal"] = GetAmount(),
+            ["total"] = GetTotal(),
         };
-    }
 
-    private string ApplyKeyToValue (string key, string value) {
-        if (string.IsNullOrEmpty(value) || value == "0") {
-            value = "";
+        var discount = GetDiscount();
+        if (discount > 0)
+        {
+            data["discount"] = discount;
         }
-        switch (key) {
-            case "del":
-                if (string.IsNullOrEmpty(value)) return "0";
-                value = value[..^1];
-                value = string.IsNullOrEmpty(value) ? "0" : value;
-                break;
-            case ".":
-                if (!value.Contains(".")) { // Only add decimal point if it doesn't exist yet
-                    value += ".";
-                }
-                break;
-            default:
-                value += key;
-                var decimalIndex = value.IndexOf(".", StringComparison.Ordinal);
-                if (decimalIndex != -1 && value.Length - decimalIndex - 1  > Divisibility) {
-                    value = value.Replace(".", "");
-                    value = $"{value[..^Divisibility]}.{value[^Divisibility..]}";
-                }
-                break;
+        if (Model.DiscountPercent is > 0)
+        {
+            data["discountPercentage"] = Model.DiscountPercent;
         }
-        return value;
+
+        var tip = GetTip();
+        if (tip > 0)
+        {
+            data["tip"] = tip;
+        }
+        if (Model.TipPercent != null)
+        {
+            data["tipPercentage"] = Model.TipPercent;
+        }
+        return data;
     }
 
-    private void HandleSubmit()
+    private List<InputMode> GetModes()
     {
+        var modes = new List<InputMode> { InputMode.Amount };
+        if (IsDiscountEnabled) modes.Add(InputMode.Discount);
+        if (IsTipEnabled) modes.Add(InputMode.Tip);
+        return modes;
     }
 
-    private void Clear()
+    private decimal GetAmount()
     {
-        Amount = Tip = Discount = DiscountPercent = 0;
-        DisplayAmount = string.Empty;
-        TipPercent = null;
-        SelectedMode = "Amount";
+        return Model.Amounts.Count > 0 ? Model.Amounts.Sum() : Model.Amounts.FirstOrDefault();
     }
 
-    private string FormatCurrency(double value, bool b)
+    private decimal GetDiscount()
     {
-        var formatted = value.ToString("C", CultureInfo.InvariantCulture);
-        return formatted[1..] + (b ? $" {Currency}" : "");
+        var amount = GetAmount();
+        return amount > 0 && Model.DiscountPercent is > 0
+            ? Math.Round(amount * (Model.DiscountPercent.Value / 100.0m), CurrencyDivisibility)
+            : 0;
     }
 
-    private string PillClass(bool isActive)
+    private decimal GetTip()
     {
-        return $"btcpay-pill{(isActive ? " active" : "")}";
+        if (Model.TipPercent is > 0) {
+            var amount = GetAmount() - GetDiscount();
+            return Math.Round(amount * (Model.TipPercent.Value / 100.0m), CurrencyDivisibility);
+        }
+        return Model.Tip is > 0 ? Math.Round(Model.Tip.Value, CurrencyDivisibility) : 0.0m;
+    }
+
+    private decimal GetTotal()
+    {
+        return GetAmount() - GetDiscount() + GetTip();
+    }
+
+    private string? Calculation(KeypadModel model)
+    {
+        if (model.Amounts.Count < 2 && model.DiscountPercent is not > 0 && !model.Tip.HasValue) return null;
+        var calc = string.Join(" + ", model.Amounts.Select(amt => FormatCurrency(amt, true)));
+        var discount = GetDiscount();
+        if (discount > 0) calc += $" - {FormatCurrency(discount, true)} (${model.DiscountPercent}%)";
+        var tip = GetTip();
+        if (model.Tip > 0) calc += $" + ${FormatCurrency(tip, true)}";
+        if (model.TipPercent > 0) calc += $" (${model.TipPercent}%)";
+        return calc;
+    }
+
+    private string FormatCurrency(decimal value, bool withSymbol)
+    {
+        if (CurrencyCode is "BTC" or "SATS") return FormatCrypto(value, withSymbol);
+        try {
+            var symbol = withSymbol ? $" {CurrencySymbol ?? CurrencyCode}" : "";
+            return $"{Formatted(value, CurrencyDivisibility)}{symbol}";
+        }
+        catch (Exception)
+        {
+            return FormatCrypto(value, withSymbol);
+        }
+    }
+
+    private string FormatCrypto(decimal value, bool withSymbol) {
+        var symbol = withSymbol ? $" {CurrencySymbol ?? CurrencyCode}" : "";
+        return $"{Formatted(value, CurrencyDivisibility)}{symbol}";
+    }
+
+    private string Formatted(decimal value, int divisibility) {
+        return string.Format($"{{0:0.{new string('0', divisibility)}}}", value);
     }
 }

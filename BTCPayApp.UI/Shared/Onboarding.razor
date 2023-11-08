@@ -1,40 +1,27 @@
 ﻿@using BTCPayApp.UI.Pages
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
-<MudCarousel Class="mx-auto" ShowArrows="@false" AutoCycle="@false" @bind-SelectedIndex="@Step" TData="object" id="OnboardingCarousel">
-    <MudCarouselItem Transition="@Transition.Slide">
-        <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex flex-column gap-4" Style="height:calc(100% - 4rem)">
-            <MudIcon Class="mx-auto my-auto" Icon="@BTCPayIcons.LogoBtcpay" Color="@Color.Primary" Size="@Size.Large"/>
-            <MudText Typo="Typo.h4" Align="Align.Center">Welcome To BTCPay Server</MudText>
-            <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
-                No fees, no third-party.
-                All payments go through your node, running on your phone!
-            </MudText>
-            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Primary" OnClick="@(() => GoToStep(1))">Next</MudButton>
-        </MudContainer>
-    </MudCarouselItem>
-    <MudCarouselItem Transition="@Transition.Slide">
-        <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex flex-column gap-4" Style="height:calc(100% - 4rem)">
-            <MudIcon Class="mx-auto my-auto" Icon="@BTCPayIcons.Key" Color="@Color.Primary" Size="@Size.Large" />
-            <MudText Typo="Typo.h4" Align="Align.Center">Keep your wallet and bitcoin secure</MudText>
-            <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
-                Cloud backups, enhanced accounting functionality and ability to easily refund your customers
-            </MudText>
-            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Primary" OnClick="@(() => GoToStep(2))">Next</MudButton>
-        </MudContainer>
-    </MudCarouselItem>
-    <MudCarouselItem Transition="@Transition.Slide">
-        <MudContainer MaxWidth="MaxWidth.ExtraSmall" Class="d-flex flex-column gap-4" Style="height:calc(100% - 4rem)">
-            <MudIcon Class="mx-auto my-auto" Icon="@BTCPayIcons.Pointofsale" Color="@Color.Primary" Size="@Size.Large" />
-            <MudText Typo="Typo.h4" Align="Align.Center">Start Accepting Bitcoin Payments</MudText>
-            <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="flex-grow-1">
-                Free and open-source bitcoin point of sale. With 0% Fees & No Third-party.
-            </MudText>
-            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Primary" Href="@Routes.WalletSetup" data-testid="StandaloneButton">Get Started</MudButton>
-            <MudButton Size="Size.Large" DisableElevation="true" Color="Color.Secondary" Href="@Routes.Pair" data-testid="PairButton">Pair with BTCPay Server</MudButton>
-        </MudContainer>
-    </MudCarouselItem>
-</MudCarousel>
+<div id="OnboardingCarousel" class="carousel slide">
+    <div class="carousel-inner">
+        <div class="carousel-item active">
+            <Icon Symbol="logo-btcpay" />
+            <h4>Welcome To BTCPay Server</h4>
+            <p>No fees, no third-party. All payments go through your node, running on your phone!</p>
+        </div>
+        <div class="carousel-item">
+            <Icon Symbol="key" />
+            <h4>Keep your wallet and bitcoin secure</h4>
+            <p>Cloud backups, enhanced accounting functionality and ability to easily refund your customers</p>
+        </div>
+        <div class="carousel-item">
+            <Icon Symbol="pointofsale" />
+            <h4>Start Accepting Bitcoin Payments</h4>
+            <p>Free and open-source bitcoin point of sale. With 0% Fees & No Third-party.</p>
+            <NavLink class="btn btn-primary" href="@Routes.WalletSetup" data-testid="StandaloneButton">Get Started</NavLink>
+            <NavLink class="btn btn-secondary" href="@Routes.Pair" data-testid="PairButton">Pair with BTCPay Server</NavLink>
+        </div>
+    </div>
+</div>
 
 @code {
     private int Step { get; set; } = 0;

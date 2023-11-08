@@ -4,14 +4,13 @@
     var messages = EditContext.GetValidationMessages(For);
     foreach (var message in messages)
     {
-        <MudText Color="Color.Error">@message</MudText>
+        <div class="text-danger">@message</div>
     }
 }
 
 @code {
-
     [CascadingParameter]
-    public EditContext EditContext{ get; set; }
+    public EditContext EditContext { get; set; }
 
     [Parameter]
     public Expression<Func<object>> For { get; set; }

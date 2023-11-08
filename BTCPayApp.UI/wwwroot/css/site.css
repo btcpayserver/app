@@ -1,24 +1,66 @@
-﻿@media (min-width: 0px) {
-  #OnboardingCarousel {
-    min-height: 430px;
-  }
-}
-@media (min-width: 320px) {
-  #OnboardingCarousel {
-    min-height: 410px;
-  }
-}
-@media (min-width: 480px) {
-  #OnboardingCarousel {
-    min-height: 380px;
-  }
-}
+﻿
 
 ::-moz-focus-inner {
   padding: 0;
   border-style: none;
 }
 
-.fw-semibold {
-  font-weight: var(--btcpay-font-weight-semibold);
+[aria-expanded] > svg.icon-caret-down {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  transition: transform 0.2s ease-in-out;
+}
+
+[aria-expanded="true"] > svg.icon-caret-down {
+  transform: rotate(-180deg);
+}
+
+/* Badges */
+.badge-new,
+.badge-pending {
+  background: #d4edda;
+  color: #000;
+}
+.badge-expired {
+  background: #eee;
+  color: #000;
+}
+.badge-invalid {
+  background: var(--btcpay-danger);
+  color: var(--btcpay-danger-text);
+}
+.badge-unusual,
+.badge-processing {
+  background: var(--btcpay-warning);
+  color: var(--btcpay-warning-text);
+}
+.badge-settled {
+  background: var(--btcpay-success);
+  color: var(--btcpay-success-text);
+}
+
+/* Blazor error */
+#blazor-error-ui {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background-color: var(--btcpay-danger);
+  color: var(--btcpay-danger-text);
+  padding: .6rem 1.75rem .7rem 1.25rem;
+}
+#blazor-error-ui .reload {
+  color: inherit;
+  text-decoration: underline;
+}
+#blazor-error-ui .dismiss{
+  position: absolute;
+  right: .75rem;
+  top: .5rem;
+  color: inherit;
+  cursor: pointer;
 }

@@ -1,0 +1,15 @@
+@media (min-width: 0px) {
+  #OnboardingCarousel {
+    min-height: 430px;
+  }
+}
+@media (min-width: 320px) {
+  #OnboardingCarousel {
+    min-height: 410px;
+  }
+}
+@media (min-width: 480px) {
+  #OnboardingCarousel {
+    min-height: 380px;
+  }
+}

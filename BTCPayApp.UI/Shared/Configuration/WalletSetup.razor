@@ -2,18 +2,17 @@
 @using NBitcoin
 
 <ValidationEditContext Model="this" @ref="_validationEditContext" Validate="Validate" OnValidSubmit="OnSubmit">
-    <MudText>Please write down this seed and keep it safe. You will need it to recover your wallet.</MudText>
-    <MudTextField
-        @bind-Value="Mnemonic"
-        HelperText="Mnemonic Seed"
-        Variant="Variant.Outlined"
-        AdornmentIcon="@Icons.Material.Filled.Refresh"
-        Adornment="Adornment.End"
-        OnAdornmentClick="GenerateSeed"
-        For="() => Mnemonic"/>
-    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="_validationEditContext.Invalid" Class="mt-3">
+    <p>Please write down this seed and keep it safe. You will need it to recover your wallet.</p>
+    <div class="form-group">
+        <label for="Mnemonic" class="form-label">Mnemonic Seed</label>
+        <div class="input-group">
+            <InputText id="Mnemonic" class="form-control" @bind-Value="Mnemonic" />
+            <button class="btn btn-outline-secondary" type="button" @onclick="GenerateSeed">Generate</button>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3" disabled="@_validationEditContext.Invalid">
         Continue
-    </MudButton>
+    </button>
 </ValidationEditContext>
 
 @code {

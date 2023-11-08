@@ -1,4 +1,12 @@
-﻿<Fluxor.Blazor.Web.StoreInitializer/>
+﻿@using BTCPayApp.UI.Features
+@using BTCPayApp.Core.Contracts
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IStateSelection<RootState, HashSet<RootState.LoadingHandles>> LoadingStateSelection
+@inject IDispatcher Dispatcher
+@inject IConfigProvider ConfigProvider
+
+<PageTitle>BTCPay Server</PageTitle>
+<Fluxor.Blazor.Web.StoreInitializer/>
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
@@ -7,7 +15,23 @@
     <NotFound>
         <PageTitle>Not found</PageTitle>
         <LayoutView Layout="@typeof(MainLayout)">
-            <MudAlert Severity="Severity.Warning">This page does not exist.</MudAlert>
+            <div class="alert alert-warning">This page does not exist.</div>
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        LoadingStateSelection.Select(state => state.Loading);
+        var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
+        if (state != null)
+        {
+            if (!string.IsNullOrEmpty(state.SelectedTheme))
+            {
+                Dispatcher.Dispatch(new UIState.ApplyUserTheme(state.SelectedTheme));
+            }
+        }
+        await base.OnInitializedAsync();
+    }
+}

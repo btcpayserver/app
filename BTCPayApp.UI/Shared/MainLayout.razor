@@ -1,34 +1,57 @@
 ﻿@using BTCPayApp.UI.Pages
 @inherits Fluxor.Blazor.Web.Components.FluxorLayout
 
-<LayoutBase>
-    <MudAppBar Elevation="1">
-        <MudIconButton Icon="@BTCPayIcons.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle"/>
-        <MudLink Href="@Routes.Home" Underline="Underline.None" Color="Color.Inherit" Class="d-flex align-center ml-2">
-            <MudImage Src="_content/BTCPayApp.UI/img/logo.svg" Height="24" Alt="BTCPay Server" />
-            <MudText Class="ml-3">BTCPay Server</MudText>
-        </MudLink>
-    </MudAppBar>
-    <MudDrawer @bind-Open="_isDrawerOpen" ClipMode="DrawerClipMode.Always" Class="py-5">
-        <MudNavMenu Color="Color.Success" Bordered="true">
-            <MudNavLink Href="@Routes.Home" Icon="@BTCPayIcons.Home" Match="NavLinkMatch.All">Dashboard</MudNavLink>
-            <MudNavLink Href="@Routes.WalletSetup" Icon="@Icons.Material.Filled.AccountBalanceWallet" Match="NavLinkMatch.All">Wallet</MudNavLink>
-            <MudNavLink Href="@Routes.PointOfSale" Icon="@BTCPayIcons.Pointofsale" Match="NavLinkMatch.All">Point Of Sale</MudNavLink>
-            <MudNavLink Href="@Routes.Settings" Icon="@BTCPayIcons.Settings" Match="NavLinkMatch.All">Settings</MudNavLink>
-        </MudNavMenu>
-    </MudDrawer>
-    <MudMainContent>
-        <MudContainer Fixed="true" Class="py-5">
+<div id="MainLayout">
+    <header id="MainMenu" class="btcpay-header d-flex flex-column d-print-none">
+        <div id="MainMenuHead">
+            <button id="MainMenuToggle" class="mainMenuButton" type="button" data-bs-toggle="offcanvas" data-bs-target="#MainNav" aria-controls="MainNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span>Menu</span>
+            </button>
+            <NavLink class="navbar-brand py-2" href="@Routes.Home" Match="NavLinkMatch.All">
+                <svg xmlns="http://www.w3.org/2000/svg" role="img" alt="BTCPay Server" class="main-logo main-logo-btcpay">
+                    <use href="_content/BTCPayApp.UI/img/logo.svg#small" class="main-logo-btcpay--small"/>
+                    <use href="_content/BTCPayApp.UI/img/logo.svg#large" class="main-logo-btcpay--large"/>
+                </svg>
+            </NavLink>
+        </div>
+        <nav id="MainNav" class="d-flex flex-column justify-content-between">
+            <div class="accordion px-3 px-lg-4">
+                <div class="accordion-item">
+                    <div class="accordion-body">
+                        <ul class="navbar-nav">
+                            <li class="nav-item">
+                                <NavLink class="nav-link" href="@Routes.Home" Match="NavLinkMatch.All">
+                                    <Icon symbol="home"/>
+                                    <span>Dashboard</span>
+                                </NavLink>
+                            </li>
+                            <li class="nav-item">
+                                <NavLink class="nav-link" href="@Routes.WalletSetup" Match="NavLinkMatch.All">
+                                    <Icon symbol="existing-wallet"/>
+                                    <span>Wallet</span>
+                                </NavLink>
+                            </li>
+                            <li class="nav-item">
+                                <NavLink class="nav-link" href="@Routes.PointOfSale" Match="NavLinkMatch.All">
+                                    <Icon symbol="pointofsale"/>
+                                    <span>Point Of Sale</span>
+                                </NavLink>
+                            </li>
+                            <li class="nav-item">
+                                <NavLink class="nav-link" href="@Routes.Settings" Match="NavLinkMatch.All">
+                                    <Icon symbol="settings"/>
+                                    <span>Settings</span>
+                                </NavLink>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+    <main id="MainContent">
+        <section>
             @Body
-        </MudContainer>
-    </MudMainContent>
-</LayoutBase>
-
-@code {
-    private bool _isDrawerOpen;
-
-    void DrawerToggle()
-    {
-        _isDrawerOpen = !_isDrawerOpen;
-    }
-}
+        </section>
+    </main>
+</div>

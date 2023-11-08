@@ -1,22 +1,23 @@
-﻿@using System.ComponentModel.DataAnnotations
+﻿@*
+@using System.ComponentModel.DataAnnotations
 @using NBitcoin
-@* if there is a configured wallet, and it is hot, ask if the user would like to import and use that within the app *@
-@* if there is a configured wallet, and it is not hot, ask if the user would like to provide the seed to the app *@
-@* if there is no configured wallet, ask if the user would like to create a new wallet *@
-@* if the user would like to create a new wallet, ask if the user would like to import it into BTCPayServer store as a hot or cold wallet *@
+$1$ if there is a configured wallet, and it is hot, ask if the user would like to import and use that within the app #1#
+$1$ if there is a configured wallet, and it is not hot, ask if the user would like to provide the seed to the app #1#
+$1$ if there is no configured wallet, ask if the user would like to create a new wallet #1#
+$1$ if the user would like to create a new wallet, ask if the user would like to import it into BTCPayServer store as a hot or cold wallet #1#
 
 @if (ConfiguredWallet is not null)
 {
-    <MudAlert Severity="Severity.Warning" Class="mb-4">
+    <div class="alert alter-warning">
         @if (IsConfiguredWalletHot)
         {
-            <MudText>Your BTCPay Server store already has an onchain hot wallet configured.</MudText>
+            <div>Your BTCPay Server store already has an onchain hot wallet configured.</div>
         }
         else
         {
-            <MudText>Your BTCPay Server store already has an onchain watch-only wallet configured.</MudText>
+            <div>Your BTCPay Server store already has an onchain watch-only wallet configured.</div>
         }
-    </MudAlert>
+    </div>
 }
 
 <ValidationEditContext Model="this" @ref="_validationEditContext" Validate="Validate" OnValidSubmit="OnSubmit">
@@ -26,7 +27,7 @@
             <div>
                 <MudRadio T="string" Option="@option.Key" Class="align-start">
                     <div class="d-flex flex-wrap gap-3 pt-3">
-                        <MudText>@option.Value.Item1</MudText>
+                        <p>@option.Value.Item1</p>
                         @if (option.Value.Item2)
                         {
                             <MudChip Variant="Variant.Text" Color="Color.Warning" Size="Size.Small" Class="ma-0">Your existing wallet will be overwritten!</MudChip>
@@ -38,18 +39,15 @@
     </MudRadioGroup>
     @if (IsMnemonicRequired)
     {
-        <MudTextField
-            @bind-Value="Mnemonic"
-            HelperText="Mnemonic Seed"
-            Variant="Variant.Outlined"
-            AdornmentIcon="@Icons.Material.Filled.Refresh"
-            Adornment="Adornment.End"
-            OnAdornmentClick="GenerateSeed"
-            For="() => Mnemonic"/>
+        <div class="input-group mb-3">
+            <label for="Mnemonic" class="form-label">Mnemonic Seed</label>
+            <input id="Mnemonic" class="form-control" @bind-Value="Mnemonic">
+            <button class="btn btn-outline-secondary" type="button" @onclick="GenerateSeed">Generate</button>
+        </div>
     }
-    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="_validationEditContext.Invalid" Class="mt-3">
+    <button type="submit" class="btn btn-primary mt-3" @bind-Disabled="_validationEditContext.Invalid">
         Continue
-    </MudButton>
+    </button>
 </ValidationEditContext>
 
 @code {
@@ -164,3 +162,4 @@
 
     public record ChosenConfiguration(bool UseExisting, bool SetStore, string? Mnemonic);
 }
+*@

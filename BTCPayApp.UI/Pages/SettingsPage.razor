@@ -6,7 +6,7 @@
 
 <PageTitle>Settings</PageTitle>
 
-<MudText Typo="Typo.h1" Class="mb-8">Settings</MudText>
+<h1 class="mb-3">Settings</h1>
 
 <Settings Theme="@UiState.Value.SelectedTheme" OnThemeChange="theme => Dispatcher.Dispatch(new UIState.ApplyUserTheme(theme))" />
 

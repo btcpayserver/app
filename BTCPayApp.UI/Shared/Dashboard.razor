@@ -7,124 +7,120 @@
 @using BTCPayApp.Core
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
-<MudText Typo="Typo.h5" Class="mb-4">Dashboard</MudText>
+<h1 class="mb-3">Dashboard</h1>
 
 @if (State.Value.Loading.Contains(RootState.LoadingHandles.PairConfig))
 {
-    <MudAlert Severity="Severity.Info">Pairing configuration loading.</MudAlert>
+    <div class="alert alert-info">Pairing configuration loading.</div>
 }
 else if (State.Value.PairConfig is not null)
 {
-    <MudAlert Severity="@ConnectionSeverity">
+    <div class="alert alert-@ConnectionSeverity">
         <div class="d-flex align-center justify-space-between gap-3">
             Your BTCPay Server is paired. Connection status is @ConnectionStatus.
             @if (State.Value.BTCPayServerConnectionState == HubConnectionState.Disconnected)
             {
-                <MudButton Href="@Routes.Pair" Variant="Variant.Text" Color="Color.Error" Size="Size.Small">
+                <NavLink href="@Routes.Pair" class="btn btn-sm btn-danger">
                     Configure connection
-                </MudButton>
+                </NavLink>
             }
         </div>
-    </MudAlert>
+    </div>
 }
 else
 {
-    <MudAlert Severity="Severity.Warning">
+    <div class="alert alert-warning">
         <div class="d-flex flex-wrap align-center justify-space-between gap-3">
             No BTCPay Server paired.
-            <MudButton Href="@Routes.Pair" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small">
+            <NavLink href="@Routes.Pair" class="btn btn-sm btn-primary">
                 Configure connection
-            </MudButton>
+            </NavLink>
         </div>
-    </MudAlert>
+    </div>
 }
 
 @if (State.Value.Loading.Contains(RootState.LoadingHandles.WalletConfig))
 {
-    <MudAlert Severity="Severity.Info">Wallet configuration loading.</MudAlert>
+    <div class="alert alert-info">Wallet configuration loading.</div>
 }
 else if (State.Value.WalletConfig is not null)
 {
-    <MudAlert Severity="Severity.Success">Your wallet is configured.</MudAlert>
+    <div class="alert alert-success">Your wallet is configured.</div>
 }
 else
 {
-    <MudAlert Severity="Severity.Warning">
+    <div class="alert alert-warning">
         <div class="d-flex flex-wrap align-center justify-space-between gap-3">
             Your wallet is not configured.
-            <MudButton Href="@Routes.WalletSetup" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small">
+            <NavLink href="@Routes.WalletSetup" class="btn btn-sm btn-primary">
                 Set up a wallet
-            </MudButton>
+            </NavLink>
         </div>
-    </MudAlert>
+    </div>
 }
 
 @if (State.Value.Loading.Contains(RootState.LoadingHandles.LightningState))
 {
-    <MudAlert Severity="Severity.Info">Lightning node loading.</MudAlert>
+    <div class="alert alert-info">Lightning node loading.</div>
 }
 else
 {
-    <MudAlert Severity="@LightningSeverity">Your Lightning node is @LightningStatus</MudAlert>
+    <div class="alert alert-@LightningSeverity">Your Lightning node is @LightningStatus</div>
 }
 
 @if (State.Value.Loading.Contains(RootState.LoadingHandles.TransactionState))
 {
-    <MudAlert Severity="Severity.Info">Transactions loading.</MudAlert>
+    <div class="alert alert-info">Transactions loading.</div>
 }
 else
 {
-    <MudText Typo="Typo.h6" Class="mt-8" GutterBottom="true">Transactions</MudText>
+    <h6 class="mt-5">Transactions</h6>
     @if (OnChainTransactionsState.Value.Error is not false)
     {
-        <MudAlert Severity="Severity.Warning">
+        <div class="alert alert-warning">
             <div class="d-flex flex-wrap align-center justify-space-between gap-3">
                 There was an error loading your transactions.
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="() => Dispatcher.Dispatch(new OnChainTransactionsState.LoadTransactionsAction())">
+                <button class="btn btn-sm btn-primary" @onclick="() => Dispatcher.Dispatch(new OnChainTransactionsState.LoadTransactionsAction())">
                     Retry
-                </MudButton>
+                </button>
             </div>
-        </MudAlert>
+        </div>
     }
     else if (OnChainTransactionsState.Value.AllTransactions?.Any() is true)
     {
-        <MudList>
+        <ul>
             @foreach (var tx in OnChainTransactionsState.Value.AllTransactions)
             {
-                <MudListItem>
-                    <MudListItemText>
-                        <div class="d-flex align-center justify-space-between gap-3">
-                            <div>
-                                <MudText Typo="Typo.body2" Class="mb-1">@tx.Value.Id</MudText>
-                                <MudText Typo="Typo.caption" Class="mb-1">@tx.Value.Timestamp</MudText>
-                            </div>
-                            <div>
-                                <MudText Typo="Typo.body2" Class="mb-1">@tx.Value.Balance</MudText>
-                                <MudText Typo="Typo.caption" Class="mb-1">@tx.Value.Status</MudText>
-                            </div>
-                        </div>
-                    </MudListItemText>
-                </MudListItem>
+                <li class="d-flex align-center justify-space-between gap-3">
+                    <div>
+                        <div class="mb-1">@tx.Value.Id</div>
+                        <div class="mb-1">@tx.Value.Timestamp</div>
+                    </div>
+                    <div>
+                        <div class="mb-1">@tx.Value.Balance</div>
+                        <div class="mb-1">@tx.Value.Status</div>
+                    </div>
+                </li>
             }
-        </MudList>
-        <MudButton Variant="Variant.Filled" Color="Color.Default" Size="Size.Small" OnClick="() => Dispatcher.Dispatch(new OnChainTransactionsState.LoadTransactionsAction())">
+        </ul>
+        <button class="btn btn-sm btn-secondary" @onclick="() => Dispatcher.Dispatch(new OnChainTransactionsState.LoadTransactionsAction())">
             Refresh
-        </MudButton>
+        </button>
     }
     else
     {
-        <MudText GutterBottom="true" Color="Color.Tertiary">There are no transactions, yet.</MudText>
+        <p class="text-muted">There are no transactions, yet.</p>
     }
 }
 @code {
     private string ConnectionStatus => State.Value.BTCPayServerConnectionState?.ToString().ToLowerInvariant() ?? "not connected";
 
-    private Severity ConnectionSeverity => State.Value.BTCPayServerConnectionState switch {
-        HubConnectionState.Disconnected => Severity.Warning,
-        HubConnectionState.Connected => Severity.Success,
-        HubConnectionState.Connecting => Severity.Info,
-        HubConnectionState.Reconnecting => Severity.Info,
-        _ => Severity.Warning
+    private string ConnectionSeverity => State.Value.BTCPayServerConnectionState switch {
+        HubConnectionState.Disconnected => "warning",
+        HubConnectionState.Connected => "success",
+        HubConnectionState.Connecting => "info",
+        HubConnectionState.Reconnecting => "info",
+        _ => "warning"
         };
 
     private string LightningStatus => State.Value.LightningNodeState switch {
@@ -135,11 +131,11 @@ else
         _ => State.Value.LightningNodeState.ToString().ToLowerInvariant()
     };
 
-    private Severity LightningSeverity => State.Value.LightningNodeState switch {
-        LightningNodeState.Starting => Severity.Info,
-        LightningNodeState.Running => Severity.Success,
-        LightningNodeState.Error => Severity.Error,
-        _ => Severity.Warning
+    private string LightningSeverity => State.Value.LightningNodeState switch {
+        LightningNodeState.Starting => "info",
+        LightningNodeState.Running => "success",
+        LightningNodeState.Error => "danger",
+        _ => "warning"
         };
 
     protected override Task OnAfterRenderAsync(bool firstRender)

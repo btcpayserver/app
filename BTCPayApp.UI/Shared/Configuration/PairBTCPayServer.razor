@@ -9,20 +9,21 @@
 @if (Result is null)
 {
     <ValidationEditContext Model="this" @ref="_validationEditContext" OnValidSubmit="StartPair">
-        <MudTextField Label="Pairing URL" @bind-Value="PairingUrl" For="() => PairingUrl"/>
-        <MudErrorMessage For="() => PairingUrl"></MudErrorMessage>
-        <MudGrid Class="mt-4">
-            <MudItem>
-                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="_validationEditContext.Invalid">
-                    Submit
-                </MudButton>
-            </MudItem>
-        </MudGrid>
+        <ErrorMessage For="() => PairingUrl"></ErrorMessage>
+        <div class="form-group">
+            <label for="PairingURL" class="form-label">Pairing URL</label>
+            <InputText id="PairingURL" class="form-control" @bind-Value="PairingUrl" />
+        </div>
+        <button type="submit" class="btn btn-primary" disabled="@_validationEditContext.Invalid">
+            Submit
+        </button>
     </ValidationEditContext>
 }
 else if (Result.StoreId is null)
 {
+    @*
     <BTCPayServerStoreSelector Key="@Result.Key" Url="@PairingUrl" bind-SelectedStoreId="SelectedStoreId" OnCreateStore="CreateStore" />
+    *@
 }
 
 @code {

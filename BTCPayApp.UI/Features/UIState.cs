@@ -11,20 +11,7 @@ public class UIState
     public bool IsDarkMode { get; set; }
 
     public record ApplyUserTheme(string Theme);
-    public record SetSystemPreference(string Theme);
     public record SetUserTheme(string Theme);
-
-    [ReducerMethod]
-    public static UIState Reduce(UIState state, SetSystemPreference action)
-    {
-        var effectiveTheme = state.SelectedTheme == Constants.SystemTheme ? action.Theme : state.SelectedTheme;
-        return new UIState
-        {
-            SystemTheme = action.Theme,
-            SelectedTheme = state.SelectedTheme,
-            IsDarkMode = effectiveTheme == Constants.DarkTheme
-        };
-    }
 
     [ReducerMethod]
     public static UIState Reduce(UIState state, SetUserTheme action)

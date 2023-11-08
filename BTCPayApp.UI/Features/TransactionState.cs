@@ -38,12 +38,14 @@ public record OnChainTransactionsState(Dictionary<string, OnChainTransaction>? A
             _state = state;
         }
 
-        public override async Task HandleAsync(RootState.BTCPayConnectionUpdatedAction action, IDispatcher dispatcher)
+        public override Task HandleAsync(RootState.BTCPayConnectionUpdatedAction action, IDispatcher dispatcher)
         {
             if (action.ConnectionState is HubConnectionState.Connected)
             {
                 dispatcher.Dispatch(new LoadTransactionsAction(true));
             }
+
+            return Task.CompletedTask;
         }
     }
 
@@ -83,7 +85,7 @@ public record OnChainTransactionsState(Dictionary<string, OnChainTransaction>? A
                             ? OnChainTransactionStatus.Mempool
                             : OnChainTransactionStatus.Confirmed))));
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 dispatcher.Dispatch(new SetError(true));
             }
