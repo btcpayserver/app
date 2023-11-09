@@ -1,6 +1,4 @@
-﻿
-
-::-moz-focus-inner {
+﻿::-moz-focus-inner {
   padding: 0;
   border-style: none;
 }
@@ -15,6 +13,56 @@
 
 [aria-expanded="true"] > svg.icon-caret-down {
   transform: rotate(-180deg);
+}
+
+/* Layout */
+.public-page-wrap {
+  --wrap-max-width: none;
+  --wrap-padding-vertical: var(--btcpay-space-l);
+  --wrap-padding-horizontal: var(--btcpay-space-m);
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-width: var(--wrap-max-width);
+  margin: 0 auto;
+  padding: var(--wrap-padding-vertical) var(--wrap-padding-horizontal);
+}
+
+.min-vh-100,
+.public-page-wrap {
+  min-height: -webkit-fill-available !important;
+  min-height: 100dvh !important;
+}
+
+.tile {
+  --section-padding: 1.5rem;
+  --section-border-radius: var(--btcpay-border-radius-l);
+
+  padding: var(--section-padding);
+  background: var(--btcpay-bg-tile);
+  border-radius: var(--section-border-radius);
+  box-shadow: var(--btcpay-box-shadow-lg);
+}
+.tile .buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--btcpay-space-m);
+}
+.tile > :last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 400px) {
+  .public-page-wrap {
+    padding-left: 0;
+    padding-right: 0;
+    --wrap-padding-horizontal: 0;
+  }
+  .tile {
+    --section-padding: 1rem;
+    --section-border-radius: none;
+  }
 }
 
 /* Badges */

@@ -1,9 +1,12 @@
 ﻿@using Newtonsoft.Json.Linq
+@using System.Text.RegularExpressions
+@using System.Globalization
+@inject IJSRuntime JS
 
 <form class="d-flex flex-column gap-4" @onsubmit="Submit">
-    <div ref="display" class="d-flex flex-column align-items-center px-4 mb-auto">
+    <div class="d-flex flex-column align-items-center px-4 mb-auto" @ref="_keypadTop">
         <div class="fw-semibold text-muted" id="Currency">@CurrencyCode</div>
-        <div class="fw-bold lh-sm" style="font-size:@(FontSize + "px")" id="Amount">@FormatCurrency(GetTotal(), false)</div>
+        <div class="fw-bold lh-sm" style="font-size:@($"{FontSize}px")" @ref="_keypadAmount">@FormatCurrency(GetTotal(), false)</div>
         <div class="text-muted text-center mt-2" id="Calculation">@Calculation(Model)</div>
     </div>
     @if (IsDiscountEnabled || IsTipEnabled)
@@ -13,7 +16,7 @@
             {
                 <div class="tab-pane fade px-2 @(Mode == InputMode.Discount ? "show active" : "")" role="tabpanel" aria-labelledby="ModeTablist-Discount">
                     <div class="h4 fw-semibold text-muted text-center" id="Discount">
-                        <span class="h3 text-body me-1">@Model.DiscountPercent%</span> discount
+                        <span class="h3 text-body me-1">@(Model.DiscountPercent ?? 0)%</span> discount
                     </div>
                 </div>
             }
@@ -75,7 +78,7 @@
         @if (IsSubmitting)
         {
             <div class="spinner-border spinner-border-sm" role="status">
-                <span class="sr-only">Loading...</span>
+                <span class="visually-hidden">Loading...</span>
             </div>
         }
         else
@@ -112,11 +115,14 @@
         Tip
     }
 
+    private ElementReference _keypadTop;
+    private ElementReference _keypadAmount;
+
     private InputMode Mode { get; set; } = InputMode.Amount;
 
     public class KeypadModel
     {
-        public List<decimal> Amounts { get; set; } = new ();
+        public List<decimal> Amounts { get; set; } = new () { 0 };
         public int? DiscountPercent { get; set; }
         public int? TipPercent { get; set; }
         public decimal? Tip { get; set; }
@@ -129,7 +135,7 @@
         IsSubmitting = true;
     }
 
-    private void KeyPress(char key = '1')
+    private async Task KeyPress(char key)
     {
         if (Mode == InputMode.Amount) {
             var lastIndex = Model.Amounts.Count - 1;
@@ -148,8 +154,9 @@
             } else if (key == '+' && lastAmount != 0) {
                 Model.Amounts.Add(0);
             } else { // Is a digit
-                Model.Amounts[lastIndex] = ApplyKeyToValue(key, lastAmount, CurrencyDivisibility);
+                Model.Amounts[lastIndex] = Math.Min(ApplyKeyToValue(key, lastAmount, CurrencyDivisibility), decimal.MaxValue / 10);
             }
+            await UpdateFontSize();
         } else {
             if (key == 'C') {
                 if (Mode == InputMode.Tip)
@@ -165,37 +172,43 @@
                 var divisibility = Mode == InputMode.Tip ? CurrencyDivisibility : 0;
                 if (Mode == InputMode.Tip)
                 {
-                    Model.Tip = ApplyKeyToValue(key, Model.Tip ?? 0, divisibility);
+                    Model.Tip = Math.Min(ApplyKeyToValue(key, Model.Tip ?? 0, divisibility), decimal.MaxValue / 10);
                     Model.TipPercent = null;
                 }
                 else
                 {
-                    Model.DiscountPercent = (int)ApplyKeyToValue(key, Model.DiscountPercent ?? 0, divisibility);
+                    var num = (int)ApplyKeyToValue(key, Model.DiscountPercent ?? 0, divisibility);
+                    Model.DiscountPercent = Math.Min(num, 100);
                 }
             }
         }
     }
 
-    public decimal ApplyKeyToValue(char key, decimal value, int divisibility)
+    private decimal ApplyKeyToValue(char key, decimal value, int divisibility)
     {
-        var val = value is 0 ? "" : Formatted(value, divisibility);
-        val = (val + key)
-            .Replace(".", "")
-            .PadLeft(divisibility, '0');
-            //.Replace(new Regex("(\\d*)(\\d{{divisibility}})", "\\1.\\2");
-        return decimal.Parse(val);
+        var str = value is 0 ? "" : Formatted(value, divisibility);
+        //var minDiv = str.Length < divisibility ? str.Length + 1 : divisibility;
+        str = (str + key).Replace(".", "");
+        if (divisibility > 0)
+        {
+            str = str.PadLeft(divisibility + 1, '0');
+            str = Regex.Replace(str, $"(\\d*)(\\d{{{divisibility}}})", "$1.$2");
+        }
+
+        return decimal.Parse(str, CultureInfo.InvariantCulture);
     }
 
-    public void DoublePress(char key)
+    private void DoublePress(char key)
     {
         if (key == 'C') {
             Clear();
         }
     }
 
-    public void Clear()
+    private void Clear()
     {
         Model.Amounts.Clear();
+        Model.Amounts.Add(0);
         Model.DiscountPercent = null;
         Model.TipPercent = null;
         Model.Tip = null;
@@ -272,10 +285,10 @@
         if (model.Amounts.Count < 2 && model.DiscountPercent is not > 0 && !model.Tip.HasValue) return null;
         var calc = string.Join(" + ", model.Amounts.Select(amt => FormatCurrency(amt, true)));
         var discount = GetDiscount();
-        if (discount > 0) calc += $" - {FormatCurrency(discount, true)} (${model.DiscountPercent}%)";
+        if (discount > 0) calc += $" - {FormatCurrency(discount, true)} ({model.DiscountPercent}%)";
         var tip = GetTip();
-        if (model.Tip > 0) calc += $" + ${FormatCurrency(tip, true)}";
-        if (model.TipPercent > 0) calc += $" (${model.TipPercent}%)";
+        if (tip > 0) calc += $" + {FormatCurrency(tip, true)}";
+        if (model.TipPercent > 0) calc += $" ({model.TipPercent}%)";
         return calc;
     }
 
@@ -298,6 +311,19 @@
     }
 
     private string Formatted(decimal value, int divisibility) {
-        return string.Format($"{{0:0.{new string('0', divisibility)}}}", value);
+        return string.Format(CultureInfo.InvariantCulture, $"{{0:0.{new string('0', divisibility)}}}", value);
+    }
+
+    private async Task UpdateFontSize()
+    {
+        var top = await JS.InvokeAsync<decimal>("Interop.getWidth", new object[] { _keypadTop });
+        var amt = await JS.InvokeAsync<decimal>("Interop.getWidth", new object[] { _keypadAmount });
+        var gamma = top / amt;
+
+        FontSize = (int)(top < amt
+            ? Math.Floor(FontSize * gamma)
+            : Math.Min(FontSize * gamma, DefaultFontSize));
+
+        StateHasChanged();
     }
 }
