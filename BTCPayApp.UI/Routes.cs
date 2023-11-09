@@ -1,4 +1,4 @@
-﻿namespace BTCPayApp.UI.Pages;
+﻿namespace BTCPayApp.UI;
 
 public static class Routes
 {

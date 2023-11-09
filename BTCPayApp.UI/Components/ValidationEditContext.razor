@@ -1,5 +1,6 @@
 ﻿@using System.Linq.Expressions
 @implements IDisposable
+
 <EditForm EditContext="EditContext" OnSubmit="OnSubmit" @attributes="@InputAttributes">
     <DataAnnotationsValidator/>
     <CascadingValue Value="MessageStore">

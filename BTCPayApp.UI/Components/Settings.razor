@@ -1,19 +1,17 @@
-﻿@using BTCPayApp.UI.Pages
-@using BTCPayApp.UI.Features
+﻿@using BTCPayApp.UI.Features
 
 <div class="form-group">
     <label class="form-label">Theme</label>
     <InputSelect class="form-select w-auto" @bind-Value="ThemeMode">
-        <option value="@Constants.SystemTheme">System</option>
-        <option value="@Constants.LightTheme">Light</option>
-        <option value="@Constants.DarkTheme">Dark</option>
+        <option value="@Themes.System">System</option>
+        <option value="@Themes.Light">Light</option>
+        <option value="@Themes.Dark">Dark</option>
     </InputSelect>
 </div>
 
-
 @code {
     [Parameter]
-    public string Theme { get; set; } = Constants.SystemTheme;
+    public string Theme { get; set; } = Themes.System;
 
     [Parameter]
     public EventCallback<string> OnThemeChange { get; set; }

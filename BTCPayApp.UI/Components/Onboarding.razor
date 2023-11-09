@@ -2,19 +2,24 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <div id="OnboardingCarousel" class="carousel slide">
+    <div class="carousel-indicators">
+        <button type="button" data-bs-target="#OnboardingCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+        <button type="button" data-bs-target="#OnboardingCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+        <button type="button" data-bs-target="#OnboardingCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+    </div>
     <div class="carousel-inner">
         <div class="carousel-item active">
-            <Icon Symbol="logo-btcpay" />
+            <Icon Symbol="logo-btcpay"/>
             <h4>Welcome To BTCPay Server</h4>
             <p>No fees, no third-party. All payments go through your node, running on your phone!</p>
         </div>
         <div class="carousel-item">
-            <Icon Symbol="key" />
+            <Icon Symbol="key"/>
             <h4>Keep your wallet and bitcoin secure</h4>
             <p>Cloud backups, enhanced accounting functionality and ability to easily refund your customers</p>
         </div>
         <div class="carousel-item">
-            <Icon Symbol="pointofsale" />
+            <Icon Symbol="pointofsale"/>
             <h4>Start Accepting Bitcoin Payments</h4>
             <p>Free and open-source bitcoin point of sale. With 0% Fees & No Third-party.</p>
             <NavLink class="btn btn-primary" href="@Routes.WalletSetup" data-testid="StandaloneButton">Get Started</NavLink>
