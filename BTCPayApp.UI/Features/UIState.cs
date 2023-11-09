@@ -47,7 +47,7 @@ public class UIState
             // store
             dispatcher.Dispatch(new SetUserTheme(action.Theme));
             // ui
-            await _jsRuntime.InvokeVoidAsync("setTheme", action.Theme);
+            await _jsRuntime.InvokeVoidAsync("setColorMode", action.Theme);
         }
     }
 }
