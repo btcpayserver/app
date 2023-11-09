@@ -2,6 +2,7 @@
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 
 namespace BTCPayApp.Maui;
@@ -20,6 +21,7 @@ public static class MauiProgram
         builder.Services.AddLogging();
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
+        builder.Logging.AddDebug();
 #endif
         builder.Services.AddSingleton<IDataDirectoryProvider, XamarinDataDirectoryProvider>();
         builder.Services.AddSingleton<IConfigProvider, XamarinEssentialsConfigProvider>();
