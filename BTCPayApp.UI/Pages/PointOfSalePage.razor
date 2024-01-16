@@ -1,10 +1,21 @@
 ﻿@attribute [Route(Routes.PointOfSale)]
 @layout SimpleLayout
+@using System.Globalization
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Point Of Sale</PageTitle>
 
 <div class="public-page-wrap">
-    <Keypad CurrencyDivisibility="2" CurrencySymbol="€" CurrencyCode="EUR"
+    <Keypad CurrencyInfo="@CurrencyInfo" CurrencyCode="EUR"
             IsDiscountEnabled="true" IsTipEnabled="true" CustomTipPercentages="new []{ 5, 10, 21 }" />
 </div>
+
+@code {
+    public NumberFormatInfo CurrencyInfo { get; set; } = new()
+    {
+        CurrencySymbol = "\u20ac",
+        CurrencyDecimalDigits = 2,
+        CurrencyDecimalSeparator = ",",
+        CurrencyGroupSeparator = "."
+    };
+}
