@@ -1,0 +1,22 @@
+﻿@attribute [Route(Routes.Logout)]
+@using BTCPayApp.Core
+@using BTCPayApp.Core.Contracts
+@inject AuthenticationStateProvider AuthStateProvider
+@inject BTCPayServerAppApiClient BtcPayServerAppApiClient
+@inject ISecureConfigProvider SecureConfigProvider
+
+<PageTitle>Logout</PageTitle>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        BtcPayServerAppApiClient.Logout();
+        var account = await SecureConfigProvider.Get<BTCPayServerAccount>("account");
+        if (account != null)
+        {
+            account.ClearAccess();
+            await SecureConfigProvider.Set("account", account);
+        }
+        ((AuthStateProvider)AuthStateProvider).Logout();
+    }
+}

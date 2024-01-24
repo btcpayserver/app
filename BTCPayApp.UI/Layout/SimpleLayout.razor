@@ -1,5 +1,10 @@
 ﻿@inherits Fluxor.Blazor.Web.Components.FluxorLayout
 
-<main class="min-vh-100">
-    @Body
-</main>
+<div id="SimpleLayout" class="container py-5 min-vh-100 d-flex flex-column justify-content-center gap-4">
+    <svg xmlns="http://www.w3.org/2000/svg" role="img" alt="BTCPay Server" class="logo">
+        <use href="_content/BTCPayApp.UI/img/logo.svg#small"/>
+    </svg>
+    <main>
+        @Body
+    </main>
+</div>

@@ -1,5 +1,7 @@
 ﻿@using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Pages
 @using BTCPayApp.Core.Contracts
+@using Microsoft.AspNetCore.Http
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IStateSelection<RootState, HashSet<RootState.LoadingHandles>> LoadingStateSelection
 @inject IDispatcher Dispatcher
@@ -9,20 +11,31 @@
 <Fluxor.Blazor.Web.StoreInitializer/>
 <Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
+        <AuthorizeRouteView Resource="@routeData" RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+            <NotAuthorized>
+                <RedirectToIndex/>
+            </NotAuthorized>
+        </AuthorizeRouteView>
         <FocusOnNavigate RouteData="@routeData" Selector="h1"/>
     </Found>
     <NotFound>
         <PageTitle>Not found</PageTitle>
-        <LayoutView Layout="@typeof(MainLayout)">
-            <div class="alert alert-warning">This page does not exist.</div>
+        <LayoutView Layout="@typeof(SimpleLayout)">
+            <ErrorPage Title="Not found" Message="This page does not exist."/>
         </LayoutView>
     </NotFound>
 </Router>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    [CascadingParameter]
+    public HttpContext? HttpContext { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
+        // UI
         LoadingStateSelection.Select(state => state.Loading);
         var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
         if (state != null)
@@ -32,6 +45,5 @@
                 Dispatcher.Dispatch(new UIState.ApplyUserTheme(state.SelectedTheme));
             }
         }
-        await base.OnInitializedAsync();
     }
 }

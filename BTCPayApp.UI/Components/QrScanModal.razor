@@ -1,0 +1,49 @@
+@inject IJSRuntime JS
+@using ReactorBlazorQRCodeScanner
+
+<div class="modal fade" id="ScanQrCodeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">Scan QR code</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                    <Icon symbol="close"/>
+                </button>
+            </div>
+            <div class="modal-body">
+                <QRCodeScanner Width="100%" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
+
+    [Parameter]
+    public Action<string>? OnScan { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        await JS.InvokeVoidAsync("Interop.addModalEvent", DotNetObjectReference.Create(this), "#ScanQrCodeModal", "show", "OnShow");
+        await JS.InvokeVoidAsync("Interop.addModalEvent", DotNetObjectReference.Create(this), "#ScanQrCodeModal", "hide", "OnHide");
+    }
+
+    [JSInvokable]
+    public async Task OnShow()
+    {
+        if (OnScan == null) return;
+        _qrCodeScannerJsInterop ??= new QRCodeScannerJsInterop(JS);
+        await _qrCodeScannerJsInterop.Init(OnScan);
+    }
+
+    [JSInvokable]
+    public async Task OnHide()
+    {
+        if (_qrCodeScannerJsInterop == null) return;
+        await _qrCodeScannerJsInterop.StopRecording();
+    }
+}
+
+

@@ -1,0 +1,13 @@
+.modal {
+  --blur-size: 1rem;
+
+  background: rgba(var(--btcpay-body-bg-rgb), 0.1);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(var(--blur-size));
+  -webkit-backdrop-filter: blur(var(--blur-size));
+}
+
+/* Use deep because it gets rendered via JS and Blazor doesn't get to attach its selector attribute */
+::deep canvas {
+  margin: calc(var(--btcpay-modal-padding) * -1) 0 0 calc(var(--btcpay-modal-padding) * -1);
+}
