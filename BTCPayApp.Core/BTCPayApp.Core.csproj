@@ -25,7 +25,7 @@
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
       <PackageReference Include="Microsoft.Extensions.Http" Version="7.0.0" />
-      <PackageReference Include="NBitcoin" Version="7.0.27" />
+      <PackageReference Include="NBitcoin" Version="7.0.34" />
       <PackageReference Include="TypedSignalR.Client" Version="3.4.0">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
