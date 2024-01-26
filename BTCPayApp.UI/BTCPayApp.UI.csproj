@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <PackageId>BTCPayApp.UI</PackageId>
@@ -13,19 +13,15 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Fluxor.Blazor.Web" Version="5.8.0" />
-    <PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="5.8.0" />
+    <PackageReference Include="Fluxor.Blazor.Web" Version="5.9.1" />
+    <PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="5.9.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components" Version="8.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Forms" Version="8.0.1" />
   </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-      <Reference Include="Microsoft.AspNetCore.Http.Abstractions">
-        <HintPath>..\..\..\Program Files\dotnet\shared\Microsoft.AspNetCore.App\7.0.9\Microsoft.AspNetCore.Http.Abstractions.dll</HintPath>
-      </Reference>
-    </ItemGroup>
-
-
 </Project>

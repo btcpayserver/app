@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
-        <TargetFrameworks>net7.0-ios;net7.0-android;</TargetFrameworks>
-        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net7.0-android;</TargetFrameworks>
+        <TargetFrameworks>net8.0-ios;net8.0-android;</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net8.0-android;</TargetFrameworks>
 
         <OutputType>Exe</OutputType>
         <RootNamespace>BTCPayApp.Maui</RootNamespace>
@@ -47,7 +47,7 @@
       <ProjectReference Include="..\BTCPayApp.UI\BTCPayApp.UI.csproj" />
     </ItemGroup>
 
-    <!--    
+    <!--
     <ItemGroup>
       <Content Include="..\BTCPayApp.UI\wwwroot\index.html">
         <Link>wwwroot\index.html</Link>
@@ -56,8 +56,8 @@
     -->
 
     <ItemGroup>
-      <PackageReference Include="Xamarin.Essentials" Version="1.8.0" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+      <PackageReference Include="Xamarin.Essentials" Version="1.8.1" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
     </ItemGroup>
 
 </Project>
