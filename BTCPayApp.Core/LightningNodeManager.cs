@@ -1,9 +1,6 @@
 ﻿using BTCPayApp.Core.Contracts;
 using Microsoft.Extensions.Hosting;
 using NBitcoin;
-using uniffi.ldk_node;
-using Network = uniffi.ldk_node.Network;
-
 namespace BTCPayApp.Core;
 
 public enum LightningNodeState
