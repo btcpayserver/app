@@ -2,7 +2,6 @@
 @using BTCPayApp.UI.Features
 @using Microsoft.Extensions.Logging
 @using BTCPayApp.Core
-@using BTCPayApp.Core.Models
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject BTCPayServerAppApiClient BtcPayServerAppApiClient
 @inject ILogger<DashboardPage> Logger
@@ -85,7 +84,7 @@
     private Task<AuthenticationState>? AuthenticationState { get; set; }
 
     private string? _errorMessage;
-    private AppUserInfoResult? _userInfo;
+    private AppUserInfoResponse? _userInfo;
 
     private bool IsInitialized => State.Value.PairConfigRequested && State.Value.WalletConfigRequested;
     private bool IsLoading => State.Value.Loading.Contains(RootState.LoadingHandles.PairConfig) ||

@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Contracts;
-using BTCPayApp.Core.Models;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -60,10 +60,10 @@ public class BTCPayServerAppApiClient(IHttpClientFactory clientFactory, ISecureC
         }
     }
 
-    public async Task<AppUserInfoResult?> GetUserInfo(BTCPayServerAccount account, CancellationToken? cancellation = default)
+    public async Task<AppUserInfoResponse?> GetUserInfo(BTCPayServerAccount account, CancellationToken? cancellation = default)
     {
         Account = account;
-        return await Get<AppUserInfoResult>("info", cancellation.GetValueOrDefault());
+        return await Get<AppUserInfoResponse>("info", cancellation.GetValueOrDefault());
     }
 
     public async Task<(bool success, string? errorCode)> ResetPassword(BTCPayServerAccount account, string? resetCode = null, string? newPassword = null, CancellationToken? cancellation = default)

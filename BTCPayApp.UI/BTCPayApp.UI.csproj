@@ -26,13 +26,4 @@
       <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Reference Include="Microsoft.AspNetCore.Authentication.BearerToken" />
-      <Reference Include="Microsoft.AspNetCore.Http.Abstractions">
-        <HintPath>..\..\..\..\.dotnet\shared\Microsoft.AspNetCore.App\8.0.0\Microsoft.AspNetCore.Http.Abstractions.dll</HintPath>
-      </Reference>
-      <Reference Include="Microsoft.AspNetCore.Identity">
-        <HintPath>..\..\..\..\.dotnet\shared\Microsoft.AspNetCore.App\8.0.0\Microsoft.AspNetCore.Identity.dll</HintPath>
-      </Reference>
-    </ItemGroup>
 </Project>

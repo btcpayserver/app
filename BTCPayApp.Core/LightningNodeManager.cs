@@ -1,6 +1,7 @@
 ﻿using BTCPayApp.Core.Contracts;
 using Microsoft.Extensions.Hosting;
 using NBitcoin;
+
 namespace BTCPayApp.Core;
 
 public enum LightningNodeState
@@ -12,12 +13,11 @@ public enum LightningNodeState
     NotRunning,
     Error
 }
+
 public class LightningNodeManager : IHostedService
 {
     private readonly BTCPayAppConfigManager _configManager;
-    private readonly IDataDirectoryProvider _directoryProvider;
     private LightningNodeState _state = LightningNodeState.NotConfigured;
-    private ILdkNode? Node { get; set; }
     private string? RunningNodeId { get; set; }
     public event EventHandler<LightningNodeState>? StateChanged;
 
@@ -40,7 +40,6 @@ public class LightningNodeManager : IHostedService
         IDataDirectoryProvider directoryProvider)
     {
         _configManager = configManager;
-        _directoryProvider = directoryProvider;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -58,19 +57,12 @@ public class LightningNodeManager : IHostedService
     {
         var mnemonic = new Mnemonic(config.Mnemonic);
         var internalId = InternalNodeIdForMnemonic(mnemonic);
-        if (Node is not null && RunningNodeId == internalId) return true;
-
-        // Handle existing node
-        if (Node is not null) StopNode();
 
         // Run the new node
         try
         {
-            var builder = await BuilderForMnemonic(mnemonic);
-            Node = builder.Build();
             State = LightningNodeState.Starting;
             RunningNodeId = internalId;
-            Node.Start();
             State = LightningNodeState.Running;
             return true;
         }
@@ -83,22 +75,13 @@ public class LightningNodeManager : IHostedService
 
     public bool StopNode()
     {
-        if (State is LightningNodeState.NotRunning || Node is null) return true;
-        try
-        {
-            State = LightningNodeState.Stopping;
-            Node.Stop();
-        }
-        catch (NodeException.NotRunning)
-        {
-            // ok
-        }
-        finally
-        {
-            Node = null;
-            RunningNodeId = null;
-            State = LightningNodeState.NotRunning;
-        }
+        if (State is LightningNodeState.NotRunning) return true;
+
+        State = LightningNodeState.Stopping;
+
+
+        RunningNodeId = null;
+        State = LightningNodeState.NotRunning;
         return true;
     }
 
@@ -110,24 +93,6 @@ public class LightningNodeManager : IHostedService
         return derived.Neuter().ParentFingerprint.ToString()!;
     }
 
-    private async Task<Builder> BuilderForMnemonic(Mnemonic mnemonic)
-    {
-        var internalId = InternalNodeIdForMnemonic(mnemonic);
-        var storageDir = await _directoryProvider.GetAppDataDirectory().ContinueWith(task =>
-        {
-            var res =  Path.Combine(task.Result, "nodes", internalId);
-            Directory.CreateDirectory(res);
-            return res;
-        });
-
-        var builder = new Builder();
-        builder.SetNetwork(Network.TESTNET);
-        builder.SetEsploraServer("https://blockstream.info/testnet/api");
-        builder.SetGossipSourceRgs("https://rapidsync.lightningdevkit.org/testnet/snapshot");
-        builder.SetStorageDirPath(storageDir);
-        builder.SetEntropyBip39Mnemonic(mnemonic.ToString()!, null);
-        return builder;
-    }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {

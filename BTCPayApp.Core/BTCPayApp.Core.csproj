@@ -11,6 +11,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
       <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.1" />
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
@@ -27,19 +28,5 @@
       <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Reference Include="Microsoft.AspNetCore.Authentication.BearerToken">
-        <HintPath>..\..\..\..\.dotnet\shared\Microsoft.AspNetCore.App\8.0.0\Microsoft.AspNetCore.Authentication.BearerToken.dll</HintPath>
-      </Reference>
-      <Reference Include="Microsoft.AspNetCore.Components.Authorization">
-        <HintPath>..\..\..\..\.dotnet\shared\Microsoft.AspNetCore.App\8.0.0\Microsoft.AspNetCore.Components.Authorization.dll</HintPath>
-      </Reference>
-      <Reference Include="Microsoft.AspNetCore.Http.Abstractions">
-        <HintPath>..\..\..\..\.dotnet\shared\Microsoft.AspNetCore.App\8.0.0\Microsoft.AspNetCore.Http.Abstractions.dll</HintPath>
-      </Reference>
-      <Reference Include="Microsoft.AspNetCore.Identity">
-        <HintPath>..\..\..\..\.dotnet\shared\Microsoft.AspNetCore.App\8.0.0\Microsoft.AspNetCore.Identity.dll</HintPath>
-      </Reference>
-    </ItemGroup>
 
 </Project>
