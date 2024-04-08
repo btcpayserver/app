@@ -1,3 +1,4 @@
+using BTCPayApp.UI;
 using BTCPayApp.UI.Pages;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ public class UnitTest1
         await using var factory = new BTCPayAppTestServer(_testOutputHelper);
         var page = await (await factory.InitializeAsync()).NewPageAsync();
         await page.GotoAsync(factory.ServerAddress);
-        Assert.EndsWith(Routes.Home, page.Url);
+        Assert.EndsWith(Routes.Index, page.Url);
 
         var carousel = page.Locator("#OnboardingCarousel");
         await carousel.Locator("[aria-label='3']").ClickAsync();

@@ -1,0 +1,128 @@
+﻿@attribute [Route(Routes.Login)]
+@attribute [AllowAnonymous]
+@layout SimpleLayout
+@using Microsoft.Extensions.Logging
+@using BTCPayApp.Core
+@using BTCPayApp.Core.Contracts
+@using BTCPayApp.UI.Util
+@inject ILogger<LoginPage> Logger
+@inject AuthenticationStateProvider AuthStateProvider
+@inject BTCPayServerAppApiClient BtcPayServerAppApiClient
+@inject ISecureConfigProvider SecureConfigProvider
+@inject NavigationManager NavigationManager
+
+<PageTitle>Login to a server</PageTitle>
+
+<EditForm Model="@Model" OnValidSubmit="HandleValidSubmit" FormName="Login" method="post">
+    <DataAnnotationsValidator />
+    <h1 class="h2 mb-4">Login to a server</h1>
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger mb-3">@_errorMessage</div>
+    }
+    <div class="mb-3" hidden="@Model.RequireTwoFactor">
+        <label for="Uri" class="form-label">Server URL</label>
+        <InputText @bind-Value="Model.Uri" type="url" id="Uri" class="form-control"/>
+        <ValidationMessage For="@(() => Model.Uri)" />
+    </div>
+    <div class="mb-3" hidden="@Model.RequireTwoFactor">
+        <label for="Email" class="form-label">Email</label>
+        <InputText @bind-Value="Model.Email" type="email" id="Email" class="form-control"/>
+        <ValidationMessage For="@(() => Model.Email)" />
+    </div>
+    <div class="mb-3" hidden="@Model.RequireTwoFactor">
+        <label for="Password" class="form-label">Password</label>
+        <InputText @bind-Value="Model.Password" type="password" id="Password" autocomplete="current-password" class="form-control"/>
+        <ValidationMessage For="@(() => Model.Password)" />
+    </div>
+    @if (Model.RequireTwoFactor)
+    {
+        <div class="mb-3">
+            <label for="TwoFactorCode" class="form-label">Two Factor Code</label>
+            <InputText @bind-Value="Model.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin"/>
+            <ValidationMessage For="@(() => Model.TwoFactorCode)" />
+        </div>
+    }
+    <button type="submit" class="btn btn-primary w-100" data-testid="LoginButton">Login</button>
+    <p class="mt-4 text-center" hidden="@Model.RequireTwoFactor">
+        <NavLink href="@Routes.ForgotPassword">Forgot your password?</NavLink>
+    </p>
+</EditForm>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "serverUrl")]
+    public string? ServerUrl { get; set; }
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private LoginModel Model { get; set; } = new();
+
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(ServerUrl))
+        {
+            // Parameter passed by ConnectPage
+            Model.Uri = Uri.UnescapeDataString(ServerUrl);
+        }
+        else
+        {
+            // See if we had a previous session/account
+            var account = await SecureConfigProvider.Get<BTCPayServerAccount>("account");
+            Model.Uri = account?.BaseUri.ToString();
+            Model.Email = account?.Email;
+        }
+    }
+
+    public async Task HandleValidSubmit()
+    {
+        _errorMessage = null;
+
+        try
+        {
+            var account = new BTCPayServerAccount(Model.Uri, Model.Email);
+            var (access, errorCode) = await BtcPayServerAppApiClient.Login(account, Model.Password, Model.TwoFactorCode);
+            if (access != null)
+            {
+                account.SetAccess(access.AccessToken, access.RefreshToken, access.Expiry);
+                ((AuthStateProvider)AuthStateProvider).SetAccount(account);
+                NavigationManager.NavigateTo(Routes.Index);
+            }
+            else if (errorCode == "RequiresTwoFactor")
+            {
+                Model.RequireTwoFactor = true;
+            }
+            else
+            {
+                _errorMessage = string.IsNullOrEmpty(errorCode) || errorCode == "Failed" ? "Invalid login attempt." : errorCode;
+            }
+        }
+        catch (Exception e)
+        {
+            _errorMessage = !string.IsNullOrEmpty(e.InnerException?.Message) ? e.InnerException.Message : e.Message;
+        }
+    }
+
+    private class LoginModel
+    {
+        public bool RequireTwoFactor { get; set; }
+
+        [Required]
+        [Url]
+        public string? Uri { get; set; }
+
+        [Required]
+        [EmailAddress]
+        public string? Email { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string? Password { get; set; }
+
+        [RequiredIf(nameof(RequireTwoFactor), true)]
+        public string? TwoFactorCode { get; set; }
+    }
+}

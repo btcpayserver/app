@@ -3,6 +3,10 @@
   border-style: none;
 }
 
+:focus {
+  outline: none;
+}
+
 [aria-expanded] > svg.icon-caret-down {
   flex-shrink: 0;
   width: 24px;

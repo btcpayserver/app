@@ -1,0 +1,14 @@
+﻿@attribute [Route(Routes.Welcome)]
+@attribute [AllowAnonymous]
+@layout SimpleLayout
+
+<PageTitle>Welcome to BTCPay Server</PageTitle>
+
+<div class="text-center">
+    <h1 class="h2 mb-3">Welcome to BTCPay</h1>
+    <p class="text-secondary fs-5 mb-5">
+        BTCPay Server is a self-hosted, open-source Bitcoin payment processor.
+        It's secure, private, censorship-resistant and free.
+    </p>
+    <NavLink class="btn btn-primary w-100" href="@Routes.Connect" data-testid="GetStartedButton">Get Started</NavLink>
+</div>

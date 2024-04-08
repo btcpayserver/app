@@ -1,5 +1,8 @@
 ﻿@using System.Net.Http
+@using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @using Microsoft.AspNetCore.Components.Web
@@ -9,3 +12,6 @@
 @using BTCPayApp.UI
 @using BTCPayApp.UI.Layout
 @using BTCPayApp.UI.Components
+
+@* Authorize by default, use "@attribute [AllowAnonymous]" for pages withouth authentication *@
+@attribute [Authorize]

@@ -1,0 +1,33 @@
+﻿@attribute [Route(Routes.Index)]
+@attribute [AllowAnonymous]
+@layout BaseLayout
+@using BTCPayApp.Core.Contracts
+@using BTCPayApp.Core
+@inject NavigationManager NavigationManager
+@inject ISecureConfigProvider SecureConfigProvider
+@inject AuthenticationStateProvider AuthStateProvider
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>BTCPay Server</PageTitle>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Sign in
+        var account = await SecureConfigProvider.Get<BTCPayServerAccount>("account");
+        ((AuthStateProvider)AuthStateProvider).SetAccount(account);
+
+        var isAuthenticated = AuthenticationState is not null && (await AuthenticationState).User.Identity?.IsAuthenticated is true;
+        if (isAuthenticated)
+        {
+            NavigationManager.NavigateTo(Routes.Dashboard);
+        }
+        else
+        {
+            NavigationManager.NavigateTo(account != null ? Routes.Login : Routes.Welcome);
+        }
+    }
+}

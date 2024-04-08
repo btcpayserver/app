@@ -53,7 +53,8 @@ public class DesktopConfigProvider : IConfigProvider
             return default;
         }
         var raw = await File.ReadAllTextAsync(dir);
-        return JsonSerializer.Deserialize<T>(await ReadFromRaw(raw));
+        var json = await ReadFromRaw(raw);
+        return JsonSerializer.Deserialize<T>(json);
     }
 
     protected virtual Task<string> ReadFromRaw(string str) => Task.FromResult(str);

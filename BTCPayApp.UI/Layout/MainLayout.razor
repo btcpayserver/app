@@ -6,7 +6,7 @@
             <button id="MainMenuToggle" class="mainMenuButton" type="button" data-bs-toggle="offcanvas" data-bs-target="#MainNav" aria-controls="MainNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span>Menu</span>
             </button>
-            <NavLink class="navbar-brand py-2" href="@Routes.Home" Match="NavLinkMatch.All">
+            <NavLink class="navbar-brand py-2" href="@Routes.Index" Match="NavLinkMatch.All">
                 <svg xmlns="http://www.w3.org/2000/svg" role="img" alt="BTCPay Server" class="main-logo main-logo-btcpay">
                     <use href="_content/BTCPayApp.UI/img/logo.svg#small" class="main-logo-btcpay--small"/>
                     <use href="_content/BTCPayApp.UI/img/logo.svg#large" class="main-logo-btcpay--large"/>
@@ -19,7 +19,7 @@
                     <div class="accordion-body">
                         <ul class="navbar-nav">
                             <li class="nav-item">
-                                <NavLink class="nav-link" href="@Routes.Home" Match="NavLinkMatch.All">
+                                <NavLink class="nav-link" href="@Routes.Index" Match="NavLinkMatch.All">
                                     <Icon symbol="home"/>
                                     <span>Dashboard</span>
                                 </NavLink>
@@ -40,6 +40,12 @@
                                 <NavLink class="nav-link" href="@Routes.Settings" Match="NavLinkMatch.All">
                                     <Icon symbol="settings"/>
                                     <span>Settings</span>
+                                </NavLink>
+                            </li>
+                            <li class="nav-item">
+                                <NavLink class="nav-link" href="@Routes.Logout" Match="NavLinkMatch.All">
+                                    <Icon symbol="remove"/>
+                                    <span>Logout</span>
                                 </NavLink>
                             </li>
                         </ul>

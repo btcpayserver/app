@@ -1,0 +1,16 @@
+@inject NavigationManager NavigationManager
+
+@code {
+    protected override void OnInitialized()
+    {
+        try
+        {
+            NavigationManager.NavigateTo(Routes.Index);
+        }
+        catch (Exception)
+        {
+            // ignored, see https://github.com/dotnet/aspnetcore/issues/53996
+        }
+        base.OnInitialized();
+    }
+}

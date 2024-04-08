@@ -1,0 +1,106 @@
+﻿@attribute [Route(Routes.Dashboard)]
+@using BTCPayApp.UI.Features
+@using Microsoft.Extensions.Logging
+@using BTCPayApp.Core
+@using BTCPayApp.Core.Models
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject BTCPayServerAppApiClient BtcPayServerAppApiClient
+@inject ILogger<DashboardPage> Logger
+@inject IState<RootState> State
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>BTCPay Server</PageTitle>
+
+@if (IsInitialized && !IsLoading)
+{
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger mb-3">@_errorMessage</div>
+    }
+    <AuthorizeView>
+        <Authorized>
+            <h1>Hello, @context.User.Identity?.Name!</h1>
+
+            @if (_userInfo != null)
+            {
+                <div class="mb-4">
+                    ID: @_userInfo.UserId<br />
+                    Email: @_userInfo.Email<br />
+                    Roles: @string.Join(", ", _userInfo.Roles)
+                </div>
+
+                if (_userInfo.Stores.Any())
+                {
+                    <ul>
+                        @foreach (var store in _userInfo.Stores)
+                        {
+                            <li>
+                                <div>
+                                    <strong>@store.Name</strong>
+                                    <span class="badge bg-light">@store.RoleId</span>
+                                    @if (store.Archived)
+                                    {
+                                        <span class="badge bg-info">archived</span>
+                                    }
+                                </div>
+                                <div></div>
+
+                                @if (store.Permissions.Any())
+                                {
+                                    <ul>
+                                        @foreach (var permission in store.Permissions)
+                                        {
+                                            <li>@permission</li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <div class="text-secondary">No permissions</div>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-secondary">No stores</p>
+                }
+            }
+        </Authorized>
+    </AuthorizeView>
+
+    @*if (State.Value.PairConfig is null && State.Value.WalletConfig is null)
+    {
+        <Onboarding />
+    }
+    else
+    {
+        <Dashboard />
+    }*@
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private string? _errorMessage;
+    private AppUserInfoResult? _userInfo;
+
+    private bool IsInitialized => State.Value.PairConfigRequested && State.Value.WalletConfigRequested;
+    private bool IsLoading => State.Value.Loading.Contains(RootState.LoadingHandles.PairConfig) ||
+                              State.Value.Loading.Contains(RootState.LoadingHandles.WalletConfig);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var account = ((AuthStateProvider)AuthenticationStateProvider).Account;
+            _userInfo = account != null ? await BtcPayServerAppApiClient.GetUserInfo(account) : null;
+        }
+        catch (Exception e)
+        {
+            _errorMessage = !string.IsNullOrEmpty(e.InnerException?.Message) ? e.InnerException.Message : e.Message;
+        }
+    }
+}

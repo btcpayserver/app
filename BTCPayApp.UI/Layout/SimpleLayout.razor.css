@@ -1,0 +1,13 @@
+.container {
+  --logo-height: 5rem;
+
+  max-width: 24rem;
+}
+.logo {
+  height: var(--logo-height);
+}
+@media (min-height: 65rem) {
+  .logo {
+    margin-top: calc(var(--logo-height) * -1);
+  }
+}
