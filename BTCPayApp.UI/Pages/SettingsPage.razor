@@ -1,4 +1,5 @@
-﻿@attribute [Route(Routes.Settings)]
+﻿@attribute [AllowAnonymous]
+@attribute [Route(Routes.Settings)]
 @using BTCPayApp.UI.Features
 @inject IState<UIState> UiState
 @inject IDispatcher Dispatcher

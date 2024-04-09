@@ -9,22 +9,19 @@
 
 <PageTitle>BTCPay Server</PageTitle>
 <Fluxor.Blazor.Web.StoreInitializer/>
-<Router AppAssembly="@typeof(App).Assembly">
-    <Found Context="routeData">
-        <AuthorizeRouteView Resource="@routeData" RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-            <NotAuthorized>
-                <RedirectToIndex/>
-            </NotAuthorized>
-        </AuthorizeRouteView>
-        <FocusOnNavigate RouteData="@routeData" Selector="h1"/>
-    </Found>
-    <NotFound>
-        <PageTitle>Not found</PageTitle>
-        <LayoutView Layout="@typeof(SimpleLayout)">
-            <ErrorPage Title="Not found" Message="This page does not exist."/>
-        </LayoutView>
-    </NotFound>
-</Router>
+<CascadingAuthenticationState>
+    <AuthorizeView>
+        <Authorized>
+            @RouterWithLayout(typeof(MainLayout))
+        </Authorized>
+        <Authorizing>
+            @RouterWithLayout(typeof(BaseLayout))
+        </Authorizing>
+        <NotAuthorized>
+            @RouterWithLayout(typeof(SimpleLayout))
+        </NotAuthorized>
+    </AuthorizeView>
+</CascadingAuthenticationState>
 
 @code {
     [CascadingParameter]
@@ -35,7 +32,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // UI
         LoadingStateSelection.Select(state => state.Loading);
         var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
         if (state != null)
@@ -46,4 +42,25 @@
             }
         }
     }
+
+    RenderFragment RouterWithLayout(Type layoutType) => __builder =>
+    {
+        <Router AppAssembly="@typeof(App).Assembly">
+            <Found Context="routeData">
+                <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@layoutType">
+                    <NotAuthorized>
+                        <RedirectToIndex/>
+                    </NotAuthorized>
+                    <Authorizing />
+                </AuthorizeRouteView>
+                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+            </Found>
+            <NotFound>
+                <PageTitle>Not found</PageTitle>
+                <LayoutView Layout="@typeof(SimpleLayout)">
+                    <ErrorPage Title="Not found" Message="This page does not exist."/>
+                </LayoutView>
+            </NotFound>
+        </Router>
+    };
 }

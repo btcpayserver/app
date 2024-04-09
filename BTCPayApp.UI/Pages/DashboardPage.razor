@@ -1,10 +1,8 @@
 ﻿@attribute [Route(Routes.Dashboard)]
 @using BTCPayApp.UI.Features
-@using Microsoft.Extensions.Logging
-@using BTCPayApp.Core
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject BTCPayServerAppApiClient BtcPayServerAppApiClient
-@inject ILogger<DashboardPage> Logger
+@using BTCPayApp.UI.Auth
+@using BTCPayApp.CommonServer
+@inject IAccountManager AccountManager
 @inject IState<RootState> State
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -12,10 +10,6 @@
 
 @if (IsInitialized && !IsLoading)
 {
-    @if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <div class="alert alert-danger mb-3">@_errorMessage</div>
-    }
     <AuthorizeView>
         <Authorized>
             <h1>Hello, @context.User.Identity?.Name!</h1>
@@ -80,11 +74,7 @@
 }
 
 @code {
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationState { get; set; }
-
-    private string? _errorMessage;
-    private AppUserInfoResponse? _userInfo;
+    private AppUserInfo? _userInfo;
 
     private bool IsInitialized => State.Value.PairConfigRequested && State.Value.WalletConfigRequested;
     private bool IsLoading => State.Value.Loading.Contains(RootState.LoadingHandles.PairConfig) ||
@@ -92,14 +82,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        try
-        {
-            var account = ((AuthStateProvider)AuthenticationStateProvider).Account;
-            _userInfo = account != null ? await BtcPayServerAppApiClient.GetUserInfo(account) : null;
-        }
-        catch (Exception e)
-        {
-            _errorMessage = !string.IsNullOrEmpty(e.InnerException?.Message) ? e.InnerException.Message : e.Message;
-        }
+        _userInfo = AccountManager.GetUserInfo();
     }
 }

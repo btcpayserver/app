@@ -1,14 +1,9 @@
 ﻿@attribute [Route(Routes.Login)]
 @attribute [AllowAnonymous]
 @layout SimpleLayout
-@using Microsoft.Extensions.Logging
-@using BTCPayApp.Core
-@using BTCPayApp.Core.Contracts
+@using BTCPayApp.UI.Auth
 @using BTCPayApp.UI.Util
-@inject ILogger<LoginPage> Logger
-@inject AuthenticationStateProvider AuthStateProvider
-@inject BTCPayServerAppApiClient BtcPayServerAppApiClient
-@inject ISecureConfigProvider SecureConfigProvider
+@inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 
 <PageTitle>Login to a server</PageTitle>
@@ -63,6 +58,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (AuthenticationState == null) return;
+
+        var authState = await AuthenticationState;
+
         if (!string.IsNullOrEmpty(ServerUrl))
         {
             // Parameter passed by ConnectPage
@@ -71,8 +70,8 @@
         else
         {
             // See if we had a previous session/account
-            var account = await SecureConfigProvider.Get<BTCPayServerAccount>("account");
-            Model.Uri = account?.BaseUri.ToString();
+            var account = AccountManager.GetAccount();
+            Model.Uri = account?.BaseUri;
             Model.Email = account?.Email;
         }
     }
@@ -81,28 +80,19 @@
     {
         _errorMessage = null;
 
-        try
+        var result = await AccountManager.Login(Model.Uri!, Model.Email!, Model.Password!, Model.TwoFactorCode);
+        if (result.Succeeded)
         {
-            var account = new BTCPayServerAccount(Model.Uri, Model.Email);
-            var (access, errorCode) = await BtcPayServerAppApiClient.Login(account, Model.Password, Model.TwoFactorCode);
-            if (access != null)
-            {
-                account.SetAccess(access.AccessToken, access.RefreshToken, access.Expiry);
-                ((AuthStateProvider)AuthStateProvider).SetAccount(account);
-                NavigationManager.NavigateTo(Routes.Index);
-            }
-            else if (errorCode == "RequiresTwoFactor")
-            {
-                Model.RequireTwoFactor = true;
-            }
-            else
-            {
-                _errorMessage = string.IsNullOrEmpty(errorCode) || errorCode == "Failed" ? "Invalid login attempt." : errorCode;
-            }
+            NavigationManager.NavigateTo(Routes.Index);
         }
-        catch (Exception e)
+        else
         {
-            _errorMessage = !string.IsNullOrEmpty(e.InnerException?.Message) ? e.InnerException.Message : e.Message;
+            if (result.ErrorList?.Contains("RequiresTwoFactor") is true)
+                Model.RequireTwoFactor = true;
+            else
+                _errorMessage = result.ErrorList?.Contains("Failed") is false
+                    ? string.Join(",", result.ErrorList)
+                    : "Invalid login attempt.";
         }
     }
 

@@ -1,4 +1,5 @@
 ﻿using BTCPayApp.Core;
+using BTCPayApp.UI.Auth;
 using Fluxor;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,8 +12,9 @@ public static class StartupExtensions
         serviceCollection.AddOptions();
         serviceCollection.AddAuthorizationCore();
         serviceCollection.AddCascadingAuthenticationState();
+        serviceCollection.AddScoped<BTCPayAppClient>();
         serviceCollection.AddScoped<AuthenticationStateProvider, AuthStateProvider>();
-        serviceCollection.AddScoped<BTCPayServerAppApiClient>();
+        serviceCollection.AddScoped(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddFluxor(options =>
         {
             options.UseRouting();
