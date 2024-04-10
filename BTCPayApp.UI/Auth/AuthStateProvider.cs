@@ -11,19 +11,30 @@ using Microsoft.Extensions.Options;
 
 namespace BTCPayApp.UI.Auth;
 
-public class AuthStateProvider(
-    BTCPayAppClient client,
-    ISecureConfigProvider config,
-    IOptionsMonitor<IdentityOptions> identityOptions
-) : AuthenticationStateProvider, IAccountManager
+public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
 {
     private bool _isInitialized;
     private BTCPayAccount? _account;
     private AppUserInfo? _userInfo;
     private readonly ClaimsPrincipal _unauthenticated = new(new ClaimsIdentity());
+    private readonly IOptionsMonitor<IdentityOptions> _identityOptions;
+    private readonly ISecureConfigProvider _config;
+    private readonly BTCPayAppClient _client;
 
     public BTCPayAccount? GetAccount() => _account;
     public AppUserInfo? GetUserInfo() => _userInfo;
+
+    public AuthStateProvider(
+        BTCPayAppClient client,
+        ISecureConfigProvider config,
+        IOptionsMonitor<IdentityOptions> identityOptions)
+    {
+        _client = client;
+        _config = config;
+        _identityOptions = identityOptions;
+
+        _client.AccessRefreshed += OnAccessRefresh;
+    }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
@@ -33,11 +44,11 @@ public class AuthStateProvider(
         // initialize with persisted account
         if (!_isInitialized && _account == null)
         {
-            _account = await config.Get<BTCPayAccount>("account");
+            _account = await _config.Get<BTCPayAccount>("account");
             if (!string.IsNullOrEmpty(_account?.AccessToken) && !string.IsNullOrEmpty(_account.RefreshToken))
-                client.SetAccess(_account.AccessToken, _account.RefreshToken, _account.AccessExpiry.GetValueOrDefault());
+                _client.SetAccess(_account.AccessToken, _account.RefreshToken, _account.AccessExpiry.GetValueOrDefault());
             else
-                client.ClearAccess();
+                _client.ClearAccess();
             _isInitialized = true;
         }
 
@@ -45,7 +56,7 @@ public class AuthStateProvider(
         {
             try
             {
-                _userInfo = await client.Get<AppUserInfo>(_account!.BaseUri, "info");
+                _userInfo = await _client.Get<AppUserInfo>(_account!.BaseUri, "info");
             }
             catch { /* ignored */ }
         }
@@ -54,12 +65,12 @@ public class AuthStateProvider(
         {
             var claims = new List<Claim>
             {
-                new (identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType, _userInfo.UserId),
-                new (identityOptions.CurrentValue.ClaimsIdentity.UserNameClaimType, _userInfo.Email),
-                new (identityOptions.CurrentValue.ClaimsIdentity.EmailClaimType, _userInfo.Email)
+                new (_identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType, _userInfo.UserId),
+                new (_identityOptions.CurrentValue.ClaimsIdentity.UserNameClaimType, _userInfo.Email),
+                new (_identityOptions.CurrentValue.ClaimsIdentity.EmailClaimType, _userInfo.Email)
             };
             claims.AddRange(_userInfo.Roles.Select(role =>
-                new Claim(identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, role)));
+                new Claim(_identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, role)));
             user = new ClaimsPrincipal(new ClaimsIdentity(claims, nameof(AuthStateProvider)));
         }
 
@@ -76,8 +87,8 @@ public class AuthStateProvider(
     {
         _userInfo = null;
         _account!.ClearAccess();
-        await config.Set("account", _account);
-        client.ClearAccess();
+        await _config.Set("account", _account);
+        _client.ClearAccess();
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
@@ -85,10 +96,17 @@ public class AuthStateProvider(
     private async Task SetAccount(BTCPayAccount account)
     {
         _account = account;
-        await config.Set("account", _account);
-        client.SetAccess(_account.AccessToken!, _account.RefreshToken!, _account.AccessExpiry.GetValueOrDefault());
+        await _config.Set("account", _account);
+        _client.SetAccess(_account.AccessToken!, _account.RefreshToken!, _account.AccessExpiry.GetValueOrDefault());
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+    }
+
+    private async void OnAccessRefresh(object? sender, AccessTokenResult access)
+    {
+        if (_account == null) return;
+        _account.SetAccess(access.AccessToken, access.RefreshToken, access.Expiry);
+        await _config.Set("account", _account);
     }
 
     public async Task<FormResult> Login(string serverUrl, string email, string password, string? otp = null, CancellationToken? cancellation = default)
@@ -102,7 +120,7 @@ public class AuthStateProvider(
         try
         {
             var expiryOffset = DateTimeOffset.Now;
-            var response = await client.Post<LoginRequest, AccessTokenResponse>(serverUrl, "login", payload, cancellation.GetValueOrDefault());
+            var response = await _client.Post<LoginRequest, AccessTokenResponse>(serverUrl, "login", payload, cancellation.GetValueOrDefault());
             var account = new BTCPayAccount(serverUrl, email);
             account.SetAccess(response.AccessToken, response.RefreshToken, response.ExpiresIn, expiryOffset);
             await SetAccount(account);
@@ -127,7 +145,7 @@ public class AuthStateProvider(
             var path = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword)
                 ? "forgot-password"
                 : "reset-password";
-            await client.Post(serverUrl, path, payload, cancellation.GetValueOrDefault());
+            await _client.Post(serverUrl, path, payload, cancellation.GetValueOrDefault());
             return new FormResult(true);
         }
         catch (BTCPayAppClientException e)

@@ -16,6 +16,8 @@ public class BTCPayAppClient(IHttpClientFactory clientFactory)
     private string? AccessToken { get; set; }
     private string? RefreshToken { get; set; }
 
+    public event EventHandler<AccessTokenResult>? AccessRefreshed;
+
     public async Task<TResponse> Get<TResponse>(string baseUrl, string path, CancellationToken cancellation = default, bool isRetry = false)
     {
         return await Send<EmptyRequestModel, TResponse>(HttpMethod.Get, baseUrl, path, null, cancellation, isRetry);
@@ -96,6 +98,7 @@ public class BTCPayAppClient(IHttpClientFactory clientFactory)
         {
             var response = await Post<RefreshRequest, AccessTokenResponse>(serverUrl, "refresh", payload, cancellation.GetValueOrDefault(), true);
             var res = HandleAccessTokenResponse(response, now);
+            AccessRefreshed?.Invoke(this, res);
             return (res, null);
         }
         catch (BTCPayAppClientException e)

@@ -15,9 +15,15 @@ public class BTCPayAccount(string baseUri, string email)
 
     public void SetAccess(string accessToken, string refreshToken, long expiresInSeconds, DateTimeOffset? expiryOffset = null)
     {
+        var expiry = (expiryOffset ?? DateTimeOffset.Now) + TimeSpan.FromSeconds(expiresInSeconds);
+        SetAccess(accessToken, refreshToken, expiry);
+    }
+
+    public void SetAccess(string accessToken, string refreshToken, DateTimeOffset expiry)
+    {
         AccessToken = accessToken;
         RefreshToken = refreshToken;
-        AccessExpiry = (expiryOffset ?? DateTimeOffset.Now) + TimeSpan.FromSeconds(expiresInSeconds);
+        AccessExpiry = expiry;
     }
 
     public void ClearAccess()
