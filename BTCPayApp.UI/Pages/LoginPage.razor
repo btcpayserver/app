@@ -1,23 +1,21 @@
 ﻿@attribute [Route(Routes.Login)]
 @attribute [AllowAnonymous]
 @layout SimpleLayout
+@using BTCPayApp.CommonServer
+@using BTCPayApp.Core
 @using BTCPayApp.UI.Auth
 @using BTCPayApp.UI.Util
+@inject BTCPayAppClient AppClient
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 
-<PageTitle>Login to a server</PageTitle>
+<PageTitle>@GetTitle()</PageTitle>
 
 <EditForm Model="@Model" OnValidSubmit="HandleValidSubmit" FormName="Login" method="post">
     <DataAnnotationsValidator />
-    <h1 class="h2 mb-4">Login to a server</h1>
-    @if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <div class="alert alert-danger mb-3">@_errorMessage</div>
-    }
     <div class="mb-3" hidden="@Model.RequireTwoFactor">
         <label for="Uri" class="form-label">Server URL</label>
-        <InputText @bind-Value="Model.Uri" type="url" id="Uri" class="form-control"/>
+        <InputText @bind-Value="Model.Uri" @bind-Value:after="ResolveInstanceInfo" type="url" id="Uri" class="form-control"/>
         <ValidationMessage For="@(() => Model.Uri)" />
     </div>
     <div class="mb-3" hidden="@Model.RequireTwoFactor">
@@ -38,11 +36,30 @@
             <ValidationMessage For="@(() => Model.TwoFactorCode)" />
         </div>
     }
-    <button type="submit" class="btn btn-primary w-100" data-testid="LoginButton">Login</button>
-    <p class="mt-4 text-center" hidden="@Model.RequireTwoFactor">
-        <NavLink href="@Routes.ForgotPassword">Forgot your password?</NavLink>
-    </p>
+    <button type="submit" class="btn btn-primary w-100" data-testid="LoginButton" disabled="@(InstanceInfo == null)">Login</button>
+
+    @if (!Model.RequireTwoFactor && InstanceInfo != null)
+    {
+        <p class="mt-4 text-center">
+            <NavLink href="@(Routes.ForgotPassword + $"?serverUrl={Model.Uri}")">Forgot your password?</NavLink>
+        </p>
+
+        @if (InstanceInfo.RegistrationEnabled)
+        {
+            <p class="mt-4 text-center">
+                <NavLink href="@(Routes.Register + $"?serverUrl={Model.Uri}")">Register new account</NavLink>
+            </p>
+        }
+    }
 </EditForm>
+
+<SectionContent SectionName="main-top">
+    <h1 class="h2 mb-4">@GetTitle()</h1>
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <div class="alert alert-danger mb-3">@_errorMessage</div>
+    }
+</SectionContent>
 
 @code {
     [Parameter]
@@ -53,15 +70,12 @@
     private Task<AuthenticationState>? AuthenticationState { get; set; }
 
     private LoginModel Model { get; set; } = new();
+    private AppInstanceInfo? InstanceInfo { get; set; }
 
     private string? _errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        if (AuthenticationState == null) return;
-
-        var authState = await AuthenticationState;
-
         if (!string.IsNullOrEmpty(ServerUrl))
         {
             // Parameter passed by ConnectPage
@@ -74,6 +88,8 @@
             Model.Uri = account?.BaseUri;
             Model.Email = account?.Email;
         }
+
+        await ResolveInstanceInfo();
     }
 
     public async Task HandleValidSubmit()
@@ -87,12 +103,30 @@
         }
         else
         {
-            if (result.ErrorList?.Contains("RequiresTwoFactor") is true)
+            if (result.Messages?.Contains("RequiresTwoFactor") is true)
                 Model.RequireTwoFactor = true;
             else
-                _errorMessage = result.ErrorList?.Contains("Failed") is false
-                    ? string.Join(",", result.ErrorList)
+                _errorMessage = result.Messages?.Contains("Failed") is false
+                    ? string.Join(",", result.Messages)
                     : "Invalid login attempt.";
+        }
+    }
+
+    private async Task ResolveInstanceInfo()
+    {
+        try
+        {
+            InstanceInfo = !string.IsNullOrEmpty(Model.Uri)
+                ? await AppClient.Get<AppInstanceInfo>(Model.Uri, "instance")
+                : null;
+
+            _errorMessage = !string.IsNullOrEmpty(Model.Uri) && InstanceInfo == null
+                ? "This server does not seem to support the BTCPay app."
+                : null;
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
         }
     }
 
@@ -115,4 +149,6 @@
         [RequiredIf(nameof(RequireTwoFactor), true)]
         public string? TwoFactorCode { get; set; }
     }
+
+    private string GetTitle() => $"Login to {InstanceInfo?.ServerName ?? "a BTCPay Server"}";
 }

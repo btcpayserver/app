@@ -11,7 +11,7 @@ namespace BTCPayApp.Core;
 public class BTCPayAppClient(IHttpClientFactory clientFactory)
 {
     private readonly HttpClient _httpClient = clientFactory.CreateClient();
-    private readonly string[] _unauthenticatedPaths = ["login", "forgot-password", "reset-password"];
+    private readonly string[] _unauthenticatedPaths = ["instance", "login", "register", "forgot-password", "reset-password"];
     private DateTimeOffset? AccessExpiry { get; set; } // TODO: Incorporate in refresh check
     private string? AccessToken { get; set; }
     private string? RefreshToken { get; set; }
@@ -68,7 +68,9 @@ public class BTCPayAppClient(IHttpClientFactory clientFactory)
                 ClearAccess();
             }
             // otherwise handle the error response
-            var problem = await res.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: cancellation);
+            var problem = res.StatusCode == HttpStatusCode.NotFound
+                ? new ProblemDetails { Instance = baseUrl, Status = 404, Detail = "This server does not seem to support the BTCPay app." }
+                : await res.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: cancellation);
             var statusCode = problem?.Status ?? (int)res.StatusCode;
             var message = problem?.Detail ?? res.ReasonPhrase;
             throw new BTCPayAppClientException(statusCode, message ?? "Request failed");

@@ -1,9 +1,8 @@
 namespace BTCPayApp.UI.Models;
 
-public class FormResult(bool succeeded, string[]? errorList = null)
+public class FormResult(bool succeeded, string[]? messages = null)
 {
     public bool Succeeded { get; set; } = succeeded;
-    public string[]? ErrorList { get; set; } = errorList;
-    public FormResult(string[] errors) : this(false, errors) { }
-    public FormResult(string error) : this([error]) { }
+    public string[]? Messages { get; set; } = messages;
+    public FormResult(bool succeeded, string message) : this(succeeded, [message]) { }
 }

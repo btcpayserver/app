@@ -56,7 +56,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         {
             try
             {
-                _userInfo = await _client.Get<AppUserInfo>(_account!.BaseUri, "info");
+                _userInfo = await _client.Get<AppUserInfo>(_account!.BaseUri, "user");
             }
             catch { /* ignored */ }
         }
@@ -128,7 +128,32 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         }
         catch (BTCPayAppClientException e)
         {
-            return new FormResult(e.Message);
+            return new FormResult(false, e.Message);
+        }
+    }
+
+    public async Task<FormResult> Register(string serverUrl, string email, string password, CancellationToken? cancellation = default)
+    {
+        var payload = new SignupRequest
+        {
+            Email = email,
+            Password = password
+        };
+        try
+        {
+            var response = await _client.Post<SignupRequest, SignupResult>(serverUrl, "register", payload, cancellation.GetValueOrDefault());
+            var account = new BTCPayAccount(serverUrl, email);
+            await SetAccount(account);
+            var message = "Account created.";
+            if (response.RequiresConfirmedEmail)
+                message += " Please confirm your email.";
+            if (response.RequiresUserApproval)
+                message += " The new account requires approval by an admin before you can log in.";
+            return new FormResult(true, message);
+        }
+        catch (BTCPayAppClientException e)
+        {
+            return new FormResult(false, e.Message);
         }
     }
 
@@ -150,7 +175,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         }
         catch (BTCPayAppClientException e)
         {
-            return new FormResult(e.Message);
+            return new FormResult(false, e.Message);
         }
     }
 }
