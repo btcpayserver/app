@@ -167,11 +167,12 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         };
         try
         {
-            var path = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword)
-                ? "forgot-password"
-                : "reset-password";
+            var isForgotStep = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword);
+            var path = isForgotStep ? "forgot-password" : "reset-password";
             await _client.Post(serverUrl, path, payload, cancellation.GetValueOrDefault());
-            return new FormResult(true);
+            return new FormResult(true, isForgotStep
+                ? "You should have received an email with a password reset code."
+                : "Your password has been reset.");
         }
         catch (BTCPayAppClientException e)
         {

@@ -6,6 +6,7 @@
 @using BTCPayApp.UI.Auth
 @inject BTCPayAppClient AppClient
 @inject IAccountManager AccountManager
+@inject NavigationManager NavigationManager
 
 <PageTitle>@GetTitle()</PageTitle>
 
@@ -34,7 +35,7 @@
     <button type="submit" class="btn btn-primary w-100" data-testid="RegisterButton" disabled="@GetRegistrationEnabled()">Create account</button>
 
     <p class="mt-4 text-center">
-        <NavLink href="@(Routes.Login + $"?serverUrl={Model.Uri}")">Back to login</NavLink>
+        <NavLink href="@GetLoginUrl()">Back to login</NavLink>
     </p>
 </EditForm>
 
@@ -44,15 +45,11 @@
     {
         <div class="alert alert-danger mb-3">@_errorMessage</div>
     }
-    else if (!string.IsNullOrEmpty(_successMessage))
-    {
-        <div class="alert alert-success mb-3">@_successMessage</div>
-    }
 </SectionContent>
 
 @code {
     [Parameter, EditorRequired]
-    [SupplyParameterFromQuery(Name = "serverUrl")]
+    [SupplyParameterFromQuery]
     public string ServerUrl { get; set; }
 
     [CascadingParameter]
@@ -62,26 +59,28 @@
     private AppInstanceInfo? InstanceInfo { get; set; }
 
     private string? _errorMessage;
-    private string? _successMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        // Parameter passed by LoginPage
-        Model.Uri = Uri.UnescapeDataString(ServerUrl);
+        if (!string.IsNullOrEmpty(ServerUrl))
+        {
+            Model.Uri = Uri.UnescapeDataString(ServerUrl);
+        }
 
         await ResolveInstanceInfo();
     }
 
     public async Task HandleValidSubmit()
     {
-        _errorMessage = _successMessage = null;
+        _errorMessage = null;
 
         var result = await AccountManager.Register(Model.Uri!, Model.Email!, Model.Password!);
         if (result.Succeeded)
         {
-            _successMessage = result.Messages != null
-                ? string.Join(",", result.Messages)
-                : "Account created.";
+            var successMessage = string.Join(",", result.Messages ?? ["Account created."]);
+            var uri = NavigationManager.GetUriWithQueryParameters(Routes.Login,
+                new Dictionary<string, object?> { {"success", successMessage } } );
+            NavigationManager.NavigateTo(uri);
         }
         else
         {
@@ -129,5 +128,6 @@
     }
 
     private string GetTitle() => $"Create account{(string.IsNullOrEmpty(InstanceInfo?.ServerName) ? null : $" at {InstanceInfo.ServerName}")}";
+    private string GetLoginUrl() => NavigationManager.GetUriWithQueryParameters(Routes.Login, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
     private bool GetRegistrationEnabled() => InstanceInfo is not { RegistrationEnabled: true };
 }

@@ -59,32 +59,43 @@
     {
         <div class="alert alert-danger mb-3">@_errorMessage</div>
     }
+    else if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <div class="alert alert-success mb-3">@_successMessage</div>
+    }
 </SectionContent>
 
 @code {
     [Parameter]
-    [SupplyParameterFromQuery(Name = "serverUrl")]
+    [SupplyParameterFromQuery]
     public string? ServerUrl { get; set; }
 
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationState { get; set; }
+    [Parameter]
+    [SupplyParameterFromQuery]
+    public string? Success { get; set; }
+
+    private string? _errorMessage;
+    private string? _successMessage;
 
     private LoginModel Model { get; set; } = new();
     private AppInstanceInfo? InstanceInfo { get; set; }
 
-    private string? _errorMessage;
-
     protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrEmpty(Success))
+        {
+            _successMessage = Uri.UnescapeDataString(Success);
+        }
+
         if (!string.IsNullOrEmpty(ServerUrl))
         {
-            // Parameter passed by ConnectPage
             Model.Uri = Uri.UnescapeDataString(ServerUrl);
         }
-        else
+
+        // See if we had a previous session/account
+        var account = AccountManager.GetAccount();
+        if (string.IsNullOrEmpty(ServerUrl) || Model.Uri == account?.BaseUri)
         {
-            // See if we had a previous session/account
-            var account = AccountManager.GetAccount();
             Model.Uri = account?.BaseUri;
             Model.Email = account?.Email;
         }
