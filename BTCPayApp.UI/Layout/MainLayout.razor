@@ -1,4 +1,6 @@
-﻿@inherits Fluxor.Blazor.Web.Components.FluxorLayout
+﻿@using BTCPayApp.UI.Features
+@inherits Fluxor.Blazor.Web.Components.FluxorLayout
+@inject IState<UIState> UiState
 
 <div id="MainLayout">
     <header id="MainMenu" class="btcpay-header d-flex flex-column d-print-none">
@@ -7,10 +9,18 @@
                 <span>Menu</span>
             </button>
             <NavLink class="navbar-brand py-2" href="@Routes.Dashboard" Match="NavLinkMatch.All">
-                <svg xmlns="http://www.w3.org/2000/svg" role="img" alt="BTCPay Server" class="main-logo main-logo-btcpay">
-                    <use href="_content/BTCPayApp.UI/img/logo.svg#small" class="main-logo-btcpay--small"/>
-                    <use href="_content/BTCPayApp.UI/img/logo.svg#large" class="main-logo-btcpay--large"/>
-                </svg>
+
+                @if (!string.IsNullOrEmpty(UiState.Value.LogoUrl))
+                {
+                    <img src="@UiState.Value.LogoUrl" alt="@(UiState.Value.ServerName ?? "BTCPay Server")" class="main-logo main-logo-custom " />
+                }
+                else
+                {
+                    <svg xmlns="http://www.w3.org/2000/svg" role="img" alt="BTCPay Server" class="main-logo main-logo-btcpay">
+                        <use href="_content/BTCPayApp.UI/img/logo.svg#small" class="main-logo-btcpay--small"/>
+                        <use href="_content/BTCPayApp.UI/img/logo.svg#large" class="main-logo-btcpay--large"/>
+                    </svg>
+                }
             </NavLink>
         </div>
         <nav id="MainNav" class="d-flex flex-column justify-content-between">

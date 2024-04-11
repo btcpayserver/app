@@ -4,10 +4,12 @@
 @using BTCPayApp.CommonServer
 @using BTCPayApp.Core
 @using BTCPayApp.UI.Auth
+@using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
 @inject BTCPayAppClient AppClient
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
+@inject IDispatcher Dispatcher
 
 <PageTitle>@GetTitle()</PageTitle>
 
@@ -137,8 +139,11 @@
         }
         catch (Exception e)
         {
+            InstanceInfo = null;
             _errorMessage = e.Message;
         }
+
+        Dispatcher.Dispatch(new UIState.SetInstance(InstanceInfo));
     }
 
     private class LoginModel

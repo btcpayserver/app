@@ -1,11 +1,22 @@
-﻿@inherits Fluxor.Blazor.Web.Components.FluxorLayout
+﻿@using BTCPayApp.UI.Features
+@inherits Fluxor.Blazor.Web.Components.FluxorLayout
+@inject IState<UIState> UiState
 
 <div id="SimpleLayout" class="container py-5 min-vh-100 d-flex flex-column justify-content-center gap-4">
-    <svg xmlns="http://www.w3.org/2000/svg" role="img" alt="BTCPay Server" class="logo">
-        <use href="_content/BTCPayApp.UI/img/logo.svg#small"/>
-    </svg>
+    @if (!string.IsNullOrEmpty(UiState.Value.LogoUrl))
+    {
+        <div>
+            <img src="@UiState.Value.LogoUrl" alt="@(UiState.Value.ServerName ?? "BTCPay Server")" class="logo" />
+        </div>
+    }
+    else
+    {
+        <svg xmlns="http://www.w3.org/2000/svg" role="img" alt="BTCPay Server" class="logo">
+            <use href="_content/BTCPayApp.UI/img/logo.svg#small"/>
+        </svg>
+    }
     <main>
-        <SectionOutlet SectionName="main-top" />
+        <SectionOutlet SectionName="main-top"/>
         @Body
     </main>
 </div>

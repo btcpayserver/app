@@ -4,7 +4,10 @@
   max-width: 24rem;
 }
 .logo {
+  display: block;
   height: var(--logo-height);
+  margin-left: auto;
+  margin-right: auto;
 }
 @media (min-height: 65rem) {
   .logo {

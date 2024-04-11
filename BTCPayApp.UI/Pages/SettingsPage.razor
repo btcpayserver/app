@@ -9,4 +9,37 @@
 
 <h1 class="mb-3">Settings</h1>
 
-<Settings Theme="@UiState.Value.SelectedTheme" OnThemeChange="theme => Dispatcher.Dispatch(new UIState.ApplyUserTheme(theme))" />
+<div class="form-group">
+    @if (UiState.Value.CustomThemeExtension is null)
+    {
+        <label class="form-label">Theme</label>
+        <InputSelect class="form-select w-auto" @bind-Value="Model.Theme" @bind-Value:after="OnThemeChange">
+            <option value="@Themes.System">System</option>
+            <option value="@Themes.Light">Light</option>
+            <option value="@Themes.Dark">Dark</option>
+        </InputSelect>
+    }
+    else
+    {
+        <div>Custom Theme</div>
+    }
+</div>
+
+@code {
+    private SettingsModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Model.Theme = UiState.Value.SelectedTheme;
+    }
+
+    private void OnThemeChange()
+    {
+        Dispatcher.Dispatch(new UIState.ApplyUserTheme(Model.Theme));
+    }
+
+    private class SettingsModel
+    {
+        public string Theme { get; set; } = Themes.System;
+    }
+}
