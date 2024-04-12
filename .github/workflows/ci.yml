@@ -3,13 +3,23 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.gitignore'
+      - '**/*.gitattributes'
   pull_request:
     branches:
       - master
 
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+# https://blog.taranissoftware.com/build-net-maui-apps-with-github-actions
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       # Setup code, .NET and Android
       - uses: actions/checkout@v4
@@ -19,16 +29,16 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      - name: Set up JDK 17
+      - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
+          java-version: '22'
           distribution: 'temurin'
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
       # Restore and build
       - name: Install workloads
-        run: dotnet workload restore
+        run: dotnet workload install maui --ignore-failed-sources
       - name: Install dependencies
         run: dotnet restore
       - name: Build
