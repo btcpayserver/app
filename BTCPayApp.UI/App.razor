@@ -27,9 +27,6 @@
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationState { get; set; }
 
-    [CascadingParameter]
-    public HttpContext? HttpContext { get; set; }
-
     protected override async Task OnInitializedAsync()
     {
         LoadingStateSelection.Select(state => state.Loading);

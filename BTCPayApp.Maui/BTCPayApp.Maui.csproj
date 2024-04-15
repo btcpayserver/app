@@ -54,6 +54,18 @@
       </Content>
     </ItemGroup>
     -->
+    <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-android')) != true">
+        <Compile Remove="**\Android\**\*.cs" />
+        <None Include="**\Android\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+    </ItemGroup>
+
+    <!-- Both iOS and Mac Catalyst -->
+    <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-ios')) != true AND $(TargetFramework.StartsWith('net8.0-maccatalyst')) != true">
+        <Compile Remove="**\iOS\**\*.cs" />
+        <None Include="**\iOS\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />  
+        <Compile Remove="**\Mac\**\*.cs" />
+        <None Include="**\Mac\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+    </ItemGroup>
 
     <ItemGroup>
       <PackageReference Include="Xamarin.Essentials" Version="1.8.1" />
@@ -61,5 +73,4 @@
         <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.7" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.7" />
     </ItemGroup>
-
 </Project>
