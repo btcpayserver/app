@@ -3,7 +3,7 @@
 
 using System.Text.Json.Serialization;
 
-namespace Microsoft.AspNetCore.Mvc;
+namespace BTCPayApp.Core.AspNetRip;
 
 /// <summary>
 /// A machine-readable format for specifying errors in HTTP API responses based on <see href="https://tools.ietf.org/html/rfc7807"/>.

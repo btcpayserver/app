@@ -1,5 +1,4 @@
-﻿
-namespace Microsoft.AspNetCore.Identity.Data;
+﻿namespace BTCPayApp.Core.AspNetRip;
 
 /// <summary>
 /// The response type for the "/resetPassword" endpoint added by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApi"/>.

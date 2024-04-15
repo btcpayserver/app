@@ -1,12 +1,11 @@
 using System.Security.Claims;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core;
+using BTCPayApp.Core.AspNetRip;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.UI.Models;
-using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.Extensions.Options;
 
 namespace BTCPayApp.UI.Auth;

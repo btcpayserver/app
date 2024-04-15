@@ -1,4 +1,4 @@
-﻿namespace Microsoft.AspNetCore.Identity.Data;
+﻿namespace BTCPayApp.Core.AspNetRip;
 
 /// <summary>
 /// The request type for the "/login" endpoint added by <see cref="IdentityApiEndpointRouteBuilderExtensions.MapIdentityApi"/>.

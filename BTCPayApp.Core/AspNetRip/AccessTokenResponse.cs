@@ -3,7 +3,7 @@
 
 using System.Text.Json;
 
-namespace Microsoft.AspNetCore.Authentication.BearerToken;
+namespace BTCPayApp.Core.AspNetRip;
 
 /// <summary>
 /// The JSON data transfer object for the bearer token response typically found in "/login" and "/refresh" responses.
