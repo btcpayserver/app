@@ -31,9 +31,9 @@ jobs:
           dotnet-version: 8.0.x
       
       - name: Install dependencies
-        run: dotnet restore -p BTCPayApp.Server\
+        run: dotnet restore -p BTCPayApp.Server
       - name: Build
-        run: dotnet restore -p BTCPayApp.Server --configuration Release --no-restore
+        run: dotnet build -p BTCPayApp.Server --configuration Release --no-restore
       # Unit and integration tests
       - name: Run fast tests
         run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Fast=Fast"
