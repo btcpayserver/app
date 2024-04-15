@@ -1,4 +1,4 @@
-﻿name: 'Test the app'
+﻿name: 'Test the mobile app'
 on:
   push:
     branches:
@@ -19,7 +19,7 @@ env:
 # https://blog.taranissoftware.com/build-net-maui-apps-with-github-actions
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       # Setup code, .NET and Android
       - uses: actions/checkout@v4
@@ -48,16 +48,4 @@ jobs:
         run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Fast=Fast"
       - name: Run integration tests
         run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Integration=Integration"
-      # E2E tests
-      - name: Start containers
-        run: docker-compose -f "submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" up -d dev
-      - name: Start BTCPay
-        run: |
-          cd submodules/btcpayserver
-          nohup dotnet run -c Release --project BTCPayServer &
-          while ! curl -s http://localhost:14142/api/v1/health > /dev/null; do
-            echo "Waiting for BTCPay Server to start..."
-            sleep 10
-          done
-      - name: Run Selenium tests
-        run: dotnet test --no-restore --filter "Selenium=Selenium" -v n --logger "console;verbosity=normal"
+

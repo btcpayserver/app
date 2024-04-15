@@ -1,0 +1,54 @@
+﻿name: 'Test the mobile app'
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.gitignore'
+      - '**/*.gitattributes'
+  pull_request:
+    branches:
+      - master
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+# https://blog.taranissoftware.com/build-net-maui-apps-with-github-actions
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Setup code, .NET and Android
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      
+      - name: Install dependencies
+        run: dotnet restore -p BTCPayApp.Server\
+      - name: Build
+        run: dotnet restore -p BTCPayApp.Server --configuration Release --no-restore
+      # Unit and integration tests
+      - name: Run fast tests
+        run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Fast=Fast"
+      - name: Run integration tests
+        run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Integration=Integration"
+      # E2E tests
+      - name: Start containers
+        run: docker-compose -f "submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" up -d dev
+      - name: Start BTCPay
+        run: |
+          cd submodules/btcpayserver
+          nohup dotnet run -c Release --project BTCPayServer &
+          while ! curl -s http://localhost:14142/api/v1/health > /dev/null; do
+            echo "Waiting for BTCPay Server to start..."
+            sleep 10
+          done
+      - name: Run Selenium tests
+        run: dotnet test --no-restore --filter "Selenium=Selenium" -v n --logger "console;verbosity=normal"
