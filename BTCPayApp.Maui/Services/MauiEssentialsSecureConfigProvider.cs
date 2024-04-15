@@ -3,7 +3,7 @@ using BTCPayApp.Core.Contracts;
 
 namespace BTCPayApp.Maui.Services;
 
-public class XamarinEssentialsSecureConfigProvider : ISecureConfigProvider
+public class MauiEssentialsSecureConfigProvider : ISecureConfigProvider
 {
     public async Task<T?> Get<T>(string key)
     {

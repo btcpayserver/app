@@ -3,9 +3,9 @@ using BTCPayApp.Core.Contracts;
 
 namespace BTCPayApp.Maui.Services;
 
-public class XamarinSystemThemeProvider : ISystemThemeProvider
+public class MauiSystemThemeProvider : ISystemThemeProvider
 {
-    public XamarinSystemThemeProvider()
+    public MauiSystemThemeProvider()
     {
         Application.Current.RequestedThemeChanged += (sender, args) =>
         {

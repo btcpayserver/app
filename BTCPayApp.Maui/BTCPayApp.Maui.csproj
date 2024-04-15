@@ -25,7 +25,9 @@
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">14.2</SupportedOSPlatformVersion>
         <SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">23.0</SupportedOSPlatformVersion>
     </PropertyGroup>
-
+    <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-ios'">
+        <UseInterpreter>True</UseInterpreter>
+    </PropertyGroup>
     <ItemGroup>
         <!-- App Icon -->
 
@@ -62,9 +64,9 @@
 
     <ItemGroup>
       <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
-      <PackageReference Include="Xamarin.Essentials" Version="1.8.1" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
         <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.7" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.7" />
+        <PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.20" />
     </ItemGroup>
 </Project>

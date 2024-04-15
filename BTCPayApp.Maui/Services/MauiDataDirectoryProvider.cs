@@ -3,7 +3,7 @@ using BTCPayApp.Core.Contracts;
 
 namespace BTCPayApp.Maui.Services;
 
-public class XamarinDataDirectoryProvider: IDataDirectoryProvider
+public class MauiDataDirectoryProvider: IDataDirectoryProvider
 {
     public Task<string> GetAppDataDirectory()
     {

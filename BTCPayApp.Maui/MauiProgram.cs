@@ -18,17 +18,16 @@ public static class MauiProgram
             .ConfigureFonts(fonts => { fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular"); });
 
         builder.Services.AddMauiBlazorWebView();
-        builder.Services.AddBTCPayAppUIServices();
         builder.Services.ConfigureBTCPayAppCore();
+        builder.Services.AddBTCPayAppUIServices();
         builder.Services.AddLogging();
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Logging.AddDebug();
 #endif
-        builder.Services.AddSingleton<IDataDirectoryProvider, XamarinDataDirectoryProvider>();
-        builder.Services.AddSingleton<IConfigProvider, XamarinEssentialsConfigProvider>();
-        builder.Services.AddSingleton<ISecureConfigProvider, XamarinEssentialsSecureConfigProvider>();
-        builder.Services.AddSingleton<ISystemThemeProvider, XamarinSystemThemeProvider>();
+        builder.Services.AddSingleton<IDataDirectoryProvider, MauiDataDirectoryProvider>();
+        builder.Services.AddSingleton<ISecureConfigProvider, MauiEssentialsSecureConfigProvider>();
+        builder.Services.AddSingleton<ISystemThemeProvider, MauiSystemThemeProvider>();
         builder.Services.AddSingleton(typeof(IFingerprint), CrossFingerprint.Current);
         builder.ConfigureLifecycleEvents(events =>
         {
