@@ -31,14 +31,10 @@ jobs:
           dotnet-version: 8.0.x
       
       - name: Install dependencies
-        run: dotnet restore -p BTCPayApp.Server
+        run: dotnet restore
       - name: Build
         run: dotnet build -p BTCPayApp.Server --configuration Release --no-restore
-      # Unit and integration tests
-      - name: Run fast tests
-        run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Fast=Fast"
-      - name: Run integration tests
-        run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Integration=Integration"
+
       # E2E tests
       - name: Start containers
         run: docker-compose -f "submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" up -d dev
@@ -50,5 +46,10 @@ jobs:
             echo "Waiting for BTCPay Server to start..."
             sleep 10
           done
+          # Unit and integration tests
+      - name: Run fast tests
+        run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Fast=Fast"
+      - name: Run integration tests
+        run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Integration=Integration"
       - name: Run Selenium tests
         run: dotnet test --no-restore --filter "Selenium=Selenium" -v n --logger "console;verbosity=normal"
