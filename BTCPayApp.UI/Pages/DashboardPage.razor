@@ -19,10 +19,10 @@
                 <div class="mb-4">
                     ID: @_userInfo.UserId<br />
                     Email: @_userInfo.Email<br />
-                    Roles: @string.Join(", ", _userInfo.Roles)
+                    Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
                 </div>
 
-                if (_userInfo.Stores.Any())
+                if (_userInfo.Stores?.Any() is true)
                 {
                     <ul>
                         @foreach (var store in _userInfo.Stores)
@@ -38,7 +38,7 @@
                                 </div>
                                 <div></div>
 
-                                @if (store.Permissions.Any())
+                                @if (store.Permissions?.Any() is true)
                                 {
                                     <ul>
                                         @foreach (var permission in store.Permissions)
@@ -80,8 +80,9 @@
     private bool IsLoading => State.Value.Loading.Contains(RootState.LoadingHandles.PairConfig) ||
                               State.Value.Loading.Contains(RootState.LoadingHandles.WalletConfig);
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         _userInfo = AccountManager.GetUserInfo();
+        return Task.CompletedTask;
     }
 }

@@ -118,9 +118,12 @@
                                         <div class="d-flex align-items-baseline justify-content-between flex-wrap flex-grow-1 gap-2">
                                             <span class="flex-grow-1">@t.Date</span>
                                             <span class="flex-grow-1 text-end">@t.Price</span>
-                                            <div class="badge-container">
-                                                <span class="badge badge-@t.Status.ToLowerInvariant()">@t.Status</span>
-                                            </div>
+                                            @if (!string.IsNullOrEmpty(t.Status))
+                                            {
+                                                <div class="badge-container">
+                                                    <span class="badge badge-@t.Status.ToLowerInvariant()">@t.Status</span>
+                                                </div>
+                                            }
                                         </div>
                                         <vc:icon symbol="caret-right" />
                                     </a>
@@ -146,11 +149,10 @@
 </div>
 
 @code {
-#nullable enable
 	[Parameter, EditorRequired]
-	public string CurrencyCode { get; set; }
+	public string? CurrencyCode { get; set; }
     [Parameter]
-    public string RecentTransactionsUrl { get; set; }
+    public string? RecentTransactionsUrl { get; set; }
     [Parameter]
     public NumberFormatInfo? CurrencyInfo { get; set; }
     [Parameter]
@@ -361,7 +363,7 @@
         if (CurrencyCode is "BTC" or "SATS") return FormatCrypto(value, withSymbol);
         try {
             var formatted = value.ToString("C", CurrencyInfo);
-            return withSymbol ? formatted : formatted.Replace(_currencySymbol, "").Trim();
+            return withSymbol || string.IsNullOrEmpty(_currencySymbol) ? formatted : formatted.Replace(_currencySymbol, "").Trim();
         }
         catch (Exception)
         {
@@ -380,8 +382,8 @@
 
     private async Task UpdateFontSize()
     {
-        var top = await JS.InvokeAsync<decimal>("Interop.getWidth", new object[] { _keypadTop });
-        var amt = await JS.InvokeAsync<decimal>("Interop.getWidth", new object[] { _keypadAmount });
+        var top = await JS.InvokeAsync<decimal>("Interop.getWidth", [_keypadTop]);
+        var amt = await JS.InvokeAsync<decimal>("Interop.getWidth", [_keypadAmount]);
         var gamma = top / amt;
 
         FontSize = (int)(top < amt
@@ -391,21 +393,22 @@
         StateHasChanged();
     }
 
-    private async Task LoadRecentTransactions()
+    private Task LoadRecentTransactions()
     {
         _recentTransactionsLoading = true;
         StateHasChanged();
         RecentTransactions = null;
         _recentTransactionsLoading = false;
         StateHasChanged();
+        return Task.CompletedTask;
     }
 
     private class RecentTransaction
     {
-        public string Id { get; set; }
+        public string? Id { get; set; }
         public DateTimeOffset Date { get; set; }
-        public string Url { get; set; }
-        public string Price { get; set; }
-        public string Status { get; set; }
+        public string? Url { get; set; }
+        public string? Price { get; set; }
+        public string? Status { get; set; }
     }
 }

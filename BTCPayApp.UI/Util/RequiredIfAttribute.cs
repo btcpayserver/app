@@ -4,7 +4,7 @@ namespace BTCPayApp.UI.Util;
 
 public class RequiredIfAttribute(string otherProperty, object targetValue) : ValidationAttribute
 {
-    protected override ValidationResult IsValid(object? value, ValidationContext validationContext)
+    protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
     {
         var otherPropertyValue = validationContext.ObjectType
             .GetProperty(otherProperty)?

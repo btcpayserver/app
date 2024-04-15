@@ -64,12 +64,13 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         {
             var claims = new List<Claim>
             {
-                new (_identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType, _userInfo.UserId),
-                new (_identityOptions.CurrentValue.ClaimsIdentity.UserNameClaimType, _userInfo.Email),
-                new (_identityOptions.CurrentValue.ClaimsIdentity.EmailClaimType, _userInfo.Email)
+                new (_identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType, _userInfo.UserId!),
+                new (_identityOptions.CurrentValue.ClaimsIdentity.UserNameClaimType, _userInfo.Email!),
+                new (_identityOptions.CurrentValue.ClaimsIdentity.EmailClaimType, _userInfo.Email!)
             };
-            claims.AddRange(_userInfo.Roles.Select(role =>
-                new Claim(_identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, role)));
+            if (_userInfo.Roles?.Any() is true)
+                claims.AddRange(_userInfo.Roles.Select(role =>
+                    new Claim(_identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, role)));
             user = new ClaimsPrincipal(new ClaimsIdentity(claims, nameof(AuthStateProvider)));
         }
 

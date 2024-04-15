@@ -68,7 +68,7 @@ public static class Program
                     }
                 }
             }
-            catch (Exception exc)
+            catch (Exception)
             {
                 // ignored
             }

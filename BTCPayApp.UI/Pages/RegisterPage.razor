@@ -50,7 +50,7 @@
 @code {
     [Parameter, EditorRequired]
     [SupplyParameterFromQuery]
-    public string ServerUrl { get; set; }
+    public string? ServerUrl { get; set; }
 
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationState { get; set; }
