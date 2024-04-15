@@ -1,4 +1,4 @@
-﻿name: 'Test the mobile app'
+﻿name: 'Test the desktop app'
 on:
   push:
     branches:
