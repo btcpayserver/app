@@ -29,11 +29,8 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-      
-      - name: Install dependencies
-        run: dotnet restore
       - name: Build
-        run: dotnet build -p BTCPayApp.Server --configuration Release --no-restore
+        run: dotnet build -p BTCPayApp.Server --configuration Release
 
       # E2E tests
       - name: Start containers
