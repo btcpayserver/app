@@ -44,8 +44,8 @@ jobs:
           done
           # Unit and integration tests
       - name: Run fast tests
-        run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Fast=Fast"
+        run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Fast=Fast" BTCPayApp.Tests
       - name: Run integration tests
-        run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Integration=Integration"
+        run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Integration=Integration"  BTCPayApp.Tests
       - name: Run Selenium tests
-        run: dotnet test --no-restore --filter "Selenium=Selenium" -v n --logger "console;verbosity=normal"
+        run: dotnet test --no-restore --filter "Selenium=Selenium" -v n --logger "console;verbosity=normal"  BTCPayApp.Tests
