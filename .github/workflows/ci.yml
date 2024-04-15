@@ -19,7 +19,7 @@ env:
 # https://blog.taranissoftware.com/build-net-maui-apps-with-github-actions
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       # Setup code, .NET and Android
       - uses: actions/checkout@v4
