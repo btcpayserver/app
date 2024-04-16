@@ -2,7 +2,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorLayout
 @inject IState<UIState> UiState
 
-<div id="SimpleLayout" class="container min-vh-100">
+<div id="SimpleLayout" class="min-vh-100 container ">
     @if (!string.IsNullOrEmpty(UiState.Value.LogoUrl))
     {
         <div>

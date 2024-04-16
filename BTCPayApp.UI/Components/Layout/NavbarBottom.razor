@@ -1,0 +1,31 @@
+@using BTCPayApp.UI.Features
+@inject IState<UIState> UiState
+
+<nav id="NavbarBottom" class="navbar fixed-bottom bg-tile d-flex flex-column justify-content-between">
+    <ul class="navbar-nav">
+        <li class="nav-item">
+            <NavLink class="nav-link" href="@Routes.Dashboard" Match="NavLinkMatch.All">
+                <Icon symbol="nav-store"/>
+                <span>Dashboard</span>
+            </NavLink>
+        </li>
+        <li class="nav-item">
+            <NavLink class="nav-link" href="@Routes.WalletSetup" Match="NavLinkMatch.All">
+                <Icon symbol="wallet-existing"/>
+                <span>Wallet</span>
+            </NavLink>
+        </li>
+        <li class="nav-item">
+            <NavLink class="nav-link" href="@Routes.PointOfSale" Match="NavLinkMatch.All">
+                <Icon symbol="nav-keypad"/>
+                <span>Keypad</span>
+            </NavLink>
+        </li>
+        <li class="nav-item">
+            <NavLink class="nav-link" href="@Routes.Settings" Match="NavLinkMatch.All">
+                <Icon symbol="nav-settings"/>
+                <span>Settings</span>
+            </NavLink>
+        </li>
+    </ul>
+</nav>

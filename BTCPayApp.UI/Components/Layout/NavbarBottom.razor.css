@@ -1,0 +1,39 @@
+.navbar {
+  padding: 0;
+}
+
+.navbar-nav {
+  margin: 0 auto;
+  flex-direction: row;
+}
+
+.nav-item {
+  flex: 1;
+}
+
+::deep .nav-link {
+  --icon-size: 1.5rem;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: end;
+  gap: var(--btcpay-space-xs);
+  padding: var(--btcpay-space-xs) var(--btcpay-space-m);
+  text-align: center;
+  color: var(--btcpay-body-text-muted);
+}
+
+::deep .nav-link span {
+  font-size: var(--btcpay-font-size-xs);
+}
+
+::deep .nav-link .icon {
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+::deep .nav-link:hover,
+::deep .nav-link.active {
+  color: var(--btcpay-body-text);
+}
