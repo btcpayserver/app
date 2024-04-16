@@ -2,7 +2,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorLayout
 @inject IState<UIState> UiState
 
-<div id="SimpleLayout" class="container py-5 min-vh-100 d-flex flex-column justify-content-center gap-4">
+<div id="SimpleLayout" class="container min-vh-100">
     @if (!string.IsNullOrEmpty(UiState.Value.LogoUrl))
     {
         <div>

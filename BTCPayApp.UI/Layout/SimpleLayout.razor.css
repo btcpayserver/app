@@ -1,7 +1,13 @@
 .container {
   --logo-height: 5rem;
+  --padding-vertical: 15vh;
 
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
   max-width: 24rem;
+  padding-top: var(--padding-vertical);
+  padding-bottom: 3rem;
 }
 .logo {
   display: block;
@@ -9,8 +15,13 @@
   margin-left: auto;
   margin-right: auto;
 }
-@media (min-height: 65rem) {
-  .logo {
-    margin-top: calc(var(--logo-height) * -1);
+::deep h1 {
+  margin-bottom: 1.5rem;
+  font-size: calc(1.3rem + 0.6vw);
+  text-align: center;
+}
+@media (min-height: 54rem) {
+  .container {
+    --padding-vertical: 20vh;
   }
 }
