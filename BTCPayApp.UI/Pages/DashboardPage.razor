@@ -18,58 +18,62 @@
 <section class="container">
     @if (IsInitialized && !IsLoading)
     {
-    <AuthorizeView>
-        <Authorized>
-            <h1>Hello, @context.User.Identity?.Name!</h1>
+        <AuthorizeView>
+            <Authorized>
+                <h1>Hello, @context.User.Identity?.Name!</h1>
 
-            @if (_userInfo != null)
-            {
-            <div class="mb-4">
-                ID: @_userInfo.UserId<br />
-                Email: @_userInfo.Email<br />
-                Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
-            </div>
-
-            if (_userInfo.Stores?.Any() is true)
-            {
-            <ul>
-                @foreach (var store in _userInfo.Stores)
+                @if (_userInfo != null)
                 {
-                <li>
-                    <div>
-                        <strong>@store.Name</strong>
-                        <span class="badge bg-light">@store.RoleId</span>
-                        @if (store.Archived)
-                        {
-                        <span class="badge bg-info">archived</span>
-                        }
+                    <div class="mb-4">
+                        ID: @_userInfo.UserId<br />
+                        Email: @_userInfo.Email<br />
+                        Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
                     </div>
-                    <div></div>
 
-                    @if (store.Permissions?.Any() is true)
+                    if (_userInfo.Stores?.Any() is true)
                     {
-                    <ul>
-                        @foreach (var permission in store.Permissions)
-                        {
-                        <li>@permission</li>
-                        }
-                    </ul>
+                        <ul>
+                            @foreach (var store in _userInfo.Stores)
+                            {
+                                <li>
+                                    <div>
+                                        <strong>@store.Name</strong>
+                                        <span class="badge bg-light">@store.RoleId</span>
+                                        @if (store.Archived)
+                                        {
+                                            <span class="badge bg-info">archived</span>
+                                        }
+                                    </div>
+                                    <div></div>
+
+                                    @if (store.Permissions?.Any() is true)
+                                    {
+                                        <ul>
+                                            @foreach (var permission in store.Permissions)
+                                            {
+                                                <li>@permission</li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <div class="text-secondary">No permissions</div>
+                                    }
+                                </li>
+                            }
+                        </ul>
                     }
                     else
                     {
-                    <div class="text-secondary">No permissions</div>
+                        <p class="text-secondary">No stores</p>
                     }
-                </li>
                 }
-            </ul>
-            }
-            else
-            {
-            <p class="text-secondary">No stores</p>
-            }
-            }
-        </Authorized>
-    </AuthorizeView>
+
+                <NavLink class="btn btn-outline-danger" href="@Routes.Logout" Match="NavLinkMatch.All">
+                    <span>Logout</span>
+                </NavLink>
+            </Authorized>
+        </AuthorizeView>
 
     @*if (State.Value.PairConfig is null && State.Value.WalletConfig is null)
     {

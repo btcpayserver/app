@@ -10,6 +10,14 @@
 
 <PageTitle>@GetTitle()</PageTitle>
 
+<SectionContent SectionName="main-top">
+    <h1>@GetTitle()</h1>
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+    <div class="alert alert-danger mb-3">@_errorMessage</div>
+    }
+</SectionContent>
+
 <EditForm Model="@Model" OnValidSubmit="HandleValidSubmit" FormName="Register" method="post">
     <DataAnnotationsValidator />
     <div class="mb-3">
@@ -38,14 +46,6 @@
         <NavLink href="@GetLoginUrl()">Back to login</NavLink>
     </p>
 </EditForm>
-
-<SectionContent SectionName="main-top">
-    <h1>@GetTitle()</h1>
-    @if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <div class="alert alert-danger mb-3">@_errorMessage</div>
-    }
-</SectionContent>
 
 @code {
     [Parameter, EditorRequired]
