@@ -1,6 +1,11 @@
 ﻿@inherits Fluxor.Blazor.Web.Components.FluxorLayout
 
-<main id="BaseLayout" class="min-vh-100">
-    <SectionOutlet SectionName="main-top" />
-    @Body
-</main>
+<div id="BaseLayout" class="layout">
+    <SectionOutlet SectionName="top" />
+    <main id="MainContent">
+        <SectionOutlet SectionName="main-top" />
+        @Body
+        <SectionOutlet SectionName="main-bottom" />
+    </main>
+    <SectionOutlet SectionName="bottom" />
+</div>

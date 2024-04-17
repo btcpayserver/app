@@ -2,13 +2,20 @@
 @inject IDispatcher Dispatcher
 @using BTCPayApp.UI.Features
 @using BTCPayApp.Core
+@using BTCPayApp.UI.Components.Layout
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Wallet Setup</PageTitle>
 
-<h1 class="mb-3">Wallet Setup</h1>
+<SectionContent SectionName="top">
+    <Titlebar>
+        <h1>Wallet Setup</h1>
+    </Titlebar>
+</SectionContent>
 
-<WalletSetup OnSeedChosen="SetSeed" />
+<section class="container">
+    <WalletSetup OnSeedChosen="SetSeed" />
+</section>
 
 @code {
     private void SetSeed(string mnemonic)

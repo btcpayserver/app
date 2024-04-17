@@ -1,0 +1,52 @@
+#Titlebar {
+  height: var(--navbar-bottom-height);
+  display: flex;
+  justify-content: space-between;
+  background-color: var(--btcpay-body-bg);
+}
+
+#Titlebar.fixed {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1030;
+}
+
+.back,
+.close {
+  flex: 0 0 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.title {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  padding: var(--btcpay-space-xs) var(--btcpay-space-s);
+}
+::deep .btn-close {
+  --icon-size: 1.5rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: .5rem;
+}
+
+::deep .btn-close .icon {
+  position: static;
+  top: auto;
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+::deep h1 {
+  font-size: 1rem;
+  font-weight: var(--btcpay-font-weight-semibold);
+  margin: 0;
+}

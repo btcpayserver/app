@@ -2,7 +2,8 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorLayout
 @inject IState<UIState> UiState
 
-<div id="SimpleLayout" class="min-vh-100 container ">
+<div id="SimpleLayout" class="layout">
+    <SectionOutlet SectionName="top" />
     @if (!string.IsNullOrEmpty(UiState.Value.LogoUrl))
     {
         <div>
@@ -15,8 +16,10 @@
             <use href="_content/BTCPayApp.UI/img/logo.svg#small"/>
         </svg>
     }
-    <main>
+    <main id="MainContent">
         <SectionOutlet SectionName="main-top"/>
         @Body
+        <SectionOutlet SectionName="main-bottom"/>
     </main>
+    <SectionOutlet SectionName="bottom" />
 </div>

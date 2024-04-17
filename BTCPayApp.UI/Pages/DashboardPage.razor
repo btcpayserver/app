@@ -2,63 +2,71 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Auth
 @using BTCPayApp.CommonServer
+@using BTCPayApp.UI.Components.Layout
 @inject IAccountManager AccountManager
 @inject IState<RootState> State
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
-<PageTitle>BTCPay Server</PageTitle>
+<PageTitle>Dashboard</PageTitle>
 
-@if (IsInitialized && !IsLoading)
-{
+<SectionContent SectionName="top">
+    <Titlebar>
+        <h1>Dashboard</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    @if (IsInitialized && !IsLoading)
+    {
     <AuthorizeView>
         <Authorized>
             <h1>Hello, @context.User.Identity?.Name!</h1>
 
             @if (_userInfo != null)
             {
-                <div class="mb-4">
-                    ID: @_userInfo.UserId<br />
-                    Email: @_userInfo.Email<br />
-                    Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
-                </div>
+            <div class="mb-4">
+                ID: @_userInfo.UserId<br />
+                Email: @_userInfo.Email<br />
+                Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
+            </div>
 
-                if (_userInfo.Stores?.Any() is true)
+            if (_userInfo.Stores?.Any() is true)
+            {
+            <ul>
+                @foreach (var store in _userInfo.Stores)
                 {
-                    <ul>
-                        @foreach (var store in _userInfo.Stores)
+                <li>
+                    <div>
+                        <strong>@store.Name</strong>
+                        <span class="badge bg-light">@store.RoleId</span>
+                        @if (store.Archived)
                         {
-                            <li>
-                                <div>
-                                    <strong>@store.Name</strong>
-                                    <span class="badge bg-light">@store.RoleId</span>
-                                    @if (store.Archived)
-                                    {
-                                        <span class="badge bg-info">archived</span>
-                                    }
-                                </div>
-                                <div></div>
+                        <span class="badge bg-info">archived</span>
+                        }
+                    </div>
+                    <div></div>
 
-                                @if (store.Permissions?.Any() is true)
-                                {
-                                    <ul>
-                                        @foreach (var permission in store.Permissions)
-                                        {
-                                            <li>@permission</li>
-                                        }
-                                    </ul>
-                                }
-                                else
-                                {
-                                    <div class="text-secondary">No permissions</div>
-                                }
-                            </li>
+                    @if (store.Permissions?.Any() is true)
+                    {
+                    <ul>
+                        @foreach (var permission in store.Permissions)
+                        {
+                        <li>@permission</li>
                         }
                     </ul>
+                    }
+                    else
+                    {
+                    <div class="text-secondary">No permissions</div>
+                    }
+                </li>
                 }
-                else
-                {
-                    <p class="text-secondary">No stores</p>
-                }
+            </ul>
+            }
+            else
+            {
+            <p class="text-secondary">No stores</p>
+            }
             }
         </Authorized>
     </AuthorizeView>
@@ -71,7 +79,8 @@
     {
         <Dashboard />
     }*@
-}
+    }
+</section>
 
 @code {
     private AppUserInfo? _userInfo;

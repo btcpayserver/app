@@ -1,4 +1,11 @@
-﻿::-moz-focus-inner {
+﻿:root {
+  --sticky-header-height: 0; /* gets dynamically set via JavaScript */
+  --navbar-top-height: 3.25rem;
+  --navbar-bottom-height: 3.25rem;
+  --sidebar-width: 280px;
+}
+
+::-moz-focus-inner {
   padding: 0;
   border-style: none;
 }
@@ -20,6 +27,15 @@
 }
 
 /* Layout */
+#Titlebar.fixed ~ #MainContent,
+#NavbarTop ~ #MainContent {
+  padding-top: var(--navbar-top-height);
+}
+
+#NavbarBottom ~ #MainContent {
+  padding-bottom: var(--navbar-bottom-height);
+}
+
 .public-page-wrap {
   --wrap-max-width: none;
   --wrap-padding-vertical: var(--btcpay-space-l);
@@ -33,6 +49,7 @@
   padding: var(--wrap-padding-vertical) var(--wrap-padding-horizontal);
 }
 
+.layout,
 .min-vh-100,
 .public-page-wrap {
   min-height: -webkit-fill-available !important;

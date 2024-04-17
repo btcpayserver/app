@@ -1,5 +1,15 @@
-.navbar {
+#NavbarBottom {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  z-index: 1030;
+  height: var(--navbar-bottom-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
   padding: 0;
+  background-color: var(--btcpay-bg-tile);
 }
 
 .navbar-nav {

@@ -4,7 +4,7 @@
   --button-padding: 7px;
   --icon-size: 1.5rem;
   --menu-border: 1px solid var(--btcpay-body-border-light);
-  height: var(--header-height);
+  height: var(--navbar-bottom-height);
   z-index: 1031; /* needs a value between fixed and the offcanvas backdrop, see https://getbootstrap.com/docs/5.1/layout/z-index/ */
 }
 

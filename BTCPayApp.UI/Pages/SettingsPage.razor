@@ -1,29 +1,35 @@
 ﻿@attribute [AllowAnonymous]
 @attribute [Route(Routes.Settings)]
 @using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Components.Layout
 @inject IState<UIState> UiState
 @inject IDispatcher Dispatcher
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Settings</PageTitle>
 
-<h1 class="mb-3">Settings</h1>
-
-<div class="form-group">
-    @if (UiState.Value.CustomThemeExtension is null)
-    {
+<SectionContent SectionName="top">
+    <Titlebar>
+        <h1>Settings</h1>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+    <div class="form-group">
+        @if (UiState.Value.CustomThemeExtension is null)
+        {
         <label class="form-label">Theme</label>
         <InputSelect class="form-select w-auto" @bind-Value="Model.Theme" @bind-Value:after="OnThemeChange">
             <option value="@Themes.System">System</option>
             <option value="@Themes.Light">Light</option>
             <option value="@Themes.Dark">Dark</option>
         </InputSelect>
-    }
-    else
-    {
+        }
+        else
+        {
         <div>Custom Theme</div>
-    }
-</div>
+        }
+    </div>
+</section>
 
 @code {
     private SettingsModel Model { get; set; } = new();

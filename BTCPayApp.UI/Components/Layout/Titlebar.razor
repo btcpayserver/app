@@ -1,0 +1,35 @@
+<div id="Titlebar" class="@(Fixed ? "fixed" : null)">
+    <div class="back">
+        @if (!string.IsNullOrEmpty(Back))
+        {
+            <NavLink class="btn-close btn-back" href="@Back">
+                <Icon symbol="nav-back"/>
+            </NavLink>
+        }
+    </div>
+    <div class="title">
+        @ChildContent
+    </div>
+    <div class="close">
+        @if (Close)
+        {
+        <button type="button" class="btn-close" aria-label="Close">
+            <Icon symbol="nav-close"/>
+        </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string? Back { get; set; }
+
+    [Parameter]
+    public bool Close { get; set; }
+
+    [Parameter]
+    public bool Fixed { get; set; } = true;
+}

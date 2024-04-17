@@ -1,10 +1,13 @@
 ﻿@using BTCPayApp.UI.Components.Layout
 @inherits Fluxor.Blazor.Web.Components.FluxorLayout
 
-<div id="MainLayout" class="min-vh-100">
+<div id="MainLayout" class="layout">
+    <SectionOutlet SectionName="top" />
     <NavbarBottom />
     <main id="MainContent">
         <SectionOutlet SectionName="main-top" />
         @Body
+        <SectionOutlet SectionName="main-bottom" />
     </main>
+    <SectionOutlet SectionName="bottom" />
 </div>
