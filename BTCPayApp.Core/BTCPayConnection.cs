@@ -1,4 +1,5 @@
 ﻿using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Data;
 using BTCPayServer.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
@@ -7,7 +8,7 @@ using TypedSignalR.Client;
 
 namespace BTCPayApp.Core;
 
-public class BTCPayAppServerClient : IBTCPayAppServerClient
+public class BTCPayAppServerClient : IBTCPayAppHubClient
 {
     private readonly ILogger<BTCPayAppServerClient> _logger;
 
@@ -39,9 +40,9 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
     private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
     private readonly ILogger<BTCPayConnection> _logger;
     private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IBTCPayAppServerClient _btcPayAppServerClient;
+    private readonly IBTCPayAppHubClient _btcPayAppServerClient;
     private IDisposable? _subscription;
-    public  IBTCPayAppServerHub? HubProxy { get; private set; }
+    public  IBTCPayAppHubServer? HubProxy { get; private set; }
     public BTCPayServerClient? Client { get; set; }
     public HubConnection? Connection { get; private set; }
     public event EventHandler? ConnectionChanged;
@@ -59,7 +60,7 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
     public BTCPayConnection(BTCPayAppConfigManager btcPayAppConfigManager,
         ILogger<BTCPayConnection> logger,
         IHttpClientFactory httpClientFactory,
-        IBTCPayAppServerClient btcPayAppServerClient)
+        IBTCPayAppHubClient btcPayAppServerClient)
     {
         _btcPayAppConfigManager = btcPayAppConfigManager;
         _logger = logger;
@@ -73,7 +74,6 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
         OnPairConfigUpdated(_btcPayAppConfigManager, _btcPayAppConfigManager.PairConfig);
 
         _btcPayAppConfigManager.PairConfigUpdated += OnPairConfigUpdated;
-        _btcPayAppConfigManager.WalletConfigUpdated += OnWalletConfigUpdated;
         _ = TryStayConnected();
     }
 
@@ -105,12 +105,6 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
             }
         }
     }
-
-    private void OnWalletConfigUpdated(object? sender, WalletConfig? e)
-    {
-        // throw new NotImplementedException();
-    }
-
     private void OnPairConfigUpdated(object? sender, BTCPayPairConfig? e)
     {
         if (e?.PairingInstanceUri is not null && e.PairingResult.Key is not null)
@@ -147,13 +141,12 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
 
         InvokeConnectionChange();
         _subscription = Connection.Register(_btcPayAppServerClient);
-        HubProxy = Connection.CreateHubProxy<IBTCPayAppServerHub>();
+        HubProxy = Connection.CreateHubProxy<IBTCPayAppHubServer>();
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _btcPayAppConfigManager.PairConfigUpdated -= OnPairConfigUpdated;
-        _btcPayAppConfigManager.WalletConfigUpdated -= OnWalletConfigUpdated;
         return Task.CompletedTask;
     }
 
@@ -176,5 +169,10 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
         InvokeConnectionChange();
         _logger.LogError(exception, "OnReconnecting");
         return Task.CompletedTask;
+    }
+
+    public async Task Register(WalletDerivation deriv)
+    {
+        throw new NotImplementedException();
     }
 }

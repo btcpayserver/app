@@ -2,6 +2,7 @@
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
+using BTCPayApp.UI.Auth;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -22,13 +23,16 @@ public static class StartupExtensions
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddHttpClient();
         serviceCollection.AddSingleton<BTCPayConnection>();
-        serviceCollection.AddSingleton<IBTCPayAppServerClient,BTCPayAppServerClient>();
+        serviceCollection.AddSingleton<IBTCPayAppHubClient,BTCPayAppServerClient>();
         serviceCollection.AddSingleton<BTCPayAppConfigManager>();
         serviceCollection.AddSingleton<LightningNodeManager>();
         serviceCollection.AddSingleton<IHostedService>(provider =>  provider.GetRequiredService<BTCPayAppConfigManager>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BTCPayConnection>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<LightningNodeManager>());
         
+        serviceCollection.AddSingleton<BTCPayAppClient>();
+        serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>();
+        serviceCollection.AddSingleton(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddSingleton<IConfigProvider, DatabaseConfigProvider>();
 
         return serviceCollection;

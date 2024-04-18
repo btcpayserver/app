@@ -13,9 +13,6 @@ public static class StartupExtensions
         serviceCollection.AddOptions();
         serviceCollection.AddAuthorizationCore();
         serviceCollection.AddCascadingAuthenticationState();
-        serviceCollection.AddScoped<BTCPayAppClient>();
-        serviceCollection.AddScoped<AuthenticationStateProvider, AuthStateProvider>();
-        serviceCollection.AddScoped(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddFluxor(options =>
         {
             options.UseRouting();

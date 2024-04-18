@@ -1,8 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
-using BTCPayApp.Core.Contracts;
+﻿using System.Data;
+using BTCPayApp.CommonServer;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Hosting;
+using NBitcoin;
+using NBitcoin.Scripting;
 
 namespace BTCPayApp.Core.Data;
 
@@ -21,55 +23,133 @@ public class AppDbContext : DbContext
 // }
 }
 
-public class DatabaseConfigProvider : IConfigProvider
+public class WalletConfig
 {
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    public const string Key = "walletconfig";
+    
+    public required string Mnemonic { get; set; }
+    //key is the identifier of the tracker, value is a sub wallet format. 
+    //for example, we will track native segwit wallet, the descriptor will be wpkh([fingerprint/84'/0'/0']xpub/0/*)
+    // or for LN specifics, the descriptor is null, and we track non deterministic scripts
+    public Dictionary<string, WalletDerivation> Derivations { get; set; } = new();
 
-    public DatabaseConfigProvider(IDbContextFactory<AppDbContext> dbContextFactory)
+}
+
+public class WalletDerivation
+{
+    public string Identifier { get; set; }
+    public string Name { get; set; }
+    public string? Descriptor { get; set; }
+
+    public const string NativeSegwit = "Segwit";
+    public const string LightningScripts = "LightningScripts";
+}
+
+
+
+
+public abstract class WalletService:IHostedService
+{
+    private readonly AppConfig _appConfig;
+    private readonly BTCPayConnection _btcPayConnection;
+    private WalletConfig _walletConfig;
+
+    public WalletService(AppConfig appConfig, BTCPayConnection btcPayConnection)
     {
-        _dbContextFactory = dbContextFactory;
+        _appConfig = appConfig;
+        _btcPayConnection = btcPayConnection;
     }
-
-    public async Task<T?> Get<T>(string key)
+    public async Task<WalletConfig> GenerateWallet()
     {
-        await using var db = await _dbContextFactory.CreateDbContextAsync();
-        var setting = await db.Settings.FindAsync(key);
-        return setting == null ? default : JsonSerializer.Deserialize<T>(setting.Value);
-    }
-
-    public async Task Set<T>(string key, T? value)
-    {
-        await using var db = await _dbContextFactory.CreateDbContextAsync();
-        if (value is null)
+        await _started.Task;
+        if (_btcPayConnection.Connection?.State !=  HubConnectionState.Connected)
+            throw new InvalidOperationException("BTCPay not connected");
+        if(_walletConfig != null)
+            throw new InvalidOperationException("Wallet already generated");
+        var newSeed = new Mnemonic(Wordlist.English, WordCount.Twelve);
+        var walletConfig = new WalletConfig
         {
-            db.Settings.Remove(new Setting {Key = key});
-            await db.SaveChangesAsync();
-            return;
+            Mnemonic = newSeed.ToString()
+        };
+        var fingerPrint = newSeed.DeriveExtKey().GetPublicKey().GetHDFingerPrint();
+        
+        
+        
+
+
+    }
+
+
+    public async Task StartListening(Mnemonic mnemonic, Network network)
+    {
+        var mainnet = network == Network.Main;
+        var path = new KeyPath($"m/84'/{(mainnet? "0":"1")}'/0'");
+        var fingerprint = mnemonic.DeriveExtKey().GetPublicKey().GetHDFingerPrint();
+        var xpub = mnemonic.DeriveExtKey().Derive(path).Neuter().ToString(network);
+        
+        var segwitDerivation = new WalletDerivation
+        {
+            Name = "Native Segwit",
+            Descriptor = OutputDescriptor.AddChecksum($"wpkh([{path.ToString().Replace("m", fingerprint.ToString())}]{xpub}/0/*)")
+        };
+             
+        var ln = new WalletDerivation
+        {
+            Name = "Lightning",
+            Descriptor = null
+        };
+        var pairRequest = new PairRequest()
+        {
+            Derivations = new Dictionary<string, string?>
+            {
+                {WalletDerivation.NativeSegwit, segwitDerivation.Descriptor},
+                {WalletDerivation.LightningScripts, ln.Descriptor}
+            }
+        };
+
+        var response = await _btcPayConnection.HubProxy.Pair(pairRequest);
+        foreach (var pair in response)
+        {
+            if(pair.Key == WalletDerivation.NativeSegwit)
+            {
+                segwitDerivation.Identifier = pair.Value;
+            }
+            else if(pair.Key == WalletDerivation.LightningScripts)
+            {
+                ln.Identifier = pair.Value;
+            }
         }
 
-        var newValue = JsonSerializer.SerializeToUtf8Bytes(value);
-        await db.Settings.Upsert(new Setting()
+        var walletConfig = new WalletConfig()
         {
-            Key = key,
-            Value = newValue
-        }).RunAsync();
+            Mnemonic = mnemonic.ToString(),
+            Derivations = new Dictionary<string, WalletDerivation>
+            {
+                {WalletDerivation.NativeSegwit, segwitDerivation},
+                {WalletDerivation.LightningScripts, ln}
+            }
+        };
+
     }
-}
 
-public class Setting
-{
-    [Key]
-    public string Key { get; set; }
-    public byte[] Value { get; set; }
-}
 
-public class DesignTimeAppContextFactory : IDesignTimeDbContextFactory<AppDbContext>
-{
-    public AppDbContext CreateDbContext(string[] args)
+    private readonly TaskCompletionSource _started = new();
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
-        optionsBuilder.UseSqlite("Data Source=fake.db");
+        _started.TrySetResult();
+    }
 
-        return new AppDbContext(optionsBuilder.Options);
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
     }
 }
+
+public class AppConfig
+{
+    public string Network { get; set; }
+}
+
+
+
+
