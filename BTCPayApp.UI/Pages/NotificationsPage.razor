@@ -1,0 +1,28 @@
+﻿@attribute [AllowAnonymous]
+@attribute [Route(Routes.Notifications)]
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>Notifications</PageTitle>
+
+<SectionContent SectionName="top">
+    <Titlebar Back="@Routes.Dashboard">
+        <h1>Notifications</h1>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+
+</section>
+
+@code {
+    private NotificationsModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    private class NotificationsModel
+    {
+        public string[] Notifications { get; set; } = [];
+    }
+}

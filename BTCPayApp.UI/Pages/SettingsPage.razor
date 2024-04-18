@@ -1,9 +1,12 @@
 ﻿@attribute [AllowAnonymous]
 @attribute [Route(Routes.Settings)]
+@using BTCPayApp.CommonServer
+@using BTCPayApp.UI.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Components.Layout
 @inject IState<UIState> UiState
 @inject IDispatcher Dispatcher
+@inject IAccountManager AccountManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Settings</PageTitle>
@@ -17,25 +20,72 @@
     <div class="form-group">
         @if (UiState.Value.CustomThemeExtension is null)
         {
-        <label class="form-label">Theme</label>
-        <InputSelect class="form-select w-auto" @bind-Value="Model.Theme" @bind-Value:after="OnThemeChange">
-            <option value="@Themes.System">System</option>
-            <option value="@Themes.Light">Light</option>
-            <option value="@Themes.Dark">Dark</option>
-        </InputSelect>
+            <label class="form-label">Theme</label>
+            <InputSelect class="form-select w-auto" @bind-Value="Model.Theme" @bind-Value:after="OnThemeChange">
+                <option value="@Themes.System">System</option>
+                <option value="@Themes.Light">Light</option>
+                <option value="@Themes.Dark">Dark</option>
+            </InputSelect>
         }
         else
         {
-        <div>Custom Theme</div>
+            <div>Custom Theme</div>
         }
     </div>
 </section>
+@if (_userInfo != null)
+{
+    <section class="container">
+        <p>
+            ID: @_userInfo.UserId<br/>
+            Email: @_userInfo.Email<br/>
+            Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
+        </p>
+        @if (_userInfo.Stores?.Any() is true)
+        {
+            <ul>
+                @foreach (var store in _userInfo.Stores)
+                {
+                    <li>
+                        <div>
+                            <strong>@store.Name</strong>
+                            <span class="badge bg-light">@store.RoleId</span>
+                            @if (store.Archived)
+                            {
+                                <span class="badge bg-info">archived</span>
+                            }
+                        </div>
+                        @if (store.Permissions?.Any() is true)
+                        {
+                            <ul>
+                                @foreach (var permission in store.Permissions)
+                                {
+                                    <li>@permission</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p class="text-secondary">No permissions</p>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-secondary">No stores</p>
+        }
+    </section>
+}
 
 @code {
+    private AppUserInfo? _userInfo;
     private SettingsModel Model { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
+        _userInfo = AccountManager.GetUserInfo();
         Model.Theme = UiState.Value.SelectedTheme;
     }
 

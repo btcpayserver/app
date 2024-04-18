@@ -42,6 +42,9 @@
   width: var(--icon-size);
   height: var(--icon-size);
 }
+::deep .nav-link .icon.icon-wallet-existing {
+  padding: .125rem;
+}
 
 ::deep .nav-link:hover,
 ::deep .nav-link.active {

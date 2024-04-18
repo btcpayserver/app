@@ -12298,6 +12298,14 @@ ul:not([class]) li {
   padding: 1rem;
 }
 
+/* Icons */
+.icon {
+    display: inline-block;
+    width: var(--icon-size, 1rem);
+    height: var(--icon-size, 1rem);
+    flex-shrink: 0 !important;
+}
+
 /* Button */
 .btn-outline-secondary {
   --btcpay-btn-color: var(--btcpay-secondary-text);
@@ -12313,9 +12321,7 @@ ul:not([class]) li {
 }
 
 .btn .icon {
-  --btn-icon-size: 1.25em;
-  height: var(--btn-icon-size);
-  width: var(--btn-icon-size);
+  --icon-size: 1.25em;
 }
 
 .btn.rounded-circle {

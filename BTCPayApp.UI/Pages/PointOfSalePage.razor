@@ -10,13 +10,13 @@
     <Titlebar Back="@Routes.Dashboard" Fixed="false" />
 </SectionContent>
 
-<div class="mb-3">
+<section class="container">
     <Keypad CurrencyInfo="@CurrencyInfo" CurrencyCode="EUR"
             IsDiscountEnabled="true" IsTipEnabled="true" CustomTipPercentages="new []{ 5, 10, 21 }" />
-</div>
+</section>
 
 @code {
-    public NumberFormatInfo CurrencyInfo { get; set; } = new()
+    private NumberFormatInfo CurrencyInfo { get; set; } = new()
     {
         CurrencySymbol = "\u20ac",
         CurrencyDecimalDigits = 2,

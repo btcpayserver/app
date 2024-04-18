@@ -1,0 +1,27 @@
+﻿@attribute [AllowAnonymous]
+@attribute [Route(Routes.WalletSend)]
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>Send</PageTitle>
+
+<SectionContent SectionName="top">
+    <Titlebar Back="@Routes.Dashboard">
+        <h1>Send</h1>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+
+</section>
+
+@code {
+    private WalletSendModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    private class WalletSendModel
+    {
+    }
+}

@@ -12,9 +12,13 @@ public static class Routes
 
     // authorized
     public const string Dashboard = "/dashboard";
+    public const string Notifications = "/notifications";
     public const string Settings = "/settings";
     public const string Pair = "/pair";
+    public const string Wallet = "/wallet";
     public const string WalletSetup = "/wallet/setup";
+    public const string WalletSend = "/wallet/send";
+    public const string WalletReceive = "/wallet/receive";
     public const string PointOfSale = "/pos";
     public const string Logout = "/logout";
 }

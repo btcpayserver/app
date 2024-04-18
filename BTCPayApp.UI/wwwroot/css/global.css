@@ -56,6 +56,10 @@
   min-height: 100dvh !important;
 }
 
+main section + section {
+  margin-top: 1.5rem;
+}
+
 .tile {
   --section-padding: 1.5rem;
   --section-border-radius: var(--btcpay-border-radius-l);
@@ -108,6 +112,19 @@
 .badge-settled {
   background: var(--btcpay-success);
   color: var(--btcpay-success-text);
+}
+
+/* List Group */
+.list-group-flush.list-group-links .list-group-item {
+  --btcpay-list-group-item-padding-y: .75rem;
+  --btcpay-list-group-item-padding-x: 0;
+}
+
+.list-group-flush.list-group-links .list-group-item > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: var(--btcpay-font-weight-semibold);
 }
 
 /* Blazor error */

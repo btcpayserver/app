@@ -2,89 +2,84 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Auth
 @using BTCPayApp.CommonServer
-@using BTCPayApp.UI.Components.Layout
 @inject IAccountManager AccountManager
 @inject IState<RootState> State
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Dashboard</PageTitle>
 
-<SectionContent SectionName="top">
-    <Titlebar>
-        <h1>Dashboard</h1>
-    </Titlebar>
-</SectionContent>
-
-<section class="container">
-    @if (IsInitialized && !IsLoading)
-    {
-        <AuthorizeView>
-            <Authorized>
-                <h1>Hello, @context.User.Identity?.Name!</h1>
-
-                @if (_userInfo != null)
-                {
-                    <div class="mb-4">
-                        ID: @_userInfo.UserId<br />
-                        Email: @_userInfo.Email<br />
-                        Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
-                    </div>
-
-                    if (_userInfo.Stores?.Any() is true)
-                    {
-                        <ul>
-                            @foreach (var store in _userInfo.Stores)
-                            {
-                                <li>
-                                    <div>
-                                        <strong>@store.Name</strong>
-                                        <span class="badge bg-light">@store.RoleId</span>
-                                        @if (store.Archived)
-                                        {
-                                            <span class="badge bg-info">archived</span>
-                                        }
-                                    </div>
-                                    <div></div>
-
-                                    @if (store.Permissions?.Any() is true)
-                                    {
-                                        <ul>
-                                            @foreach (var permission in store.Permissions)
-                                            {
-                                                <li>@permission</li>
-                                            }
-                                        </ul>
-                                    }
-                                    else
-                                    {
-                                        <div class="text-secondary">No permissions</div>
-                                    }
-                                </li>
-                            }
-                        </ul>
-                    }
-                    else
-                    {
-                        <p class="text-secondary">No stores</p>
-                    }
-                }
-
-                <NavLink class="btn btn-outline-danger" href="@Routes.Logout" Match="NavLinkMatch.All">
-                    <span>Logout</span>
+<AuthorizeView>
+    <Authorized>
+        <section class="container d-flex align-items-center justify-content-between py-4">
+            <div class="fw-semibold">
+                @context.User.Identity?.Name!
+            </div>
+            <div class="notifications">
+                <NavLink class="btn btn-light rounded-circle" href="@Routes.Notifications" Match="NavLinkMatch.All">
+                    <Icon symbol="nav-notifications"/>
+                    <span class="visually-hidden">Notifications</span>
                 </NavLink>
-            </Authorized>
-        </AuthorizeView>
-
-    @*if (State.Value.PairConfig is null && State.Value.WalletConfig is null)
-    {
-        <Onboarding />
-    }
-    else
-    {
-        <Dashboard />
-    }*@
-    }
-</section>
+            </div>
+        </section>
+        <section class="container d-flex flex-column gap-4">
+            <div class="amount text-center">
+                <div class="sats fw-bold fs-1">615,000,000 sats</div>
+                <div class="fiat fw-semibold text-muted">$174,465.79</div>
+            </div>
+            <nav class="d-flex align-items-center gap-3 mx-auto">
+                <NavLink class="btn btn-light rounded-pill w-125px" href="@Routes.WalletSend" Match="NavLinkMatch.All">
+                    <Icon symbol="payment-send"/>
+                    <span>Send</span>
+                </NavLink>
+                <NavLink class="btn btn-light rounded-pill w-125px" href="@Routes.WalletSend" Match="NavLinkMatch.All">
+                    <Icon symbol="payment-receive"/>
+                    <span>Receive</span>
+                </NavLink>
+            </nav>
+        </section>
+        <section class="container">
+            <h2>Getting started</h2>
+            <ul class="list-group list-group-flush list-group-links">
+                <li class="list-group-item">
+                    <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
+                        <span>Configure node</span>
+                        <Icon symbol="caret-right"/>
+                    </NavLink>
+                </li>
+                <li class="list-group-item">
+                    <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
+                        <span>Set up wallet</span>
+                        <Icon symbol="caret-right"/>
+                    </NavLink>
+                </li>
+                <li class="list-group-item">
+                    <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
+                        <span>Set up recovery tools</span>
+                        <Icon symbol="caret-right"/>
+                    </NavLink>
+                </li>
+                <li class="list-group-item">
+                    <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
+                        <span>Configure LSP</span>
+                        <Icon symbol="caret-right"/>
+                    </NavLink>
+                </li>
+            </ul>
+        </section>
+        <section class="container">
+            <NavLink class="btn btn-outline-danger" href="@Routes.Logout" Match="NavLinkMatch.All">
+                <span>Logout</span>
+            </NavLink>
+        </section>
+    </Authorized>
+    <Authorizing>
+        <section class="d-flex justify-content-center min-vh-100">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Authorizing...</span>
+            </div>
+        </section>
+    </Authorizing>
+</AuthorizeView>
 
 @code {
     private AppUserInfo? _userInfo;

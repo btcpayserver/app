@@ -1,0 +1,27 @@
+﻿@attribute [AllowAnonymous]
+@attribute [Route(Routes.WalletReceive)]
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>Receive</PageTitle>
+
+<SectionContent SectionName="top">
+    <Titlebar Back="@Routes.Dashboard">
+        <h1>Receive</h1>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+
+</section>
+
+@code {
+    private WalletReceiveModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    private class WalletReceiveModel
+    {
+    }
+}

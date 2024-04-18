@@ -1,0 +1,17 @@
+﻿@attribute [Route(Routes.Wallet)]
+@layout BaseLayout
+@inject NavigationManager NavigationManager
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>BTCPay Server</PageTitle>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // TODO: Check if wallet exists
+        NavigationManager.NavigateTo(Routes.WalletSetup);
+    }
+}

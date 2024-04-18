@@ -65,7 +65,7 @@
 }
 
 #RecentTransactionsToggle .icon {
-  --btn-icon-size: 2.25em;
+  --icon-size: 2.25em;
 }
 #RecentTransactionsRefresh[disabled] .icon {
   animation: 1.25s linear infinite spinner-border;
