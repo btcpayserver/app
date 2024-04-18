@@ -1,0 +1,4 @@
+h2 {
+  font-size: var(--btcpay-font-size-m);
+  font-weight: var(--btcpay-font-weight-semibold);
+}

@@ -10,8 +10,21 @@
         <h1>Notifications</h1>
     </Titlebar>
 </SectionContent>
-<section class="container">
 
+<section>
+    @if (Model.Notifications.Any())
+    {
+        <div class="notifications">
+            @foreach (var n in Model.Notifications)
+            {
+                <NotificationItem Id="@n.Id" Type="@n.Type" Created="@n.Created" Seen="@n.Seen" Body="@n.Body"/>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">There are no transactions, yet.</p>
+    }
 </section>
 
 @code {
@@ -19,10 +32,46 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Model.Notifications =
+        [
+            new Notification
+            {
+                Id = "1",
+                Type = "invoice_confirmed",
+                Created = DateTimeOffset.Now - TimeSpan.FromSeconds(21),
+                Body = "Invoice GZ090Z03 is settled.",
+                Seen = false
+            },
+            new Notification
+            {
+                Id = "2",
+                Type = "payout_awaitingapproval",
+                Created = DateTimeOffset.Now - TimeSpan.FromHours(6),
+                Body = "A new payout is awaiting your approval.",
+                Seen = true
+            },
+            new Notification
+            {
+                Id = "3",
+                Type = "invoice_failedtoconfirm",
+                Created = DateTimeOffset.Now - TimeSpan.FromDays(3),
+                Body = "Invoice GZ090Z03 has payments that failed to confirm on time.",
+                Seen = true
+            }
+        ];
     }
 
     private class NotificationsModel
     {
-        public string[] Notifications { get; set; } = [];
+        public Notification[] Notifications { get; set; } = [];
+    }
+
+    private class Notification
+    {
+        public string? Id { get; set; }
+        public string? Type { get; set; }
+        public DateTimeOffset Created { get; set; }
+        public string? Body { get; set; }
+        public bool Seen { get; set; }
     }
 }

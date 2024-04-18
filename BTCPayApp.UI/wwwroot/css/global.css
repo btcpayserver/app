@@ -56,10 +56,6 @@
   min-height: 100dvh !important;
 }
 
-main section + section {
-  margin-top: 1.5rem;
-}
-
 .tile {
   --section-padding: 1.5rem;
   --section-border-radius: var(--btcpay-border-radius-l);
@@ -114,10 +110,18 @@ main section + section {
   color: var(--btcpay-success-text);
 }
 
+/* Box */
+.box {
+  padding: var(--btcpay-space-m);
+  background: var(--btcpay-light);
+  border-radius: var(--btcpay-border-radius-xl);
+}
+
 /* List Group */
-.list-group-flush.list-group-links .list-group-item {
+.list-group-flush .list-group-item {
   --btcpay-list-group-item-padding-y: .75rem;
   --btcpay-list-group-item-padding-x: 0;
+  --btcpay-list-group-bg: transparent;
 }
 
 .list-group-flush.list-group-links .list-group-item > a {

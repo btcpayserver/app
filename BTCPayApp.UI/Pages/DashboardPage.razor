@@ -10,9 +10,14 @@
 
 <AuthorizeView>
     <Authorized>
-        <section class="container d-flex align-items-center justify-content-between py-4">
-            <div class="fw-semibold">
-                @context.User.Identity?.Name!
+        <section class="container d-flex align-items-center justify-content-between py-3">
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <div class="fw-semibold">
+                    @context.User.Identity?.Name
+                </div>
+                <NavLink class="btn btn-sm rounded-pill py-1 px-3 btn-outline-light" href="@Routes.Logout" Match="NavLinkMatch.All">
+                    <span>Logout</span>
+                </NavLink>
             </div>
             <div class="notifications">
                 <NavLink class="btn btn-light rounded-circle" href="@Routes.Notifications" Match="NavLinkMatch.All">
@@ -21,7 +26,7 @@
                 </NavLink>
             </div>
         </section>
-        <section class="container d-flex flex-column gap-4">
+        <section class="container d-flex flex-column gap-4 py-3">
             <div class="amount text-center">
                 <div class="sats fw-bold fs-1">615,000,000 sats</div>
                 <div class="fiat fw-semibold text-muted">$174,465.79</div>
@@ -37,39 +42,61 @@
                 </NavLink>
             </nav>
         </section>
-        <section class="container">
-            <h2>Getting started</h2>
-            <ul class="list-group list-group-flush list-group-links">
+        <section class="container py-3">
+            <div class="box">
+                <h2>Getting started</h2>
+                <ul class="list-group list-group-flush list-group-links">
+                    <li class="list-group-item">
+                        <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
+                            <span>Configure node</span>
+                            <Icon symbol="caret-right"/>
+                        </NavLink>
+                    </li>
+                    <li class="list-group-item">
+                        <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
+                            <span>Set up wallet</span>
+                            <Icon symbol="caret-right"/>
+                        </NavLink>
+                    </li>
+                    <li class="list-group-item">
+                        <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
+                            <span>Set up recovery tools</span>
+                            <Icon symbol="caret-right"/>
+                        </NavLink>
+                    </li>
+                    <li class="list-group-item">
+                        <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
+                            <span>Configure LSP</span>
+                            <Icon symbol="caret-right"/>
+                        </NavLink>
+                    </li>
+                </ul>
+            </div>
+        </section>
+        <section class="container py-3">
+            <h2>Recent Activity</h2>
+            <ul class="list-group list-group-flush">
                 <li class="list-group-item">
-                    <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
-                        <span>Configure node</span>
-                        <Icon symbol="caret-right"/>
-                    </NavLink>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>3940..CkGJ</span>
+                        <span class="text-end">$29.13</span>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="text-muted">March 21 at 6:15am</span>
+                        <span class="text-muted text-end">177,032 sats</span>
+                    </div>
                 </li>
                 <li class="list-group-item">
-                    <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
-                        <span>Set up wallet</span>
-                        <Icon symbol="caret-right"/>
-                    </NavLink>
-                </li>
-                <li class="list-group-item">
-                    <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
-                        <span>Set up recovery tools</span>
-                        <Icon symbol="caret-right"/>
-                    </NavLink>
-                </li>
-                <li class="list-group-item">
-                    <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
-                        <span>Configure LSP</span>
-                        <Icon symbol="caret-right"/>
-                    </NavLink>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span>CkGJ..3940</span>
+                        <span class="text-end">$29.13</span>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <span class="text-muted">March 21 at 6:15am</span>
+                        <span class="text-muted text-end">177,032 sats</span>
+                    </div>
                 </li>
             </ul>
-        </section>
-        <section class="container">
-            <NavLink class="btn btn-outline-danger" href="@Routes.Logout" Match="NavLinkMatch.All">
-                <span>Logout</span>
-            </NavLink>
         </section>
     </Authorized>
     <Authorizing>
