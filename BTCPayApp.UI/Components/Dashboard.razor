@@ -10,11 +10,11 @@
 
 @if (State.Value.Loading.Contains(RootState.LoadingHandles.PairConfig))
 {
-    <div class="alert alert-info">Pairing configuration loading.</div>
+    <Alert Type="info">Pairing configuration loading.</Alert>
 }
 else if (State.Value.PairConfig is not null)
 {
-    <div class="alert alert-@ConnectionSeverity">
+    <Alert Type="@ConnectionSeverity">
         <div class="d-flex align-center justify-space-between gap-3">
             Your BTCPay Server is paired. Connection status is @ConnectionStatus.
             @if (State.Value.BTCPayServerConnectionState == HubConnectionState.Disconnected)
@@ -24,66 +24,70 @@ else if (State.Value.PairConfig is not null)
                 </NavLink>
             }
         </div>
-    </div>
+    </Alert>
 }
 else
 {
-    <div class="alert alert-warning">
+    <Alert Type="warning">
         <div class="d-flex flex-wrap align-center justify-space-between gap-3">
             No BTCPay Server paired.
             <NavLink href="@Routes.Pair" class="btn btn-sm btn-primary">
                 Configure connection
             </NavLink>
         </div>
-    </div>
+    </Alert>
 }
 
 @if (State.Value.Loading.Contains(RootState.LoadingHandles.WalletConfig))
 {
-    <div class="alert alert-info">Wallet configuration loading.</div>
+    <Alert Type="info">Wallet configuration loading.</Alert>
 }
 else if (State.Value.WalletConfig is not null)
 {
-    <div class="alert alert-success">Your wallet is configured.</div>
+    <Alert Type="success">Your wallet is configured.</Alert>
 }
 else
 {
-    <div class="alert alert-warning">
+    <Alert Type="warning">
         <div class="d-flex flex-wrap align-center justify-space-between gap-3">
             Your wallet is not configured.
             <NavLink href="@Routes.WalletSetup" class="btn btn-sm btn-primary">
                 Set up a wallet
             </NavLink>
         </div>
-    </div>
+    </Alert>
 }
 
 @if (State.Value.Loading.Contains(RootState.LoadingHandles.LightningState))
 {
-    <div class="alert alert-info">Lightning node loading.</div>
+    <Alert Type="info">
+        Lightning node loading.
+    </Alert>
 }
 else
 {
-    <div class="alert alert-@LightningSeverity">Your Lightning node is @LightningStatus</div>
+    <Alert Type="@LightningSeverity">
+        Your Lightning node is @LightningStatus
+    </Alert>
 }
 
 @if (State.Value.Loading.Contains(RootState.LoadingHandles.TransactionState))
 {
-    <div class="alert alert-info">Transactions loading.</div>
+    <Alert Type="info">Transactions loading.</Alert>
 }
 else
 {
     <h6 class="mt-5">Transactions</h6>
     @if (OnChainTransactionsState.Value.Error is not false)
     {
-        <div class="alert alert-warning">
+        <Alert Type="warning">
             <div class="d-flex flex-wrap align-center justify-space-between gap-3">
                 There was an error loading your transactions.
                 <button class="btn btn-sm btn-primary" @onclick="() => Dispatcher.Dispatch(new OnChainTransactionsState.LoadTransactionsAction())">
                     Retry
                 </button>
             </div>
-        </div>
+        </Alert>
     }
     else if (OnChainTransactionsState.Value.AllTransactions?.Any() is true)
     {

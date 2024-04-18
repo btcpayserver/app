@@ -17,11 +17,11 @@
     <h1>@GetTitle()</h1>
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
-    <div class="alert alert-danger mb-3">@_errorMessage</div>
+        <Alert Type="danger">@_errorMessage</Alert>
     }
     else if (!string.IsNullOrEmpty(_successMessage))
     {
-    <div class="alert alert-success mb-3">@_successMessage</div>
+        <Alert Type="success">@_successMessage</Alert>
     }
 </SectionContent>
 
@@ -55,13 +55,13 @@
     @if (!Model.RequireTwoFactor && InstanceInfo != null)
     {
         <p class="mt-4 text-center">
-            <NavLink href="@(Routes.ForgotPassword + $"?serverUrl={Model.Uri}")">Forgot your password?</NavLink>
+            <NavLink href="@GetForgotPasswordUrl()">Forgot your password?</NavLink>
         </p>
 
         @if (InstanceInfo.RegistrationEnabled)
         {
             <p class="mt-4 text-center">
-                <NavLink href="@(Routes.Register + $"?serverUrl={Model.Uri}")">Register new account</NavLink>
+                <NavLink href="@GetRegisterUrl()">Register new account</NavLink>
             </p>
         }
     }
@@ -167,4 +167,6 @@
     }
 
     private string GetTitle() => $"Login to {InstanceInfo?.ServerName ?? "a BTCPay Server"}";
+    private string GetRegisterUrl() => NavigationManager.GetUriWithQueryParameters(Routes.Register, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
+    private string GetForgotPasswordUrl() => NavigationManager.GetUriWithQueryParameters(Routes.ForgotPassword, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
 }

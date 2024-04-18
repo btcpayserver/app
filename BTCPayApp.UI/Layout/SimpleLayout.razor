@@ -17,11 +17,11 @@
         </svg>
     }
     <main id="MainContent">
-        <SectionOutlet SectionName="main-top"/>
         <div class="container">
+            <SectionOutlet SectionName="main-top"/>
             @Body
+            <SectionOutlet SectionName="main-bottom"/>
         </div>
-        <SectionOutlet SectionName="main-bottom"/>
     </main>
     <SectionOutlet SectionName="bottom" />
 </div>

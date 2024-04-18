@@ -1,6 +1,6 @@
 #SimpleLayout {
   --logo-height: 5rem;
-  --padding-vertical: 15vh;
+  --padding-vertical: 12.5vh;
 
   display: flex;
   flex-direction: column;

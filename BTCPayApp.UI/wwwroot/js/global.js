@@ -25,7 +25,11 @@ Interop = {
       $tag.removeAttribute('rel');
       $tag.removeAttribute('href');
       const mode = window.localStorage.getItem(window.THEME_STORE_ATTR);
-      document.documentElement.setAttribute(window.THEME_ATTR, mode);
+      if (THEME_COLOR_MODES.includes(mode)) {
+        document.documentElement.setAttribute(THEME_ATTR, mode);
+      } else {
+        document.documentElement.removeAttribute(THEME_ATTR);
+      }
     }
   }
 }

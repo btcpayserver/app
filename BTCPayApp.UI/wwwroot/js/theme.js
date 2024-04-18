@@ -1,14 +1,14 @@
 // global constants
 var THEME_ATTR = "data-btcpay-theme";
 var THEME_STORE_ATTR = "btcpay-theme";
+var THEME_COLOR_MODES = ["light", "dark"];
 
 // local scope
-const COLOR_MODES = ["light", "dark"];
 const userColorMode = window.localStorage.getItem(THEME_STORE_ATTR);
-const initialColorMode = COLOR_MODES.includes(userColorMode) ? userColorMode : null;
+const initialColorMode = THEME_COLOR_MODES.includes(userColorMode) ? userColorMode : null;
 
 function setColorMode(mode) {
-  if (COLOR_MODES.includes(mode)) {
+  if (THEME_COLOR_MODES.includes(mode)) {
     window.localStorage.setItem(THEME_STORE_ATTR, mode);
     document.documentElement.setAttribute(THEME_ATTR, mode);
   } else {

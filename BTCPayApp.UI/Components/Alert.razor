@@ -1,0 +1,23 @@
+<div class="alert alert-@Type @(Dismissible ? "alert-dismissible" : null)mb-@(Margin)" role="alert">
+    @if (Dismissible)
+    {
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
+            <Icon Symbol="close" />
+        </button>
+    }
+    @ChildContent
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter, EditorRequired]
+    public string? Type { get; set; }
+
+    [Parameter]
+    public bool Dismissible { get; set; }
+
+    [Parameter]
+    public int Margin { get; set; } = 3;
+}

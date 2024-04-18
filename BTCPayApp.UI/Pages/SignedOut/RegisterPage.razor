@@ -14,7 +14,7 @@
     <h1>@GetTitle()</h1>
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
-    <div class="alert alert-danger mb-3">@_errorMessage</div>
+        <Alert Type="danger">@_errorMessage</Alert>
     }
 </SectionContent>
 
