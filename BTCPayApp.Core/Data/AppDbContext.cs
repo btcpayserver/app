@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Contracts;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -26,13 +27,13 @@ public class AppDbContext : DbContext
 public class WalletConfig
 {
     public const string Key = "walletconfig";
-    
+
     public required string Mnemonic { get; set; }
+
     //key is the identifier of the tracker, value is a sub wallet format. 
     //for example, we will track native segwit wallet, the descriptor will be wpkh([fingerprint/84'/0'/0']xpub/0/*)
     // or for LN specifics, the descriptor is null, and we track non deterministic scripts
     public Dictionary<string, WalletDerivation> Derivations { get; set; } = new();
-
 }
 
 public class WalletDerivation
@@ -45,54 +46,63 @@ public class WalletDerivation
     public const string LightningScripts = "LightningScripts";
 }
 
-
-
-
-public abstract class WalletService:IHostedService
+public enum LightningNodeState
 {
-    private readonly AppConfig _appConfig;
-    private readonly BTCPayConnection _btcPayConnection;
-    private WalletConfig _walletConfig;
+    InitialState,
+    NotConfigured,
+    WaitingForConnection,
+    Starting,
+    Running,
+    Stopping,
+    NotRunning,
+    Error
+}
 
-    public WalletService(AppConfig appConfig, BTCPayConnection btcPayConnection)
+public abstract class WalletService : IHostedService
+{
+    private readonly Network _network;
+    private readonly BTCPayConnection _btcPayConnection;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly IConfigProvider _configProvider;
+    private WalletConfig? _walletConfig;
+
+    public LightningNodeState State { get; private set; } = LightningNodeState.InitialState;
+
+
+    public WalletService(
+        Network network,
+        BTCPayConnection btcPayConnection,
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        IConfigProvider configProvider)
     {
-        _appConfig = appConfig;
+        _network = network;
         _btcPayConnection = btcPayConnection;
+        _dbContextFactory = dbContextFactory;
+        _configProvider = configProvider;
     }
+
+
     public async Task<WalletConfig> GenerateWallet()
     {
         await _started.Task;
-        if (_btcPayConnection.Connection?.State !=  HubConnectionState.Connected)
+        if (_btcPayConnection.Connection?.State != HubConnectionState.Connected)
             throw new InvalidOperationException("BTCPay not connected");
-        if(_walletConfig != null)
+        if (_walletConfig != null)
             throw new InvalidOperationException("Wallet already generated");
-        var newSeed = new Mnemonic(Wordlist.English, WordCount.Twelve);
-        var walletConfig = new WalletConfig
-        {
-            Mnemonic = newSeed.ToString()
-        };
-        var fingerPrint = newSeed.DeriveExtKey().GetPublicKey().GetHDFingerPrint();
-        
-        
-        
-
-
-    }
-
-
-    public async Task StartListening(Mnemonic mnemonic, Network network)
-    {
-        var mainnet = network == Network.Main;
-        var path = new KeyPath($"m/84'/{(mainnet? "0":"1")}'/0'");
+        var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
+        var mainnet = _network == Network.Main;
+        var path = new KeyPath($"m/84'/{(mainnet ? "0" : "1")}'/0'");
         var fingerprint = mnemonic.DeriveExtKey().GetPublicKey().GetHDFingerPrint();
-        var xpub = mnemonic.DeriveExtKey().Derive(path).Neuter().ToString(network);
-        
+        var xpub = mnemonic.DeriveExtKey().Derive(path).Neuter().ToString(_network);
+
         var segwitDerivation = new WalletDerivation
         {
             Name = "Native Segwit",
-            Descriptor = OutputDescriptor.AddChecksum($"wpkh([{path.ToString().Replace("m", fingerprint.ToString())}]{xpub}/0/*)")
+            Descriptor =
+                OutputDescriptor.AddChecksum(
+                    $"wpkh([{path.ToString().Replace("m", fingerprint.ToString())}]{xpub}/0/*)")
         };
-             
+
         var ln = new WalletDerivation
         {
             Name = "Lightning",
@@ -110,11 +120,11 @@ public abstract class WalletService:IHostedService
         var response = await _btcPayConnection.HubProxy.Pair(pairRequest);
         foreach (var pair in response)
         {
-            if(pair.Key == WalletDerivation.NativeSegwit)
+            if (pair.Key == WalletDerivation.NativeSegwit)
             {
                 segwitDerivation.Identifier = pair.Value;
             }
-            else if(pair.Key == WalletDerivation.LightningScripts)
+            else if (pair.Key == WalletDerivation.LightningScripts)
             {
                 ln.Identifier = pair.Value;
             }
@@ -129,27 +139,34 @@ public abstract class WalletService:IHostedService
                 {WalletDerivation.LightningScripts, ln}
             }
         };
-
+        await _configProvider.Set(WalletConfig.Key, walletConfig);
+        _walletConfig = walletConfig;
     }
 
 
     private readonly TaskCompletionSource _started = new();
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+
+        _walletConfig = await _configProvider.Get<WalletConfig>(WalletConfig.Key);
+
+        if (_walletConfig is null)
+        {
+            State = LightningNodeState.NotConfigured;
+        }
+        else
+        {
+            State = LightningNodeState.WaitingForConnection;
+        }
+
         _started.TrySetResult();
     }
 
+
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
     }
 }
-
-public class AppConfig
-{
-    public string Network { get; set; }
-}
-
-
-
-
