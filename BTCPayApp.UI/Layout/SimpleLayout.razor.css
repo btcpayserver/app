@@ -6,6 +6,7 @@
   flex-direction: column;
   gap: 1.5rem;
   max-width: 24rem;
+  margin: 0 auto;
   padding-top: var(--padding-vertical);
   padding-bottom: 3rem;
 }

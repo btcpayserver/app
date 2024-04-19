@@ -1,6 +1,6 @@
-﻿@attribute [AllowAnonymous]
-@attribute [Route(Routes.Notifications)]
+﻿@attribute [Route(Routes.Notifications)]
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Notifications</PageTitle>
@@ -64,14 +64,5 @@
     private class NotificationsModel
     {
         public Notification[] Notifications { get; set; } = [];
-    }
-
-    private class Notification
-    {
-        public string? Id { get; set; }
-        public string? Type { get; set; }
-        public DateTimeOffset Created { get; set; }
-        public string? Body { get; set; }
-        public bool Seen { get; set; }
     }
 }

@@ -1,0 +1,71 @@
+﻿@attribute [Route(Routes.Invoices)]
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Models
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>Invoices</PageTitle>
+
+<SectionContent SectionName="top">
+    <Titlebar Back="@Routes.Dashboard">
+        <h1>Invoices</h1>
+    </Titlebar>
+</SectionContent>
+
+<section>
+    @if (Model.Invoices.Any())
+    {
+        <div class="list-group list-group-flush">
+            @foreach (var i in Model.Invoices)
+            {
+                <InvoiceItem Invoice="@i"/>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="text-muted">There are no invoices, yet.</p>
+    }
+</section>
+
+@code {
+    private InvoicesModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Model.Invoices =
+        [
+            new Invoice
+            {
+                Id = "CDOy6cOibCWEdsRiZuaHf8dSG",
+                OrderId = "1",
+                Date = DateTimeOffset.Now - TimeSpan.FromSeconds(21),
+                Status = "Settled",
+                Currency = "USD",
+                Amount = 61.5m
+            },
+            new Invoice
+            {
+                Id = "jRY5cKmdYQrS6zu863wEFXtn4",
+                OrderId = "2",
+                Date = DateTimeOffset.Now - TimeSpan.FromHours(6),
+                Status = "Processing",
+                Currency = "SATS",
+                Amount = 210000m
+            },
+            new Invoice
+            {
+                Id = "RNuhcG8UUGJRYuBGCNuhcG8",
+                OrderId = "3",
+                Date = DateTimeOffset.Now - TimeSpan.FromDays(3),
+                Status = "Expired",
+                Currency = "USD",
+                Amount = 6.15m
+            }
+        ];
+    }
+
+    private class InvoicesModel
+    {
+        public Invoice[] Invoices { get; set; } = [];
+    }
+}

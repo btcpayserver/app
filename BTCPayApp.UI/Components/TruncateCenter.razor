@@ -1,0 +1,41 @@
+<span class="truncate-center truncate-center-id @(Copy ? "truncate-center--copy" : null)">
+    <span class="truncate-center-truncated" data-bs-toggle="@(IsTruncated ? "tooltip" : null)" title="@(IsTruncated ? Text : null)">
+        <span class="truncate-center-start">@(IsTruncated ? $"{Start}…" : Text)</span>
+        @if (IsTruncated)
+        {
+            <span class="truncate-center-end">@End</span>
+        }
+    </span>
+    <span class="truncate-center-text">@Text</span>
+    @if (Copy)
+    {
+        <button type="button" class="btn btn-link p-0" data-clipboard="@Text">
+            <Icon Symbol="copy" />
+        </button>
+    }
+    @if (!string.IsNullOrEmpty(Link))
+    {
+        <a href="@Link" rel="noreferrer noopener" target="@(Link.StartsWith("http") ? "_blank" : null)">
+            <Icon Symbol="info" />
+        </a>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public string? Text { get; set; }
+
+    [Parameter]
+    public string? Link { get; set; }
+
+    [Parameter]
+    public int Padding { get; set; } = 7;
+
+    [Parameter]
+    public bool Copy { get; set; }
+
+    private bool IsTruncated => !string.IsNullOrEmpty(Start) && !string.IsNullOrEmpty(End);
+
+    private string? Start => Text?.Length > 2 * Padding ? Text[..Padding] : null;
+    private string? End => Text?.Length > 2 * Padding ? Text[^Padding..] : null;
+}

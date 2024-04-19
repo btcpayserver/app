@@ -1,0 +1,45 @@
+﻿@attribute [Route(Routes.Invoice)]
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Models
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>@GetTitle()</PageTitle>
+
+<SectionContent SectionName="top">
+    <Titlebar Back="@Routes.Invoices">
+        <h1>@GetTitle()</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    <div class="invoice">
+        ID: @Model.Invoice.Id
+    </div>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string? InvoiceId { get; set; }
+
+    private InvoiceModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Model.Invoice = new Invoice
+        {
+            Id = InvoiceId,
+            OrderId = "CDOy6cOibCWEdsRiZuaHf8dSG",
+            Date = DateTimeOffset.Now - TimeSpan.FromSeconds(21),
+            Status = "Settled",
+            Currency = "USD",
+            Amount = 61.5m
+        };
+    }
+
+    private class InvoiceModel
+    {
+        public Invoice Invoice { get; set; }
+    }
+
+    private string GetTitle() => $"Invoice {Model.Invoice.Id}";
+}

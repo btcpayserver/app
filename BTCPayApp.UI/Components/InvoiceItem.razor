@@ -1,0 +1,48 @@
+@using BTCPayApp.UI.Models
+
+<a href="@Routes.InvoicePath(Id)" class="invoice list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 px-4">
+    <div class="d-flex align-items-baseline justify-content-between flex-wrap flex-grow-1 gap-2">
+        <DateDisplay DateTimeOffset="@Date" Format="DateDisplay.DateDisplayFormat.Localized"/>
+        <TruncateCenter Text="@OrderId"></TruncateCenter>
+        <span class="amount">@Amount @Currency</span>
+        <div class="badge-container">
+            <span class="badge badge-@State">@State</span>
+        </div>
+    </div>
+    <Icon symbol="caret-right"/>
+</a>
+
+@code {
+    [Parameter]
+    public string? Id { get; set; }
+
+    [Parameter]
+    public string? OrderId { get; set; }
+
+    [Parameter]
+    public string? Status { get; set; }
+
+    [Parameter]
+    public DateTimeOffset Date { get; set; }
+
+    [Parameter]
+    public string? Currency { get; set; }
+
+    [Parameter]
+    public decimal Amount { get; set; }
+
+    [Parameter]
+    public Invoice Invoice {
+        set
+        {
+            Id = value.Id;
+            OrderId = value.OrderId;
+            Status = value.Status;
+            Date = value.Date;
+            Currency = value.Currency;
+            Amount = value.Amount;
+        }
+    }
+
+    private string State => Status?.ToLowerInvariant() ?? "unknown";
+}

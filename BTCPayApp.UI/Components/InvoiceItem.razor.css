@@ -1,0 +1,10 @@
+.invoice .badge-container {
+  flex: 0 0 5.125rem;
+  text-align: right;
+}
+
+@media (max-width: 359px) {
+  .invoice .badge-container {
+    flex-grow: 1;
+  }
+}
