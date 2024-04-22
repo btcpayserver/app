@@ -1,17 +1,11 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.LDK;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NBitcoin;
-using NBitcoin.RPC;
-using NBXplorer;
-using NBXplorer.Models;
-using Newtonsoft.Json;
-using NLDK;
-using nldksample.LSP.Flow;
-using org.ldk.enums;
 using org.ldk.structs;
 using Network = NBitcoin.Network;
 using Script = NBitcoin.Script;
@@ -86,7 +80,10 @@ public static class LDKExtensions
             Persister.new_impl(provider.GetRequiredService<LDKPersister>()));
         services.AddScoped(provider => UserConfig.with_default());
         
-        
+        services.AddTransient<IConfigProvider>(provider =>
+        {
+            var userConfig = provider.GetRequiredService<WalletConfig>();
+        });
         services.AddScoped(provider =>
         {
             var feeEstimator = provider.GetRequiredService<FeeEstimator>();
@@ -294,13 +291,6 @@ public static class LDKExtensions
     public static Logger GetGlobalLDKLogger(this IServiceProvider serviceProvider)
     {
         return serviceProvider.GetRequiredKeyedService<Logger>(nameof(LDKLogger));
-    }
-
-    public static async Task<GetBlockchainInfoResponse> GetBlockchainInfoAsyncEx(this RPCClient client,
-        CancellationToken cancellationToken = default)
-    {
-        var result = await client.SendCommandAsync("getblockchaininfo", cancellationToken).ConfigureAwait(false);
-        return JsonConvert.DeserializeObject<GetBlockchainInfoResponse>(result.ResultString);
     }
 
     public static NBitcoin.Coin Coin(this Input input)

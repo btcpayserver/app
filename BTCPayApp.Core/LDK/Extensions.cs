@@ -2,12 +2,16 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
+using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using nldksample;
+using nldksample.LDK;
 using org.ldk.enums;
 using org.ldk.structs;
 using org.ldk.util;
@@ -17,10 +21,6 @@ using NodeInfo = BTCPayServer.Lightning.NodeInfo;
 using OutPoint = org.ldk.structs.OutPoint;
 
 namespace BTCPayApp.Core.LDK;
-
-public class Extensions
-{
-}
 
 public interface IScopedHostedService : IHostedService
 {
@@ -415,7 +415,7 @@ await Semaphore.WaitAsync(cancellationToken);
 public static class ChannelManagerHelper
 {
 
-    public static ChannelMonitor[] GetInitialMonitors(byte[][] channelMonitorsSerialized, EntropySource entropySource, SignerProvider signerProvider )
+    public static ChannelMonitor[] GetInitialMonitors(IEnumerable<byte[]> channelMonitorsSerialized, EntropySource entropySource, SignerProvider signerProvider )
     {
         var monitorFundingSet = new HashSet<OutPoint>();
         return channelMonitorsSerialized.Select(bytes =>
@@ -463,11 +463,15 @@ public static class ChannelManagerHelper
 public class CurrentWalletService
 {
     private readonly WalletService _walletService;
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly IConfigProvider _configProvider;
 
     private WalletConfig? _wallet;
-    public CurrentWalletService( WalletService walletService)
+    public CurrentWalletService( WalletService walletService, IDbContextFactory<AppDbContext> dbContextFactory, IConfigProvider configProvider)
     {
         _walletService = walletService;
+        _dbContextFactory = dbContextFactory;
+        _configProvider = configProvider;
     }
 
     public void SetWallet(WalletConfig wallet)
@@ -505,7 +509,11 @@ public class CurrentWalletService
     private async Task<ChannelMonitor[]> GetInitialChannelMonitors(EntropySource entropySource, SignerProvider signerProvider)
     {
         await WalletSelected.Task;
-        var data = _wallet.Channels?.Select(c => c.Data)?.ToArray() ?? Array.Empty<byte[]>();
+        await using var db = await _dbContextFactory.CreateDbContextAsync();
+
+        var data = await db.LightningChannels.Include(c => c.Setting).Select(channel => channel.Setting.Value)
+            .ToArrayAsync();
+        
         var channels = ChannelManagerHelper.GetInitialMonitors(data, entropySource, signerProvider);
         icm.SetResult(channels);
         return channels;
@@ -514,7 +522,8 @@ public class CurrentWalletService
     public async Task<(byte[] serializedChannelManager, ChannelMonitor[] channelMonitors)?> GetSerializedChannelManager(EntropySource entropySource, SignerProvider signerProvider)
     {
         await WalletSelected.Task;
-        var data= await _walletService.GetArbitraryData<byte[]>("ChannelManager", CurrentWallet);
+        
+        var data = await _configProvider.Get<byte[]>("ChannelManager");
         if (data is null)
         {
             icm.SetResult(Array.Empty<ChannelMonitor>());

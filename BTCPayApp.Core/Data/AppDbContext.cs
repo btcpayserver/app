@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Contracts;
+using BTCPayServer.Lightning;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
@@ -16,12 +17,19 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<Setting> Settings { get; set; }
-//     public DbSet<LightningChannel> LightningChannels { get; set; }
+    public DbSet<Channel> LightningChannels { get; set; }
 //     public DbSet<OnchainCoin> OnchainCoins { get; set; }
 //     public DbSet<OnchainScript> OnchainScripts { get; set; }
 //     public List<OnChainTransaction> OnChainTransactions { get; set; }
 //     public List<LightningTransaction> LightningTransactions { get; set; }
 // }
+}
+
+public class Channel
+{
+    public string Id { get; set; }
+    public string SettingKey { get; set; }
+    public Setting Setting { get; set; }
 }
 
 public class WalletConfig
