@@ -4,19 +4,10 @@ namespace BTCPayApp.Maui;
 
 public partial class App : Application
 {
-    private readonly BTCPayAppConfigManager _btcPayAppConfigManager;
-    private readonly BTCPayConnection _btcPayConnection;
-    private readonly LightningNodeManager _lightningNodeManager;
 
-    public App(
-        BTCPayConnection btcPayConnection,
-        BTCPayAppConfigManager btcPayAppConfigManager,
-        LightningNodeManager lightningNodeManager)
+    public App()
+
     {
-        _btcPayConnection = btcPayConnection;
-        _btcPayAppConfigManager = btcPayAppConfigManager;
-        _lightningNodeManager = lightningNodeManager;
-
         InitializeComponent();
 
         MainPage = new MainPage();

@@ -1,42 +1,11 @@
 @inject IState<RootState> State
 @inject IDispatcher Dispatcher
-@inject IState<OnChainTransactionsState> OnChainTransactionsState
 @using Microsoft.AspNetCore.SignalR.Client
 @using BTCPayApp.UI.Features
-@using BTCPayApp.Core
+@using BTCPayApp.Core.Data
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <h1 class="mb-3">Dashboard</h1>
-
-@if (State.Value.Loading.Contains(RootState.LoadingHandles.PairConfig))
-{
-    <Alert Type="info">Pairing configuration loading.</Alert>
-}
-else if (State.Value.PairConfig is not null)
-{
-    <Alert Type="@ConnectionSeverity">
-        <div class="d-flex align-center justify-space-between gap-3">
-            Your BTCPay Server is paired. Connection status is @ConnectionStatus.
-            @if (State.Value.BTCPayServerConnectionState == HubConnectionState.Disconnected)
-            {
-                <NavLink href="@Routes.Pair" class="btn btn-sm btn-danger">
-                    Configure connection
-                </NavLink>
-            }
-        </div>
-    </Alert>
-}
-else
-{
-    <Alert Type="warning">
-        <div class="d-flex flex-wrap align-center justify-space-between gap-3">
-            No BTCPay Server paired.
-            <NavLink href="@Routes.Pair" class="btn btn-sm btn-primary">
-                Configure connection
-            </NavLink>
-        </div>
-    </Alert>
-}
 
 @if (State.Value.Loading.Contains(RootState.LoadingHandles.WalletConfig))
 {
@@ -71,50 +40,6 @@ else
     </Alert>
 }
 
-@if (State.Value.Loading.Contains(RootState.LoadingHandles.TransactionState))
-{
-    <Alert Type="info">Transactions loading.</Alert>
-}
-else
-{
-    <h6 class="mt-5">Transactions</h6>
-    @if (OnChainTransactionsState.Value.Error is not false)
-    {
-        <Alert Type="warning">
-            <div class="d-flex flex-wrap align-center justify-space-between gap-3">
-                There was an error loading your transactions.
-                <button class="btn btn-sm btn-primary" @onclick="() => Dispatcher.Dispatch(new OnChainTransactionsState.LoadTransactionsAction())">
-                    Retry
-                </button>
-            </div>
-        </Alert>
-    }
-    else if (OnChainTransactionsState.Value.AllTransactions?.Any() is true)
-    {
-        <ul>
-            @foreach (var tx in OnChainTransactionsState.Value.AllTransactions)
-            {
-                <li class="d-flex align-center justify-space-between gap-3">
-                    <div>
-                        <div class="mb-1">@tx.Value.Id</div>
-                        <div class="mb-1">@tx.Value.Timestamp</div>
-                    </div>
-                    <div>
-                        <div class="mb-1">@tx.Value.Balance</div>
-                        <div class="mb-1">@tx.Value.Status</div>
-                    </div>
-                </li>
-            }
-        </ul>
-        <button class="btn btn-sm btn-secondary" @onclick="() => Dispatcher.Dispatch(new OnChainTransactionsState.LoadTransactionsAction())">
-            Refresh
-        </button>
-    }
-    else
-    {
-        <p class="text-muted">There are no transactions, yet.</p>
-    }
-}
 @code {
     private string ConnectionStatus => State.Value.BTCPayServerConnectionState?.ToString().ToLowerInvariant() ?? "not connected";
 
@@ -144,8 +69,6 @@ else
     protected override Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return base.OnAfterRenderAsync(firstRender);
-        if (State.Value.BTCPayServerConnectionState is not HubConnectionState.Connected)
-            Dispatcher.Dispatch(new OnChainTransactionsState.LoadTransactionsAction(true));
         return base.OnAfterRenderAsync(firstRender);
     }
 

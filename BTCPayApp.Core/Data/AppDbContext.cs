@@ -34,6 +34,8 @@ public class WalletConfig
     //for example, we will track native segwit wallet, the descriptor will be wpkh([fingerprint/84'/0'/0']xpub/0/*)
     // or for LN specifics, the descriptor is null, and we track non deterministic scripts
     public Dictionary<string, WalletDerivation> Derivations { get; set; } = new();
+
+    public string Fingerprint => new Mnemonic(Mnemonic).DeriveExtKey().GetPublicKey().GetHDFingerPrint().ToString();
 }
 
 public class WalletDerivation
@@ -58,7 +60,7 @@ public enum LightningNodeState
     Error
 }
 
-public abstract class WalletService : IHostedService
+public class WalletService : IHostedService
 {
     private readonly Network _network;
     private readonly BTCPayConnection _btcPayConnection;
@@ -66,7 +68,21 @@ public abstract class WalletService : IHostedService
     private readonly IConfigProvider _configProvider;
     private WalletConfig? _walletConfig;
 
-    public LightningNodeState State { get; private set; } = LightningNodeState.InitialState;
+    public LightningNodeState State
+    {
+        get => _state;
+        private set
+        {
+            if (_state == value)
+                return;
+            _state = value;
+            OnStateChanged?.Invoke(this, value);
+        }
+    }
+
+    public string? CurrentWallet => _walletConfig?.Fingerprint;
+
+    public event EventHandler<LightningNodeState>? OnStateChanged;
 
 
     public WalletService(
@@ -82,12 +98,12 @@ public abstract class WalletService : IHostedService
     }
 
 
-    public async Task<WalletConfig> GenerateWallet()
+    public async Task GenerateWallet()
     {
         await _started.Task;
         if (_btcPayConnection.Connection?.State != HubConnectionState.Connected)
             throw new InvalidOperationException("BTCPay not connected");
-        if (_walletConfig != null)
+        if (State != LightningNodeState.NotConfigured)
             throw new InvalidOperationException("Wallet already generated");
         var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
         var mainnet = _network == Network.Main;
@@ -141,13 +157,17 @@ public abstract class WalletService : IHostedService
         };
         await _configProvider.Set(WalletConfig.Key, walletConfig);
         _walletConfig = walletConfig;
+        State = LightningNodeState.WaitingForConnection;
     }
 
 
     private readonly TaskCompletionSource _started = new();
+    private LightningNodeState _state = LightningNodeState.InitialState;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        OnStateChanged += OnOnStateChanged;
+        _btcPayConnection.ConnectionChanged += BtcPayConnectionOnConnectionChanged;
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
 
@@ -165,8 +185,31 @@ public abstract class WalletService : IHostedService
         _started.TrySetResult();
     }
 
+    private void BtcPayConnectionOnConnectionChanged(object? sender, EventArgs e)
+    {
+        if (_btcPayConnection.Connection?.State == HubConnectionState.Connected && State == LightningNodeState.WaitingForConnection)
+        {
+                State = LightningNodeState.Starting;
+        }
+    }
+
+    private void OnOnStateChanged(object? sender, LightningNodeState e)
+    {
+        if (e == LightningNodeState.WaitingForConnection)
+        {
+            if(_btcPayConnection.Connection.State == HubConnectionState.Connected)
+                State = LightningNodeState.Starting;
+        }
+        if(e == LightningNodeState.Starting)
+        {
+            //TODO: create scope and start LDKNode
+        }
+    }
+
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        OnStateChanged = null;
+        _btcPayConnection.ConnectionChanged -= BtcPayConnectionOnConnectionChanged;
     }
 }

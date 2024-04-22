@@ -17,15 +17,15 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
     private AppUserInfo? _userInfo;
     private readonly ClaimsPrincipal _unauthenticated = new(new ClaimsIdentity());
     private readonly IOptionsMonitor<IdentityOptions> _identityOptions;
-    private readonly ISecureConfigProvider _config;
+    private readonly IConfigProvider _config;
     private readonly BTCPayAppClient _client;
 
     public BTCPayAccount? GetAccount() => _account;
     public AppUserInfo? GetUserInfo() => _userInfo;
 
     public AuthStateProvider(
-        BTCPayAppClient client,
-        ISecureConfigProvider config,
+        BTCPayAppClient client, 
+        IConfigProvider config,
         IOptionsMonitor<IdentityOptions> identityOptions)
     {
         _client = client;

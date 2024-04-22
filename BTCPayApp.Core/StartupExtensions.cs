@@ -3,10 +3,12 @@ using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.UI.Auth;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NBitcoin;
 
 namespace BTCPayApp.Core;
 
@@ -23,12 +25,11 @@ public static class StartupExtensions
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddHttpClient();
         serviceCollection.AddSingleton<BTCPayConnection>();
+        serviceCollection.AddSingleton<Network>(Network.RegTest);
+        serviceCollection.AddSingleton<WalletService>();
         serviceCollection.AddSingleton<IBTCPayAppHubClient,BTCPayAppServerClient>();
-        serviceCollection.AddSingleton<BTCPayAppConfigManager>();
-        serviceCollection.AddSingleton<LightningNodeManager>();
-        serviceCollection.AddSingleton<IHostedService>(provider =>  provider.GetRequiredService<BTCPayAppConfigManager>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BTCPayConnection>());
-        serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<LightningNodeManager>());
+        serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<WalletService>());
         
         serviceCollection.AddSingleton<BTCPayAppClient>();
         serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>();
@@ -52,6 +53,8 @@ public class DatabaseConfigProvider: IConfigProvider
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         var config = await dbContext.Settings.FindAsync(key);
+        if (typeof(T) == typeof(byte[]))
+            return (T?) (config?.Value as object);
         return config is null ? default : JsonSerializer.Deserialize<T>(config.Value);
     }
 
