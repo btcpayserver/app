@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using System.Text.Json.Serialization;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayServer.Lightning;
@@ -45,6 +46,36 @@ public class WalletConfig
     public Dictionary<string, WalletDerivation> Derivations { get; set; } = new();
 
     public string Fingerprint => new Mnemonic(Mnemonic).DeriveExtKey().GetPublicKey().GetHDFingerPrint().ToString();
+
+    public string Alias { get; set; }
+    public string Color { get; set; }
+
+    [JsonIgnore]
+    public byte[] RGB
+    {
+        get
+        {
+            if(string.IsNullOrEmpty(Color)){ return [0,0,0];}
+
+            if (Color.StartsWith("#"))
+            {
+                var rgBint = Convert.ToInt32("FFD700", 16);
+                var red = (byte)((rgBint >> 16) & 255);
+                var green = (byte)((rgBint >> 8) & 255);
+                var blue = (byte)(rgBint & 255);
+                return [red, green, blue];
+            }
+            else
+            {
+                var parts = Color.Split(',');
+                if (parts.Length != 3)
+                {
+                    return [0, 0, 0];
+                }
+                return [byte.Parse(parts[0]), byte.Parse(parts[1]), byte.Parse(parts[2])];
+            }
+        }
+    }
 }
 
 public class WalletDerivation

@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Net.Sockets;
+using BTCPayApp.Core;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.LDK;
@@ -196,9 +197,12 @@ public static class LDKExtensions
         services.AddScoped<LDKLogger>();
         services.AddScoped<ChainParameters>(provider =>
         {
-            var explorerClient = provider.GetRequiredService<ExplorerClient>();
-            var info = explorerClient.RPCClient.GetBlockchainInfo();
-            var bestBlock = BestBlock.of(info.BestBlockHash.ToBytes(), (int) info.Blocks);
+            
+            var connection = provider.GetRequiredService<BTCPayConnection>();
+            var resp = connection.HubProxy.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
+            var hash = uint256.Parse(resp.BlockHash).ToBytes();
+            
+            var bestBlock = BestBlock.of(hash, (int) resp.BlockHeight);
             return ChainParameters.of(provider.GetRequiredService<Network>().GetLdkNetwork(), bestBlock);
         });
         services.AddScoped<Score>(provider => provider.GetRequiredService<ProbabilisticScorer>().as_Score());
@@ -219,11 +223,12 @@ public static class LDKExtensions
         services.AddScoped<ProbabilisticScoringDecayParameters>(provider => ProbabilisticScoringDecayParameters.with_default());
         services.AddScoped<ProbabilisticScorer>(provider =>
         {
-            var nodeManager = provider.GetRequiredService<WalletService>();
+            var configProvider = provider.GetRequiredService<IConfigProvider>();
+            var bytes = configProvider.Get<byte[]>("Score").ConfigureAwait(false).GetAwaiter().GetResult();
             var logger = provider.GetRequiredService<Logger>();
-            if (nodeManager.Data.TryGetValue("Score", out var s))
+            if (bytes is not null)
             {
-                var result =  ProbabilisticScorer.read(s, provider.GetRequiredService<ProbabilisticScoringDecayParameters>(), provider.GetRequiredService<NetworkGraph>(), logger);                
+                var result =  ProbabilisticScorer.read(bytes, provider.GetRequiredService<ProbabilisticScoringDecayParameters>(), provider.GetRequiredService<NetworkGraph>(), logger);                
                 if(result is Result_ProbabilisticScorerDecodeErrorZ.Result_ProbabilisticScorerDecodeErrorZ_OK ok)
                     return ok.res;
             }
@@ -236,7 +241,7 @@ public static class LDKExtensions
         {
             var configProvider = provider.GetRequiredService<IConfigProvider>();
             var bytes = configProvider.Get<byte[]>("NetworkGraph").ConfigureAwait(false).GetAwaiter().GetResult();
-            if (bytes is {})
+            if (bytes is not null)
             {
                 var result =  NetworkGraph.read(bytes, provider.GetRequiredService<Logger>());                
                 if(result is Result_NetworkGraphDecodeErrorZ.Result_NetworkGraphDecodeErrorZ_OK ok)

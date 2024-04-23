@@ -466,7 +466,8 @@ public class CurrentWalletService
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IConfigProvider _configProvider;
 
-    private WalletConfig? _wallet;
+    public WalletConfig? Wallet { get; private set; }
+
     public CurrentWalletService( WalletService walletService, IDbContextFactory<AppDbContext> dbContextFactory, IConfigProvider configProvider)
     {
         _walletService = walletService;
@@ -476,11 +477,11 @@ public class CurrentWalletService
 
     public void SetWallet(WalletConfig wallet)
     {
-        if (_wallet is not null)
+        if (Wallet is not null)
         {
             throw new InvalidOperationException("wallet is already selected");
         }
-        _wallet = wallet;
+        Wallet = wallet;
       
         WalletSelected.SetResult();
 
@@ -493,9 +494,9 @@ public class CurrentWalletService
     {
         get
         {
-            if (_wallet is null)
+            if (Wallet is null)
                 throw new InvalidOperationException("No wallet selected");
-            return _wallet.Fingerprint;
+            return Wallet.Fingerprint;
         }
     }
 
