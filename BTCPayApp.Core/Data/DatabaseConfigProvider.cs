@@ -31,10 +31,18 @@ public class DatabaseConfigProvider : IConfigProvider
         }
 
         var newValue = JsonSerializer.SerializeToUtf8Bytes(value);
-        await db.Settings.Upsert(new Setting()
+        var setting = new Setting()
         {
             Key = key,
             Value = newValue
-        }).RunAsync();
+        };
+        await db.Settings
+            .Upsert(setting)
+            .WhenMatched((existing, provided) => new Setting
+            {
+                Version = existing.Version + 1
+            })
+            .RunAsync();
+        
     }
 }

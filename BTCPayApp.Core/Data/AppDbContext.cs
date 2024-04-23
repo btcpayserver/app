@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using NBitcoin;
 using NBitcoin.Scripting;
+using org.ldk.structs;
 
 namespace BTCPayApp.Core.Data;
 
@@ -219,5 +220,15 @@ public class WalletService : IHostedService
     {
         OnStateChanged = null;
         _btcPayConnection.ConnectionChanged -= BtcPayConnectionOnConnectionChanged;
+    }
+
+    public async Task UpdateNetworkGraph(NetworkGraph networkGraph)
+    {
+        await _configProvider.Set("NetworkGraph", networkGraph.write());
+    }
+
+    public async Task UpdateScore(WriteableScore score)
+    {
+        await _configProvider.Set("Score", score.write());
     }
 }

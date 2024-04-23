@@ -519,11 +519,23 @@ public class CurrentWalletService
         return channels;
     }
 
+    public async Task<byte[]?> GetRawChannelManager()
+    {
+        await WalletSelected.Task;
+        return await _configProvider.Get<byte[]>("ChannelManager") ?? Array.Empty<byte>();
+    }
+    
+    public async Task UpdateChannelManager(ChannelManager serializedChannelManager)
+    {
+        await WalletSelected.Task;
+        await _configProvider.Set("ChannelManager", serializedChannelManager.write());
+    }
+    
     public async Task<(byte[] serializedChannelManager, ChannelMonitor[] channelMonitors)?> GetSerializedChannelManager(EntropySource entropySource, SignerProvider signerProvider)
     {
         await WalletSelected.Task;
-        
-        var data = await _configProvider.Get<byte[]>("ChannelManager");
+
+        var data = await GetRawChannelManager();
         if (data is null)
         {
             icm.SetResult(Array.Empty<ChannelMonitor>());
