@@ -1,9 +1,9 @@
-<div id="Titlebar" class="@(Fixed ? "fixed" : null)">
+<section id="Titlebar" class="container d-flex align-items-center justify-content-between p-3 @(Fixed ? "fixed" : null)">
     <div class="back">
         @if (!string.IsNullOrEmpty(Back))
         {
             <NavLink class="btn-close btn-back" href="@Back">
-                <Icon symbol="nav-back"/>
+                <Icon symbol="back"/>
             </NavLink>
         }
     </div>
@@ -13,12 +13,12 @@
     <div class="close">
         @if (Close)
         {
-        <button type="button" class="btn-close" aria-label="Close">
-            <Icon symbol="nav-close"/>
-        </button>
+            <button type="button" class="btn-close" aria-label="Close">
+                <Icon symbol="close"/>
+            </button>
         }
     </div>
-</div>
+</section>
 
 @code {
     [Parameter]
