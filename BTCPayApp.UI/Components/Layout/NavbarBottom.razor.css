@@ -8,13 +8,13 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 0;
   background-color: var(--btcpay-bg-tile);
 }
 
 .navbar-nav {
   margin: 0 auto;
   flex-direction: row;
+  gap: var(--btcpay-space-m);
 }
 
 .nav-item {
@@ -35,7 +35,8 @@
 }
 
 ::deep .nav-link span {
-  font-size: var(--btcpay-font-size-xs);
+  font-size: var(--btcpay-font-size-s);
+  font-weight: var(--btcpay-font-weight-semibold);
 }
 
 ::deep .nav-link .icon {
