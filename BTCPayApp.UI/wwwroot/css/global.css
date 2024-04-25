@@ -1,7 +1,7 @@
 ﻿:root {
   --sticky-header-height: 0; /* gets dynamically set via JavaScript */
-  --navbar-top-height: 3.5rem;
-  --navbar-bottom-height: 3.5rem;
+  --navbar-top-height: 4rem;
+  --navbar-bottom-height: 4rem;
   --sidebar-width: 280px;
 }
 

@@ -10,7 +10,7 @@
 
 <AuthorizeView>
     <Authorized>
-        <section class="container d-flex align-items-center justify-content-between py-2 px-4">
+        <header class="container d-flex align-items-center justify-content-between py-2 px-4">
             <div class="d-flex align-items-center justify-content-between gap-2">
                 <div class="fw-semibold">
                     @context.User.Identity?.Name
@@ -25,7 +25,7 @@
                     <span class="visually-hidden">Notifications</span>
                 </NavLink>
             </div>
-        </section>
+        </header>
         <section class="container d-flex flex-column gap-4 py-3">
             <div class="amount text-center">
                 <div class="sats fw-bold fs-1">615,000,000 sats</div>

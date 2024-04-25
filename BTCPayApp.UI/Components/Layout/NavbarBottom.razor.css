@@ -5,9 +5,6 @@
   left: 0;
   z-index: 1030;
   height: var(--navbar-bottom-height);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
   background-color: var(--btcpay-bg-tile);
 }
 
@@ -18,7 +15,7 @@
 }
 
 .nav-item {
-  flex: 1;
+  flex: 1 1 20%;
 }
 
 ::deep .nav-link {
@@ -29,7 +26,7 @@
   align-items: center;
   justify-content: end;
   gap: var(--btcpay-space-xs);
-  padding: var(--btcpay-space-xs) var(--btcpay-space-m);
+  padding: var(--btcpay-space-s) var(--btcpay-space-m);
   text-align: center;
   color: var(--btcpay-body-text-muted);
 }

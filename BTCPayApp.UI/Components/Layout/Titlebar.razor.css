@@ -1,5 +1,5 @@
 #Titlebar {
-  height: var(--navbar-bottom-height);
+  height: var(--navbar-top-height);
   display: flex;
   justify-content: space-between;
   background-color: var(--btcpay-body-bg);

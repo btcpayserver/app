@@ -1,3 +1,8 @@
+header {
+  height: var(--navbar-top-height);
+  padding: .75rem var(--btcpay-space-m);
+}
+
 h2 {
   font-size: var(--btcpay-font-size-m);
   font-weight: var(--btcpay-font-weight-semibold);
