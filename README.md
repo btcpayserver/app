@@ -37,9 +37,3 @@ Now you can open up the IDE and run both, the server and the app:
 
 The app should open in the browser and you should see the Welcome screen.
 Click the Connect button, use `http://localhost:14142` as the server URL and an existing account for the server.
-
-### Troubleshooting
-
-If you encounter the `Unhandled exception. System.NotSupportedException: The web root changed from "PATH/app/BTCPayApp.Server/bin/Debug/net8.0/" to "PATH/app/BTCPayApp.Server/wwwroot/". Changing the host configuration using WebApplicationBuilder.WebHost is not supported.` error:
-
-Search for `builder.WebHost.UseWebRoot("wwwroot");` and comment out that line. Try building again — once it got build you can uncopmment that line again and you should be good for future builds.
