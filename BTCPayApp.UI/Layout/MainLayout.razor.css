@@ -1,12 +1,7 @@
 #MainLayout {
-  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
   scroll-padding-top: calc(var(--sticky-header-height) + var(--btcpay-space-m));
-}
-
-#MainContent {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
 }
 
 @media (max-width: 991px) {
@@ -15,11 +10,3 @@
     scroll-padding: var(--content-padding-top);
   }
 }
-
-/*
-@media (min-width: 992px) {
-  #MainContent {
-    margin-left: var(--sidebar-width);
-  }
-}
-*/

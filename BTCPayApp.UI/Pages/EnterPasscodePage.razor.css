@@ -1,0 +1,13 @@
+.container {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--btcpay-space-l);
+  padding-top: var(--btcpay-space-l);
+  padding-bottom: var(--btcpay-space-l);
+}
+
+::deep #Passcode {
+  flex: 1;
+}

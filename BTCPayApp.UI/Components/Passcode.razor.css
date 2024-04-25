@@ -1,0 +1,24 @@
+.passcode-wrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--btcpay-space-m);
+  width: 18rem;
+}
+.passcode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--btcpay-space-m);
+}
+.dot {
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--btcpay-neutral-500);
+  border-radius: 50%;
+  background: transparent;
+  transition: background-color var(--btcpay-transition-duration-default);
+}
+.dot--filled {
+  background: var(--btcpay-neutral-500);
+}

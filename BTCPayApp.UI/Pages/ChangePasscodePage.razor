@@ -1,0 +1,79 @@
+﻿@attribute [Route(Routes.ChangePasscode)]
+@layout BaseLayout
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Util
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>@GetTitle()</PageTitle>
+
+<SectionContent SectionName="top">
+    <Titlebar Back="@Routes.Settings" Fixed="false">
+        <h1>@GetTitle()</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    <p>Set a 6-digit passcode to unlock your wallet. This passcode can't be used to recover your wallet.</p>
+    <Passcode id="Passcode" />
+</section>
+
+@code {
+    private PasscodeModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    public enum PasscodeMode
+    {
+        Create,
+        Confirm
+    }
+
+    private class PasscodeModel
+    {
+        public PasscodeMode Mode { get; set; } = PasscodeMode.Create;
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Passcode { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [RequiredIf(nameof(Mode), PasscodeMode.Create)]
+        public string NewPasscode { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [RequiredIf(nameof(Mode), PasscodeMode.Confirm)]
+        [Compare("NewPasscode", ErrorMessage = "The confirmation does not match the passcode.")]
+        public string ConfirmPasscode { get; set; } = "";
+    }
+
+    private string GetValue() => Model.Mode switch
+    {
+        PasscodeMode.Create => Model.NewPasscode,
+        PasscodeMode.Confirm => Model.ConfirmPasscode,
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
+    private void SetValue(string val)
+    {
+        switch (Model.Mode)
+        {
+            case PasscodeMode.Create:
+                Model.NewPasscode = val;
+                break;
+            case PasscodeMode.Confirm:
+                Model.ConfirmPasscode = val;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    private string GetTitle() => Model.Mode switch
+    {
+        PasscodeMode.Create => "Create Passcode",
+        PasscodeMode.Confirm => "Confirm Passcode",
+        _ => throw new ArgumentOutOfRangeException()
+    };
+}

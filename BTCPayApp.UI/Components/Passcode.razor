@@ -1,0 +1,102 @@
+﻿@using BTCPayApp.UI.Util
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<div class="passcode-wrap" @attributes="InputAttributes">
+    <div class="passcode">
+        @{ var val = GetValue(); }
+        @for (var i = 1; i <= Length; i++)
+        {
+            <div class="dot @(val.Length >= i ? "dot--filled" : null)"></div>
+        }
+    </div>
+    <div class="keypad">
+        @foreach (var key in Keys)
+        {
+            <button @onclick="@(e => KeyPress(key))" type="button" class="btn btn-secondary btn-lg" data-key="@key" disabled="@(key == 'C' && val.Length == 0)">@key</button>
+        }
+    </div>
+</div>
+
+@code {
+    static int Length = 6;
+    static char[] Keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0'];
+    private PasscodeModel Model { get; set; } = new();
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    public async Task HandleValidSubmit()
+    {
+    }
+
+    private async Task KeyPress(char key)
+    {
+        var value = GetValue();
+        if (key == 'C')
+        {
+            if (value.Length > 0)
+                SetValue(value[..^1]);
+        } else if (value.Length < Length) { // Is a digit
+            SetValue(value + key);
+        }
+    }
+
+    public enum PasscodeMode
+    {
+        Enter,
+        Create,
+        Confirm
+    }
+
+    private class PasscodeModel
+    {
+        public PasscodeMode Mode { get; set; } = PasscodeMode.Enter;
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Passcode { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [RequiredIf(nameof(Mode), PasscodeMode.Create)]
+        public string NewPasscode { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [RequiredIf(nameof(Mode), PasscodeMode.Confirm)]
+        [Compare("NewPasscode", ErrorMessage = "The confirmation does not match the passcode.")]
+        public string ConfirmPasscode { get; set; } = "";
+    }
+
+    private string GetValue() => Model.Mode switch
+    {
+        PasscodeMode.Enter => Model.Passcode,
+        PasscodeMode.Create => Model.NewPasscode,
+        PasscodeMode.Confirm => Model.ConfirmPasscode,
+        _ => throw new ArgumentOutOfRangeException()
+    };
+
+    private void SetValue(string val)
+    {
+        switch (Model.Mode)
+        {
+            case PasscodeMode.Enter:
+                Model.Passcode = val;
+                break;
+            case PasscodeMode.Create:
+                Model.NewPasscode = val;
+                break;
+            case PasscodeMode.Confirm:
+                Model.ConfirmPasscode = val;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    private string GetTitle() => Model.Mode switch
+    {
+        PasscodeMode.Enter => "Enter Passcode",
+        PasscodeMode.Create => "Create Passcode",
+        PasscodeMode.Confirm => "Confirm Passcode",
+        _ => throw new ArgumentOutOfRangeException()
+    };
+}

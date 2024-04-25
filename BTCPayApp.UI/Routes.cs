@@ -14,6 +14,8 @@ public static class Routes
     public const string Dashboard = "/dashboard";
     public const string Notifications = "/notifications";
     public const string Settings = "/settings";
+    public const string ChangePasscode = "/settings/passcode";
+    public const string EnterPasscode = "/passcode";
     public const string Pair = "/pair";
     public const string Wallet = "/wallet";
     public const string WalletSetup = "/wallet/setup";

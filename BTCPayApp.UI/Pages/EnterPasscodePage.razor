@@ -1,0 +1,38 @@
+﻿@attribute [Route(Routes.EnterPasscode)]
+@layout BaseLayout
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>Enter Passcode</PageTitle>
+
+<SectionContent SectionName="top">
+    <Titlebar Close="true" Fixed="false">
+        <h1>Enter Passcode</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    <Passcode id="Passcode" />
+</section>
+
+@code {
+    private PasscodeModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    private class PasscodeModel
+    {
+        [Required]
+        [DataType(DataType.Password)]
+        public string Passcode { get; set; } = "";
+    }
+
+    private string GetValue() => Model.Passcode;
+
+    private void SetValue(string val)
+    {
+        Model.Passcode = val;
+    }
+}

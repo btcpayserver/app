@@ -27,6 +27,18 @@
 }
 
 /* Layout */
+#MainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+#Titlebar ~ #MainContent,
+#NavbarTop ~ #MainContent {
+  min-height: calc(100dvh - var(--navbar-top-height));
+}
+
 #Titlebar.fixed ~ #MainContent,
 #NavbarTop ~ #MainContent {
   padding-top: var(--navbar-top-height);
@@ -34,6 +46,7 @@
 
 #NavbarBottom ~ #MainContent {
   padding-bottom: var(--navbar-bottom-height);
+  min-height: calc(100dvh - var(--navbar-bottom-height));
 }
 
 .public-page-wrap {
@@ -129,6 +142,49 @@
   align-items: center;
   justify-content: space-between;
   font-weight: var(--btcpay-font-weight-semibold);
+}
+
+/* Keypad */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.keypad .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  position: relative;
+  border-radius: 0;
+  border-color: transparent !important;
+  font-weight: var(--btcpay-font-weight-semibold);
+  font-size: 24px;
+  min-height: 3.5rem;
+  height: 8vh;
+  max-height: 6rem;
+  color: var(--btcpay-body-text);
+}
+.keypad .btn[data-key="+"] {
+  font-size: 2.25em;
+}
+/* make borders collapse by shifting rows and columns by 1px */
+/* second column */
+.keypad .btn:nth-child(3n-1) {
+  margin-left: -1px;
+}
+/* third column */
+.keypad .btn:nth-child(3n) {
+  margin-left: -1px;
+}
+/* from second row downwards */
+.keypad .btn:nth-child(n+4) {
+  margin-top: -1px;
+}
+/* ensure highlighted button is topmost */
+.keypad .btn:hover,
+.keypad .btn:focus,
+.keypad .btn:active {
+  z-index: 1;
 }
 
 /* Blazor error */
