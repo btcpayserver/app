@@ -1,7 +1,6 @@
 ﻿using BTCPayApp.Core.Data;
 using BTCPayApp.Core.LDK;
 using NBitcoin;
-using NLDK;
 using org.ldk.structs;
 using org.ldk.util;
 using UInt128 = org.ldk.util.UInt128;
@@ -37,20 +36,19 @@ public class LDKSignerProvider : SignerProviderInterface
     public Result_CVec_u8ZNoneZ get_destination_script(byte[] channel_keys_id)
     {
         var script = _currentWalletService.DeriveScript().GetAwaiter().GetResult();
-        return Result_CVec_u8ZNoneZ.ok(script.ToScript().ToBytes());
+        return Result_CVec_u8ZNoneZ.ok(script.ToBytes());
     }
 
     public Result_ShutdownScriptNoneZ get_shutdown_scriptpubkey()
     {
         var script = _currentWalletService.DeriveScript().GetAwaiter().GetResult();
-        var s = script.ToScript();
 
 
-        if (!s.IsScriptType(ScriptType.Witness))
+        if (!script.IsScriptType(ScriptType.Witness))
         { throw new NotSupportedException("Generated a non witness script."); }
 
 
-        var witnessParams = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(s);
+        var witnessParams = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(script);
         var result = ShutdownScript.new_witness_program(new WitnessProgram(witnessParams.Program,
             new WitnessVersion((byte) witnessParams.Version)));
         if(result is Result_ShutdownScriptInvalidShutdownScriptZ.Result_ShutdownScriptInvalidShutdownScriptZ_OK ok)

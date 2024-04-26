@@ -14,17 +14,17 @@ public class LDKFundingGenerationReadyEventHandler: ILDKEventHandler<Event.Event
     private readonly LDKFeeEstimator _feeEstimator;
     private readonly CurrentWalletService _currentWalletService;
     private readonly ChannelManager _channelManager;
-    private readonly WalletService _walletService;
+    private readonly LightningNodeService _lightningNodeService;
 
     public record FundingTransactionGeneratedEvent(Event.Event_FundingGenerationReady evt, Transaction tx);
     public event EventHandler<FundingTransactionGeneratedEvent>? FundingTransactionGenerated;
 
-    public LDKFundingGenerationReadyEventHandler(LDKFeeEstimator feeEstimator, CurrentWalletService currentWalletService, ChannelManager channelManager, WalletService walletService)
+    public LDKFundingGenerationReadyEventHandler(LDKFeeEstimator feeEstimator, CurrentWalletService currentWalletService, ChannelManager channelManager, LightningNodeService lightningNodeService)
     {
         _feeEstimator = feeEstimator;
         _currentWalletService = currentWalletService;
         _channelManager = channelManager;
-        _walletService = walletService;
+        _lightningNodeService = lightningNodeService;
     }
     public async Task Handle(Event.Event_FundingGenerationReady eventFundingGenerationReady)
     {
@@ -34,7 +34,7 @@ public class LDKFundingGenerationReadyEventHandler: ILDKEventHandler<Event.Event
             new(Money.Satoshis(eventFundingGenerationReady.channel_value_satoshis),
                 Script.FromBytesUnsafe(eventFundingGenerationReady.output_script))
         };
-        var tx = await _walletService.CreateTransaction(_currentWalletService.CurrentWallet, txOuts, feeRate);
+        var tx = await _lightningNodeService.CreateTransaction(_currentWalletService.CurrentWallet, txOuts, feeRate);
         if (tx is null)
         {
             _channelManager.close_channel(eventFundingGenerationReady.temporary_channel_id, eventFundingGenerationReady.counterparty_node_id);

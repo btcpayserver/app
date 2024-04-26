@@ -84,7 +84,7 @@ public static class LDKExtensions
         services.AddScoped(provider =>
         {
             var feeEstimator = provider.GetRequiredService<FeeEstimator>();
-            var walletService = provider.GetRequiredService<WalletService>();
+            var walletService = provider.GetRequiredService<LightningNodeService>();
             var watch = provider.GetRequiredService<Watch>();
             var broadcasterInterface = provider.GetRequiredService<BroadcasterInterface>();
             var router = provider.GetRequiredService<Router>();

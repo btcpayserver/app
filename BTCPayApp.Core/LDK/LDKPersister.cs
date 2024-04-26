@@ -10,13 +10,13 @@ namespace nldksample.LDK;
 public class LDKPersister: PersisterInterface
 {
     private readonly CurrentWalletService _currentWalletService;
-    private readonly WalletService _walletService;
+    private readonly LightningNodeService _lightningNodeService;
     private readonly IConfigProvider _configProvider;
 
-    public LDKPersister(CurrentWalletService currentWalletService, WalletService walletService, IConfigProvider configProvider)
+    public LDKPersister(CurrentWalletService currentWalletService, LightningNodeService lightningNodeService, IConfigProvider configProvider)
     {
         _currentWalletService = currentWalletService;
-        _walletService = walletService;
+        _lightningNodeService = lightningNodeService;
         _configProvider = configProvider;
     }
     public Result_NoneIOErrorZ persist_manager(ChannelManager channel_manager)
@@ -27,13 +27,13 @@ public class LDKPersister: PersisterInterface
 
     public Result_NoneIOErrorZ persist_graph(NetworkGraph network_graph)
     {
-        _walletService.UpdateNetworkGraph(network_graph).ConfigureAwait(false).GetAwaiter().GetResult();
+        _lightningNodeService.UpdateNetworkGraph(network_graph).ConfigureAwait(false).GetAwaiter().GetResult();
         return Result_NoneIOErrorZ.ok();
     }
 
     public Result_NoneIOErrorZ persist_scorer(WriteableScore scorer)
     {
-        _walletService.UpdateScore(scorer).ConfigureAwait(false).GetAwaiter().GetResult();
+        _lightningNodeService.UpdateScore(scorer).ConfigureAwait(false).GetAwaiter().GetResult();
         return Result_NoneIOErrorZ.ok();
     }
 }

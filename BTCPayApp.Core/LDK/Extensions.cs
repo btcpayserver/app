@@ -28,12 +28,12 @@ public interface IScopedHostedService : IHostedService
 
 public class LDKWalletLoggerFactory : ILoggerFactory
 {
-    private readonly WalletService _walletService;
+    private readonly LightningNodeService _lightningNodeService;
     private readonly ILoggerFactory _inner;
 
-    public LDKWalletLoggerFactory(WalletService walletService, ILoggerFactory loggerFactory)
+    public LDKWalletLoggerFactory(LightningNodeService lightningNodeService, ILoggerFactory loggerFactory)
     {
-        _walletService = walletService;
+        _lightningNodeService = lightningNodeService;
         _inner = loggerFactory;
     }
 
@@ -52,7 +52,7 @@ public class LDKWalletLoggerFactory : ILoggerFactory
     public ILogger CreateLogger(string category)
     {
         var categoryName = (string.IsNullOrWhiteSpace(category) ? "LDK" : $"LDK.{category}") +
-                           $"[{_walletService.CurrentWallet}]";
+                           $"[{_lightningNodeService.CurrentWallet}]";
         LoggerWrapper logger = new LoggerWrapper(_inner.CreateLogger(categoryName));
 
         logger.LogEvent += (sender, message) =>
@@ -325,7 +325,8 @@ public class LDKNode : IAsyncDisposable, IHostedService
     private readonly LDKPeerHandler _peerHandler;
 
     public LDKNode(IServiceProvider serviceProvider,
-        CurrentWalletService currentWalletService, LDKWalletLogger logger, ChannelManager channelManager, LDKPeerHandler peerHandler)
+        CurrentWalletService currentWalletService, LDKWalletLogger logger, ChannelManager channelManager,
+        LDKPeerHandler peerHandler)
     {
         _currentWalletService = currentWalletService;
         _logger = logger;
@@ -335,11 +336,6 @@ public class LDKNode : IAsyncDisposable, IHostedService
     }
 
     public PubKey NodeId => new(_channelManager.get_our_node_id());
-    
-    public NodeInfo? NodeInfo => _peerHandler.Endpoint is null ? null :  NodeInfo.Parse($"{NodeId}@{_peerHandler.Endpoint}");
-    
-
-    public event EventHandler OnDisposing;
 
 
     public IServiceProvider ServiceProvider { get; }
@@ -353,7 +349,7 @@ public class LDKNode : IAsyncDisposable, IHostedService
         bool exists;
         try
         {
-await Semaphore.WaitAsync(cancellationToken);
+            await Semaphore.WaitAsync(cancellationToken);
             exists = _started is not null;
             _started ??= new TaskCompletionSource();
         }
@@ -361,6 +357,7 @@ await Semaphore.WaitAsync(cancellationToken);
         {
             Semaphore.Release();
         }
+
         if (exists)
         {
             await _started.Task;
@@ -369,12 +366,13 @@ await Semaphore.WaitAsync(cancellationToken);
 
 
         var services = ServiceProvider.GetServices<IScopedHostedService>();
-        
-        _logger.LogInformation("Starting LDKNode services" );
+
+        _logger.LogInformation("Starting LDKNode services");
         foreach (var service in services)
         {
             await service.StartAsync(cancellationToken);
         }
+
         _started.SetResult();
         _logger.LogInformation("LDKNode started");
     }
@@ -391,6 +389,7 @@ await Semaphore.WaitAsync(cancellationToken);
         {
             Semaphore.Release();
         }
+
         if (!exists)
             return;
 
@@ -406,46 +405,46 @@ await Semaphore.WaitAsync(cancellationToken);
     public async ValueTask DisposeAsync()
     {
         await StopAsync(CancellationToken.None);
-        OnDisposing?.Invoke(this, EventArgs.Empty);
     }
 }
 
-
-
 public static class ChannelManagerHelper
 {
-
-    public static ChannelMonitor[] GetInitialMonitors(IEnumerable<byte[]> channelMonitorsSerialized, EntropySource entropySource, SignerProvider signerProvider )
+    public static ChannelMonitor[] GetInitialMonitors(IEnumerable<byte[]> channelMonitorsSerialized,
+        EntropySource entropySource, SignerProvider signerProvider)
     {
         var monitorFundingSet = new HashSet<OutPoint>();
         return channelMonitorsSerialized.Select(bytes =>
         {
             if (UtilMethods.C2Tuple_ThirtyTwoBytesChannelMonitorZ_read(bytes, entropySource,
-                    signerProvider) is not Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ.Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK res)
+                    signerProvider) is not Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ.
+                Result_C2Tuple_ThirtyTwoBytesChannelMonitorZDecodeErrorZ_OK res)
             {
                 throw new SerializationException("Serialized ChannelMonitor was corrupt");
             }
+
             var monitor = res.res.get_b();
 
             if (!monitorFundingSet.Add(monitor.get_funding_txo().get_a()))
             {
-                throw new SerializationException("Set of ChannelMonitors contained duplicates (ie the same funding_txo was set on multiple monitors)");
+                throw new SerializationException(
+                    "Set of ChannelMonitors contained duplicates (ie the same funding_txo was set on multiple monitors)");
             }
-            return monitor;
 
+            return monitor;
         }).ToArray();
     }
-    
-    
-    public static  ChannelManager? Load(ChannelMonitor[] channelMonitors, byte[]? channelManagerSerialized, 
-        EntropySource entropySource, SignerProvider signerProvider, 
-        NodeSigner nodeSigner, FeeEstimator feeEstimator, 
-        Watch watch, BroadcasterInterface txBroadcaster, 
+
+
+    public static ChannelManager? Load(ChannelMonitor[] channelMonitors, byte[]? channelManagerSerialized,
+        EntropySource entropySource, SignerProvider signerProvider,
+        NodeSigner nodeSigner, FeeEstimator feeEstimator,
+        Watch watch, BroadcasterInterface txBroadcaster,
         Router router, Logger logger, UserConfig config, Filter filter)
     {
-        var resManager = UtilMethods.C2Tuple_ThirtyTwoBytesChannelManagerZ_read(channelManagerSerialized, entropySource, 
-            nodeSigner, signerProvider, feeEstimator, 
-            watch, txBroadcaster, 
+        var resManager = UtilMethods.C2Tuple_ThirtyTwoBytesChannelManagerZ_read(channelManagerSerialized, entropySource,
+            nodeSigner, signerProvider, feeEstimator,
+            watch, txBroadcaster,
             router, logger, config, channelMonitors);
         if (!resManager.is_ok())
         {
@@ -456,21 +455,24 @@ public static class ChannelManagerHelper
         {
             monitor.load_outputs_to_watch(filter, logger);
         }
-        return (resManager as Result_C2Tuple_ThirtyTwoBytesChannelManagerZDecodeErrorZ.Result_C2Tuple_ThirtyTwoBytesChannelManagerZDecodeErrorZ_OK)?.res.get_b();
+
+        return (resManager as Result_C2Tuple_ThirtyTwoBytesChannelManagerZDecodeErrorZ.
+            Result_C2Tuple_ThirtyTwoBytesChannelManagerZDecodeErrorZ_OK)?.res.get_b();
     }
 }
 
 public class CurrentWalletService
 {
-    private readonly WalletService _walletService;
+    private readonly LightningNodeService _lightningNodeService;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IConfigProvider _configProvider;
 
     public WalletConfig? Wallet { get; private set; }
 
-    public CurrentWalletService( WalletService walletService, IDbContextFactory<AppDbContext> dbContextFactory, IConfigProvider configProvider)
+    public CurrentWalletService(LightningNodeService lightningNodeService,
+        IDbContextFactory<AppDbContext> dbContextFactory, IConfigProvider configProvider)
     {
-        _walletService = walletService;
+        _lightningNodeService = lightningNodeService;
         _dbContextFactory = dbContextFactory;
         _configProvider = configProvider;
     }
@@ -481,12 +483,12 @@ public class CurrentWalletService
         {
             throw new InvalidOperationException("wallet is already selected");
         }
-        Wallet = wallet;
-      
-        WalletSelected.SetResult();
 
+        Wallet = wallet;
+
+        WalletSelected.SetResult();
     }
-    
+
 
     public byte[] Seed { get; private set; }
 
@@ -503,18 +505,21 @@ public class CurrentWalletService
     public TaskCompletionSource WalletSelected { get; } = new();
 
     private readonly TaskCompletionSource<ChannelMonitor[]?> icm = new();
+
     public async Task<ChannelMonitor[]> GetInitialChannelMonitors()
     {
         return await icm.Task;
     }
-    private async Task<ChannelMonitor[]> GetInitialChannelMonitors(EntropySource entropySource, SignerProvider signerProvider)
+
+    private async Task<ChannelMonitor[]> GetInitialChannelMonitors(EntropySource entropySource,
+        SignerProvider signerProvider)
     {
         await WalletSelected.Task;
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
         var data = await db.LightningChannels.Include(c => c.Setting).Select(channel => channel.Setting.Value)
             .ToArrayAsync();
-        
+
         var channels = ChannelManagerHelper.GetInitialMonitors(data, entropySource, signerProvider);
         icm.SetResult(channels);
         return channels;
@@ -525,14 +530,15 @@ public class CurrentWalletService
         await WalletSelected.Task;
         return await _configProvider.Get<byte[]>("ChannelManager") ?? Array.Empty<byte>();
     }
-    
+
     public async Task UpdateChannelManager(ChannelManager serializedChannelManager)
     {
         await WalletSelected.Task;
         await _configProvider.Set("ChannelManager", serializedChannelManager.write());
     }
-    
-    public async Task<(byte[] serializedChannelManager, ChannelMonitor[] channelMonitors)?> GetSerializedChannelManager(EntropySource entropySource, SignerProvider signerProvider)
+
+    public async Task<(byte[] serializedChannelManager, ChannelMonitor[] channelMonitors)?> GetSerializedChannelManager(
+        EntropySource entropySource, SignerProvider signerProvider)
     {
         await WalletSelected.Task;
 
@@ -545,5 +551,10 @@ public class CurrentWalletService
 
         var channels = await GetInitialChannelMonitors(entropySource, signerProvider);
         return (data, channels);
+    }
+
+    public async Task<Script> DeriveScript()
+    {
+        throw new NotImplementedException();
     }
 }

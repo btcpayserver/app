@@ -10,18 +10,18 @@ public class StateMiddleware : Middleware
 {
     private readonly IConfigProvider _configProvider;
     private readonly BTCPayConnection _btcPayConnection;
-    private readonly WalletService _walletService;
+    private readonly LightningNodeService _lightningNodeService;
 
     public const string UiStateConfigKey = "uistate";
 
     public StateMiddleware(
         IConfigProvider configProvider,
         BTCPayConnection btcPayConnection,
-        WalletService walletService)
+        LightningNodeService lightningNodeService)
     {
         _configProvider = configProvider;
         _btcPayConnection = btcPayConnection;
-        _walletService = walletService;
+        _lightningNodeService = lightningNodeService;
     }
 
     public override async Task InitializeAsync(IDispatcher dispatcher, IStore store)
@@ -51,10 +51,10 @@ public class StateMiddleware : Middleware
         _btcPayConnection.ConnectionChanged += (sender, args) =>
             dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(_btcPayConnection.Connection?.State));
 
-        _walletService.OnStateChanged += (sender, args) =>
+        _lightningNodeService.OnStateChanged += (sender, args) =>
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(args));
 
-        if (_walletService.State is not LightningNodeState.Running)
+        if (_lightningNodeService.State is not LightningNodeState.Running)
             dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.LightningState, true));
 
         

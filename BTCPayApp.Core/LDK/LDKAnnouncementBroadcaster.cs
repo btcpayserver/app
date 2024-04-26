@@ -10,18 +10,18 @@ public class LDKAnnouncementBroadcaster: IScopedHostedService, ILDKEventHandler<
     private readonly LDKPeerHandler _ldkPeerHandler;
     private readonly PeerManager _peerManager;
     private readonly ChannelManager _channelManager;
-    private readonly WalletService _walletService;
+    private readonly LightningNodeService _lightningNodeService;
     private readonly CurrentWalletService _currentWalletService;
     private CancellationTokenSource? _cts;
 
     public LDKAnnouncementBroadcaster(LDKPeerHandler ldkPeerHandler, 
-        PeerManager peerManager, ChannelManager channelManager, WalletService walletService,
+        PeerManager peerManager, ChannelManager channelManager, LightningNodeService lightningNodeService,
         CurrentWalletService currentWalletService)
     {
         _ldkPeerHandler = ldkPeerHandler;
         _peerManager = peerManager;
         _channelManager = channelManager;
-        _walletService = walletService;
+        _lightningNodeService = lightningNodeService;
         _currentWalletService = currentWalletService;
     }
     public async Task StartAsync(CancellationToken cancellationToken)

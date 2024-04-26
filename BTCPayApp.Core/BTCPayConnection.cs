@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using NBitcoin;
 using TypedSignalR.Client;
 
 namespace BTCPayApp.Core;
@@ -47,7 +48,9 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IBTCPayAppHubClient _btcPayAppServerClient;
     private IDisposable? _subscription;
-    public  IBTCPayAppHubServer? HubProxy { get; private set; }
+
+    public IBTCPayAppHubServer? HubProxy { get; private set; }
+
     // public BTCPayServerClient? Client { get; set; }
     public HubConnection? Connection { get; private set; }
     public event EventHandler? ConnectionChanged;
@@ -90,7 +93,7 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
         {
             await task1;
             var authenticated = await _accountManager.CheckAuthenticated();
-            if(!authenticated)
+            if (!authenticated)
                 await Kill();
             else
             {
@@ -143,10 +146,10 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
     {
         await Kill();
         var account = _accountManager.GetAccount();
-        if(account is null)
+        if (account is null)
             return;
         Connection = new HubConnectionBuilder()
-            .WithUrl(account.BaseUri+ "/hub/btcpayapp", options =>
+            .WithUrl(account.BaseUri + "/hub/btcpayapp", options =>
             {
                 options.Headers.Add(new KeyValuePair<string?, string?>("Authorization",
                     new AuthenticationHeaderValue("Bearer", account.AccessToken).ToString()));
@@ -186,3 +189,4 @@ public class BTCPayConnection : IHostedService, IHubConnectionObserver
         return Task.CompletedTask;
     }
 }
+   

@@ -2,9 +2,11 @@
 using System.Text.Json.Serialization;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NBitcoin;
 using NBitcoin.Scripting;
@@ -100,12 +102,13 @@ public enum LightningNodeState
     Error
 }
 
-public class WalletService : IHostedService
+public class LightningNodeService : IHostedService
 {
     private readonly Network _network;
     private readonly BTCPayConnection _btcPayConnection;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IConfigProvider _configProvider;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     private WalletConfig? _walletConfig;
 
     public LightningNodeState State
@@ -125,16 +128,18 @@ public class WalletService : IHostedService
     public event EventHandler<LightningNodeState>? OnStateChanged;
 
 
-    public WalletService(
+    public LightningNodeService(
         Network network,
         BTCPayConnection btcPayConnection,
         IDbContextFactory<AppDbContext> dbContextFactory,
-        IConfigProvider configProvider)
+        IConfigProvider configProvider,
+        IServiceScopeFactory serviceScopeFactory)
     {
         _network = network;
         _btcPayConnection = btcPayConnection;
         _dbContextFactory = dbContextFactory;
         _configProvider = configProvider;
+        _serviceScopeFactory = serviceScopeFactory;
     }
 
 
@@ -231,18 +236,52 @@ public class WalletService : IHostedService
         {
                 State = LightningNodeState.Starting;
         }
+        
+        if (_btcPayConnection.Connection?.State != HubConnectionState.Connected && State is LightningNodeState.Starting or LightningNodeState.Running)
+        {
+            State = LightningNodeState.Stopping;
+        }
     }
 
+    private IServiceScope? _nodeScope;
+    public LDKNode? Node => _nodeScope?.ServiceProvider.GetService<LDKNode>();
+    private CancellationTokenSource _startingCts; 
+    
     private void OnOnStateChanged(object? sender, LightningNodeState e)
     {
-        if (e == LightningNodeState.WaitingForConnection)
+        switch (e)
         {
-            if(_btcPayConnection.Connection.State == HubConnectionState.Connected)
-                State = LightningNodeState.Starting;
-        }
-        if(e == LightningNodeState.Starting)
-        {
-            //TODO: create scope and start LDKNode
+            case LightningNodeState.WaitingForConnection:
+            {
+                if(_btcPayConnection.Connection.State == HubConnectionState.Connected)
+                    State = LightningNodeState.Starting;
+                break;
+            }
+            case LightningNodeState.Starting:
+                if (_nodeScope is null)
+                {
+                    
+                    _nodeScope = _serviceScopeFactory.CreateAsyncScope();
+                    _startingCts = new CancellationTokenSource();
+                    _nodeScope.ServiceProvider.GetRequiredService<CurrentWalletService>().SetWallet(_walletConfig!);
+                }
+                Node.StartAsync(_startingCts.Token).ContinueWith(task =>
+                {
+                    if (task.IsFaulted)
+                    {
+                        State = LightningNodeState.Error;
+                    }
+                    else
+                    {
+                        State = LightningNodeState.Running;
+                    }
+                });
+                break;
+            case LightningNodeState.Stopping:
+                _startingCts?.CancelAsync();
+                _nodeScope?.Dispose();
+                State = _walletConfig is null ? LightningNodeState.NotConfigured : LightningNodeState.WaitingForConnection;
+                break;
         }
     }
 
