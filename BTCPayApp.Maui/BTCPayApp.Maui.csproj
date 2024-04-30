@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
         <TargetFrameworks>net8.0-ios;net8.0-android;</TargetFrameworks>
@@ -55,12 +55,13 @@
     <!-- Both iOS and Mac Catalyst -->
     <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-ios')) != true AND $(TargetFramework.StartsWith('net8.0-maccatalyst')) != true">
         <Compile Remove="**\iOS\**\*.cs" />
-        <None Include="**\iOS\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />  
+        <None Include="**\iOS\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
         <Compile Remove="**\Mac\**\*.cs" />
         <None Include="**\Mac\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
       <PackageReference Include="Xamarin.Essentials" Version="1.8.1" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
         <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.7" />

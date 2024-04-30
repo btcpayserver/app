@@ -4,6 +4,8 @@ using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
+using Plugin.Fingerprint;
+using Plugin.Fingerprint.Abstractions;
 
 namespace BTCPayApp.Maui;
 
@@ -27,6 +29,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<IConfigProvider, XamarinEssentialsConfigProvider>();
         builder.Services.AddSingleton<ISecureConfigProvider, XamarinEssentialsSecureConfigProvider>();
         builder.Services.AddSingleton<ISystemThemeProvider, XamarinSystemThemeProvider>();
+        builder.Services.AddSingleton(typeof(IFingerprint), CrossFingerprint.Current);
         builder.ConfigureLifecycleEvents(events =>
         {
             // https://learn.microsoft.com/de-de/dotnet/maui/fundamentals/app-lifecycle#platform-lifecycle-events

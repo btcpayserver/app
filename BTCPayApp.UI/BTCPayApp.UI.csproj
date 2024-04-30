@@ -7,7 +7,6 @@
     <PackageId>BTCPayApp.UI</PackageId>
   </PropertyGroup>
 
-
   <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
@@ -25,6 +24,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
     </ItemGroup>
 
 </Project>
