@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
     <PropertyGroup>
         <TargetFrameworks>net8.0-ios;net8.0-android;</TargetFrameworks>
@@ -47,13 +47,6 @@
       <ProjectReference Include="..\BTCPayApp.UI\BTCPayApp.UI.csproj" />
     </ItemGroup>
 
-    <!--
-    <ItemGroup>
-      <Content Include="..\BTCPayApp.UI\wwwroot\index.html">
-        <Link>wwwroot\index.html</Link>
-      </Content>
-    </ItemGroup>
-    -->
     <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-android')) != true">
         <Compile Remove="**\Android\**\*.cs" />
         <None Include="**\Android\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
