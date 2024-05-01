@@ -72,9 +72,8 @@ public static class LDKExtensions
 
     public static IServiceCollection AddLDK(this IServiceCollection services)
     { 
-        services.AddScoped<CurrentWalletService>();
 
-        services.AddScoped<KeysManager>(provider => KeysManager.of(provider.GetRequiredService<CurrentWalletService>().Seed, DateTimeOffset.Now.ToUnixTimeSeconds(),
+        services.AddScoped<KeysManager>(provider => KeysManager.of(provider.GetRequiredService<LDKNode>().Seed, DateTimeOffset.Now.ToUnixTimeSeconds(),
             RandomUtils.GetInt32()));
         services.AddScoped(provider => provider.GetRequiredService<KeysManager>().as_NodeSigner());
         services.AddScoped<LDKPersister>();
@@ -85,7 +84,6 @@ public static class LDKExtensions
         services.AddScoped(provider =>
         {
             var feeEstimator = provider.GetRequiredService<FeeEstimator>();
-            var walletService = provider.GetRequiredService<LightningNodeService>();
             var watch = provider.GetRequiredService<Watch>();
             var broadcasterInterface = provider.GetRequiredService<BroadcasterInterface>();
             var router = provider.GetRequiredService<Router>();
@@ -95,9 +93,9 @@ public static class LDKExtensions
             var entropySource = provider.GetRequiredService<EntropySource>();
             var nodeSigner = provider.GetRequiredService<NodeSigner>();
             var chainParameters = provider.GetRequiredService<ChainParameters>();
-            var currentWalletService = provider.GetRequiredService<CurrentWalletService>();
             var filter = provider.GetRequiredService<Filter>();
-            var channelManagerSerialized = currentWalletService
+            var node = provider.GetRequiredService<LDKNode>();
+            var channelManagerSerialized = node
                 .GetSerializedChannelManager(entropySource, signerProvider)
                 .ConfigureAwait(false)
                 .GetAwaiter()

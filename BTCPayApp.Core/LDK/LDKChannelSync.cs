@@ -1,6 +1,7 @@
 ﻿using BTCPayApp.CommonServer;
 using BTCPayApp.Core;
 using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
 using NBitcoin;
 using org.ldk.structs;
@@ -11,7 +12,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
 {
     private readonly Confirm[] _confirms;
     private readonly BTCPayConnectionManager _connectionManager;
-    private readonly CurrentWalletService _currentWalletService;
+    private readonly LDKNode _node;
     private readonly Network _network;
     private readonly Watch _watch;
     private readonly BTCPayAppServerClient _appHubClient;
@@ -21,14 +22,14 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     public LDKChannelSync(
         IEnumerable<Confirm> confirms,
         BTCPayConnectionManager connectionManager,
-        CurrentWalletService currentWalletService,
+        LDKNode node,
         Network network,
         Watch watch,
         BTCPayAppServerClient appHubClient)
     {
         _confirms = confirms.ToArray();
         _connectionManager = connectionManager;
-        _currentWalletService = currentWalletService;
+        _node = node;
         _network = network;
         _watch = watch;
         _appHubClient = appHubClient;
@@ -96,7 +97,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
             confirm.best_block_updated(bbHeader, bb.BlockHeight);
         }
 
-        var monitors = await _currentWalletService.GetInitialChannelMonitors();
+        var monitors = await _node.GetInitialChannelMonitors();
         foreach (var channelMonitor in monitors)
         {
             _watch.watch_channel(channelMonitor.get_funding_txo().get_a(), channelMonitor);

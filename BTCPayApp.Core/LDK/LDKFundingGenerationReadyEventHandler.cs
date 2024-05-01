@@ -1,7 +1,4 @@
-﻿using BTCPayApp.Core.Data;
-using BTCPayApp.Core.LDK;
-using NBitcoin;
-using NLDK;
+﻿using NBitcoin;
 using org.ldk.structs;
 using Script = NBitcoin.Script;
 using Transaction = NBitcoin.Transaction;

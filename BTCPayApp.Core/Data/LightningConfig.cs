@@ -1,13 +1,13 @@
 ﻿using System.Text.Json.Serialization;
 
 namespace BTCPayApp.Core.Data;
-// UNUSED. RIght now its contents are superficial and only useful if you want public channels.
 public class LightningConfig
 {
     public const string Key = "lightningconfig";
-    
-    public string Alias { get; set; }
-    public string Color { get; set; }
+
+    public string Alias { get; set; } = "BTCPay Server";
+    public string ScriptDerivationKey { get; set; } = WalletDerivation.NativeSegwit;
+    public string Color { get; set; } = "#51B13E";
 
     [JsonIgnore]
     public byte[] RGB
@@ -18,7 +18,7 @@ public class LightningConfig
 
             if (Color.StartsWith("#"))
             {
-                var rgBint = Convert.ToInt32("FFD700", 16);
+                var rgBint = Convert.ToInt32(Color.Substring(1), 16);
                 var red = (byte)((rgBint >> 16) & 255);
                 var green = (byte)((rgBint >> 8) & 255);
                 var blue = (byte)(rgBint & 255);

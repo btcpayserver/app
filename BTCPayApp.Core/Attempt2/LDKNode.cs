@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using NBitcoin.Scripting;
 using org.ldk.structs;
 using LightningPayment = BTCPayApp.Core.Data.LightningPayment;
 
@@ -17,7 +18,6 @@ public class LDKNode : IAsyncDisposable, IHostedService
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly BTCPayConnectionManager _connectionManager;
     private readonly ILogger _logger;
-    private readonly ChannelManager _channelManager;
     private readonly IConfigProvider _configProvider;
     private readonly OnChainWalletManager _onChainWalletManager;
 
@@ -26,20 +26,16 @@ public class LDKNode : IAsyncDisposable, IHostedService
         BTCPayConnectionManager connectionManager,
         IServiceProvider serviceProvider, 
         LDKWalletLogger logger, 
-        ChannelManager channelManager,
         IConfigProvider configProvider,
         OnChainWalletManager onChainWalletManager)
     {
         _dbContextFactory = dbContextFactory;
         _connectionManager = connectionManager;
         _logger = logger;
-        _channelManager = channelManager;
         _configProvider = configProvider;
         _onChainWalletManager = onChainWalletManager;
         ServiceProvider = serviceProvider;
     }
-
-    public PubKey NodeId => new(_channelManager.get_our_node_id());
 
 
     public IServiceProvider ServiceProvider { get; }
@@ -66,7 +62,41 @@ public class LDKNode : IAsyncDisposable, IHostedService
             return;
         }
 
+        var n = Network.GetNetwork(_onChainWalletManager.WalletConfig.Network);
 
+        Config = await _configProvider.Get<LightningConfig>(key: LightningConfig.Key)?? new LightningConfig();
+        var od = OutputDescriptor.Parse(_onChainWalletManager.WalletConfig.Derivations[Config.ScriptDerivationKey].Descriptor, n);
+
+        (BitcoinExtPubKey, RootedKeyPath[]) ExtractFromPkProvider(PubKeyProvider pubKeyProvider)
+        {
+            switch (pubKeyProvider)
+            {
+                case PubKeyProvider.Const _:
+                    throw new FormatException("Only HD output descriptors are supported.");
+                case PubKeyProvider.HD hd:
+                    if (hd.Path != null && hd.Path.ToString() != "0")
+                    {
+                        throw new FormatException("Custom change paths are not supported.");
+                    }
+                    return (hd.Extkey, null);
+                case PubKeyProvider.Origin origin:
+                    var innerResult = ExtractFromPkProvider(origin.Inner);
+                    return (innerResult.Item1, new[] { origin.KeyOriginInfo });
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        switch (od)
+        {
+            case OutputDescriptor.WPKH wpkh:
+                var (_, path) = ExtractFromPkProvider(wpkh.PkProvider);
+                Seed = new Mnemonic( _onChainWalletManager.WalletConfig.Mnemonic).DeriveExtKey().Derive(path[0]).PrivateKey.ToBytes();
+                break;
+        }
+        
+        if(Seed is null)
+            throw new InvalidOperationException("Seed for LN could noit be derived.");
         var services = ServiceProvider.GetServices<IScopedHostedService>();
 
         _logger.LogInformation("Starting LDKNode services");
@@ -78,6 +108,11 @@ public class LDKNode : IAsyncDisposable, IHostedService
         _started.SetResult();
         _logger.LogInformation("LDKNode started");
     }
+
+    public LightningConfig Config { get; private set; }
+
+    public byte[] Seed { get; private set; }
+
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
@@ -165,6 +200,13 @@ public class LDKNode : IAsyncDisposable, IHostedService
         return channels;
     }
 
+    public async Task UpdateConfig(LightningConfig config)
+    {
+        Config = config;
+        await _configProvider.Set(LightningConfig.Key, config);
+    }
+    
+    
     public async Task<byte[]?> GetRawChannelManager()
     {
         return await _configProvider.Get<byte[]>("ChannelManager") ?? Array.Empty<byte>();

@@ -1,16 +1,13 @@
-﻿using BTCPayApp.Core.Data;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 
 namespace BTCPayApp.Core.LDK;
 
 public class LDKWalletLoggerFactory : ILoggerFactory
 {
-    private readonly LightningNodeService _lightningNodeService;
     private readonly ILoggerFactory _inner;
 
-    public LDKWalletLoggerFactory(LightningNodeService lightningNodeService, ILoggerFactory loggerFactory)
+    public LDKWalletLoggerFactory(ILoggerFactory loggerFactory)
     {
-        _lightningNodeService = lightningNodeService;
         _inner = loggerFactory;
     }
 
@@ -28,8 +25,7 @@ public class LDKWalletLoggerFactory : ILoggerFactory
 
     public ILogger CreateLogger(string category)
     {
-        var categoryName = (string.IsNullOrWhiteSpace(category) ? "LDK" : $"LDK.{category}") +
-                           $"[{_lightningNodeService.CurrentWallet}]";
+        var categoryName = string.IsNullOrWhiteSpace(category) ? "LDK" : $"LDK.{category}";
         LoggerWrapper logger = new LoggerWrapper(_inner.CreateLogger(categoryName));
 
         logger.LogEvent += (sender, message) =>

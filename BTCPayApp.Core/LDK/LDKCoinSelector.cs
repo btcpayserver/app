@@ -1,4 +1,5 @@
-﻿using BTCPayApp.Core.LDK;
+﻿using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.LDK;
 using NBitcoin;
 using org.ldk.structs;
 using Transaction = NBitcoin.Transaction;
@@ -7,13 +8,11 @@ namespace nldksample.LDK;
 
 public class LDKCoinSelector : CoinSelectionSourceInterface
 {
-    private readonly CurrentWalletService _currentWalletService;
-    private readonly Network _network;
+    private readonly OnChainWalletManager _onChainWalletManager;
 
-    public LDKCoinSelector(Network network, CurrentWalletService currentWalletService)
+    public LDKCoinSelector(OnChainWalletManager onChainWalletManager)
     {
-        _currentWalletService = currentWalletService;
-        _network = network;
+        _onChainWalletManager = onChainWalletManager;
     }
     
     
@@ -38,14 +37,7 @@ public class LDKCoinSelector : CoinSelectionSourceInterface
 
     public Result_TransactionNoneZ sign_psbt(byte[] psbt)
     {
-       var psbtParsed =  PSBT.Load(psbt, _network);
+       var psbt =  _onChainWalletManager.SignPSBT(psbt).GetAwaiter().GetResult();
        return sign_tx(psbtParsed.GetGlobalTransaction().ToBytes());
-    }
-
-    public Result_TransactionNoneZ sign_tx(byte[] tx)
-    {
-        var tx1 =  Transaction.Load(tx, _network);
-        tx1 = _currentWalletService.SignTransaction(_currentWalletService.CurrentWallet,tx1).GetAwaiter().GetResult();
-        return Result_TransactionNoneZ.ok(tx1.ToBytes());
     }
 }
