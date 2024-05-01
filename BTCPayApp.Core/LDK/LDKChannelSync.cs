@@ -1,4 +1,6 @@
-﻿using BTCPayApp.Core;
+﻿using BTCPayApp.CommonServer;
+using BTCPayApp.Core;
+using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.LDK;
 using NBitcoin;
 using org.ldk.structs;
@@ -8,29 +10,33 @@ namespace nldksample.LDK;
 public class LDKChannelSync : IScopedHostedService, IDisposable
 {
     private readonly Confirm[] _confirms;
-    private readonly BTCPayConnection _connection;
+    private readonly BTCPayConnectionManager _connectionManager;
     private readonly CurrentWalletService _currentWalletService;
     private readonly Network _network;
     private readonly Watch _watch;
+    private readonly BTCPayAppServerClient _appHubClient;
     private List<IDisposable> _disposables = new();
     
 
     public LDKChannelSync(
         IEnumerable<Confirm> confirms,
-        BTCPayConnection connection,
+        BTCPayConnectionManager connectionManager,
         CurrentWalletService currentWalletService,
         Network network,
-        Watch watch)
+        Watch watch,
+        BTCPayAppServerClient appHubClient)
     {
         _confirms = confirms.ToArray();
-        _connection = connection;
+        _connectionManager = connectionManager;
         _currentWalletService = currentWalletService;
         _network = network;
         _watch = watch;
+        _appHubClient = appHubClient;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        _disposables.Clear();
         var txs1 = _confirms.SelectMany(confirm => confirm.get_relevant_txids().Select(zz =>
             (TransactionId: new uint256(zz.get_a()),
                 Height: zz.get_b(),
@@ -38,7 +44,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
                     ? new uint256(some.some)
                     : null))).ToDictionary(tuple => tuple.TransactionId, tuple => tuple);
 
-        var result = await _connection.HubProxy.FetchTxsAndTheirBlockHeads(txs1.Select(zz => zz.Key.ToString()).ToArray());
+        var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(txs1.Select(zz => zz.Key.ToString()).ToArray());
         
         
         Dictionary<uint256, List<TwoTuple_usizeTransactionZ>> confirmedTxList = new();
@@ -83,7 +89,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
             }
         }
 
-        var bb = await  _connection.HubProxy.GetBestBlock();
+        var bb = await  _connectionManager.HubProxy.GetBestBlock();
        var bbHeader = BlockHeader.Parse( bb.BlockHeader, _network).ToBytes();
         foreach (var confirm in _confirms)
         {
@@ -95,58 +101,60 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         {
             _watch.watch_channel(channelMonitor.get_funding_txo().get_a(), channelMonitor);
         }
-        _connection.
         
-        _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<NewBlockEvent>(
-            action => _nbxListener.NewBlock += action,
-            action => _nbxListener.NewBlock -= action, OnNewBlock,
+        _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<string>(
+            action =>_appHubClient.OnNewBlock += action,
+            action => _appHubClient.OnNewBlock -= action, OnNewBlock,
             cancellationToken)); 
         
-        _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<TransactionUpdateEvent>(
-            action => _nbxListener.TransactionUpdate += action,
-            action => _nbxListener.TransactionUpdate -= action, OnTransactionUpdate,
+        _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<string>(
+            action => _appHubClient.OnTransactionDetected += action,
+            action => _appHubClient.OnTransactionDetected -= action, OnTransactionUpdate,
             cancellationToken));
     }
 
   
 
-    private async Task OnTransactionUpdate(TransactionUpdateEvent txUpdate, CancellationToken cancellationToken)
+    private async Task OnTransactionUpdate(string txUpdate, CancellationToken cancellationToken)
     {
-        if (_currentWalletService.CurrentWallet != txUpdate.Wallet.Id)
-            return;
+        var txResult = await  _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(new[] {txUpdate});
+        var tx = txResult.Txs[txUpdate];
 
-        var tx = txUpdate.TransactionInformation.Transaction;
-        var txHash = tx.GetHash();
+        var txHash = new uint256(txUpdate);
+        var txHashBytes = txHash.ToBytes();
+        
         byte[]? headerBytes = null;
-        if (txUpdate.TransactionInformation.Confirmations > 0)
+        int? blockHeight = null;
+        if (tx.BlockHash is not null )
         {
-            var header = await _explorerClient.RPCClient
-                .GetBlockHeaderAsync(txUpdate.TransactionInformation.BlockHash, CancellationToken.None);
-            headerBytes = header.ToBytes();
+            var header = txResult.Blocks[tx.BlockHash];
+            blockHeight = txResult.BlockHeghts[tx.BlockHash];
+            headerBytes = BlockHeader.Parse(header, _network).ToBytes();
         }
 
         foreach (var confirm in _confirms)
         {
-            if (txUpdate.TransactionInformation.Confirmations == 0)
-                confirm.transaction_unconfirmed(txHash.ToBytes());
+            if (blockHeight is null)
+                confirm.transaction_unconfirmed(txHashBytes);
             else
-                confirm.transactions_confirmed(headerBytes, new[] {TwoTuple_usizeTransactionZ.of(1, tx.ToBytes()),},
-                    (int) txUpdate.TransactionInformation.Height);
+                confirm.transactions_confirmed(headerBytes, [TwoTuple_usizeTransactionZ.of(1, txHashBytes)],blockHeight.Value);
         }
     }
-    private async Task OnNewBlock(NewBlockEvent e, CancellationToken arg2)
+    private async Task OnNewBlock(string e, CancellationToken arg2)
     {
-        var header = await _explorerClient.RPCClient.GetBlockHeaderAsync(e.Hash, CancellationToken.None);
+        var blockHeaderResponse = await _connectionManager.HubProxy.GetBestBlock();
+        var header = BlockHeader.Parse(blockHeaderResponse.BlockHeader, _network);
         var headerBytes = header.ToBytes();
         foreach (var confirm in _confirms)
         {
-            confirm.best_block_updated(headerBytes, e.Height);
+            confirm.best_block_updated(headerBytes, blockHeaderResponse.BlockHeight);
         }
     }
 
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        
     }
 
     public void Dispose()

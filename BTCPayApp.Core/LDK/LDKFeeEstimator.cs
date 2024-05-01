@@ -1,4 +1,5 @@
 ﻿using BTCPayApp.Core;
+using BTCPayApp.Core.Attempt2;
 using NBitcoin;
 using org.ldk.enums;
 using org.ldk.structs;
@@ -7,11 +8,11 @@ namespace nldksample.LDK;
 
 public class LDKFeeEstimator : FeeEstimatorInterface
 {
-    private readonly BTCPayConnection _connection;
+    private readonly BTCPayConnectionManager _connectionManager;
 
-    public LDKFeeEstimator(BTCPayConnection connection)
+    public LDKFeeEstimator(BTCPayConnectionManager connectionManager)
     {
-        _connection = connection;
+        _connectionManager = connectionManager;
     }
 
     public int get_est_sat_per_1000_weight(ConfirmationTarget confirmation_target)
@@ -39,7 +40,7 @@ public class LDKFeeEstimator : FeeEstimatorInterface
 
     public async Task<FeeRate> GetFeeRate(int blockTarget = 3)
     {
-        var result =  await _connection.HubProxy.GetFeeRate(blockTarget);
+        var result =  await _connectionManager.HubProxy.GetFeeRate(blockTarget);
         return new FeeRate(result);
     }
 }

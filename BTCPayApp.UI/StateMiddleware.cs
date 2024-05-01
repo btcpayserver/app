@@ -1,4 +1,5 @@
 ﻿using BTCPayApp.Core;
+using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.UI.Features;
@@ -9,18 +10,18 @@ namespace BTCPayApp.UI;
 public class StateMiddleware : Middleware
 {
     private readonly IConfigProvider _configProvider;
-    private readonly BTCPayConnection _btcPayConnection;
+    private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly LightningNodeService _lightningNodeService;
 
     public const string UiStateConfigKey = "uistate";
 
     public StateMiddleware(
         IConfigProvider configProvider,
-        BTCPayConnection btcPayConnection,
+        BTCPayConnectionManager btcPayConnectionManager,
         LightningNodeService lightningNodeService)
     {
         _configProvider = configProvider;
-        _btcPayConnection = btcPayConnection;
+        _btcPayConnectionManager = btcPayConnectionManager;
         _lightningNodeService = lightningNodeService;
     }
 
@@ -48,8 +49,8 @@ public class StateMiddleware : Middleware
 
     private void ListenIn(IDispatcher dispatcher)
     {
-        _btcPayConnection.ConnectionChanged += (sender, args) =>
-            dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(_btcPayConnection.Connection?.State));
+        _btcPayConnectionManager.ConnectionChanged += (sender, args) =>
+            dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(_btcPayConnectionManager.Connection?.State));
 
         _lightningNodeService.OnStateChanged += (sender, args) =>
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(args));

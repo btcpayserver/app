@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.LDK;
 using org.ldk.structs;
@@ -10,19 +11,16 @@ public class LDKAnnouncementBroadcaster: IScopedHostedService, ILDKEventHandler<
     private readonly LDKPeerHandler _ldkPeerHandler;
     private readonly PeerManager _peerManager;
     private readonly ChannelManager _channelManager;
-    private readonly LightningNodeService _lightningNodeService;
-    private readonly CurrentWalletService _currentWalletService;
+    private readonly LightningNodeManager _lightningNodeManager;
     private CancellationTokenSource? _cts;
 
     public LDKAnnouncementBroadcaster(LDKPeerHandler ldkPeerHandler, 
-        PeerManager peerManager, ChannelManager channelManager, LightningNodeService lightningNodeService,
-        CurrentWalletService currentWalletService)
+        PeerManager peerManager, ChannelManager channelManager, LightningNodeManager lightningNodeManager)
     {
         _ldkPeerHandler = ldkPeerHandler;
         _peerManager = peerManager;
         _channelManager = channelManager;
-        _lightningNodeService = lightningNodeService;
-        _currentWalletService = currentWalletService;
+        _lightningNodeManager = lightningNodeManager;
     }
     public async Task StartAsync(CancellationToken cancellationToken)
     {

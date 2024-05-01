@@ -1,6 +1,7 @@
 ﻿using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
 using org.ldk.structs;
+using LightningPayment = BTCPayApp.Core.Data.LightningPayment;
 
 namespace nldksample.LDK;
 
@@ -32,7 +33,7 @@ public class LDKPaymentEventsHandler :
     public async Task Handle(Event.Event_PaymentClaimed eventPaymentClaimed)
     {
         var preimage = eventPaymentClaimed.purpose.GetPreimage(out var secret);
-        await _currentWalletService.Payment(new LightningPaymentRecord()
+        await _currentWalletService.Payment(new LightningPayment()
         {
             PaymentHash = Convert.ToHexString(eventPaymentClaimed.payment_hash),
             Inbound = true,

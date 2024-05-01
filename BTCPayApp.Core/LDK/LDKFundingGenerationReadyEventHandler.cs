@@ -34,7 +34,7 @@ public class LDKFundingGenerationReadyEventHandler: ILDKEventHandler<Event.Event
             new(Money.Satoshis(eventFundingGenerationReady.channel_value_satoshis),
                 Script.FromBytesUnsafe(eventFundingGenerationReady.output_script))
         };
-        var tx = await _lightningNodeService.CreateTransaction(_currentWalletService.CurrentWallet, txOuts, feeRate);
+        var tx = await _currentWalletService.CreateTransaction(txOuts, feeRate);
         if (tx is null)
         {
             _channelManager.close_channel(eventFundingGenerationReady.temporary_channel_id, eventFundingGenerationReady.counterparty_node_id);

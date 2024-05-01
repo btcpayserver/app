@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 using BTCPayApp.Core;
+using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.LDK;
@@ -170,8 +171,6 @@ public static class LDKExtensions
         services.AddScoped<LDKSignerProvider>();
         services.AddScoped<SignerProvider>(provider =>
             SignerProvider.new_impl(provider.GetRequiredService<LDKSignerProvider>()));
-        services.AddScoped<LDKFilter>();
-        services.AddScoped<Filter>(provider => Filter.new_impl(provider.GetRequiredService<LDKFilter>()));
         services.AddScoped<ChainMonitor>(provider =>
             ChainMonitor.of(
                 Option_FilterZ.some(provider.GetRequiredService<Filter>()),
@@ -198,7 +197,7 @@ public static class LDKExtensions
         services.AddScoped<ChainParameters>(provider =>
         {
             
-            var connection = provider.GetRequiredService<BTCPayConnection>();
+            var connection = provider.GetRequiredService<BTCPayConnectionManager>();
             var resp = connection.HubProxy.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
             var hash = uint256.Parse(resp.BlockHash).ToBytes();
             

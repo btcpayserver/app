@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.UI.Auth;
@@ -24,11 +25,11 @@ public static class StartupExtensions
         });
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddHttpClient();
-        serviceCollection.AddSingleton<BTCPayConnection>();
+        serviceCollection.AddSingleton<BTCPayConnectionManager>();
         serviceCollection.AddSingleton<Network>(Network.RegTest);
         serviceCollection.AddSingleton<LightningNodeService>();
         serviceCollection.AddSingleton<IBTCPayAppHubClient,BTCPayAppServerClient>();
-        serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BTCPayConnection>());
+        serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BTCPayConnectionManager>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<LightningNodeService>());
         
         serviceCollection.AddSingleton<BTCPayAppClient>();
