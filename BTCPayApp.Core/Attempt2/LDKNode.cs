@@ -67,7 +67,7 @@ public class LDKNode : IAsyncDisposable, IHostedService
         Config = await _configProvider.Get<LightningConfig>(key: LightningConfig.Key)?? new LightningConfig();
         var od = OutputDescriptor.Parse(_onChainWalletManager.WalletConfig.Derivations[Config.ScriptDerivationKey].Descriptor, n);
 
-        (BitcoinExtPubKey, RootedKeyPath[]) ExtractFromPkProvider(PubKeyProvider pubKeyProvider)
+        (BitcoinExtPubKey, RootedKeyPath) ExtractFromPkProvider(PubKeyProvider pubKeyProvider)
         {
             switch (pubKeyProvider)
             {
@@ -81,7 +81,7 @@ public class LDKNode : IAsyncDisposable, IHostedService
                     return (hd.Extkey, null);
                 case PubKeyProvider.Origin origin:
                     var innerResult = ExtractFromPkProvider(origin.Inner);
-                    return (innerResult.Item1, new[] { origin.KeyOriginInfo });
+                    return (innerResult.Item1,  origin.KeyOriginInfo );
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -91,7 +91,7 @@ public class LDKNode : IAsyncDisposable, IHostedService
         {
             case OutputDescriptor.WPKH wpkh:
                 var (_, path) = ExtractFromPkProvider(wpkh.PkProvider);
-                Seed = new Mnemonic( _onChainWalletManager.WalletConfig.Mnemonic).DeriveExtKey().Derive(path[0]).PrivateKey.ToBytes();
+                Seed = new Mnemonic( _onChainWalletManager.WalletConfig.Mnemonic).DeriveExtKey().Derive(path).PrivateKey.ToBytes();
                 break;
         }
         
@@ -192,7 +192,7 @@ public class LDKNode : IAsyncDisposable, IHostedService
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
-        var data = await db.LightningChannels.Include(c => c.Setting).Select(channel => channel.Setting.Value)
+        var data = await db.LightningChannels.Select(channel => channel.Data)
             .ToArrayAsync();
 
         var channels = ChannelManagerHelper.GetInitialMonitors(data, entropySource, signerProvider);
@@ -253,6 +253,38 @@ public class LDKNode : IAsyncDisposable, IHostedService
     {
         var identifier = _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier;
         
-        await _connectionManager.HubProxy.TrackScripts(WalletDerivation.LightningScripts,scripts.Select(script => script.ToHex()).ToArray());
+        await _connectionManager.HubProxy.TrackScripts(identifier,scripts.Select(script => script.ToHex()).ToArray());
+    }
+
+    public async Task UpdateChannel(string id, byte[] write)
+    {
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        
+        var channel = await context.LightningChannels.SingleOrDefaultAsync(lightningChannel => lightningChannel.Id == id || lightningChannel.Aliases.Contains(id));
+
+        if (channel is not null)
+        {
+            if (!channel.Aliases.Contains(channel.Id))
+            {
+                channel.Aliases.Add(channel.Id);
+            }
+            if (!channel.Aliases.Contains(id))
+            {
+                channel.Aliases.Add(id);
+            }
+
+            channel.Id = id;
+            channel.Data = write;
+        }
+        else
+        {
+            await context.LightningChannels.AddAsync(new Channel()
+            {
+                Id = id,
+                Data = write,
+                Aliases = [id]
+            });
+        }
+        await context.SaveChangesAsync();
     }
 }

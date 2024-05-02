@@ -14,8 +14,6 @@ public class LDKCoinSelector : CoinSelectionSourceInterface
     {
         _onChainWalletManager = onChainWalletManager;
     }
-    
-    
     public Result_CoinSelectionNoneZ select_confirmed_utxos(byte[] claim_id, Input[] must_spend,
         org.ldk.structs.TxOut[] must_pay_to,
         int target_feerate_sat_per_1000_weight)
@@ -23,7 +21,7 @@ public class LDKCoinSelector : CoinSelectionSourceInterface
         var feerate = new FeeRate(Money.Satoshis(target_feerate_sat_per_1000_weight));
         var txouts = must_pay_to.Select(x => x.TxOut()).ToList();
         var coins = must_spend.Select(x => x.Coin()).ToList();
-        var tx = _currentWalletService.CreateTransaction(
+        var tx = _onChainWalletManager.CreateTransaction(
             txouts, feerate,
             coins).GetAwaiter().GetResult();
         if (tx is null)
@@ -35,9 +33,12 @@ public class LDKCoinSelector : CoinSelectionSourceInterface
         return Result_CoinSelectionNoneZ.ok(CoinSelection.of(utxos, changeTxOut is null ? Option_TxOutZ.none() : Option_TxOutZ.some(changeTxOut.TxOut())));
     }
 
-    public Result_TransactionNoneZ sign_psbt(byte[] psbt)
+    public Result_TransactionNoneZ sign_psbt(byte[] psbtBytes)
     {
-       var psbt =  _onChainWalletManager.SignPSBT(psbt).GetAwaiter().GetResult();
-       return sign_tx(psbtParsed.GetGlobalTransaction().ToBytes());
+        var psbt = PSBT.Load(psbtBytes, _onChainWalletManager.Network);
+       var signedPsbt =  _onChainWalletManager.SignTransaction(psbt).GetAwaiter().GetResult();
+       return signedPsbt is null
+           ? Result_TransactionNoneZ.err()
+           : Result_TransactionNoneZ.ok(signedPsbt.ExtractTransaction().ToBytes());
     }
 }

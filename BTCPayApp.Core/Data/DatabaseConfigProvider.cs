@@ -38,10 +38,10 @@ public class DatabaseConfigProvider : IConfigProvider
         };
         await db.Settings
             .Upsert(setting)
-            .WhenMatched((existing, provided) => new Setting
-            {
-                Version = existing.Version + 1
-            })
+            // .WhenMatched((existing, provided) => new Setting
+            // {
+            //     Version = existing.Version + 1
+            // })
             .RunAsync();
         
     }

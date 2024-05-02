@@ -4,6 +4,35 @@ using UInt128 = org.ldk.util.UInt128;
 
 namespace nldksample.LDK;
 
+public class LDKChannelEventsHandler: 
+    ILDKEventHandler<Event.Event_ChannelClosed>,
+    ILDKEventHandler<Event.Event_ChannelPending>,
+    ILDKEventHandler<Event.Event_ChannelReady>
+{
+    private readonly ChannelManager _channelManager;
+
+    public LDKChannelEventsHandler(ChannelManager channelManager)
+    {
+        _channelManager = channelManager;
+    }
+
+    public async Task Handle(Event.Event_ChannelClosed @event)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task Handle(Event.Event_ChannelPending @event)
+    {
+        throw new NotImplementedException();
+    }
+
+    public async Task Handle(Event.Event_ChannelReady @event)
+    {
+        throw new NotImplementedException();
+    }
+}
+
+
 public class LDKOpenChannelRequestEventHandler: ILDKEventHandler<Event.Event_OpenChannelRequest>
 {
     private readonly ChannelManager _channelManager;

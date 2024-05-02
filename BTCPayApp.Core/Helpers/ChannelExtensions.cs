@@ -1,5 +1,10 @@
 ﻿using System.Threading.Channels;
+using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
+using NBitcoin;
+using NBitcoin.Scripting;
+using org.ldk.structs;
+using Channel = System.Threading.Channels.Channel;
 
 namespace nldksample.LDK;
 
@@ -38,6 +43,57 @@ public static class ChannelExtensions
                 await processor(item, cancellationToken);
             }
         }
+    }
+
+
+    public static (BitcoinExtPubKey, RootedKeyPath, ScriptPubKeyType)? ExtractFromDescriptor(this string descriptor, Network network)
+    {
+        var od = OutputDescriptor.Parse(descriptor, network);
+
+        (BitcoinExtPubKey, RootedKeyPath) ExtractFromPkProvider(PubKeyProvider pubKeyProvider)
+        {
+            switch (pubKeyProvider)
+            {
+                case PubKeyProvider.Const _:
+                    throw new FormatException("Only HD output descriptors are supported.");
+                case PubKeyProvider.HD hd:
+                    if (hd.Path != null && hd.Path.ToString() != "0")
+                    {
+                        throw new FormatException("Custom change paths are not supported.");
+                    }
+                    return (hd.Extkey, null);
+                case PubKeyProvider.Origin origin:
+                    var innerResult = ExtractFromPkProvider(origin.Inner);
+                    return (innerResult.Item1,  origin.KeyOriginInfo );
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+        switch (od)
+        {
+            case OutputDescriptor.WPKH wpkh:
+                var res=  ExtractFromPkProvider(wpkh.PkProvider);
+                return (res.Item1, res.Item2, ScriptPubKeyType.Segwit);
+        }
+
+        return null;
+    }
+
+    public static UserConfig AsLDKUserConfig(this LightningConfig config)
+    {
+        var result = UserConfig.with_default();
+        result.set_accept_intercept_htlcs(true);
+        result.set_accept_mpp_keysend(true);
+        result.set_manually_accept_inbound_channels(true);
+        var channelHandshakeConfig = ChannelHandshakeConfig.with_default();
+        channelHandshakeConfig.set_announced_channel(false);
+        channelHandshakeConfig.set_negotiate_anchors_zero_fee_htlc_tx(true);
+        channelHandshakeConfig.set_minimum_depth(1);
+        result.set_channel_handshake_config(channelHandshakeConfig);
+        var channelHandshakeLimits = ChannelHandshakeLimits.with_default();
+        channelHandshakeLimits.set_force_announced_channel_preference(true);
+        result.set_channel_handshake_limits(channelHandshakeLimits);
+        return result;
     }
     
     // public static async Task Process<T>(this Channel<T> channel, Func<T, CancellationToken, Task> processor,

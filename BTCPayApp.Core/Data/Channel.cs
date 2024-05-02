@@ -3,6 +3,8 @@
 public class Channel
 {
     public string Id { get; set; }
-    public string SettingKey { get; set; }
-    public Setting Setting { get; set; }
+    public List<string> Aliases { get; set; }
+    public byte[] Data { get; set; }
+    
+    
 }

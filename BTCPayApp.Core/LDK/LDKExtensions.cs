@@ -79,7 +79,7 @@ public static class LDKExtensions
         services.AddScoped<LDKPersister>();
         services.AddScoped<Persister>(provider =>
             Persister.new_impl(provider.GetRequiredService<LDKPersister>()));
-        services.AddScoped(provider => UserConfig.with_default());
+        services.AddScoped(provider => provider.GetRequiredService<LDKNode>().Config.AsLDKUserConfig());
         
         services.AddScoped(provider =>
         {
@@ -100,7 +100,6 @@ public static class LDKExtensions
                 .ConfigureAwait(false)
                 .GetAwaiter()
                 .GetResult();
-                
             if (channelManagerSerialized is not null)
             {
                 return ChannelManagerHelper.Load(channelManagerSerialized.Value.channelMonitors, channelManagerSerialized.Value.serializedChannelManager, entropySource, signerProvider, nodeSigner,

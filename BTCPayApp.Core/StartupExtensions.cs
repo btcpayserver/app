@@ -26,7 +26,6 @@ public static class StartupExtensions
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddHttpClient();
         serviceCollection.AddSingleton<BTCPayConnectionManager>();
-        serviceCollection.AddSingleton<Network>(Network.RegTest);
         serviceCollection.AddSingleton<LightningNodeService>();
         serviceCollection.AddSingleton<IBTCPayAppHubClient,BTCPayAppServerClient>();
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BTCPayConnectionManager>());

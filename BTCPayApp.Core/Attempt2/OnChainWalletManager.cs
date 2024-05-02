@@ -18,6 +18,7 @@ public class OnChainWalletManager : BaseHostedService
     private OnChainWalletState _state = OnChainWalletState.Init;
 
     public WalletConfig? WalletConfig { get; private set; }
+    public Network? Network => WalletConfig is null ? null : Network.GetNetwork(WalletConfig.Network);
 
     public OnChainWalletState State
     {
@@ -221,6 +222,87 @@ public class OnChainWalletManager : BaseHostedService
         return Script.FromHex(addr);
     }
 
+    public async Task<byte[]?> SignTransaction(byte[] psbtBytes)
+    {
+       var psbt =  PSBT.Load(psbtBytes, Network);
+       psbt =  await SignTransaction(psbt);
+       return psbt?.ToBytes();
+    }
+    public async Task<PSBT?> SignTransaction(PSBT psbt)
+    {
+        var identifiers = WalletConfig.Derivations.Select(derivation => derivation.Value.Identifier).ToArray();
+        var updated = await _btcPayConnectionManager.HubProxy.UpdatePsbt(identifiers, psbt.ToHex());
+        psbt = PSBT.Parse(updated, Network);
+        var rootKey =new Mnemonic(WalletConfig.Mnemonic).DeriveExtKey();
+        foreach (var deriv in WalletConfig.Derivations.Values.Where(derivation => derivation.Descriptor is not null))
+        {
+            var data = deriv.Descriptor.ExtractFromDescriptor(Network);
+            if(data is null)
+                continue;
+            var accKey = rootKey.Derive(data.Value.Item2);
+            psbt = psbt.SignAll(data.Value.Item1.AsHDScriptPubKey(data.Value.Item3), accKey);
+            if(psbt.TryFinalize(out _))
+                break;
+        }
+
+        return psbt;
+    }
+
+    public async Task<(NBitcoin.Transaction Tx, ICoin[] SpentCoins, NBitcoin.Script Change)?> CreateTransaction(List<TxOut> txOuts, FeeRate feeRate, List<Coin> explicitIns = null)
+    {
+        var identifiers = WalletConfig.Derivations.Values.Where(derivation => derivation.Descriptor is not null)
+            .Select(derivation => derivation.Identifier).ToArray();
+        var utxos = await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers);
+
+        var coins = utxos.Select(response => )
+        var changeScript = await DeriveScript(WalletDerivation.NativeSegwit);
+        var txBuilder = Network.CreateTransactionBuilder().SetChange(changeScript)
+            .SendEstimatedFees(feeRate);
+        
+        
+        var mnemonic = new Mnemonic(WalletConfig.Mnemonic).DeriveExtKey()!;
+        NBitcoin.Transaction? tx;
+        if (!txOuts.Any() && explicitIns?.Any() is true)
+        {
+            txBuilder.AddCoins(explicitIns.ToArray());
+
+            txBuilder.SendAllRemainingToChange();
+            while (coinsByWalletScript.Any())
+            {
+                try
+                {
+                    tx = txBuilder.BuildTransaction(true);
+                    return (tx, txBuilder.FindSpentCoins(tx), changeScript);
+                }
+                catch (NotEnoughFundsException e)
+                {
+                    var scriptSet = coinsByWalletScript.First();
+                    var newCoin = scriptSet.Value.First();
+                    var key = mnemonic.Derive(KeyPath.Parse(scriptSet.Key.DerivationPath));
+                    txBuilder.AddCoins(newCoin.AsCoin());
+                    txBuilder.AddKeys(key);
+                    scriptSet.Value.Remove(newCoin);
+                    if (scriptSet.Value.Count == 0)
+                        coinsByWalletScript.Remove(scriptSet.Key);
+                }
+            }
+
+            return null;
+        }
+
+        txBuilder = coinsByWalletScript.Aggregate(txBuilder,
+            (current, keysAndCoin) => current.AddKeys(mnemonic.Derive(KeyPath.Parse(keysAndCoin.Key.DerivationPath)))
+                .AddCoins(keysAndCoin.Value.Select(coin => new NBitcoin.Coin(uint256.Parse(coin.FundingTransactionHash),
+                    (uint) coin.FundingTransactionOutputIndex, Money.Coins(coin.Value),
+                    NBitcoin.Script.FromHex(coin.ScriptId)))));
+        txBuilder = txOuts.Aggregate(txBuilder, (current, c) => current.Send(c.ScriptPubKey, c.Value));
+
+        tx = txBuilder.BuildTransaction(true);
+
+        return (tx, txBuilder.FindSpentCoins(tx), changeScript);
+
+        
+    }
 }
 
 public enum OnChainWalletState
