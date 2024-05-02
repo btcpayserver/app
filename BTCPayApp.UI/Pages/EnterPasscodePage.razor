@@ -1,6 +1,8 @@
 ﻿@attribute [Route(Routes.EnterPasscode)]
 @layout BaseLayout
 @using BTCPayApp.UI.Components.Layout
+@using Plugin.Fingerprint.Abstractions
+@inject IFingerprint Fingerprint
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Enter Passcode</PageTitle>
@@ -20,6 +22,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (await Fingerprint.IsAvailableAsync())
+        {
+            var request = new AuthenticationRequestConfiguration("Unlock BTCPay", "Alternatively you can provide your passcode.");
+            var result = await Fingerprint.AuthenticateAsync(request);
+            if (result.Authenticated)
+            {
+                // do secret stuff :)
+            }
+        }
     }
 
     private class PasscodeModel

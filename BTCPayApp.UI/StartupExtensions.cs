@@ -3,6 +3,7 @@ using BTCPayApp.UI.Auth;
 using Fluxor;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+
 namespace BTCPayApp.UI;
 
 public static class StartupExtensions

@@ -3,6 +3,8 @@ using BTCPayApp.Core.Contracts;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Plugin.Fingerprint;
+using Plugin.Fingerprint.Abstractions;
 
 namespace BTCPayApp.Desktop;
 
@@ -14,6 +16,7 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<IDataDirectoryProvider, DesktopDataDirectoryProvider>();
         serviceCollection.AddSingleton<IConfigProvider, DesktopConfigProvider>();
         serviceCollection.AddSingleton<ISecureConfigProvider, DesktopSecureConfigProvider>();
+        serviceCollection.AddSingleton<IFingerprint, FingerprintProvider>();
         return serviceCollection;
     }
 }
@@ -29,6 +32,30 @@ public class DesktopSecureConfigProvider: DesktopConfigProvider, ISecureConfigPr
 
     protected override Task<string> ReadFromRaw(string str) => Task.FromResult(_dataProtector.Unprotect(str));
     protected override Task<string> WriteFromRaw(string str) => Task.FromResult(_dataProtector.Protect(str));
+}
+
+public class FingerprintProvider: IFingerprint
+{
+    public Task<FingerprintAvailability> GetAvailabilityAsync(bool allowAlternativeAuthentication = false)
+    {
+        return Task.FromResult(FingerprintAvailability.NoImplementation);
+    }
+
+    public Task<bool> IsAvailableAsync(bool allowAlternativeAuthentication = false)
+    {
+        return Task.FromResult(false);
+    }
+
+    public Task<FingerprintAuthenticationResult> AuthenticateAsync(AuthenticationRequestConfiguration authRequestConfig,
+        CancellationToken cancellationToken = new CancellationToken())
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<AuthenticationType> GetAuthenticationTypeAsync()
+    {
+        throw new NotImplementedException();
+    }
 }
 
 public class DesktopConfigProvider : IConfigProvider

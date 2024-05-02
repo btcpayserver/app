@@ -13,6 +13,7 @@
     <ItemGroup>
       <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="8.0.1" />
       <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="8.0.1" />
+      <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
     </ItemGroup>
 
 </Project>

@@ -2,8 +2,6 @@
 @layout BaseLayout
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Util
-@using Plugin.Fingerprint.Abstractions
-@inject IFingerprint Fingerprint;
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>@GetTitle()</PageTitle>
@@ -25,16 +23,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var request = new AuthenticationRequestConfiguration("Validate that you have fingers", "Because without them you will not be able to access");
-        var result = await Fingerprint.AuthenticateAsync(request);
-        if (result.Authenticated)
-        {
-            // do secret stuff :)
-        }
-        else
-        {
-            // not allowed to do secret stuff :(
-        }
     }
 
     public enum PasscodeMode

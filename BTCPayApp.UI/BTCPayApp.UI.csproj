@@ -20,14 +20,10 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.Forms" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.4" />
     <PackageReference Include="ReactorBlazorQRCodeScanner" Version="1.0.7" />
+    <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
   </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
     </ItemGroup>
-
-    <ItemGroup>
-      <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
-    </ItemGroup>
-
 </Project>
