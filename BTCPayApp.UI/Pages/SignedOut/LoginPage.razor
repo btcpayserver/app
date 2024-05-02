@@ -68,11 +68,9 @@
 </EditForm>
 
 @code {
-    [Parameter]
     [SupplyParameterFromQuery]
     public string? ServerUrl { get; set; }
 
-    [Parameter]
     [SupplyParameterFromQuery]
     public string? Success { get; set; }
 
@@ -140,7 +138,7 @@
         catch (Exception e)
         {
             InstanceInfo = null;
-            _errorMessage = e.Message;
+            _errorMessage = e.InnerException?.Message ?? e.Message;
         }
 
         Dispatcher.Dispatch(new UIState.SetInstance(InstanceInfo));

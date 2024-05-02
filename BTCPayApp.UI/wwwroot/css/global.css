@@ -26,6 +26,10 @@
   transform: rotate(-180deg);
 }
 
+.btn .icon-scan-qr {
+  --icon-size: 1.1875rem;
+}
+
 /* Layout */
 #MainContent {
   flex: 1;

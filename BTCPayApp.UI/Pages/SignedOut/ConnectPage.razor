@@ -1,37 +1,52 @@
-﻿@using Microsoft.Extensions.Logging
+﻿@using BTCPayApp.CommonServer
+@using BTCPayApp.Core
+@using BTCPayApp.UI.Features
+@using Microsoft.Extensions.Logging
 @attribute [Route(Routes.Connect)]
 @attribute [AllowAnonymous]
 @layout SimpleLayout
 @inject IJSRuntime JS
+@inject BTCPayAppClient AppClient
 @inject ILogger<ConnectPage> Logger
 @inject NavigationManager NavigationManager
+@inject IDispatcher Dispatcher
 
-<PageTitle>Connect to a server</PageTitle>
+<PageTitle>@GetTitle()</PageTitle>
 
-<EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="ConnectServer" method="post">
-    <DataAnnotationsValidator />
-    <h1>Connect to a server</h1>
+<SectionContent SectionName="main-top">
+    <h1>@GetTitle()</h1>
     <p>
         A server is your .. accessed using a unique URL.
         Enter or scan your server URL or invite link.
     </p>
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <Alert Type="danger">@_errorMessage</Alert>
+    }
+</SectionContent>
+
+<EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="ConnectServer" method="post">
+    <DataAnnotationsValidator />
     <div class="mb-3">
         <label for="Uri" class="form-label visually-hidden">Server URL or invite link</label>
         <div class="d-flex align-items-center justify-content-between gap-3">
-            <InputText @bind-Value="Model.Uri" id="Uri" class="form-control flex-grow-1" placeholder="Enter server URL or invite link"/>
+            <InputText @bind-Value="Model.Uri" @bind-Value:after="ResolveInstanceInfo" id="Uri" class="form-control flex-grow-1" placeholder="Enter server URL or invite link"/>
             <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
                 <Icon symbol="scan-qr"/>
             </button>
         </div>
         <ValidationMessage For="@(() => Model.Uri)" />
     </div>
-    <button type="submit" class="btn btn-primary w-100" data-testid="ConnectButton">Connect</button>
+    <button type="submit" class="btn btn-primary w-100" data-testid="ConnectButton" disabled="@(InstanceInfo == null)">Connect</button>
 </EditForm>
 
 <QrScanModal OnScan="@OnQrCodeScan"/>
 
 @code {
     ConnectModel Model { get; set; } = new();
+    private AppInstanceInfo? InstanceInfo { get; set; }
+
+    private string? _errorMessage;
 
     private void HandleValidSubmit()
     {
@@ -47,10 +62,33 @@
         JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
     }
 
+    private async Task ResolveInstanceInfo()
+    {
+        try
+        {
+            InstanceInfo = !string.IsNullOrEmpty(Model!.Uri)
+                ? await AppClient.Get<AppInstanceInfo>(Model.Uri, "instance")
+                : null;
+
+            _errorMessage = !string.IsNullOrEmpty(Model.Uri) && InstanceInfo == null
+                ? "This server does not seem to support the BTCPay app."
+                : null;
+        }
+        catch (Exception e)
+        {
+            InstanceInfo = null;
+            _errorMessage = e.InnerException?.Message ?? e.Message;
+        }
+
+        Dispatcher.Dispatch(new UIState.SetInstance(InstanceInfo));
+    }
+
     private class ConnectModel
     {
         [Url]
         [Required]
         public string? Uri { get; set; }
     }
+
+    private string GetTitle() => $"Connect to {InstanceInfo?.ServerName ?? "a BTCPay Server"}";
 }

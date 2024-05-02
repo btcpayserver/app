@@ -18,7 +18,7 @@
 }
 ::deep h1 {
   margin-bottom: 1.5rem;
-  font-size: calc(1.3rem + 0.6vw);
+  font-size: 1.5rem;
   text-align: center;
 }
 @media (min-height: 54rem) {

@@ -48,8 +48,7 @@
 </EditForm>
 
 @code {
-    [Parameter, EditorRequired]
-    [SupplyParameterFromQuery]
+    [SupplyParameterFromQuery, EditorRequired]
     public string? ServerUrl { get; set; }
 
     [CascadingParameter]
@@ -78,7 +77,7 @@
         if (result.Succeeded)
         {
             var successMessage = string.Join(",", result.Messages ?? ["Account created."]);
-            var uri = NavigationManager.GetUriWithQueryParameters(Routes.Login,
+            var uri = NavigationManager.GetUriWithQueryParameters(GetLoginUrl(),
                 new Dictionary<string, object?> { {"success", successMessage } } );
             NavigationManager.NavigateTo(uri);
         }
@@ -104,7 +103,7 @@
         }
         catch (Exception e)
         {
-            _errorMessage = e.Message;
+            _errorMessage = e.InnerException?.Message ?? e.Message;
         }
     }
 
