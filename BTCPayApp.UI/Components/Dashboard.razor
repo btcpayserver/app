@@ -3,19 +3,26 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @using BTCPayApp.UI.Features
 @using BTCPayApp.Core.Data
+@using BTCPayApp.Core.Attempt2
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <h1 class="mb-3">Dashboard</h1>
 
-@if (State.Value.Loading.Contains(RootState.LoadingHandles.WalletConfig))
+
+@if (State.Value.Loading.Any())
 {
-    <Alert Type="info">Wallet configuration loading.</Alert>
+    @foreach(var loading in State.Value.Loading)
+    {
+        <Alert Type="info">@loading.ToString() loading.</Alert>
+    }
 }
-else if (State.Value.WalletConfig is not null)
+
+
+@if (State.Value.OnchainWalletState != OnChainWalletState.NotConfigured)
 {
-    <Alert Type="success">Your wallet is configured.</Alert>
+  <Alert Type="success">Wallet: @State.Value.OnchainWalletState</Alert>
 }
-else
+else if(State.Value.BTCPayServerConnectionState == HubConnectionState.Connected)
 {
     <Alert Type="warning">
         <div class="d-flex flex-wrap align-center justify-space-between gap-3">
@@ -27,17 +34,22 @@ else
     </Alert>
 }
 
-@if (State.Value.Loading.Contains(RootState.LoadingHandles.LightningState))
+@if (State.Value.LightningNodeState != LightningNodeState.NodeNotConfigured)
 {
     <Alert Type="info">
         Lightning node loading.
     </Alert>
 }
-else
+else if(State.Value.OnchainWalletState != OnChainWalletState.NotConfigured && State.Value.BTCPayServerConnectionState == HubConnectionState.Connected)
 {
-    <Alert Type="@LightningSeverity">
-        Your Lightning node is @LightningStatus
-    </Alert>
+    <div class="alert alert-warning">
+        <div class="d-flex flex-wrap align-center justify-space-between gap-3">
+            Your Lightning node is not configured.
+            <NavLink href="@Routes.WalletSetup" class="btn btn-sm btn-primary">
+                Get started
+            </NavLink>
+        </div>
+    </div>
 }
 
 @code {
@@ -52,18 +64,21 @@ else
         };
 
     private string LightningStatus => State.Value.LightningNodeState switch {
-
-        LightningNodeState.NotConfigured => "not configured",
-        LightningNodeState.NotRunning => "not running",
-        LightningNodeState.Error => "in error state",
-        _ => State.Value.LightningNodeState.ToString().ToLowerInvariant()
+        LightningNodeState.Init => "Init",
+        LightningNodeState.NodeNotConfigured => "not configured",
+        LightningNodeState.WaitingForConnection => "waiting for connection",
+        LightningNodeState.Loading => "loading",
+        LightningNodeState.Loaded => "loaded",
+        LightningNodeState.Error => "error",
+        _ => "unknown"
     };
 
     private string LightningSeverity => State.Value.LightningNodeState switch {
-        LightningNodeState.Starting => "info",
-        LightningNodeState.Running => "success",
+        LightningNodeState.Loaded => "success",
+        LightningNodeState.NodeNotConfigured => "warning",
+        LightningNodeState.WaitingForConnection => "warning",
         LightningNodeState.Error => "danger",
-        _ => "warning"
+        _ => "info"
         };
 
     protected override Task OnAfterRenderAsync(bool firstRender)

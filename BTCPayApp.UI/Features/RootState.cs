@@ -1,4 +1,5 @@
 ﻿using BTCPayApp.Core;
+using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Data;
 using Fluxor;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -8,27 +9,23 @@ namespace BTCPayApp.UI.Features;
 [FeatureState]
 public record RootState(
     HashSet<RootState.LoadingHandles> Loading,
-    WalletConfig? WalletConfig,
     HubConnectionState? BTCPayServerConnectionState,
-    LightningNodeState LightningNodeState,
-    bool PairConfigRequested,
-    bool WalletConfigRequested)
+    LightningNodeState? LightningNodeState,
+    OnChainWalletState? OnchainWalletState)
 {
     public enum LoadingHandles
     {
         UiState,
-        PairConfig,
-        WalletConfig,
+        Connection,
+        WalletState,
         LightningState
     }
 
-    public RootState() : this(new HashSet<LoadingHandles>(), null, null, LightningNodeState.NotConfigured, false, false)
+    public RootState() : this(new HashSet<LoadingHandles>(), null,null, null)
     {
     }
 
     public record LoadingAction(LoadingHandles LoadingHandle, bool IsLoading);
-    public record WalletConfigLoadedAction(WalletConfig? Config);
-    public record WalletConfigChangeRequestedAction(WalletConfig Config);
     public record BTCPayConnectionUpdatedAction(HubConnectionState? ConnectionState);
     public record LightningNodeStateUpdatedAction(LightningNodeState State);
 
@@ -40,15 +37,6 @@ public record RootState(
             var handle = action.LoadingHandle;
             _ = action.IsLoading ? loading.Add(handle) : loading.Remove(handle);
             return state with { Loading = loading };
-        }
-    }
-    
-    protected class WalletConfigLoadedReducer : Reducer<RootState, WalletConfigLoadedAction>
-    {
-        public override RootState Reduce(RootState state, WalletConfigLoadedAction action)
-        {
-            var walletConfig = action.Config;
-            return state with { WalletConfig = walletConfig, WalletConfigRequested = true };
         }
     }
 
@@ -68,5 +56,14 @@ public record RootState(
         }
     }
 
+    protected class OnChainWalletStateUpdatedReducer : Reducer<RootState, OnChainWalletStateUpdatedAction>
+    {
+        public override RootState Reduce(RootState state, OnChainWalletStateUpdatedAction action)
+        {
+            return state with { OnchainWalletState = action.State };
+        }
+    }
 
+
+    public record OnChainWalletStateUpdatedAction(OnChainWalletState State);
 }

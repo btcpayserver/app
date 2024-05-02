@@ -17,6 +17,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     private readonly AuthenticationStateProvider _authStateProvider;
     private readonly ILogger<BTCPayConnectionManager> _logger;
     private readonly BTCPayAppServerClient _btcPayAppServerClient;
+    private readonly IBTCPayAppHubClient _btcPayAppServerClientInterface;
     private IDisposable? _subscription;
 
     public IBTCPayAppHubServer? HubProxy { get; private set; }
@@ -40,12 +41,14 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         IAccountManager accountManager,
         AuthenticationStateProvider authStateProvider,
         ILogger<BTCPayConnectionManager> logger,
-        BTCPayAppServerClient btcPayAppServerClient)
+        BTCPayAppServerClient btcPayAppServerClient,
+        IBTCPayAppHubClient btcPayAppServerClientInterface)
     {
         _accountManager = accountManager;
         _authStateProvider = authStateProvider;
         _logger = logger;
         _btcPayAppServerClient = btcPayAppServerClient;
+        _btcPayAppServerClientInterface = btcPayAppServerClientInterface;
         
     }
 
@@ -55,6 +58,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     {
         _authStateProvider.AuthenticationStateChanged += AuthStateProviderOnAuthenticationStateChanged;
         _btcPayAppServerClient.OnNotifyNetwork +=BtcPayAppServerClientOnOnNotifyNetwork;
+        await StartOrReplace();
         _ = TryStayConnected();
     }
 
@@ -130,7 +134,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         if (account is null)
             return;
         Connection = new HubConnectionBuilder()
-            .WithUrl(account.BaseUri + "/hub/btcpayapp", options =>
+            .WithUrl(new Uri(new Uri(account.BaseUri) ,"hub/btcpayapp").ToString(), options =>
             {
                 options.Headers.Add(new KeyValuePair<string?, string?>("Authorization",
                     new AuthenticationHeaderValue("Bearer", account.AccessToken).ToString()));
@@ -139,7 +143,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
             .Build();
 
         InvokeConnectionChange();
-        _subscription = Connection.Register(_btcPayAppServerClient);
+        _subscription = Connection.Register(_btcPayAppServerClientInterface);
         HubProxy = Connection.CreateHubProxy<IBTCPayAppHubServer>();
     }
 

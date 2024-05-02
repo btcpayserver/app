@@ -28,9 +28,7 @@ public partial class App : Application
         {
 #if ANDROID
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            _btcPayConnection.StartAsync(default);
-            _btcPayAppConfigManager.StartAsync(default);
-            _lightningNodeManager.StartAsync(default);
+
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 #endif
         };
@@ -54,9 +52,7 @@ public partial class App : Application
         window.Destroying += (s, e) =>
         {
 #if ANDROID
-            _btcPayConnection.StopAsync(default);
-            _btcPayAppConfigManager.StopAsync(default);
-            _lightningNodeManager.StopAsync(default);
+
 #endif
         };
 

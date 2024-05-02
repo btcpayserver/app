@@ -4,6 +4,7 @@ using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.UI.Features;
 using Fluxor;
+using Microsoft.AspNetCore.SignalR.Client;
 
 namespace BTCPayApp.UI;
 
@@ -11,18 +12,21 @@ public class StateMiddleware : Middleware
 {
     private readonly IConfigProvider _configProvider;
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
-    private readonly LightningNodeService _lightningNodeService;
+    private readonly LightningNodeManager _lightningNodeService;
+    private readonly OnChainWalletManager _onChainWalletManager;
 
     public const string UiStateConfigKey = "uistate";
 
     public StateMiddleware(
         IConfigProvider configProvider,
         BTCPayConnectionManager btcPayConnectionManager,
-        LightningNodeService lightningNodeService)
+        LightningNodeManager lightningNodeService,
+        OnChainWalletManager onChainWalletManager)
     {
         _configProvider = configProvider;
         _btcPayConnectionManager = btcPayConnectionManager;
         _lightningNodeService = lightningNodeService;
+        _onChainWalletManager = onChainWalletManager;
     }
 
     public override async Task InitializeAsync(IDispatcher dispatcher, IStore store)
@@ -50,13 +54,34 @@ public class StateMiddleware : Middleware
     private void ListenIn(IDispatcher dispatcher)
     {
         _btcPayConnectionManager.ConnectionChanged += (sender, args) =>
-            dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(_btcPayConnectionManager.Connection?.State));
+        {
+            dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(args));
+            dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.Connection,
+                args == HubConnectionState.Connecting));
 
-        _lightningNodeService.OnStateChanged += (sender, args) =>
-            dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(args));
+            return Task.CompletedTask;
+        };
 
-        if (_lightningNodeService.State is not LightningNodeState.Running)
-            dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.LightningState, true));
+        _lightningNodeService.StateChanged += (sender, args) =>
+        {
+            dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(args.New));
+            if (args.New is LightningNodeState.Loading)
+                dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.LightningState, true));
+            if (args.Old is LightningNodeState.Loading)
+                dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.LightningState, false));
+            return Task.CompletedTask;
+        };
+        
+        _onChainWalletManager.StateChanged += (sender, args) =>
+        {
+            dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(args.New));
+            if (args.New is OnChainWalletState.Loading)
+                dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.WalletState, true));
+            if (args.Old is OnChainWalletState.Loading)
+                dispatcher.Dispatch(new RootState.LoadingAction(RootState.LoadingHandles.WalletState, false));
+            return Task.CompletedTask;
+        };
+
 
         
     }

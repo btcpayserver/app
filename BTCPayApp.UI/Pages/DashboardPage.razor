@@ -115,9 +115,7 @@
 @code {
     private AppUserInfo? _userInfo;
 
-    private bool IsInitialized => State.Value.PairConfigRequested && State.Value.WalletConfigRequested;
-    private bool IsLoading => State.Value.Loading.Contains(RootState.LoadingHandles.PairConfig) ||
-                              State.Value.Loading.Contains(RootState.LoadingHandles.WalletConfig);
+    private bool IsLoading => State.Value.Loading.Any();
 
     protected override Task OnInitializedAsync()
     {

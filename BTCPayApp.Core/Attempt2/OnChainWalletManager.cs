@@ -248,60 +248,61 @@ public class OnChainWalletManager : BaseHostedService
         return psbt;
     }
 
-    public async Task<(NBitcoin.Transaction Tx, ICoin[] SpentCoins, NBitcoin.Script Change)?> CreateTransaction(List<TxOut> txOuts, FeeRate feeRate, List<Coin> explicitIns = null)
+    public async Task<(NBitcoin.Transaction Tx, ICoin[] SpentCoins, NBitcoin.Script Change)?> CreateTransaction(
+        List<TxOut> txOuts, FeeRate feeRate, List<Coin> explicitIns = null)
     {
         var identifiers = WalletConfig.Derivations.Values.Where(derivation => derivation.Descriptor is not null)
             .Select(derivation => derivation.Identifier).ToArray();
         var utxos = await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers);
 
-        var coins = utxos.Select(response => )
+        var rootKey = new Mnemonic(WalletConfig.Mnemonic).DeriveExtKey();
+        var coins = utxos.Select(response => (new Coin()
+                {
+                    Outpoint = OutPoint.Parse(response.Outpoint),
+                    ScriptPubKey = Script.FromHex(response.Script),
+                    Amount = Money.Coins(response.Value),
+                    TxOut = new TxOut(Money.Coins(response.Value), Script.FromHex(response.Script))
+                }, KeyPath.Parse(response.Path),
+                WalletConfig.Derivations.Values.First(derivation => derivation.Identifier == response.Identifier)))
+            .ToDictionary(tuple => tuple.Item1.Outpoint, tuple => tuple);
+
+        var availableCoins = coins.Values.Select(tuple => tuple.Item1).ToList();
+
+
         var changeScript = await DeriveScript(WalletDerivation.NativeSegwit);
         var txBuilder = Network.CreateTransactionBuilder().SetChange(changeScript)
             .SendEstimatedFees(feeRate);
-        
-        
+
+
         var mnemonic = new Mnemonic(WalletConfig.Mnemonic).DeriveExtKey()!;
         NBitcoin.Transaction? tx;
-        if (!txOuts.Any() && explicitIns?.Any() is true)
+        if (explicitIns?.Any() is true)
         {
             txBuilder.AddCoins(explicitIns.ToArray());
-
-            txBuilder.SendAllRemainingToChange();
-            while (coinsByWalletScript.Any())
-            {
-                try
-                {
-                    tx = txBuilder.BuildTransaction(true);
-                    return (tx, txBuilder.FindSpentCoins(tx), changeScript);
-                }
-                catch (NotEnoughFundsException e)
-                {
-                    var scriptSet = coinsByWalletScript.First();
-                    var newCoin = scriptSet.Value.First();
-                    var key = mnemonic.Derive(KeyPath.Parse(scriptSet.Key.DerivationPath));
-                    txBuilder.AddCoins(newCoin.AsCoin());
-                    txBuilder.AddKeys(key);
-                    scriptSet.Value.Remove(newCoin);
-                    if (scriptSet.Value.Count == 0)
-                        coinsByWalletScript.Remove(scriptSet.Key);
-                }
-            }
-
-            return null;
         }
 
-        txBuilder = coinsByWalletScript.Aggregate(txBuilder,
-            (current, keysAndCoin) => current.AddKeys(mnemonic.Derive(KeyPath.Parse(keysAndCoin.Key.DerivationPath)))
-                .AddCoins(keysAndCoin.Value.Select(coin => new NBitcoin.Coin(uint256.Parse(coin.FundingTransactionHash),
-                    (uint) coin.FundingTransactionOutputIndex, Money.Coins(coin.Value),
-                    NBitcoin.Script.FromHex(coin.ScriptId)))));
-        txBuilder = txOuts.Aggregate(txBuilder, (current, c) => current.Send(c.ScriptPubKey, c.Value));
+        txBuilder.SendAllRemainingToChange();
+        while (availableCoins.Any())
+        {
+            try
+            {
+                tx = txBuilder.BuildTransaction(true);
+                return (tx, txBuilder.FindSpentCoins(tx), changeScript);
+            }
+            catch (NotEnoughFundsException e)
+            {
+                var newCoin = availableCoins.First();
+                var data = coins[newCoin.Outpoint];
 
-        tx = txBuilder.BuildTransaction(true);
+                var key = mnemonic.Derive(data.Item3.Descriptor.ExtractFromDescriptor(Network).Value.Item2.KeyPath)
+                    .Derive(data.Item2);
+                txBuilder.AddCoins(newCoin);
+                txBuilder.AddKeys(key);
+                availableCoins.Remove(newCoin);
+            }
+        }
 
-        return (tx, txBuilder.FindSpentCoins(tx), changeScript);
-
-        
+        return null;
     }
 }
 
