@@ -34,47 +34,67 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
 
         _client.AccessRefreshed += OnAccessRefresh;
     }
+    
+    private SemaphoreSlim _semaphore = new(1, 1);
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        // default to unauthenticated
-        var user = _unauthenticated;
-
-        // initialize with persisted account
-        if (!_isInitialized && _account == null)
+        try
         {
-            _account = await _config.Get<BTCPayAccount>("account");
-            if (!string.IsNullOrEmpty(_account?.AccessToken) && !string.IsNullOrEmpty(_account.RefreshToken))
-                _client.SetAccess(_account.AccessToken, _account.RefreshToken, _account.AccessExpiry.GetValueOrDefault());
-            else
-                _client.ClearAccess();
-            _isInitialized = true;
-        }
+            await _semaphore.WaitAsync();
 
-        if (_account != null && _userInfo == null)
-        {
-            try
+            // default to unauthenticated
+            var user = _unauthenticated;
+
+            // initialize with persisted account
+            if (!_isInitialized && _account == null)
             {
-                _userInfo = await _client.Get<AppUserInfo>(_account!.BaseUri, "user");
+                _account = await _config.Get<BTCPayAccount>("account");
+                if (!string.IsNullOrEmpty(_account?.AccessToken) && !string.IsNullOrEmpty(_account.RefreshToken))
+                    _client.SetAccess(_account.AccessToken, _account.RefreshToken,
+                        _account.AccessExpiry.GetValueOrDefault());
+                else
+                    _client.ClearAccess();
+                _isInitialized = true;
             }
-            catch { /* ignored */ }
-        }
 
-        if (_userInfo != null)
-        {
-            var claims = new List<Claim>
+            var oldUserInfo = _userInfo;
+            if (_account != null && _userInfo == null)
             {
-                new (_identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType, _userInfo.UserId!),
-                new (_identityOptions.CurrentValue.ClaimsIdentity.UserNameClaimType, _userInfo.Email!),
-                new (_identityOptions.CurrentValue.ClaimsIdentity.EmailClaimType, _userInfo.Email!)
-            };
-            if (_userInfo.Roles?.Any() is true)
-                claims.AddRange(_userInfo.Roles.Select(role =>
-                    new Claim(_identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, role)));
-            user = new ClaimsPrincipal(new ClaimsIdentity(claims, nameof(AuthStateProvider)));
-        }
+                try
+                {
+                    _userInfo = await _client.Get<AppUserInfo>(_account!.BaseUri, "user");
+                }
+                catch
+                {
+                    /* ignored */
+                }
+            }
 
-        return new AuthenticationState(user);
+            if (_userInfo != null)
+            {
+                var claims = new List<Claim>
+                {
+                    new(_identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType, _userInfo.UserId!),
+                    new(_identityOptions.CurrentValue.ClaimsIdentity.UserNameClaimType, _userInfo.Email!),
+                    new(_identityOptions.CurrentValue.ClaimsIdentity.EmailClaimType, _userInfo.Email!)
+                };
+                if (_userInfo.Roles?.Any() is true)
+                    claims.AddRange(_userInfo.Roles.Select(role =>
+                        new Claim(_identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, role)));
+                user = new ClaimsPrincipal(new ClaimsIdentity(claims, nameof(AuthStateProvider)));
+            }
+
+            var res = new AuthenticationState(user);
+            if (AppUserInfo.Equals(oldUserInfo, _userInfo))
+                return res;
+            NotifyAuthenticationStateChanged(Task.FromResult(res));
+            return res;
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
     public async Task<bool> CheckAuthenticated()
