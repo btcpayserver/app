@@ -11,12 +11,12 @@ public class LDKPaymentEventsHandler :
     ILDKEventHandler<Event.Event_PaymentFailed>,
     ILDKEventHandler<Event.Event_PaymentSent>
 {
-    private readonly LDKNode _ldkNode;
+    private readonly PaymentsManager _paymentsManager;
     private readonly ChannelManager _channelManager;
 
-    public LDKPaymentEventsHandler(LDKNode ldkNode, ChannelManager channelManager)
+    public LDKPaymentEventsHandler(PaymentsManager paymentsManager, ChannelManager channelManager)
     {
-        _ldkNode = ldkNode;
+        _paymentsManager = paymentsManager;
         _channelManager = channelManager;
     }
 
@@ -33,7 +33,7 @@ public class LDKPaymentEventsHandler :
     public async Task Handle(Event.Event_PaymentClaimed eventPaymentClaimed)
     {
         var preimage = eventPaymentClaimed.purpose.GetPreimage(out var secret);
-        await _ldkNode.Payment(new LightningPayment()
+        await _paymentsManager.Payment(new LightningPayment()
         {
             PaymentHash = Convert.ToHexString(eventPaymentClaimed.payment_hash),
             Inbound = true,
@@ -48,13 +48,13 @@ public class LDKPaymentEventsHandler :
     public async Task Handle(Event.Event_PaymentFailed @eventPaymentFailed)
     {
         
-        await _ldkNode.PaymentUpdate(Convert.ToHexString(eventPaymentFailed.payment_hash), false,
+        await _paymentsManager.PaymentUpdate(Convert.ToHexString(eventPaymentFailed.payment_hash), false,
             Convert.ToHexString(eventPaymentFailed.payment_id), true, null);
     }
 
     public async Task Handle(Event.Event_PaymentSent eventPaymentSent)
     {
-        await _ldkNode.PaymentUpdate(Convert.ToHexString(eventPaymentSent.payment_hash), false,
+        await _paymentsManager.PaymentUpdate(Convert.ToHexString(eventPaymentSent.payment_hash), false,
             Convert.ToHexString(
                 ((Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some) eventPaymentSent.payment_id).some), false,
             Convert.ToHexString(eventPaymentSent.payment_preimage));

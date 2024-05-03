@@ -6,6 +6,9 @@
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.Core.Data
 @using Microsoft.Extensions.Logging
+@using System.Text.Json
+@using Microsoft.Extensions.DependencyInjection
+@using org.ldk.structs
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject OnChainWalletManager OnChainWalletManager
 @inject LightningNodeManager LightningNodeManager
@@ -20,10 +23,25 @@
     <li>Lightning wallet state: @State.Value.LightningNodeState</li>
     <li>Connection state: @State.Value.BTCPayServerConnectionState</li>
 </ul>
+@if (CanConfigureWallet)
+{
+    <button class="btn btn-primary" @onclick="ConfigureWallet">Configure Wallet</button>
+}
+@if (CanConfigureLNWallet)
+{
+    <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
+}
 
-<button class="btn btn-primary" disabled="@(!CanConfigureWallet)" @onclick="ConfigureWallet">Configure Wallet</button>
-<button class="btn btn-primary" disabled="@(!CanConfigureLNWallet)"  @onclick="ConfigureLNWallet" >Configure Lightning Wallet</button>
-
+@if (OnChainWalletManager.State == OnChainWalletState.Loaded)
+{
+    <pre>
+    @(JsonSerializer.Serialize(OnChainWalletManager.WalletConfig, new JsonSerializerOptions() {WriteIndented = true}))
+    </pre>
+}
+@if (LightningNodeManager.State == LightningNodeState.Loaded)
+{
+   <LN />
+}
 
 @code {
 
@@ -50,11 +68,9 @@
 
     private async Task ConfigureWallet()
     {
-        
         try
         {
-
-            await  OnChainWalletManager.Generate();
+            await OnChainWalletManager.Generate();
         }
         catch (Exception ex)
         {
@@ -66,8 +82,7 @@
     {
         try
         {
-
-            await  LightningNodeManager.Generate();
+            await LightningNodeManager.Generate();
         }
         catch (Exception ex)
         {

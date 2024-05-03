@@ -1,0 +1,165 @@
+﻿@using BTCPayApp.Core.Attempt2
+@using BTCPayApp.Core.LDK
+@using BTCPayApp.UI.Features
+@using BTCPayServer.Lightning
+@using Microsoft.Extensions.DependencyInjection
+@using NBitcoin
+@using nldksample.LDK
+@using org.ldk.structs
+@using LightningPayment = BTCPayApp.Core.Data.LightningPayment
+
+@if (Loading)
+{
+    <span>loading...</span>
+} else {
+ <button type="button" @onclick="FetchData">Refresh data</button>
+}
+
+@if(_nodeId is not null)
+{
+    <h3>Node ID: @_nodeId</h3>
+}
+@if(_peers is not null)
+{
+    <h3>Peers</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Node ID</th>
+                <th>Socket</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var peer in _peers)
+            {
+                <tr>
+                    <td>@peer.nodeId</td>
+                    <td>@peer.socket</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+@if(_channels is not null)
+{
+    <h3>Channels</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Channel ID</th>
+                <th>User Channel ID</th>
+                <th>Counterparty</th>
+                <th>Short Channel ID</th>
+                <th>Confirmations</th>
+                <th>Confirmations Required</th>
+                <th>Funding Transaction Hash</th>
+                <th>Usable</th>
+                <th>Ready</th>
+                <th>Balance</th>
+                <th>Inbound</th>
+                <th>Outbound</th>
+                <th>State</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var channel in _channels)
+            {
+                <tr>
+                    <td>@channel.id</td>
+                    <td>@channel.userId</td>
+                    <td>@channel.counterparty</td>
+                    <td>@channel.shortChannelId</td>
+                    <td>@channel.confirmations</td>
+                    <td>@channel.confirmationsRequired</td>
+                    <td>@channel.fundingTransactionHash</td>
+                    <td>@channel.usable</td>
+                    <td>@channel.ready</td>
+                    <td>@channel.Balance</td>
+                    <td>@channel.Inbound</td>
+                    <td>@channel.Outbound</td>
+                    <td>@channel.State</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+@if(_payments is not null)
+{
+    <h3>Payments</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Payment Hash</th>
+                <th>Inbound</th>
+                <th>Id</th>
+                <th>Preimage</th>
+                <th>Secret</th>
+                <th>Timestamp</th>
+                <th>Value</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var payment in _payments)
+            {
+                <tr>
+                    <td>@payment.PaymentHash</td>
+                    <td>@payment.Inbound</td>
+                    <td>@payment.PaymentId</td>
+                    <td>@payment.Preimage</td>
+                    <td>@payment.Secret</td>
+                    <td>@payment.Timestamp</td>
+                    <td>@payment.Value</td>
+                    <td>@payment.Status</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+}
+
+
+@inject LightningNodeManager LightningNodeManager
+@inject IDispatcher Dispatcher
+@code {
+    private string _nodeId;
+    private (string id, string userId, string counterparty, long? shortChannelId, int? confirmations, int? confirmationsRequired, string fundingTransactionHash, bool usable, bool ready, LightMoney Balance, LightMoney Inbound, LightMoney Outbound, string? State)[] _channels;
+    private (string nodeId, string? socket)[] _peers;
+    private List<LightningPayment> _payments;
+    public LDKNode Node =>LightningNodeManager.Node;
+    public ChannelManager ChannelManager =>LightningNodeManager.Node.ServiceProvider.GetService<ChannelManager>();
+    public LDKPeerHandler PeerHandler =>LightningNodeManager.Node.ServiceProvider.GetService<LDKPeerHandler>();
+    public PeerManager PeerManager =>LightningNodeManager.Node.ServiceProvider.GetService<PeerManager>();
+    public PaymentsManager PaymentsManager =>LightningNodeManager.Node.ServiceProvider.GetService<PaymentsManager>();
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        _ = FetchData();
+    }
+    private bool Loading { get; set; }
+    private SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
+    private async Task FetchData()
+    {
+        
+        try
+        {
+            Loading = true;
+            await _semaphore.WaitAsync();
+        _nodeId = Convert.ToHexString(ChannelManager.get_our_node_id());
+        _channels = ChannelManager.list_channels().Select(details => (id: Convert.ToHexString(details.get_channel_id()), userId: Convert.ToHexString(details.get_user_channel_id().getLEBytes()), counterparty: Convert.ToHexString(details.get_counterparty().get_node_id()), shortChannelId: details.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some1 ? some1.some : (long?) null, confirmations: details.get_confirmations() is Option_u32Z.Option_u32Z_Some some2 ? some2.some : (int?) null, confirmationsRequired: details.get_confirmations_required() is Option_u32Z.Option_u32Z_Some some3 ? some3.some : (int?) null, fundingTransactionHash: new uint256(details.get_funding_txo().get_txid()).ToString(), usable: details.get_is_usable(), ready: details.get_is_channel_ready(), Balance: LightMoney.MilliSatoshis(details.get_balance_msat()), Inbound: LightMoney.MilliSatoshis(details.get_inbound_capacity_msat()), Outbound: LightMoney.MilliSatoshis(details.get_outbound_capacity_msat()), State: details.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some4 ? some4.some.ToString() : null)).ToArray();
+        _peers = PeerManager.get_peer_node_ids().Select(peer => (nodeId: Convert.ToHexString(peer.get_a()), socket: peer.get_b() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1? some1.some.to_str(): null )).ToArray();
+        _payments = await PaymentsManager.List(payments => payments);
+
+        }
+        finally
+        {
+            Loading = false;
+            _semaphore.Release();
+        }
+    }
+
+
+}

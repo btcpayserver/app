@@ -17,6 +17,10 @@ public class DatabaseConfigProvider : IConfigProvider
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
         var setting = await db.Settings.FindAsync(key);
+        if(typeof(T) == typeof(byte[]))
+        {
+            return setting == null ? default : (T)(object)setting.Value;
+        }
         return setting == null ? default : JsonSerializer.Deserialize<T>(setting.Value);
     }
 
@@ -30,11 +34,12 @@ public class DatabaseConfigProvider : IConfigProvider
             return;
         }
 
-        var newValue = JsonSerializer.SerializeToUtf8Bytes(value);
+        
+        var newValue =  typeof(T) == typeof(byte[])? value as byte[]:JsonSerializer.SerializeToUtf8Bytes(value);
         var setting = new Setting()
         {
             Key = key,
-            Value = newValue
+            Value = newValue!
         };
         await db.Settings
             .Upsert(setting)

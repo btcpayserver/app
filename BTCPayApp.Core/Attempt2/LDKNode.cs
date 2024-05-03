@@ -36,24 +36,23 @@ public class LDKNode : IAsyncDisposable, IHostedService
         _onChainWalletManager = onChainWalletManager;
         ServiceProvider = serviceProvider;
     }
-
-
+    
     public IServiceProvider ServiceProvider { get; }
     private TaskCompletionSource? _started;
-    private static readonly SemaphoreSlim Semaphore = new(1);
+    private readonly SemaphoreSlim _semaphore = new(1);
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         bool exists;
         try
         {
-            await Semaphore.WaitAsync(cancellationToken);
+            await _semaphore.WaitAsync(cancellationToken);
             exists = _started is not null;
             _started ??= new TaskCompletionSource();
         }
         finally
         {
-            Semaphore.Release();
+            _semaphore.Release();
         }
 
         if (exists)
@@ -119,12 +118,12 @@ public class LDKNode : IAsyncDisposable, IHostedService
         bool exists;
         try
         {
-            await Semaphore.WaitAsync(cancellationToken);
+            await _semaphore.WaitAsync(cancellationToken);
             exists = _started is not null;
         }
         finally
         {
-            Semaphore.Release();
+            _semaphore.Release();
         }
 
         if (!exists)
@@ -154,36 +153,7 @@ public class LDKNode : IAsyncDisposable, IHostedService
         return await icm.Task;
     }
     
-    public async Task Payment(LightningPayment lightningPayment, CancellationToken cancellationToken = default)
-    {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        await context.LightningPayments.Upsert(lightningPayment).RunAsync(cancellationToken);
-    }
-
-    public async Task PaymentUpdate(string paymentHash, bool inbound, string paymentId, bool failure,
-        string? preimage, CancellationToken cancellationToken = default)
-    {
-        await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var payment = await context.LightningPayments.SingleOrDefaultAsync(lightningPayment => 
-                lightningPayment.PaymentHash == paymentHash && 
-                lightningPayment.Inbound == inbound && 
-                lightningPayment.PaymentId == paymentId,
-            cancellationToken);
-        if (payment != null)
-        {
-            if (failure && payment.Status == LightningPaymentStatus.Complete)
-            {
-                // ignore as per ldk docs that this might happen
-            }
-            else
-            {
-                payment.Status = failure ? LightningPaymentStatus.Failed : LightningPaymentStatus.Complete;
-                payment.Preimage ??= preimage;
-            }
-            await context.SaveChangesAsync(cancellationToken);
-        }
-
-    }
+   
     
     
 
@@ -209,7 +179,7 @@ public class LDKNode : IAsyncDisposable, IHostedService
     
     public async Task<byte[]?> GetRawChannelManager()
     {
-        return await _configProvider.Get<byte[]>("ChannelManager") ?? Array.Empty<byte>();
+        return await _configProvider.Get<byte[]>("ChannelManager") ?? null;
     }
 
     public async Task UpdateChannelManager(ChannelManager serializedChannelManager)

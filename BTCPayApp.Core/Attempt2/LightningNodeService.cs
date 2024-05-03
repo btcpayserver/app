@@ -96,6 +96,7 @@ public class LightningNodeManager : BaseHostedService
 
     private async Task OnOnStateChanged(object? sender, (LightningNodeState Old, LightningNodeState New) state)
     {
+        
         LightningNodeState? newState = null;
         try
         {

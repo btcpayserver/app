@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using nldksample.LDK;
 
 namespace BTCPayApp.Core;
 
@@ -38,6 +39,7 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>();
         serviceCollection.AddSingleton(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddSingleton<IConfigProvider, DatabaseConfigProvider>();
+        serviceCollection.AddLDK();
 
         return serviceCollection;
     }

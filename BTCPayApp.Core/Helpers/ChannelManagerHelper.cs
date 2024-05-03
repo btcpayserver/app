@@ -32,7 +32,7 @@ public static class ChannelManagerHelper
     }
 
 
-    public static ChannelManager? Load(ChannelMonitor[] channelMonitors, byte[]? channelManagerSerialized,
+    public static ChannelManager? Load(ChannelMonitor[] channelMonitors, byte[] channelManagerSerialized,
         EntropySource entropySource, SignerProvider signerProvider,
         NodeSigner nodeSigner, FeeEstimator feeEstimator,
         Watch watch, BroadcasterInterface txBroadcaster,

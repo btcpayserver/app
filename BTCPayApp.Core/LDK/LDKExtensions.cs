@@ -80,6 +80,7 @@ public static class LDKExtensions
         services.AddScoped<Persister>(provider =>
             Persister.new_impl(provider.GetRequiredService<LDKPersister>()));
         services.AddScoped(provider => provider.GetRequiredService<LDKNode>().Config.AsLDKUserConfig());
+        services.AddScoped(provider => provider.GetRequiredService<OnChainWalletManager>().Network!);
         
         services.AddScoped(provider =>
         {
@@ -177,6 +178,7 @@ public static class LDKExtensions
                 provider.GetRequiredService<Persist>()
             ));
         services.AddScoped<Watch>(provider => provider.GetRequiredService<ChainMonitor>().as_Watch());
+        services.AddScoped<LDKFilter>();
         services.AddScoped<Filter>(provider => Filter.new_impl(provider.GetRequiredService<LDKFilter>()));
         services.AddScoped<Confirm, Confirm>(provider => provider.GetRequiredService<ChannelManager>().as_Confirm());
         services.AddScoped<Confirm, Confirm>(provider => provider.GetRequiredService<ChainMonitor>().as_Confirm());
