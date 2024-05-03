@@ -109,7 +109,7 @@ public class LightningNodeManager : BaseHostedService
                     break;
                 }
                 case LightningNodeState.Loading:
-                    if (_btcPayConnectionManager?.Connection?.State == HubConnectionState.Connected)
+                    if (_btcPayConnectionManager?.Connection?.State != HubConnectionState.Connected)
                     {
                         newState = LightningNodeState.WaitingForConnection;
                         break;

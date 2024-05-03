@@ -51,6 +51,9 @@ public class OnChainWalletManager : BaseHostedService
     {
         State = OnChainWalletState.Loading;
         StateChanged += OnStateChanged;
+        _btcPayAppServerClient.OnNewBlock += OnNewBlock;
+        _btcPayAppServerClient.OnTransactionDetected += OnTransactionDetected;
+        _btcPayConnectionManager.ConnectionChanged += ConnectionChanged;
         WalletConfig = await _configProvider.Get<WalletConfig>(WalletConfig.Key);
         if (WalletConfig is null)
         {
@@ -59,13 +62,11 @@ public class OnChainWalletManager : BaseHostedService
         else
         {
             await Track();
+            State = OnChainWalletState.Loaded;
         }
 
-        _btcPayAppServerClient.OnNewBlock += OnNewBlock;
-        _btcPayAppServerClient.OnTransactionDetected += OnTransactionDetected;
-        _btcPayConnectionManager.ConnectionChanged += ConnectionChanged;
+      
 
-        State = OnChainWalletState.Loaded;
     }
 
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
@@ -105,18 +106,18 @@ public class OnChainWalletManager : BaseHostedService
                     {
                         Name = "Native Segwit",
                         Descriptor = OutputDescriptor.AddChecksum(
-                            $"wpkh([{path.ToString().Replace("m", fingerprint.ToString())}]{xpub}/0/*)")
+                            $"wpkh([{fingerprint.ToString()}/{path}]{xpub}/0/*)")
                     }
                 }
             };
             
             var result = await _btcPayConnectionManager.HubProxy.Pair(new PairRequest()
             {   
-                Derivations = WalletConfig.Derivations.ToDictionary(pair => pair.Key, pair => pair.Value.Descriptor)
+                Derivations = walletConfig.Derivations.ToDictionary(pair => pair.Key, pair => pair.Value.Descriptor)
             });
             foreach (var keyValuePair in result)
             {
-                WalletConfig.Derivations[keyValuePair.Key].Identifier = keyValuePair.Value;
+                walletConfig.Derivations[keyValuePair.Key].Identifier = keyValuePair.Value;
                 
             }
             await _configProvider.Set(WalletConfig.Key, walletConfig);
@@ -177,7 +178,7 @@ public class OnChainWalletManager : BaseHostedService
 
     private async Task Track()
     {
-        if (WalletConfig is null)
+        if (WalletConfig is null || _btcPayConnectionManager.HubProxy is null)
             return;
 
         var identifiers = WalletConfig.Derivations.Select(pair => pair.Value.Identifier).ToArray();

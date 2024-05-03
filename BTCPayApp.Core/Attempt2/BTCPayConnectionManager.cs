@@ -133,8 +133,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         Connection = new HubConnectionBuilder()
             .WithUrl(new Uri(new Uri(account.BaseUri), "hub/btcpayapp").ToString(), options =>
             {
-                options.Headers.Add(new KeyValuePair<string?, string?>("Authorization",
-                    new AuthenticationHeaderValue("Bearer", account.AccessToken).ToString()));
+                
+                options.AccessTokenProvider = () => Task.FromResult(_accountManager.GetAccount()?.AccessToken);
             })
             .WithAutomaticReconnect()
             .Build();

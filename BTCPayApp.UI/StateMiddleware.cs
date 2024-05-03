@@ -53,6 +53,10 @@ public class StateMiddleware : Middleware
 
     private void ListenIn(IDispatcher dispatcher)
     {
+        dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(_btcPayConnectionManager.Connection?.State));
+        dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(_lightningNodeService.State));
+        dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(_onChainWalletManager.State));
+        
         _btcPayConnectionManager.ConnectionChanged += (sender, args) =>
         {
             dispatcher.Dispatch(new RootState.BTCPayConnectionUpdatedAction(args));

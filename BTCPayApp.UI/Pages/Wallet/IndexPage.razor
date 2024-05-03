@@ -1,17 +1,78 @@
 ﻿@attribute [Route(Routes.Wallet)]
 @layout BaseLayout
 @inject NavigationManager NavigationManager
+@using BTCPayApp.UI.Features
+@using Microsoft.AspNetCore.SignalR.Client
+@using BTCPayApp.Core.Attempt2
+@using BTCPayApp.Core.Data
+@using Microsoft.Extensions.Logging
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject OnChainWalletManager OnChainWalletManager
+@inject LightningNodeManager LightningNodeManager
 
+@inject IState<RootState> State
+@inject IDispatcher Dispatcher
+@inject ILogger<IndexPage> Logger
 <PageTitle>BTCPay Server</PageTitle>
 
+<ul>
+    <li>Onchain wallet state: @State.Value.OnchainWalletState</li>
+    <li>Lightning wallet state: @State.Value.LightningNodeState</li>
+    <li>Connection state: @State.Value.BTCPayServerConnectionState</li>
+</ul>
+
+<button class="btn btn-primary" disabled="@(!CanConfigureWallet)" @onclick="ConfigureWallet">Configure Wallet</button>
+<button class="btn btn-primary" disabled="@(!CanConfigureLNWallet)"  @onclick="ConfigureLNWallet" >Configure Lightning Wallet</button>
+
+
 @code {
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    public bool CanConfigureWallet =>
+        !State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) &&
+        State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
+        State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
+
+
+    public bool CanConfigureLNWallet =>
+        !State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) &&
+        State.Value.OnchainWalletState == OnChainWalletState.Loaded &&
+        State.Value.LightningNodeState == LightningNodeState.NodeNotConfigured &&
+        State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
+
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthenticationState { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         // TODO: Check if wallet exists
-        NavigationManager.NavigateTo(Routes.WalletSetup);
+        // NavigationManager.NavigateTo(Routes.WalletSetup);
     }
+
+    private async Task ConfigureWallet()
+    {
+        
+        try
+        {
+
+            await  OnChainWalletManager.Generate();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error configuring wallet");
+        }
+    }
+
+    private async Task ConfigureLNWallet()
+    {
+        try
+        {
+
+            await  LightningNodeManager.Generate();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error configuring LN wallet");
+        }
+    }
+
 }
