@@ -55,11 +55,12 @@ public class LightningNodeManager : BaseHostedService
 
     public async Task StopNode()
     {
+        if (_nodeScope is null || State is not LightningNodeState.Loaded)
+            return;
         await _controlSemaphore.WaitAsync();
         try
         {
-            if (_nodeScope is null || State == LightningNodeState.Loaded)
-                return;
+            await Node.StopAsync(CancellationToken.None);
             _nodeScope.Dispose();
             _nodeScope = null;
         }
@@ -72,14 +73,15 @@ public class LightningNodeManager : BaseHostedService
     
     public async Task CleanseTask()
     {
+        if (_nodeScope is not null || State == LightningNodeState.NodeNotConfigured)
+        {
+            return;
+        }
         
         await _controlSemaphore.WaitAsync();
         try
         {
-            if (_nodeScope is not null || State == LightningNodeState.NodeNotConfigured)
-            {
-                return;
-            }
+           
             
             
             await _onChainWalletManager.RemoveDerivation(WalletDerivation.LightningScripts);

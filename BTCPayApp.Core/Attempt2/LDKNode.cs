@@ -140,7 +140,7 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
     public async ValueTask DisposeAsync()
     {
-         await StopAsync(CancellationToken.None);
+         // await StopAsync(CancellationToken.None);
     }
     
     
