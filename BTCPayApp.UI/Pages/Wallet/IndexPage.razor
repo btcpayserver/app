@@ -34,6 +34,7 @@
 else if(State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Error )
 {
     <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
+    <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
 }
 
 @if (OnChainWalletManager.State == OnChainWalletState.Loaded)

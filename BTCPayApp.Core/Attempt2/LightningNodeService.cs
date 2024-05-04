@@ -53,7 +53,22 @@ public class LightningNodeManager : BaseHostedService
     }
 
 
-    
+    public async Task StopNode()
+    {
+        await _controlSemaphore.WaitAsync();
+        try
+        {
+            if (_nodeScope is null || State == LightningNodeState.Loaded)
+                return;
+            _nodeScope.Dispose();
+            _nodeScope = null;
+        }
+        finally
+        {
+            _controlSemaphore.Release();
+            State = LightningNodeState.Init;
+        }
+    }
     
     public async Task CleanseTask()
     {
@@ -164,7 +179,7 @@ public class LightningNodeManager : BaseHostedService
 
                     if (_nodeScope is null)
                     {
-                        _nodeScope = _serviceScopeFactory.CreateAsyncScope();
+                        _nodeScope = _serviceScopeFactory.CreateScope();
                         _cancellationTokenSource = new CancellationTokenSource();
                     }
 
