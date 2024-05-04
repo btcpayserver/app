@@ -2,6 +2,7 @@
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using nldksample.LDK;
@@ -10,6 +11,7 @@ namespace BTCPayApp.Core.Attempt2;
 
 public class LightningNodeManager : BaseHostedService
 {
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<LightningNodeManager> _logger;
     private readonly OnChainWalletManager _onChainWalletManager;
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
@@ -37,17 +39,48 @@ public class LightningNodeManager : BaseHostedService
 
 
     public LightningNodeManager(
+        IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<LightningNodeManager> logger,
         OnChainWalletManager onChainWalletManager,
         BTCPayConnectionManager btcPayConnectionManager,
         IServiceScopeFactory serviceScopeFactory)
     {
+        _dbContextFactory = dbContextFactory;
         _logger = logger;
         _onChainWalletManager = onChainWalletManager;
         _btcPayConnectionManager = btcPayConnectionManager;
         _serviceScopeFactory = serviceScopeFactory;
     }
 
+
+    
+    
+    public async Task CleanseTask()
+    {
+        
+        await _controlSemaphore.WaitAsync();
+        try
+        {
+            if (_nodeScope is not null || State == LightningNodeState.NodeNotConfigured)
+            {
+                return;
+            }
+            
+            
+            await _onChainWalletManager.RemoveDerivation(WalletDerivation.LightningScripts);
+            await using var context = await _dbContextFactory.CreateDbContextAsync();
+           context.LightningPayments.RemoveRange(context.LightningPayments);
+           context.LightningChannels.RemoveRange(context.LightningChannels);
+           context.Settings.RemoveRange(context.Settings.Where(s => new string[]{"ChannelManager","NetworkGraph","Score","lightningconfig"}.Contains(s.Key)));
+           await context.SaveChangesAsync();
+        }
+        finally
+        {
+            _controlSemaphore.Release();
+            
+            State = LightningNodeState.NodeNotConfigured;
+        }
+    }
 
     public async Task Generate()
     {
@@ -142,7 +175,9 @@ public class LightningNodeManager : BaseHostedService
                     }
                     catch (Exception e)
                     {
+                        _nodeScope.Dispose();
                         _logger.LogError(e, "Error while starting lightning node");
+                        _nodeScope = null;
                         State = LightningNodeState.Error;
                     }
 

@@ -13,7 +13,7 @@ using LightningPayment = BTCPayApp.Core.Data.LightningPayment;
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKNode : IAsyncDisposable, IHostedService
+public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly BTCPayConnectionManager _connectionManager;
@@ -140,7 +140,7 @@ public class LDKNode : IAsyncDisposable, IHostedService
 
     public async ValueTask DisposeAsync()
     {
-        await StopAsync(CancellationToken.None);
+        // await StopAsync(CancellationToken.None);
     }
     
     

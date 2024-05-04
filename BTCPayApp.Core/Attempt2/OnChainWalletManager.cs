@@ -305,6 +305,27 @@ public class OnChainWalletManager : BaseHostedService
 
         return null;
     }
+
+    public async Task RemoveDerivation(string lightningScripts)
+    {
+        await _controlSemaphore.WaitAsync();
+        try
+        {
+            if (State != OnChainWalletState.Loaded || WalletConfig is null)
+            {
+                throw new InvalidOperationException("Cannot remove deriv in current state");
+            }
+
+            if (!WalletConfig.Derivations.ContainsKey(lightningScripts))
+                throw new InvalidOperationException("Derivation does not exist");
+            WalletConfig.Derivations.Remove(lightningScripts);
+            await _configProvider.Set(WalletConfig.Key, WalletConfig);
+        }
+        finally
+        {
+            _controlSemaphore.Release();
+        }
+    }
 }
 
 public enum OnChainWalletState

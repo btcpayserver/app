@@ -31,6 +31,10 @@
 {
     <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
 }
+else if(State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Error )
+{
+    <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
+}
 
 @if (OnChainWalletManager.State == OnChainWalletState.Loaded)
 {
