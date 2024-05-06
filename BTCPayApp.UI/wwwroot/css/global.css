@@ -141,6 +141,11 @@
   --btcpay-list-group-bg: transparent;
 }
 
+.list-group-flush .list-group-item.disabled,
+.list-group-flush .list-group-item:disabled {
+  --btcpay-list-group-disabled-bg: transparent;
+}
+
 .list-group-flush.list-group-links .list-group-item > a {
   display: flex;
   align-items: center;

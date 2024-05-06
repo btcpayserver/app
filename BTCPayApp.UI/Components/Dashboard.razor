@@ -1,5 +1,4 @@
 @inject IState<RootState> State
-@inject IDispatcher Dispatcher
 @using Microsoft.AspNetCore.SignalR.Client
 @using BTCPayApp.UI.Features
 @using BTCPayApp.Core.Data
@@ -8,7 +7,6 @@
 
 <h1 class="mb-3">Dashboard</h1>
 
-
 @if (State.Value.Loading.Any())
 {
     @foreach(var loading in State.Value.Loading)
@@ -16,7 +14,6 @@
         <Alert Type="info">@loading.ToString() loading.</Alert>
     }
 }
-
 
 @if (State.Value.OnchainWalletState != OnChainWalletState.NotConfigured)
 {

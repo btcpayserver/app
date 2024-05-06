@@ -64,6 +64,5 @@ public record RootState(
         }
     }
 
-
     public record OnChainWalletStateUpdatedAction(OnChainWalletState State);
 }

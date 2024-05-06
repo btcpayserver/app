@@ -1,69 +1,70 @@
 ﻿@attribute [Route(Routes.Wallet)]
 @layout BaseLayout
-@inject NavigationManager NavigationManager
 @using BTCPayApp.UI.Features
 @using Microsoft.AspNetCore.SignalR.Client
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.Core.Data
 @using Microsoft.Extensions.Logging
 @using System.Text.Json
-@using Microsoft.Extensions.DependencyInjection
-@using org.ldk.structs
+@using BTCPayApp.UI.Components.Layout
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject OnChainWalletManager OnChainWalletManager
 @inject LightningNodeManager LightningNodeManager
-
 @inject IState<RootState> State
-@inject IDispatcher Dispatcher
 @inject ILogger<IndexPage> Logger
-<PageTitle>BTCPay Server</PageTitle>
 
-<ul>
-    <li>Onchain wallet state: @State.Value.OnchainWalletState</li>
-    <li>Lightning wallet state: @State.Value.LightningNodeState</li>
-    <li>Connection state: @State.Value.BTCPayServerConnectionState</li>
-</ul>
-@if (CanConfigureWallet)
-{
-    <button class="btn btn-primary" @onclick="ConfigureWallet">Configure Wallet</button>
-}
-@if (CanConfigureLNWallet)
-{
-    <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
-}
-else if(State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Error )
-{
-    <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
-    <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
-    var groupId = OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts]?.Identifier;
-    <input class="form-control" type="text" value="type=app;group=@groupId" />
-}
+<PageTitle>Wallet</PageTitle>
 
-@if (OnChainWalletManager.State == OnChainWalletState.Loaded)
-{
-    <pre>
-    @(JsonSerializer.Serialize(OnChainWalletManager.WalletConfig, new JsonSerializerOptions() {WriteIndented = true}))
-    </pre>
-}
-@if (LightningNodeManager.State == LightningNodeState.Loaded)
-{
-   <LN />
-}
+<SectionContent SectionName="top">
+    <Titlebar Back="@Routes.Dashboard">
+        <h1>Wallet</h1>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+    <ul>
+        <li>Onchain wallet state: @State.Value.OnchainWalletState</li>
+        <li>Lightning wallet state: @State.Value.LightningNodeState</li>
+        <li>Connection state: @State.Value.BTCPayServerConnectionState</li>
+    </ul>
+    @if (CanConfigureWallet)
+    {
+        <button class="btn btn-primary" @onclick="ConfigureWallet">Configure Wallet</button>
+    }
+    @if (CanConfigureLNWallet)
+    {
+        <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
+    }
+    else if(State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Error )
+    {
+        <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
+        <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
+        var groupId = OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts]?.Identifier;
+        <input class="form-control" type="text" value="type=app;group=@groupId" />
+    }
+
+    @if (OnChainWalletManager.State == OnChainWalletState.Loaded)
+    {
+        <pre>
+        @(JsonSerializer.Serialize(OnChainWalletManager.WalletConfig, new JsonSerializerOptions() {WriteIndented = true}))
+        </pre>
+    }
+    @if (LightningNodeManager.State == LightningNodeState.Loaded)
+    {
+        <LN />
+    }
+</section>
 
 @code {
-
     public bool CanConfigureWallet =>
         !State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) &&
         State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
         State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
-
 
     public bool CanConfigureLNWallet =>
         !State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) &&
         State.Value.OnchainWalletState == OnChainWalletState.Loaded &&
         State.Value.LightningNodeState == LightningNodeState.NodeNotConfigured &&
         State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
-
 
     [CascadingParameter] private Task<AuthenticationState>? AuthenticationState { get; set; }
 
@@ -96,5 +97,4 @@ else if(State.Value.LightningNodeState is LightningNodeState.Loaded or Lightning
             Logger.LogError(ex, "Error configuring LN wallet");
         }
     }
-
 }
