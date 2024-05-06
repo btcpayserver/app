@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Scripting;
 using org.ldk.structs;
-using LightningPayment = BTCPayApp.Core.Data.LightningPayment;
 
 namespace BTCPayApp.Core.LDK;
 

@@ -1,4 +1,5 @@
 ﻿using System.Data;
+using BTCPayApp.CommonServer;
 using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayApp.Core.Data;
@@ -21,7 +22,9 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        LightningPayment.OnModelCreating(modelBuilder);
+        //TODO: add paymentId to the primary key and generate a random one if not provided
+        modelBuilder.Entity<LightningPayment>()
+            .HasKey(w => new {w.PaymentHash, w.Inbound});
         base.OnModelCreating(modelBuilder);
     }
 }

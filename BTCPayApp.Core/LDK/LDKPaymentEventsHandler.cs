@@ -1,7 +1,7 @@
 ﻿using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
 using org.ldk.structs;
-using LightningPayment = BTCPayApp.Core.Data.LightningPayment;
+using LightningPayment = BTCPayApp.CommonServer.LightningPayment;
 
 namespace nldksample.LDK;
 
