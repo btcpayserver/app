@@ -73,6 +73,8 @@ public class LightningNodeManager : BaseHostedService
     
     public async Task CleanseTask()
     {
+       await StopNode();
+        
         if (_nodeScope is not null || State == LightningNodeState.NodeNotConfigured)
         {
             return;
@@ -200,6 +202,11 @@ public class LightningNodeManager : BaseHostedService
 
                     break;
 
+                case LightningNodeState.Loaded:
+
+                    await _btcPayConnectionManager.HubProxy.MasterNodePong(_onChainWalletManager.WalletConfig
+                        .Derivations[WalletDerivation.LightningScripts].Identifier, true);
+                    break;
                 // case LightningNodeState.Unloading:
                 //     _nodeScope?.Dispose();
                 //     State = _walletConfig is null

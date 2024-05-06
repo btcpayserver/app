@@ -4,6 +4,7 @@ using BTCPayApp.Core.Helpers;
 using BTCPayApp.UI.Auth;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -131,6 +132,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         if (account is null)
             return;
         Connection = new HubConnectionBuilder()
+            .AddNewtonsoftJsonProtocol()
             .WithUrl(new Uri(new Uri(account.BaseUri), "hub/btcpayapp").ToString(), options =>
             {
                 

@@ -1,6 +1,7 @@
 ﻿namespace BTCPayApp.Core.Helpers;
 
 public delegate Task AsyncEventHandler<TEventArgs>(object? sender, TEventArgs e);
+public delegate Task AsyncEventHandler(object? sender);
 
 public static class EventHandlers
 {

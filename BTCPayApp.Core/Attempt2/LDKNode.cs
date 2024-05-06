@@ -128,7 +128,9 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
         if (!exists)
             return;
-
+        var identifier = _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier;
+        await _connectionManager.HubProxy.MasterNodePong(identifier, false);
+        
         var services = ServiceProvider.GetServices<IScopedHostedService>();
         foreach (var service in services)
         {
