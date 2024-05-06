@@ -7,5 +7,6 @@ public enum LightningNodeState
     WaitingForConnection,
     Loading,
     Loaded,
+    Stopped,
     Error
 }

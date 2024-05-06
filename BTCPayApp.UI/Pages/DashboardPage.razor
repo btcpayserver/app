@@ -181,18 +181,16 @@
 
     private SetupState SetupStateOnchain() {
         if (State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) ||
-            State.Value.OnchainWalletState == OnChainWalletState.Init ||
-            State.Value.OnchainWalletState == OnChainWalletState.Loading ||
+            State.Value.OnchainWalletState is OnChainWalletState.Init or OnChainWalletState.Loading ||
             State.Value.BTCPayServerConnectionState != HubConnectionState.Connected) return SetupState.Undetermined;
         return State.Value.OnchainWalletState == OnChainWalletState.Loaded ? SetupState.Completed : SetupState.Pending;
     }
 
     private SetupState SetupStateLightning() {
         if (State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) ||
-            State.Value.LightningNodeState == LightningNodeState.Init ||
-            State.Value.LightningNodeState == LightningNodeState.Loading ||
+            State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loading ||
             State.Value.BTCPayServerConnectionState != HubConnectionState.Connected) return SetupState.Undetermined;
-        if (State.Value.LightningNodeState == LightningNodeState.Error) return SetupState.Failed;
+        if (State.Value.LightningNodeState is LightningNodeState.Error or LightningNodeState.Stopped) return SetupState.Failed;
         return State.Value.LightningNodeState == LightningNodeState.Loaded ? SetupState.Completed : SetupState.Pending;
     }
 

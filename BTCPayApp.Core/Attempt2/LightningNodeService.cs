@@ -37,7 +37,6 @@ public class LightningNodeManager : BaseHostedService
 
     public event AsyncEventHandler<(LightningNodeState Old, LightningNodeState New)>? StateChanged;
 
-
     public LightningNodeManager(
         IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<LightningNodeManager> logger,
@@ -52,6 +51,35 @@ public class LightningNodeManager : BaseHostedService
         _serviceScopeFactory = serviceScopeFactory;
     }
 
+    public async Task StartNode()
+    {
+        if (_nodeScope is not null || State is LightningNodeState.Loaded)
+            return;
+        await _controlSemaphore.WaitAsync();
+
+        try
+        {
+            if (_nodeScope is null)
+            {
+                _nodeScope = _serviceScopeFactory.CreateScope();
+                _cancellationTokenSource = new CancellationTokenSource();
+            }
+            await Node.StartAsync(_cancellationTokenSource.Token);
+
+            State = LightningNodeState.Loaded;
+        }
+        catch (Exception e)
+        {
+            _nodeScope.Dispose();
+            _logger.LogError(e, "Error while starting lightning node");
+            _nodeScope = null;
+            State = LightningNodeState.Error;
+        }
+        finally
+        {
+            _controlSemaphore.Release();
+        }
+    }
 
     public async Task StopNode()
     {
@@ -67,36 +95,33 @@ public class LightningNodeManager : BaseHostedService
         finally
         {
             _controlSemaphore.Release();
-            State = LightningNodeState.Init;
+            State = LightningNodeState.Stopped;
         }
     }
-    
+
     public async Task CleanseTask()
     {
-       await StopNode();
-        
+        await StopNode();
+
         if (_nodeScope is not null || State == LightningNodeState.NodeNotConfigured)
         {
             return;
         }
-        
+
         await _controlSemaphore.WaitAsync();
         try
         {
-           
-            
-            
             await _onChainWalletManager.RemoveDerivation(WalletDerivation.LightningScripts);
             await using var context = await _dbContextFactory.CreateDbContextAsync();
-           context.LightningPayments.RemoveRange(context.LightningPayments);
-           context.LightningChannels.RemoveRange(context.LightningChannels);
-           context.Settings.RemoveRange(context.Settings.Where(s => new string[]{"ChannelManager","NetworkGraph","Score","lightningconfig"}.Contains(s.Key)));
-           await context.SaveChangesAsync();
+            context.LightningPayments.RemoveRange(context.LightningPayments);
+            context.LightningChannels.RemoveRange(context.LightningChannels);
+            context.Settings.RemoveRange(context.Settings.Where(s => new string[]{"ChannelManager","NetworkGraph","Score","lightningconfig"}.Contains(s.Key)));
+            await context.SaveChangesAsync();
         }
         finally
         {
             _controlSemaphore.Release();
-            
+
             State = LightningNodeState.NodeNotConfigured;
         }
     }
@@ -148,11 +173,9 @@ public class LightningNodeManager : BaseHostedService
 
     private async Task OnOnStateChanged(object? sender, (LightningNodeState Old, LightningNodeState New) state)
     {
-        
         LightningNodeState? newState = null;
         try
         {
-            await _controlSemaphore.WaitAsync();
             switch (state.New)
             {
                 case LightningNodeState.WaitingForConnection:
@@ -181,31 +204,16 @@ public class LightningNodeManager : BaseHostedService
                         break;
                     }
 
-                    if (_nodeScope is null)
-                    {
-                        _nodeScope = _serviceScopeFactory.CreateScope();
-                        _cancellationTokenSource = new CancellationTokenSource();
-                    }
-
-                    try
-                    {
-                        await Node.StartAsync(_cancellationTokenSource.Token);
-                        newState = LightningNodeState.Loaded;
-                    }
-                    catch (Exception e)
-                    {
-                        _nodeScope.Dispose();
-                        _logger.LogError(e, "Error while starting lightning node");
-                        _nodeScope = null;
-                        State = LightningNodeState.Error;
-                    }
+                    await StartNode();
 
                     break;
 
                 case LightningNodeState.Loaded:
+                    await _controlSemaphore.WaitAsync();
 
                     await _btcPayConnectionManager.HubProxy.MasterNodePong(_onChainWalletManager.WalletConfig
                         .Derivations[WalletDerivation.LightningScripts].Identifier, true);
+                    _controlSemaphore.Release();
                     break;
                 // case LightningNodeState.Unloading:
                 //     _nodeScope?.Dispose();
@@ -217,7 +225,6 @@ public class LightningNodeManager : BaseHostedService
         }
         finally
         {
-            _controlSemaphore.Release();
             if (newState is not null)
                 State = newState.Value;
         }

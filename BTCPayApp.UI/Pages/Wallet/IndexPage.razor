@@ -34,10 +34,17 @@
     {
         <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
     }
-    else if(State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Error )
+    else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Stopped or LightningNodeState.Error)
     {
         <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
-        <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
+        @if (State.Value.LightningNodeState is LightningNodeState.Stopped)
+        {
+            <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
+        }
+        else
+        {
+            <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
+        }
         var groupId = OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts]?.Identifier;
         <input class="form-control" type="text" value="type=app;group=@groupId" />
     }
