@@ -37,11 +37,11 @@
     else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error)
     {
         <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
-        @if (State.Value.LightningNodeState is LightningNodeState.Init)
+        @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
         {
             <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
         }
-        else
+        else if(State.Value.LightningNodeState is LightningNodeState.Loaded )
         {
             <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
         }
