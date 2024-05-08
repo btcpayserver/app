@@ -126,7 +126,7 @@ else
     private string _nodeId;
     private (string id, string userId, string counterparty, long? shortChannelId, int? confirmations, int? confirmationsRequired, string fundingTransactionHash, bool usable, bool ready, LightMoney Balance, LightMoney Inbound, LightMoney Outbound, string? State)[] _channels;
     private (string nodeId, string? socket)[] _peers;
-    private List<LightningPayment> _payments;
+    private List<LightningPayment?> _payments;
     public LDKNode Node => LightningNodeManager.Node;
     public ChannelManager ChannelManager => LightningNodeManager.Node.ServiceProvider.GetService<ChannelManager>();
     public LDKPeerHandler PeerHandler => LightningNodeManager.Node.ServiceProvider.GetService<LDKPeerHandler>();

@@ -12,41 +12,46 @@ using LightningPayment = BTCPayApp.CommonServer.LightningPayment;
 
 namespace nldksample.LDK;
 
-public class PaymentsManager:IScopedHostedService
+public class PaymentsManager
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly BTCPayConnectionManager _connectionManager;
+
+    // private readonly BTCPayConnectionManager _connectionManager;
     private readonly ChannelManager _channelManager;
     private readonly Logger _logger;
     private readonly NodeSigner _nodeSigner;
     private readonly Network _network;
-    private readonly OnChainWalletManager _onChainWalletManager;
+    // private readonly OnChainWalletManager _onChainWalletManager;
 
     public PaymentsManager(
         IDbContextFactory<AppDbContext> dbContextFactory,
-        BTCPayConnectionManager connectionManager,
+        // BTCPayConnectionManager connectionManager,
         ChannelManager channelManager,
         Logger logger,
         NodeSigner nodeSigner,
-        Network network,
-        OnChainWalletManager onChainWalletManager)
+        Network network
+        // OnChainWalletManager onChainWalletManager
+    )
     {
         _dbContextFactory = dbContextFactory;
-        _connectionManager = connectionManager;
+        // _connectionManager = connectionManager;
         _channelManager = channelManager;
         _logger = logger;
         _nodeSigner = nodeSigner;
         _network = network;
-        _onChainWalletManager = onChainWalletManager;
+        // _onChainWalletManager = onChainWalletManager;
     }
 
-    public async Task<List<LightningPayment>> List(Func<IQueryable<LightningPayment>, IQueryable<LightningPayment>> filter, CancellationToken cancellationToken = default)
+    public async Task<List<LightningPayment>> List(
+        Func<IQueryable<LightningPayment>, IQueryable<LightningPayment?>> filter,
+        CancellationToken cancellationToken = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        return await filter.Invoke(context.LightningPayments.AsNoTracking().AsQueryable()).ToListAsync(cancellationToken: cancellationToken);
+        return (await filter.Invoke(context.LightningPayments.AsNoTracking().AsQueryable())
+            .ToListAsync(cancellationToken: cancellationToken))!;
     }
-    
-    public async Task<LightningPayment> RequestPayment(LightMoney amount, TimeSpan expiry, string descriptionHash)
+
+    public async Task<LightningPayment> RequestPayment(LightMoney amount, TimeSpan expiry, uint256 descriptionHash)
     {
         var amt = amount == LightMoney.Zero ? Option_u64Z.none() : Option_u64Z.some(amount.MilliSatoshi);
         var preimage = RandomNumberGenerator.GetBytes(32);
@@ -59,10 +64,13 @@ public class PaymentsManager:IScopedHostedService
         //         paymentHash, Option_u16Z.none());
 
 
-        var descHashBytes = Sha256.from_bytes(uint256.Parse(descriptionHash).ToBytes());
-        
-        var result =  org.ldk.util.UtilMethods.create_invoice_from_channelmanager_with_description_hash_and_duration_since_epoch(_channelManager, _nodeSigner, _logger,
-            _network.GetLdkCurrency(), amt, descHashBytes, epoch, (int) Math.Ceiling(expiry.TotalSeconds),Option_u16Z.none());
+        var descHashBytes = Sha256.from_bytes(descriptionHash.ToBytes());
+
+        var result =
+            org.ldk.util.UtilMethods.create_invoice_from_channelmanager_with_description_hash_and_duration_since_epoch(
+                _channelManager, _nodeSigner, _logger,
+                _network.GetLdkCurrency(), amt, descHashBytes, epoch, (int) Math.Ceiling(expiry.TotalSeconds),
+                Option_u16Z.none());
 
         if (result is Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_Err err)
         {
@@ -73,24 +81,25 @@ public class PaymentsManager:IScopedHostedService
             .res;
 
         var bolt11 = invoice.to_str();
-        var paymentRequest = BOLT11PaymentRequest.Parse(bolt11, _network);
         var lp = new LightningPayment()
         {
             Inbound = true,
-            Value = amount,
+            PaymentId = "default",
+            Value = amount.MilliSatoshi,
             PaymentHash = Convert.ToHexString(paymentHash),
             Secret = Convert.ToHexString(invoice.payment_secret()),
             Preimage = Convert.ToHexString(preimage),
             Status = LightningPaymentStatus.Pending,
-            Timestamp = DateTimeOffset.UtcNow
+            Timestamp = DateTimeOffset.FromUnixTimeSeconds(epoch),
+            PaymentRequests = [bolt11]
         };
         await Payment(lp);
-        
-        OnPaymentUpdate?.Invoke(this, lp);
+
         return lp;
     }
 
-    public async Task<LightningPayment> PayInvoice(BOLT11PaymentRequest paymentRequest, LightMoney? explicitAmount = null)
+    public async Task<LightningPayment> PayInvoice(BOLT11PaymentRequest paymentRequest,
+        LightMoney? explicitAmount = null)
     {
         var id = RandomUtils.GetBytes(32);
         var invoiceStr = paymentRequest.ToString();
@@ -117,7 +126,8 @@ public class PaymentsManager:IScopedHostedService
             Secret = paymentRequest.PaymentSecret.ToString(),
             Status = LightningPaymentStatus.Pending,
             Timestamp = DateTimeOffset.UtcNow,
-            PaymentId = Convert.ToHexString(id)
+            PaymentId = Convert.ToHexString(id),
+            PaymentRequests = [invoiceStr]
         };
         await Payment(lp);
 
@@ -129,14 +139,10 @@ public class PaymentsManager:IScopedHostedService
         {
             throw new Exception(err.err.ToString());
         }
-
-        
-        OnPaymentUpdate?.Invoke(this, lp);
         return lp;
     }
-    
-    
-    
+
+
     public async Task Payment(LightningPayment lightningPayment, CancellationToken cancellationToken = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -151,9 +157,9 @@ public class PaymentsManager:IScopedHostedService
         string? preimage, CancellationToken cancellationToken = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var payment = await context.LightningPayments.SingleOrDefaultAsync(lightningPayment => 
-                lightningPayment.PaymentHash == paymentHash && 
-                lightningPayment.Inbound == inbound && 
+        var payment = await context.LightningPayments.SingleOrDefaultAsync(lightningPayment =>
+                lightningPayment.PaymentHash == paymentHash &&
+                lightningPayment.Inbound == inbound &&
                 lightningPayment.PaymentId == paymentId,
             cancellationToken);
         if (payment != null)
@@ -167,28 +173,14 @@ public class PaymentsManager:IScopedHostedService
                 payment.Status = failure ? LightningPaymentStatus.Failed : LightningPaymentStatus.Complete;
                 payment.Preimage ??= preimage;
             }
+
             var x = await context.SaveChangesAsync(cancellationToken);
-            if (x >0)
+            if (x > 0)
             {
                 OnPaymentUpdate?.Invoke(this, payment);
             }
         }
-        
     }
-    
+
     public AsyncEventHandler<LightningPayment>? OnPaymentUpdate { get; set; }
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        OnPaymentUpdate+= OnOnPaymentUpdate;
-    }
-
-    private async Task OnOnPaymentUpdate(object? sender, LightningPayment e)
-    {
-        await _connectionManager.HubProxy.SendPaymentUpdate(_onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier, e);
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        OnPaymentUpdate-= OnOnPaymentUpdate;
-    }
 }

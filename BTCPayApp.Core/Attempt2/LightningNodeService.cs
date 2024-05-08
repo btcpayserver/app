@@ -95,7 +95,7 @@ public class LightningNodeManager : BaseHostedService
         finally
         {
             _controlSemaphore.Release();
-            State = LightningNodeState.Stopped;
+            State = LightningNodeState.Init;
         }
     }
 

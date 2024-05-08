@@ -1,21 +1,26 @@
-﻿using BTCPayApp.CommonServer;
-using BTCPayApp.Core.Data;
+﻿using System.Text;
+using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Helpers;
 using BTCPayServer.Client.Models;
+using BTCPayServer.Lightning;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using NBitcoin;
+using NBitcoin.Crypto;
 using nldksample.LDK;
+using LightningPayment = BTCPayApp.CommonServer.LightningPayment;
 
 namespace BTCPayApp.Core.Attempt2;
 
 public class BTCPayAppServerClient : IBTCPayAppHubClient
 {
     private readonly ILogger<BTCPayAppServerClient> _logger;
-    private readonly PaymentsManager _paymentsManager;
+    private readonly IServiceProvider _serviceProvider;
 
-    public BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, PaymentsManager paymentsManager)
+    public BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
-        _paymentsManager = paymentsManager;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task NotifyNetwork(string network)
@@ -36,10 +41,38 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
         _logger.LogInformation("NewBlock: {block}", block);
         await OnNewBlock?.Invoke(this, block);
     }
+    
+    private PaymentsManager PaymentsManager => _serviceProvider.GetRequiredService<LightningNodeManager>().Node.ServiceProvider.GetRequiredService<PaymentsManager>();
 
     public async Task<LightningPayment> CreateInvoice(CreateLightningInvoiceRequest createLightningInvoiceRequest)
     {
-       return await  _paymentsManager.RequestPayment(createLightningInvoiceRequest.Amount, createLightningInvoiceRequest.Expiry, createLightningInvoiceRequest.Description);
+        var descHash =  new uint256(Hashes.SHA256(Encoding.UTF8.GetBytes(createLightningInvoiceRequest.Description)), false);
+        return await PaymentsManager.RequestPayment(createLightningInvoiceRequest.Amount, createLightningInvoiceRequest.Expiry, descHash);
+    }
+
+    public async Task<LightningPayment?> GetLightningInvoice(string paymentHash)
+    {
+        var invs = await PaymentsManager.List(payments =>
+            payments.Where(payment => payment.Inbound && payment.PaymentHash == paymentHash));
+        return invs.FirstOrDefault();
+
+    }
+
+    public async Task<LightningPayment?> GetLightningPayment(string paymentHash)
+    {
+        var invs = await PaymentsManager.List(payments =>
+            payments.Where(payment => !payment.Inbound && payment.PaymentHash == paymentHash));
+        return invs.FirstOrDefault();
+    }
+
+    public async Task<List<LightningPayment>> GetLightningPayments(ListPaymentsParams request)
+    {
+        return await PaymentsManager.List(payments => payments.Where(payment => !payment.Inbound), default);
+    }
+
+    public async Task<List<LightningPayment>> GetLightningInvoices(ListInvoicesParams request)
+    {
+        return await PaymentsManager.List(payments => payments.Where(payment => payment.Inbound), default);
     }
 
     public event AsyncEventHandler<string>? OnNewBlock;

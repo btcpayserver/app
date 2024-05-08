@@ -34,10 +34,10 @@
     {
         <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
     }
-    else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Stopped or LightningNodeState.Error)
+    else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error)
     {
         <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
-        @if (State.Value.LightningNodeState is LightningNodeState.Stopped)
+        @if (State.Value.LightningNodeState is LightningNodeState.Init)
         {
             <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
         }

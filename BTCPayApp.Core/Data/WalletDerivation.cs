@@ -6,6 +6,6 @@ public class WalletDerivation
     public string Name { get; set; }
     public string? Descriptor { get; set; }
 
-    public const string NativeSegwit = "Segwit";
-    public const string LightningScripts = "LightningScripts";
+    public const string NativeSegwit = "segwit";
+    public const string LightningScripts = "lightningScripts";
 }

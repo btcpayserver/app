@@ -187,10 +187,12 @@ public static class LDKExtensions
         services.AddScoped<LDKBackgroundProcessor>();
         services.AddScoped<LDKAnnouncementBroadcaster>();
         services.AddScoped<PaymentsManager>();
+        services.AddScoped<BTCPayPaymentsNotifier>();
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKChannelSync>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKBackgroundProcessor>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKPeerHandler>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKAnnouncementBroadcaster>());
+        services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<BTCPayPaymentsNotifier>());
 
         services.AddScoped<LDKLogger>();
         services.AddScoped<ChainParameters>(provider =>
