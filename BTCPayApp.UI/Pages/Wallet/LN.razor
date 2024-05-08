@@ -6,6 +6,8 @@
 @using nldksample.LDK
 @using org.ldk.structs
 @using LightningPayment = BTCPayApp.CommonServer.LightningPayment
+@using NodeInfo = BTCPayServer.Lightning.NodeInfo
+@using System.Text.Json
 
 @if (Loading)
 {
@@ -15,6 +17,10 @@ else
 {
     <button class="btn btn-primary" type="button" @onclick="FetchData">Refresh data</button>
 }
+
+<pre>
+        @(JsonSerializer.Serialize(Node.Config, new JsonSerializerOptions() {WriteIndented = true}))
+        </pre>
 
 @if (_nodeId is not null)
 {
@@ -39,6 +45,15 @@ else
             </tr>
         }
         </tbody>
+        <tfoot>
+        <tr>
+            <td colspan="2">
+                <div class="input-group"></div>
+                <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
+                <button class="btn btn-primary" type="button" @onclick="Callback">Connect</button>
+            </td>
+        </tr>
+        </tfoot>
     </table>
 }
 @if (_channels is not null)
@@ -159,4 +174,35 @@ else
             _semaphore.Release();
         }
     }
+
+
+    private async Task Callback()
+    {
+        try
+        {
+            Loading = true;
+            await _semaphore.WaitAsync();
+            if (!NodeInfo.TryParse(NewPeer, out var nodeInfo))
+            {
+                return;
+            }
+
+
+            var result = await PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
+            if (result is null)
+            {
+                return;
+            }
+
+            NewPeer = "";
+        }
+        finally
+        {
+            Loading = false;
+            _semaphore.Release();
+        }
+    }
+
+    private string NewPeer { get; set; }
+
 }

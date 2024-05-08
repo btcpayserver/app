@@ -6,7 +6,8 @@ public class LightningConfig
     public const string Key = "lightningconfig";
 
     public string Alias { get; set; } = "BTCPay Server";
-    public string ScriptDerivationKey { get; set; } = WalletDerivation.NativeSegwit;
+    public string ScriptDerivationKey { get; set; } = WalletDerivation.NativeSegwit; //when ldk asks for an address, where do we get it from?
+    public string LightningDerivationPath { get; set; } = "m/666'";// your lightning node derivation path
     public string Color { get; set; } = "#51B13E";
 
     [JsonIgnore]
@@ -36,4 +37,13 @@ public class LightningConfig
         }
     }
     
+    public Dictionary<string, PeerInfo> Peers { get; set; } = new();
+    
+    
+}
+
+public class PeerInfo
+{
+    public string Endpoint { get; set; }
+    public bool Persistent { get; set; }
 }
