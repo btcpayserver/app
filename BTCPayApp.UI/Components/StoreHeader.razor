@@ -1,0 +1,14 @@
+<header class="store-header">
+    @if (!string.IsNullOrEmpty(LogoUrl))
+    {
+        <img src="@LogoUrl" alt="@Title" class="store-logo"/>
+    }
+    <h1 class="store-name">@Title</h1>
+</header>
+
+@code {
+    [Parameter, EditorRequired]
+    public string? Title { get; set; }
+    [Parameter]
+    public string? LogoUrl { get; set; }
+}
