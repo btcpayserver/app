@@ -66,6 +66,10 @@ else
 
 
                     }
+                    else if(peer.socket is not null)
+                    {
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo(){Endpoint=peer.socket})">Remember peer</button>
+                    }
 
 
                 </td>
