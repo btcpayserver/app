@@ -9,6 +9,7 @@
 @using System.Text.Json
 @using BTCPayApp.Core.Data
 @using System.Reflection.Metadata
+@using BTCPayApp.Core.Helpers
 
 @if (Loading)
 {
@@ -43,6 +44,9 @@ else
         </tr>
         </thead>
         <tbody>
+        @{
+        var rememberedButUnconnected = _config.Peers.Keys.Where(peer => _peers.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
+    }
         @foreach (var peer in _peers)
         {
             var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
@@ -55,25 +59,41 @@ else
                     <button type="button" class="btn btn-primary btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
                     @if (peerRemembered)
                     {
-                        <button type="button" class="btn btn-primary btn-sm"  @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
-                        <button type="button" class="btn btn-primary btn-sm"  @onclick="() => UpdatePeer(peer.nodeId, peerConfig with{ Persistent =!peerConfig.Persistent } )">Constant conn = @peerConfig.Persistent Toggle
-                            </button>
-                        <button type="button" class="btn btn-primary btn-sm"   @onclick="() => UpdatePeer(peer.nodeId, peerConfig with{ Persistent =!peerConfig.Trusted } )">Trusted = @peerConfig.Trusted Toggle</button>
-                        
-                        
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Persistent})">Constant conn = @peerConfig.Persistent Toggle
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
+
+
                     }
 
 
                 </td>
             </tr>
         }
+        @foreach(var peer in rememberedButUnconnected)
+        {
+            var peerConfig = _config.Peers[peer];
+            <tr>
+                <td>@peer</td>
+                <td>@peerConfig.Endpoint</td>
+                <td>
+                    
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">Constant conn = @peerConfig.Persistent Toggle
+                    </button>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
+                </td>
+            </tr>
+        }
         </tbody>
         <tfoot>
         <tr>
-            <td colspan="2">
-                <div class="input-group"></div>
+            <td colspan="3">
+                <div class="input-group">
                 <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
-                <button class="btn btn-primary" type="button" @onclick="Callback">Connect</button>
+                <button class="btn btn-primary" type="button" @onclick="Connect">Connect</button></div>
             </td>
         </tr>
         </tfoot>
@@ -202,7 +222,7 @@ else
     }
 
 
-    private async Task Callback()
+    private async Task Connect()
     {
         try
         {
@@ -256,6 +276,25 @@ else
 
             await Node.Peer(toString, value);
             
+        }
+        finally
+        {
+            Loading = false;
+            _semaphore.Release();
+            
+        }
+    }
+
+    private async Task ConnectPeer(string peer, PeerInfo peerConfig)
+    {
+        try
+        {
+            Loading = true;
+            await _semaphore.WaitAsync();
+
+            EndPointParser.TryParse(peerConfig.Endpoint,9735, out var endpoint);
+            await PeerHandler.ConnectAsync(new PubKey(peer), endpoint);
+
         }
         finally
         {
