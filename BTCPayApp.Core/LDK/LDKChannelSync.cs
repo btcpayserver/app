@@ -105,7 +105,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
             action => _appHubClient.OnNewBlock -= action, OnNewBlock,
             cancellationToken)); 
         
-        _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<string>(
+        _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<(string identifier, string txId, string[] relatedScripts, bool confirmed)>(
             action => _appHubClient.OnTransactionDetected += action,
             action => _appHubClient.OnTransactionDetected -= action, OnTransactionUpdate,
             cancellationToken));
@@ -113,12 +113,12 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
 
   
 
-    private async Task OnTransactionUpdate(string txUpdate, CancellationToken cancellationToken)
+    private async Task OnTransactionUpdate((string identifier, string txId, string[] relatedScripts, bool confirmed) txUpdate, CancellationToken cancellationToken)
     {
-        var txResult = await  _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(new[] {txUpdate});
-        var tx = txResult.Txs[txUpdate];
+        var txResult = await  _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(new[] {txUpdate.txId});
+        var tx = txResult.Txs[txUpdate.txId];
 
-        var txHash = new uint256(txUpdate);
+        var txHash = new uint256(txUpdate.txId);
         var txHashBytes = txHash.ToBytes();
         
         byte[]? headerBytes = null;

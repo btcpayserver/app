@@ -205,14 +205,12 @@ public class OnChainWalletManager : BaseHostedService
         State = OnChainWalletState.Init;
     }
 
-    private Task OnTransactionDetected(object? sender, string e)
+    private async Task OnTransactionDetected(object? sender, (string identifier, string txId, string[] relatedScripts, bool confirmed) valueTuple)
     {
-        throw new NotImplementedException();
     }
 
-    private Task OnNewBlock(object? sender, string e)
+    private async Task OnNewBlock(object? sender, string e)
     {
-        throw new NotImplementedException();
     }
 
     public async Task<Script> DeriveScript(string derivation)
