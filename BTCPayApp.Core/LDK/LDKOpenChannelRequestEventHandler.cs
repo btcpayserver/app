@@ -1,8 +1,8 @@
-﻿using NBitcoin;
+﻿using BTCPayApp.Core.Attempt2;
 using org.ldk.structs;
 using UInt128 = org.ldk.util.UInt128;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKChannelEventsHandler: 
     ILDKEventHandler<Event.Event_ChannelClosed>,
@@ -36,28 +36,41 @@ public class LDKChannelEventsHandler:
 public class LDKOpenChannelRequestEventHandler: ILDKEventHandler<Event.Event_OpenChannelRequest>
 {
     private readonly ChannelManager _channelManager;
+    private readonly LDKNode _node;
 
-    public LDKOpenChannelRequestEventHandler(ChannelManager channelManager)
+    public LDKOpenChannelRequestEventHandler(ChannelManager channelManager, LDKNode node)
     {
         _channelManager = channelManager;
+        _node = node;
     }
     public async Task Handle(Event.Event_OpenChannelRequest eventOpenChannelRequest)
     {
+        var userChannelId = new UInt128(eventOpenChannelRequest.temporary_channel_id.Take(16).ToArray());
+        
         if (eventOpenChannelRequest.channel_type.supports_zero_conf())
         {
-            _channelManager.accept_inbound_channel_from_trusted_peer_0conf(
-                eventOpenChannelRequest.temporary_channel_id,
-                eventOpenChannelRequest.counterparty_node_id,
-                new UInt128(RandomUtils.GetBytes(16))
-            );
+           var nodeId =  Convert.ToHexString(eventOpenChannelRequest.counterparty_node_id);
+            
+            var config = await _node.GetConfig();
+            if(config.Peers.TryGetValue(nodeId, out var peer) && peer.Trusted)
+            {
+                _channelManager.accept_inbound_channel_from_trusted_peer_0conf(
+                    eventOpenChannelRequest.temporary_channel_id,
+                    eventOpenChannelRequest.counterparty_node_id,
+                    userChannelId
+                );
+                return;
+            }
         }
-        else
-        {
-            _channelManager.accept_inbound_channel(
-                eventOpenChannelRequest.temporary_channel_id,
-                eventOpenChannelRequest.counterparty_node_id,
-                new UInt128(RandomUtils.GetBytes(16)));
-        }
+        
+        
+        _channelManager.accept_inbound_channel(
+            eventOpenChannelRequest.temporary_channel_id,
+            eventOpenChannelRequest.counterparty_node_id,
+            userChannelId);
+        
+        //TODO: if we want to reject the channel, we can call reject_channel
+        //_channelManager.force_close_without_broadcasting_txn(eventOpenChannelRequest.temporary_channel_id, eventOpenChannelRequest.counterparty_node_id);
         
     }
 }

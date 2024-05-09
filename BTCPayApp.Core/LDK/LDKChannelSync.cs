@@ -1,12 +1,9 @@
-﻿using BTCPayApp.CommonServer;
-using BTCPayApp.Core;
-using BTCPayApp.Core.Attempt2;
+﻿using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Helpers;
-using BTCPayApp.Core.LDK;
 using NBitcoin;
 using org.ldk.structs;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKChannelSync : IScopedHostedService, IDisposable
 {
@@ -16,7 +13,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     private readonly Network _network;
     private readonly Watch _watch;
     private readonly BTCPayAppServerClient _appHubClient;
-    private List<IDisposable> _disposables = new();
+    private readonly List<IDisposable> _disposables = new();
     
 
     public LDKChannelSync(

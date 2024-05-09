@@ -1,8 +1,8 @@
-﻿using BTCPayApp.Core.LDK;
+﻿using BTCPayApp.Core.Attempt2;
 using org.ldk.structs;
 using Script = NBitcoin.Script;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKFilter : FilterInterface
 {

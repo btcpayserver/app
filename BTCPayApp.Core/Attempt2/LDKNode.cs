@@ -1,17 +1,15 @@
-﻿using BTCPayApp.Core.Attempt2;
-using BTCPayApp.Core.Contracts;
+﻿using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
-using BTCPayServer.Lightning;
+using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.LDK;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using NBitcoin.Scripting;
-using nldksample.LDK;
 using org.ldk.structs;
 
-namespace BTCPayApp.Core.LDK;
+namespace BTCPayApp.Core.Attempt2;
 
 public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 {
@@ -60,8 +58,9 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             await _started.Task;
             return;
         }
-        Config = await _configProvider.Get<LightningConfig>(key: LightningConfig.Key)?? new LightningConfig();
-        var keyPath = KeyPath.Parse(Config.LightningDerivationPath);
+        _config = await _configProvider.Get<LightningConfig>(key: LightningConfig.Key)?? new LightningConfig();
+        _configLoaded.SetResult();
+        var keyPath = KeyPath.Parse(_config.LightningDerivationPath);
         Seed = new Mnemonic( _onChainWalletManager.WalletConfig.Mnemonic).DeriveExtKey().Derive(keyPath).PrivateKey.ToBytes();
         var services = ServiceProvider.GetServices<IScopedHostedService>();
 
@@ -75,8 +74,25 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         _logger.LogInformation("LDKNode started");
     }
 
-    public LightningConfig Config { get; private set; }
+   private TaskCompletionSource _configLoaded = new();
+    
+    public async Task<LightningConfig> GetConfig()
+    {
+        await _configLoaded.Task;
+        return _config!;
+    }
+    
+    private async Task UpdateConfig(LightningConfig config)
+    {
+        await _started.Task;
+        await _configProvider.Set(LightningConfig.Key, config);
+        _config = config;
+        ConfigUpdated?.Invoke(this, config);
+    }
+    
 
+    public AsyncEventHandler<LightningConfig>? ConfigUpdated;
+    
     public byte[] Seed { get; private set; }
 
 
@@ -116,16 +132,12 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     
 
     private readonly TaskCompletionSource<ChannelMonitor[]?> icm = new();
+    private LightningConfig? _config;
 
     public async Task<ChannelMonitor[]> GetInitialChannelMonitors()
     {
         return await icm.Task;
     }
-    
-   
-    
-    
-
     private async Task<ChannelMonitor[]> GetInitialChannelMonitors(EntropySource entropySource,
         SignerProvider signerProvider)
     {
@@ -139,11 +151,7 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         return channels;
     }
 
-    public async Task UpdateConfig(LightningConfig config)
-    {
-        Config = config;
-        await _configProvider.Set(LightningConfig.Key, config);
-    }
+    
     
     
     public async Task<byte[]?> GetRawChannelManager()
@@ -185,7 +193,8 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
     public async Task<Script> DeriveScript()
     {
-        return await _onChainWalletManager.DeriveScript(Config.ScriptDerivationKey);
+        var derivationKey = (await GetConfig()).ScriptDerivationKey;
+        return await _onChainWalletManager.DeriveScript(derivationKey);
     }
 
     public async Task TrackScripts(Script[] scripts)
@@ -225,5 +234,22 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             });
         }
         await context.SaveChangesAsync();
+    }
+
+
+    public async Task Peer(string toString, PeerInfo? value)
+    {
+        toString = toString.ToLowerInvariant();
+        var config = await GetConfig();
+        if (value is null)
+        {
+            if (config.Peers.Remove(toString))
+            {
+                await UpdateConfig(config);
+                return;
+            }
+        }
+        config.Peers.AddOrReplace(toString, value);
+        await UpdateConfig(config);
     }
 }

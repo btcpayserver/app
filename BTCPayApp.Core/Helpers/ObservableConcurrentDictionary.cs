@@ -3,7 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace nldksample;
+namespace BTCPayApp.Core.Helpers;
 
 /// <summary>
 /// Represents a thread-safe collection of key/value pairs that can be accessed by multiple threads concurrently and provides

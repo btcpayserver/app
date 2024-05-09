@@ -1,12 +1,11 @@
 ﻿using System.Threading.Channels;
 using BTCPayApp.Core.Data;
-using BTCPayApp.Core.Helpers;
 using NBitcoin;
 using NBitcoin.Scripting;
 using org.ldk.structs;
 using Channel = System.Threading.Channels.Channel;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.Helpers;
 
 public static class ChannelExtensions
 {

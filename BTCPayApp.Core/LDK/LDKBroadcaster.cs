@@ -1,10 +1,8 @@
-﻿using BTCPayApp.Core;
-using BTCPayApp.Core.Attempt2;
+﻿using BTCPayApp.Core.Attempt2;
 using NBitcoin;
-using nldksample.LSP.Flow;
 using org.ldk.structs;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKBroadcaster : BroadcasterInterfaceInterface
 {

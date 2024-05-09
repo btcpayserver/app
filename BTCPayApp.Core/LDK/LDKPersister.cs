@@ -1,7 +1,7 @@
-using BTCPayApp.Core.LDK;
+using BTCPayApp.Core.Attempt2;
 using org.ldk.structs;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKPersister : PersisterInterface
 {

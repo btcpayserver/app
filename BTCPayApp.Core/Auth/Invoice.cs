@@ -1,4 +1,4 @@
-namespace BTCPayApp.UI.Models;
+namespace BTCPayApp.Core.Auth;
 
 public class Invoice
 {

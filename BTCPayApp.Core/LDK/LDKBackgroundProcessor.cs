@@ -1,8 +1,8 @@
-using BTCPayApp.Core.LDK;
+using BTCPayApp.Core.Helpers;
 using org.ldk.structs;
 using EventHandler = org.ldk.structs.EventHandler;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKBackgroundProcessor : IScopedHostedService
 {

@@ -1,10 +1,10 @@
-using System.Collections.Concurrent;
 using System.Net.Sockets;
+using BTCPayApp.Core.Helpers;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using org.ldk.structs;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKTcpDescriptor : SocketDescriptorInterface
 {

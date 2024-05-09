@@ -2,7 +2,7 @@
 using org.ldk.structs;
 using org.ldk.util;
 
-namespace BTCPayApp.Core.LDK;
+namespace BTCPayApp.Core.Helpers;
 
 public static class ChannelManagerHelper
 {

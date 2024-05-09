@@ -1,16 +1,14 @@
 ﻿using System.Security.Cryptography;
-using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
-using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
 using Microsoft.EntityFrameworkCore;
-// using BTCPayServer.Lightning;
 using NBitcoin;
 using org.ldk.structs;
+// using BTCPayServer.Lightning;
 using LightningPayment = BTCPayApp.CommonServer.LightningPayment;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class PaymentsManager
 {

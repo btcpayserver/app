@@ -1,15 +1,15 @@
 ﻿using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
-using BTCPayApp.UI.Auth;
+using BTCPayApp.Core.LDK;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
-using nldksample.LDK;
 
 namespace BTCPayApp.Core;
 

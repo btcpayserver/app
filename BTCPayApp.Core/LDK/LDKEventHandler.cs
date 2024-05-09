@@ -1,8 +1,7 @@
-﻿using BTCPayApp.Core.LDK;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using org.ldk.structs;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKEventHandler : EventHandlerInterface
 {

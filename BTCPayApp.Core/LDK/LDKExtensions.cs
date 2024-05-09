@@ -1,10 +1,8 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using BTCPayApp.Core;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
-using BTCPayApp.Core.Data;
-using BTCPayApp.Core.LDK;
+using BTCPayApp.Core.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NBitcoin;
@@ -14,7 +12,7 @@ using Script = NBitcoin.Script;
 using SocketAddress = org.ldk.structs.SocketAddress;
 using TxOut = NBitcoin.TxOut;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public static class LDKExtensions
 {
@@ -79,7 +77,7 @@ public static class LDKExtensions
         services.AddScoped<LDKPersister>();
         services.AddScoped<Persister>(provider =>
             Persister.new_impl(provider.GetRequiredService<LDKPersister>()));
-        services.AddScoped(provider => provider.GetRequiredService<LDKNode>().Config.AsLDKUserConfig());
+        services.AddScoped(provider => provider.GetRequiredService<LDKNode>().GetConfig().GetAwaiter().GetResult().AsLDKUserConfig());
         services.AddScoped(provider => provider.GetRequiredService<OnChainWalletManager>().Network!);
         
         services.AddScoped(provider =>

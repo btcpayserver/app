@@ -1,9 +1,8 @@
-﻿using BTCPayApp.Core.LDK;
-using BTCPayServer.Lightning;
+﻿using BTCPayServer.Lightning;
 using org.ldk.structs;
 using LightningPayment = BTCPayApp.CommonServer.LightningPayment;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKPaymentEventsHandler :
     ILDKEventHandler<Event.Event_PaymentClaimable>,

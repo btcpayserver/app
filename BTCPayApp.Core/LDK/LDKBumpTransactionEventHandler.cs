@@ -1,7 +1,6 @@
-﻿using nldksample.LSP.Flow;
-using org.ldk.structs;
+﻿using org.ldk.structs;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKBumpTransactionEventHandler: ILDKEventHandler<Event.Event_BumpTransaction>
 {

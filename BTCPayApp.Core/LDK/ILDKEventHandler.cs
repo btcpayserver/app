@@ -1,6 +1,6 @@
 ﻿using org.ldk.structs;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public interface ILDKEventHandler<in TEvent>: ILDKEventHandler where TEvent : Event
 {

@@ -1,6 +1,6 @@
 ﻿using NBitcoin;
 
-namespace nldksample.LSP.Flow;
+namespace BTCPayApp.Core.LDK;
 
 public interface IBroadcastGateKeeper
 {

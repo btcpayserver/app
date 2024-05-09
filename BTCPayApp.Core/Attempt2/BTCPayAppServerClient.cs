@@ -1,13 +1,13 @@
 ﻿using System.Text;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.LDK;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Crypto;
-using nldksample.LDK;
 using LightningPayment = BTCPayApp.CommonServer.LightningPayment;
 
 namespace BTCPayApp.Core.Attempt2;

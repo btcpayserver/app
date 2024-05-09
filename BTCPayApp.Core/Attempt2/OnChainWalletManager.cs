@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Scripting;
-using nldksample.LDK;
 
 namespace BTCPayApp.Core.Attempt2;
 public class OnChainWalletManager : BaseHostedService

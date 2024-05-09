@@ -38,12 +38,13 @@ public class LightningConfig
     }
     
     public Dictionary<string, PeerInfo> Peers { get; set; } = new();
-    
-    
+
+    public bool AcceptInboundConnection{ get; set; }
 }
 
-public class PeerInfo
+public record PeerInfo
 {
     public string Endpoint { get; set; }
     public bool Persistent { get; set; }
+    public bool Trusted { get; set; }
 }

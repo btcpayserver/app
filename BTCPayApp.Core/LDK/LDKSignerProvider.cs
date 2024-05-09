@@ -1,11 +1,10 @@
-﻿using BTCPayApp.Core.Data;
-using BTCPayApp.Core.LDK;
+﻿using BTCPayApp.Core.Attempt2;
 using NBitcoin;
 using org.ldk.structs;
 using org.ldk.util;
 using UInt128 = org.ldk.util.UInt128;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKSignerProvider : SignerProviderInterface
 {

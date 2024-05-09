@@ -1,7 +1,7 @@
 ﻿using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Data;
+using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
-using nldksample.LDK;
 
 namespace BTCPayApp.Core.Attempt2;
 

@@ -6,7 +6,7 @@ using Script = NBitcoin.Script;
 using Transaction = NBitcoin.Transaction;
 using TxOut = NBitcoin.TxOut;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKFundingGenerationReadyEventHandler: ILDKEventHandler<Event.Event_FundingGenerationReady>
 {

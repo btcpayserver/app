@@ -1,14 +1,12 @@
 using System.Security.Claims;
 using BTCPayApp.CommonServer;
-using BTCPayApp.Core;
 using BTCPayApp.Core.AspNetRip;
 using BTCPayApp.Core.Contracts;
-using BTCPayApp.UI.Models;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 
-namespace BTCPayApp.UI.Auth;
+namespace BTCPayApp.Core.Auth;
 
 public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
 {

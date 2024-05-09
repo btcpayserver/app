@@ -1,10 +1,8 @@
 ﻿using BTCPayApp.Core.Attempt2;
-using BTCPayApp.Core.LDK;
 using NBitcoin;
 using org.ldk.structs;
-using Transaction = NBitcoin.Transaction;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKCoinSelector : CoinSelectionSourceInterface
 {

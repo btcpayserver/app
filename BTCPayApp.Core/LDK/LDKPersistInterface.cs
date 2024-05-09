@@ -1,12 +1,10 @@
-﻿using BTCPayApp.Core.Data;
-using BTCPayApp.Core.LDK;
-using NBitcoin;
+﻿using BTCPayApp.Core.Attempt2;
 using org.ldk.enums;
 using org.ldk.structs;
 using OutPoint = org.ldk.structs.OutPoint;
 using Script = NBitcoin.Script;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKPersistInterface : PersistInterface
 {

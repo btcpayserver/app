@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Hosting;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.Helpers;
 
 public abstract class BaseHostedService : IHostedService, IDisposable
 {

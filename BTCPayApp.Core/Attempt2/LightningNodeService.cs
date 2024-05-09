@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using nldksample.LDK;
 
 namespace BTCPayApp.Core.Attempt2;
 

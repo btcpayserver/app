@@ -1,8 +1,6 @@
 using BTCPayApp.CommonServer;
-using BTCPayApp.Core;
-using BTCPayApp.UI.Models;
 
-namespace BTCPayApp.UI.Auth;
+namespace BTCPayApp.Core.Auth;
 
 public interface IAccountManager
 {

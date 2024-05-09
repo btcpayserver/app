@@ -1,10 +1,9 @@
 ﻿using System.Text;
 using BTCPayApp.Core.Attempt2;
-using BTCPayApp.Core.Data;
-using BTCPayApp.Core.LDK;
+using BTCPayApp.Core.Helpers;
 using org.ldk.structs;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKAnnouncementBroadcaster : IScopedHostedService, ILDKEventHandler<Event.Event_ChannelReady>
 {
@@ -38,8 +37,9 @@ public class LDKAnnouncementBroadcaster : IScopedHostedService, ILDKEventHandler
             if (_channelManager.list_channels().Any(details => details.get_is_public()))
             {
                 var endpoint = _ldkPeerHandler.Endpoint?.Endpoint();
-                var alias = _ldkNode.Config.Alias;
-                _peerManager.broadcast_node_announcement(_ldkNode.Config.RGB,
+                var config = await _ldkNode.GetConfig();
+                var alias = config.Alias;
+                _peerManager.broadcast_node_announcement(config.RGB,
                     Encoding.UTF8.GetBytes(alias), endpoint is null ? Array.Empty<SocketAddress>() : new[] {endpoint});
             }
 

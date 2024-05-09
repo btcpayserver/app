@@ -3,11 +3,12 @@
 @using BTCPayServer.Lightning
 @using Microsoft.Extensions.DependencyInjection
 @using NBitcoin
-@using nldksample.LDK
 @using org.ldk.structs
 @using LightningPayment = BTCPayApp.CommonServer.LightningPayment
 @using NodeInfo = BTCPayServer.Lightning.NodeInfo
 @using System.Text.Json
+@using BTCPayApp.Core.Data
+@using System.Reflection.Metadata
 
 @if (Loading)
 {
@@ -18,9 +19,13 @@ else
     <button class="btn btn-primary" type="button" @onclick="FetchData">Refresh data</button>
 }
 
-<pre>
-        @(JsonSerializer.Serialize(Node.Config, new JsonSerializerOptions() {WriteIndented = true}))
-        </pre>
+@if (_config is not null)
+{
+    <h3>Config</h3>
+    <pre>
+        @(JsonSerializer.Serialize(_config, new JsonSerializerOptions() {WriteIndented = true}))
+    </pre>
+}
 
 @if (_nodeId is not null)
 {
@@ -34,14 +39,32 @@ else
         <tr>
             <th>Node ID</th>
             <th>Socket</th>
+            <th>X</th>
         </tr>
         </thead>
         <tbody>
         @foreach (var peer in _peers)
         {
+            var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
+
             <tr>
                 <td>@peer.nodeId</td>
                 <td>@peer.socket</td>
+                <td>
+
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
+                    @if (peerRemembered)
+                    {
+                        <button type="button" class="btn btn-primary btn-sm"  @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
+                        <button type="button" class="btn btn-primary btn-sm"  @onclick="() => UpdatePeer(peer.nodeId, peerConfig with{ Persistent =!peerConfig.Persistent } )">Constant conn = @peerConfig.Persistent Toggle
+                            </button>
+                        <button type="button" class="btn btn-primary btn-sm"   @onclick="() => UpdatePeer(peer.nodeId, peerConfig with{ Persistent =!peerConfig.Trusted } )">Trusted = @peerConfig.Trusted Toggle</button>
+                        
+                        
+                    }
+
+
+                </td>
             </tr>
         }
         </tbody>
@@ -139,6 +162,8 @@ else
 
 @code {
     private string _nodeId;
+
+    private LightningConfig? _config;
     private (string id, string userId, string counterparty, long? shortChannelId, int? confirmations, int? confirmationsRequired, string fundingTransactionHash, bool usable, bool ready, LightMoney Balance, LightMoney Inbound, LightMoney Outbound, string? State)[] _channels;
     private (string nodeId, string? socket)[] _peers;
     private List<LightningPayment?> _payments;
@@ -163,6 +188,7 @@ else
         {
             Loading = true;
             await _semaphore.WaitAsync();
+            _config = await Node.GetConfig();
             _nodeId = Convert.ToHexString(ChannelManager.get_our_node_id());
             _channels = ChannelManager.list_channels().Select(details => (id: Convert.ToHexString(details.get_channel_id()), userId: Convert.ToHexString(details.get_user_channel_id().getLEBytes()), counterparty: Convert.ToHexString(details.get_counterparty().get_node_id()), shortChannelId: details.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some1 ? some1.some : (long?) null, confirmations: details.get_confirmations() is Option_u32Z.Option_u32Z_Some some2 ? some2.some : (int?) null, confirmationsRequired: details.get_confirmations_required() is Option_u32Z.Option_u32Z_Some some3 ? some3.some : (int?) null, fundingTransactionHash: new uint256(details.get_funding_txo().get_txid()).ToString(), usable: details.get_is_usable(), ready: details.get_is_channel_ready(), Balance: LightMoney.MilliSatoshis(details.get_balance_msat()), Inbound: LightMoney.MilliSatoshis(details.get_inbound_capacity_msat()), Outbound: LightMoney.MilliSatoshis(details.get_outbound_capacity_msat()), State: details.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some4 ? some4.some.ToString() : null)).ToArray();
             _peers = PeerManager.get_peer_node_ids().Select(peer => (nodeId: Convert.ToHexString(peer.get_a()), socket: peer.get_b() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null)).ToArray();
@@ -204,5 +230,39 @@ else
     }
 
     private string NewPeer { get; set; }
+
+    private async void DisconnectPeer(string nodeId)
+    {
+        try
+        {
+            Loading = true;
+            await _semaphore.WaitAsync();
+
+            PeerManager.disconnect_by_node_id(new PubKey(nodeId).ToBytes());
+        }
+        finally
+        {
+            Loading = false;
+            _semaphore.Release();
+        }
+    }
+
+    private async void UpdatePeer(string toString, PeerInfo? value)
+    {
+        try
+        {
+            Loading = true;
+            await _semaphore.WaitAsync();
+
+            await Node.Peer(toString, value);
+            
+        }
+        finally
+        {
+            Loading = false;
+            _semaphore.Release();
+            
+        }
+    }
 
 }

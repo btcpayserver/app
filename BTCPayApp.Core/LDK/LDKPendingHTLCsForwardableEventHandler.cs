@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using org.ldk.structs;
 
-namespace nldksample.LDK;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKPendingHTLCsForwardableEventHandler : ILDKEventHandler<Event.Event_PendingHTLCsForwardable>
 {

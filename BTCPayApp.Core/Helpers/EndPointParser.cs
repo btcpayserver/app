@@ -1,7 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
 
-namespace WalletWasabi.Userfacing;
+namespace BTCPayApp.Core.Helpers;
 //from wasabi 
 public static class EndPointParser
 {
