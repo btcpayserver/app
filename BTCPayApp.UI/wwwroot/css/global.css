@@ -153,6 +153,18 @@
   font-weight: var(--btcpay-font-weight-semibold);
 }
 
+/* Forms */
+.form-floating label {
+  padding-left: 0;
+  text-transform: uppercase;
+  letter-spacing: .1rem;
+  font-weight: var(--btcpay-font-weight-semibold);
+}
+.form-floating button {
+  padding: 0 0 var(--btcpay-space-xs) 0;
+  font-weight: var(--btcpay-font-weight-semibold);
+}
+
 /* Keypad */
 .keypad {
   display: grid;

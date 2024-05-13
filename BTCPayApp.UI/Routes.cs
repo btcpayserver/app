@@ -21,6 +21,8 @@ public static class Routes
     public const string WalletSetup = "/wallet/setup";
     public const string WalletSend = "/wallet/send";
     public const string WalletReceive = "/wallet/receive";
+    public const string Lightning = "/lightning";
+    public const string LightningSetup = "/lightning/setup";
     public const string Invoices = "/invoices";
     public const string Invoice = "/invoices/{InvoiceId}";
     public const string PointOfSale = "/pos";

@@ -5,6 +5,13 @@
   max-width: 100%;
 }
 
+.truncate-center--elastic .truncate-center-start {
+  flex: 0 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .truncate-center-end,
 .truncate-center-start {
   white-space: nowrap;
@@ -35,8 +42,19 @@
   --icon-size: 1rem;
 }
 
+.truncate-center--elastic .truncate-center-truncated {
+  max-width: 100%;
+}
+
+.truncate-center--elastic.truncate-center--copy .truncate-center-truncated {
+  max-width: calc(100% - 2em);
+}
+
 .truncate-center.form-control-plaintext {
   padding-right: 3px;
+  padding-left: 3px;
+  padding-bottom: 0;
+  font-weight: var(--btcpay-font-weight-semibold);
 }
 
 .truncate-center.form-control-plaintext button.btn .icon {

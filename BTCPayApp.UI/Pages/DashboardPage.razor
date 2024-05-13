@@ -1,12 +1,10 @@
 ﻿@attribute [Route(Routes.Dashboard)]
-@using BTCPayApp.UI.Features
 @using BTCPayApp.CommonServer
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.Core.Auth
-@using BTCPayApp.Core.Data
-@using Microsoft.AspNetCore.SignalR.Client
-@inject IAccountManager AccountManager
+@using BTCPayApp.UI.Features
 @inject IState<RootState> State
+@inject IAccountManager AccountManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Dashboard</PageTitle>
@@ -15,20 +13,7 @@
     <Authorized>
         <header class="container d-flex align-items-center justify-content-between py-2 px-4">
             <div class="d-flex align-items-center justify-content-between gap-2">
-                <div class="status">
-                    @if (SetupStateOverall() == SetupState.Undetermined)
-                    {
-                        <div class="spinner-border spinner-border-sm" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    }
-                    else
-                    {
-                        <a href="@Routes.Wallet">
-                            <span class="btcpay-status btcpay-status--@(SetupStateOverall() == SetupState.Completed ? "enabled" : (SetupStateOverall() == SetupState.Failed ? "disabled" : "pending"))"></span>
-                        </a>
-                    }
-                </div>
+                <SetupStatus @ref="_setupStatus" />
                 <div class="fw-semibold">
                     @context.User.Identity?.Name
                 </div>
@@ -43,30 +28,33 @@
                 </NavLink>
             </div>
         </header>
-        <section class="container d-flex flex-column gap-4 py-3">
-            <div class="amount text-center">
-                <div class="sats fw-bold fs-1">615,000,000 sats</div>
-                <div class="fiat fw-semibold text-muted">$174,465.79</div>
-            </div>
-            <nav class="d-flex align-items-center gap-3 mx-auto">
-                <NavLink class="btn btn-light rounded-pill w-125px" href="@Routes.WalletSend" Match="NavLinkMatch.All">
-                    <Icon symbol="payment-send"/>
-                    <span>Send</span>
-                </NavLink>
-                <NavLink class="btn btn-light rounded-pill w-125px" href="@Routes.WalletReceive" Match="NavLinkMatch.All">
-                    <Icon symbol="payment-receive"/>
-                    <span>Receive</span>
-                </NavLink>
-            </nav>
-        </section>
+        @if (SetupStateOnchain == SetupState.Completed)
+        {
+            <section class="container d-flex flex-column gap-4 py-3">
+                <div class="amount text-center">
+                    <div class="sats fw-bold fs-1">615,000,000 sats</div>
+                    <div class="fiat fw-semibold text-muted">$174,465.79</div>
+                </div>
+                <nav class="d-flex align-items-center gap-3 mx-auto">
+                    <NavLink class="btn btn-light rounded-pill w-125px" href="@Routes.WalletSend" Match="NavLinkMatch.All">
+                        <Icon symbol="payment-send"/>
+                        <span>Send</span>
+                    </NavLink>
+                    <NavLink class="btn btn-light rounded-pill w-125px" href="@Routes.WalletReceive" Match="NavLinkMatch.All">
+                        <Icon symbol="payment-receive"/>
+                        <span>Receive</span>
+                    </NavLink>
+                </nav>
+            </section>
+        }
         <section class="container py-3">
             <h2>Getting started</h2>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
-                    <li class="list-group-item @(SetupStateOnchain() == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateOnchain() == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateLightning().ToString().ToLowerInvariant()">
-                        <NavLink class="nav-link" href="@Routes.Wallet" Match="NavLinkMatch.All">
+                    <li class="list-group-item @(SetupStateOnchain == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateOnchain == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateOnchain.ToString().ToLowerInvariant()">
+                        <NavLink class="nav-link" href="@(SetupStateOnchain == SetupState.Completed ? Routes.Wallet : Routes.WalletSetup)" Match="NavLinkMatch.All">
                             <span>Set up wallet</span>
-                            @switch (SetupStateOnchain())
+                            @switch (SetupStateOnchain)
                             {
                                 case SetupState.Undetermined:
                                     <div class="spinner-border spinner-border-sm" role="status">
@@ -82,10 +70,10 @@
                             }
                         </NavLink>
                     </li>
-                    <li class="list-group-item @(SetupStateLightning() == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateLightning() == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateLightning().ToString().ToLowerInvariant()">
-                        <NavLink class="nav-link" href="@Routes.Wallet" Match="NavLinkMatch.All">
+                    <li class="list-group-item @(SetupStateLightning == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateLightning == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateLightning.ToString().ToLowerInvariant()">
+                        <NavLink class="nav-link" href="@(SetupStateLightning == SetupState.Completed ? Routes.Lightning : Routes.LightningSetup)" Match="NavLinkMatch.All">
                             <span>Configure node</span>
-                            @switch (SetupStateLightning())
+                            @switch (SetupStateLightning)
                             {
                                 case SetupState.Undetermined:
                                     <div class="spinner-border spinner-border-sm" role="status">
@@ -126,7 +114,7 @@
             <ul class="list-group list-group-flush">
                 <li class="list-group-item">
                     <div class="d-flex align-items-center justify-content-between mb-1">
-                        <TruncateCenter Text="CDOy6cOibCWEdsRiZuaHf8dSGGJRYuBGC" Link="@Routes.InvoicePath("CDOy6cOibCWEdsRiZuaHf8dSGGJRYuBGC")"/>
+                        <TruncateCenter Text="CDOy6cOibCWEdsRiZuaHf8dSGGJRYuBGC" Link="@Routes.InvoicePath("CDOy6cOibCWEdsRiZuaHf8dSGGJRYuBGC")" class="truncate-center-id"/>
                         <span class="text-end">$29.13</span>
                     </div>
                     <div class="d-flex align-items-center justify-content-between">
@@ -138,7 +126,7 @@
                 </li>
                 <li class="list-group-item">
                     <div class="d-flex align-items-center justify-content-between mb-1">
-                        <TruncateCenter Text="WpYu7PQz4QOOjznTuLwp1PNZXZKP8U1pB2" Link="@Routes.InvoicePath("WpYu7PQz4QOOjznTuLwp1PNZXZKP8U1pB2")"/>
+                        <TruncateCenter Text="WpYu7PQz4QOOjznTuLwp1PNZXZKP8U1pB2" Link="@Routes.InvoicePath("WpYu7PQz4QOOjznTuLwp1PNZXZKP8U1pB2")" class="truncate-center-id"/>
                         <span class="text-end">$29.13</span>
                     </div>
                     <div class="d-flex align-items-center justify-content-between">
@@ -162,6 +150,7 @@
 
 @code {
     private AppUserInfo? _userInfo;
+    private SetupStatus? _setupStatus;
 
     protected override Task OnInitializedAsync()
     {
@@ -169,35 +158,6 @@
         return Task.CompletedTask;
     }
 
-    private bool IsLoading => State.Value.Loading.Any();
-
-    private enum SetupState
-    {
-        Undetermined,
-        Pending,
-        Completed,
-        Failed
-    }
-
-    private SetupState SetupStateOnchain() {
-        if (State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) ||
-            State.Value.OnchainWalletState is OnChainWalletState.Init or OnChainWalletState.Loading ||
-            State.Value.BTCPayServerConnectionState != HubConnectionState.Connected) return SetupState.Undetermined;
-        return State.Value.OnchainWalletState == OnChainWalletState.Loaded ? SetupState.Completed : SetupState.Pending;
-    }
-
-    private SetupState SetupStateLightning() {
-        if (State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) ||
-            State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loading ||
-            State.Value.BTCPayServerConnectionState != HubConnectionState.Connected) return SetupState.Undetermined;
-        if (State.Value.LightningNodeState is LightningNodeState.Error or LightningNodeState.Stopped) return SetupState.Failed;
-        return State.Value.LightningNodeState == LightningNodeState.Loaded ? SetupState.Completed : SetupState.Pending;
-    }
-
-    private SetupState SetupStateOverall() {
-        if (SetupStateOnchain() == SetupState.Undetermined || SetupStateLightning() == SetupState.Undetermined) return SetupState.Undetermined;
-        if (SetupStateOnchain() == SetupState.Completed || SetupStateLightning() == SetupState.Completed) return SetupState.Completed;
-        if (SetupStateOnchain() == SetupState.Failed || SetupStateLightning() == SetupState.Failed) return SetupState.Failed;
-        return SetupState.Pending;
-    }
+    private SetupState? SetupStateOnchain => _setupStatus?.SetupStateOnchain() ?? SetupState.Undetermined;
+    private SetupState? SetupStateLightning => _setupStatus?.SetupStateLightning() ?? SetupState.Undetermined;
 }

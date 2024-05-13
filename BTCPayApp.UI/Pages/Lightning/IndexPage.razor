@@ -1,0 +1,57 @@
+﻿@attribute [Route(Routes.Lightning)]
+@layout BaseLayout
+@using BTCPayApp.UI.Features
+@using Microsoft.AspNetCore.SignalR.Client
+@using BTCPayApp.Core.Attempt2
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject LightningNodeManager LightningNodeManager
+@inject NavigationManager NavigationManager
+@inject IState<RootState> State
+
+<PageTitle>Lightning</PageTitle>
+
+<SectionContent SectionName="top">
+    <Titlebar Back="@Routes.Dashboard">
+        <h1>Lightning</h1>
+        <SectionContent SectionId="Titlebar.End">
+            <NavLink class="btn-close btn-back" href="@Routes.LightningSetup">
+                <Icon symbol="settings"/>
+            </NavLink>
+        </SectionContent>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+    @if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error)
+    {
+        <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
+        @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
+        {
+            <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
+        }
+        else if(State.Value.LightningNodeState is LightningNodeState.Loaded )
+        {
+            <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
+        }
+    }
+    @if (LightningNodeManager.State == LightningNodeState.Loaded)
+    {
+        <LN />
+    }
+</section>
+
+@code {
+    private bool CanConfigureLNWallet =>
+        !State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) &&
+        State.Value.OnchainWalletState == OnChainWalletState.Loaded &&
+        State.Value.LightningNodeState == LightningNodeState.NodeNotConfigured &&
+        State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (CanConfigureLNWallet)
+        {
+            NavigationManager.NavigateTo(Routes.LightningSetup);
+        }
+    }
+}

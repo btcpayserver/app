@@ -1,0 +1,51 @@
+@using BTCPayApp.Core.Attempt2
+@using BTCPayApp.UI.Features
+@using Microsoft.AspNetCore.SignalR.Client
+@inject IState<RootState> State
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<div class="status">
+    @if (SetupStateOverall() == SetupState.Undetermined)
+    {
+        <div class="spinner-border spinner-border-sm" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    }
+    else
+    {
+        <a href="@GetLink()">
+            <span class="btcpay-status btcpay-status--@(SetupStateOverall() == SetupState.Completed ? "enabled" : (SetupStateOverall() == SetupState.Failed ? "disabled" : "pending"))"></span>
+        </a>
+    }
+</div>
+
+@code {
+    public SetupState SetupStateOverall() {
+        if (SetupStateOnchain() == SetupState.Undetermined || SetupStateLightning() == SetupState.Undetermined) return SetupState.Undetermined;
+        if (SetupStateOnchain() == SetupState.Completed || SetupStateLightning() == SetupState.Completed) return SetupState.Completed;
+        if (SetupStateOnchain() == SetupState.Failed || SetupStateLightning() == SetupState.Failed) return SetupState.Failed;
+        return SetupState.Pending;
+    }
+
+    public SetupState SetupStateOnchain() {
+        if (State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) ||
+            State.Value.OnchainWalletState is OnChainWalletState.Init or OnChainWalletState.Loading ||
+            State.Value.BTCPayServerConnectionState != HubConnectionState.Connected) return SetupState.Undetermined;
+        return State.Value.OnchainWalletState == OnChainWalletState.Loaded ? SetupState.Completed : SetupState.Pending;
+    }
+
+    public SetupState SetupStateLightning() {
+        if (State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) ||
+            State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loading ||
+            State.Value.BTCPayServerConnectionState != HubConnectionState.Connected) return SetupState.Undetermined;
+        if (State.Value.LightningNodeState is LightningNodeState.Error or LightningNodeState.Stopped) return SetupState.Failed;
+        return State.Value.LightningNodeState == LightningNodeState.Loaded ? SetupState.Completed : SetupState.Pending;
+    }
+
+    private string GetLink()
+    {
+        if (SetupStateOnchain() == SetupState.Failed || SetupStateOnchain() != SetupState.Completed) return Routes.WalletSetup;
+        if (SetupStateLightning() == SetupState.Failed || SetupStateLightning() != SetupState.Completed) return Routes.LightningSetup;
+        return Routes.Dashboard;
+    }
+}

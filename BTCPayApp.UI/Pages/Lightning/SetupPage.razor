@@ -1,0 +1,87 @@
+﻿@attribute [Route(Routes.LightningSetup)]
+@layout BaseLayout
+@using BTCPayApp.UI.Features
+@using Microsoft.AspNetCore.SignalR.Client
+@using BTCPayApp.Core.Attempt2
+@using BTCPayApp.Core.Data
+@using Microsoft.Extensions.Logging
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject OnChainWalletManager OnChainWalletManager
+@inject LightningNodeManager LightningNodeManager
+@inject IState<RootState> State
+@inject ILogger<IndexPage> Logger
+
+<PageTitle>Lightning Node</PageTitle>
+
+<SectionContent SectionName="top">
+    <Titlebar Back="@(State.Value.LightningNodeState == LightningNodeState.Loaded ? Routes.Lightning : Routes.Dashboard)">
+        <h1>Lightning Node</h1>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+    @if (CanConfigureLNWallet)
+    {
+        <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
+    }
+    else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error)
+    {
+        @if (_config is not null)
+        {
+            <h3>Lightning Node</h3>
+            <p>Alias: <code>@_config.Alias</code></p>
+            <p>Color: <code>@_config.Color</code></p>
+            <p>Derivation Path: <code>@_config.LightningDerivationPath</code></p>
+        }
+        <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
+        @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
+        {
+            <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
+        }
+        else if(State.Value.LightningNodeState is LightningNodeState.Loaded )
+        {
+            <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
+        }
+        var groupId = OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier;
+        @if (!string.IsNullOrEmpty(groupId))
+        {
+            <div class="form-floating">
+                <TruncateCenter Text="@($"type=app;group={groupId}")" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                <label>Connection String</label>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    private bool CanConfigureLNWallet =>
+        !State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) &&
+        State.Value.OnchainWalletState == OnChainWalletState.Loaded &&
+        State.Value.LightningNodeState == LightningNodeState.NodeNotConfigured &&
+        State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
+
+    private LightningConfig? _config;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (LightningNodeManager?.Node is not null)
+        {
+            _config = await LightningNodeManager.Node.GetConfig();
+        }
+    }
+
+    private async Task ConfigureLNWallet()
+    {
+        try
+        {
+            await LightningNodeManager.Generate();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error configuring LN wallet");
+        }
+    }
+}

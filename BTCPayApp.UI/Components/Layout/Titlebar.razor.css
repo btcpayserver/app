@@ -14,14 +14,14 @@
   z-index: 1030;
 }
 
-.back,
-.close {
+.titlebar-start,
+.titlebar-end {
   flex: 0 0 2.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.title {
+.titlebar-center {
   display: inline-flex;
   flex-direction: column;
   align-items: center;

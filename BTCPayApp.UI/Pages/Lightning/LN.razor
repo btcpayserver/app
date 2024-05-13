@@ -6,9 +6,7 @@
 @using org.ldk.structs
 @using LightningPayment = BTCPayApp.CommonServer.LightningPayment
 @using NodeInfo = BTCPayServer.Lightning.NodeInfo
-@using System.Text.Json
 @using BTCPayApp.Core.Data
-@using System.Reflection.Metadata
 @using BTCPayApp.Core.Helpers
 
 @if (Loading)
@@ -18,14 +16,6 @@
 else
 {
     <button class="btn btn-primary" type="button" @onclick="FetchData">Refresh data</button>
-}
-
-@if (_config is not null)
-{
-    <h3>Config</h3>
-    <pre>
-        @(JsonSerializer.Serialize(_config, new JsonSerializerOptions() {WriteIndented = true}))
-    </pre>
 }
 
 @if (_nodeId is not null)
@@ -82,7 +72,7 @@ else
                 <td>@peer</td>
                 <td>@peerConfig.Endpoint</td>
                 <td>
-                    
+
                     <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
                     <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
                     <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">Constant conn = @peerConfig.Persistent Toggle
@@ -279,13 +269,13 @@ else
             await _semaphore.WaitAsync();
 
             await Node.Peer(toString, value);
-            
+
         }
         finally
         {
             Loading = false;
             _semaphore.Release();
-            
+
         }
     }
 
@@ -304,7 +294,7 @@ else
         {
             Loading = false;
             _semaphore.Release();
-            
+
         }
     }
 

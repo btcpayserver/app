@@ -1,8 +1,11 @@
-<svg role="img" class="icon icon-@Symbol">
+<svg role="img" class="icon icon-@Symbol" @attributes="InputAttributes">
     <use href="#@Symbol" />
 </svg>
 
 @code {
 	[Parameter]
 	public string? Symbol { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
 }

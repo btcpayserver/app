@@ -1,5 +1,5 @@
 <section id="Titlebar" class="container d-flex align-items-center justify-content-between p-3 @(Fixed ? "fixed" : null)">
-    <div class="back">
+    <div class="titlebar-start">
         @if (!string.IsNullOrEmpty(Back))
         {
             <NavLink class="btn-close btn-back" href="@Back">
@@ -7,28 +7,22 @@
             </NavLink>
         }
     </div>
-    <div class="title">
+    <div class="titlebar-center">
         @ChildContent
     </div>
-    <div class="close">
-        @if (Close)
-        {
-            <button type="button" class="btn-close" aria-label="Close">
-                <Icon symbol="close"/>
-            </button>
-        }
+    <div class="titlebar-end">
+        <SectionOutlet SectionId="End" />
     </div>
 </section>
 
 @code {
+    public static readonly SectionOutlet End = new();
+
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
     [Parameter]
     public string? Back { get; set; }
-
-    [Parameter]
-    public bool Close { get; set; }
 
     [Parameter]
     public bool Fixed { get; set; } = true;

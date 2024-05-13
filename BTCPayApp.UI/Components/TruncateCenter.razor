@@ -1,6 +1,14 @@
-<span class="truncate-center truncate-center-id @(Copy ? "truncate-center--copy" : null)">
+<span @attributes="InputAttributes" class="truncate-center @(Copy ? "truncate-center--copy" : null) @(Elastic ? "truncate-center--elastic" : null) @InputAttributes?["class"]">
     <span class="truncate-center-truncated" data-bs-toggle="@(IsTruncated ? "tooltip" : null)" title="@(IsTruncated ? Text : null)">
-        <span class="truncate-center-start">@(IsTruncated ? $"{Start}…" : Text)</span>
+        @if (Elastic)
+        {
+            <span class="truncate-center-start">@Text</span>
+        }
+        else
+        {
+            <span class="truncate-center-start">@Start</span>
+            <span>…</span>
+        }
         @if (IsTruncated)
         {
             <span class="truncate-center-end">@End</span>
@@ -10,7 +18,7 @@
     @if (Copy)
     {
         <button type="button" class="btn btn-link p-0" data-clipboard="@Text">
-            <Icon Symbol="copy" />
+            <Icon Symbol="actions-copy" />
         </button>
     }
     @if (!string.IsNullOrEmpty(Link))
@@ -33,6 +41,12 @@
 
     [Parameter]
     public bool Copy { get; set; }
+
+    [Parameter]
+    public bool Elastic { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
 
     private bool IsTruncated => !string.IsNullOrEmpty(Start) && !string.IsNullOrEmpty(End);
 

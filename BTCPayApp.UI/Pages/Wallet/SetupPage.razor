@@ -1,0 +1,86 @@
+﻿@attribute [Route(Routes.WalletSetup)]
+@layout BaseLayout
+@using BTCPayApp.UI.Features
+@using Microsoft.AspNetCore.SignalR.Client
+@using BTCPayApp.Core.Attempt2
+@using Microsoft.Extensions.Logging
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject OnChainWalletManager OnChainWalletManager
+@inject IState<RootState> State
+@inject ILogger<IndexPage> Logger
+
+<PageTitle>Wallet Setup</PageTitle>
+
+<SectionContent SectionName="top">
+    <Titlebar Back="@(State.Value.OnchainWalletState == OnChainWalletState.Loaded ? Routes.Wallet : Routes.Dashboard)">
+        <h1>Wallet Setup</h1>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+    @if (CanConfigureWallet)
+    {
+        <button class="btn btn-primary" @onclick="GenerateWallet">Generate Wallet</button>
+    }
+    @if (OnChainWalletManager.State == OnChainWalletState.Loaded)
+    {
+        var config = OnChainWalletManager.WalletConfig;
+        <h3>@config.Network Wallet</h3>
+        <p>Fingerprint: <code>@config.Fingerprint</code></p>
+        <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#seed" aria-expanded="false" aria-controls="seed">
+            Show seed
+        </button>
+        <div id="seed" class="collapse">
+            <div class="p-4">
+                <ol class="m-0">
+                    @foreach (var word in config.Mnemonic.Split(' '))
+                    {
+                        <li class="font-monospace">@word</li>
+                    }
+                </ol>
+            </div>
+        </div>
+
+        <h3 class="mt-4">Derivations</h3>
+        @foreach (var d in config.Derivations)
+        {
+            <article class="mb-3">
+                <h4>@(d.Value.Name)</h4>
+
+                @if (!string.IsNullOrEmpty(d.Value.Identifier))
+                {
+                    <div class="form-floating">
+                        <TruncateCenter Text="@d.Value.Identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                        <label>Identifier</label>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(d.Value.Descriptor))
+                {
+                    <div class="form-floating">
+                        <TruncateCenter Text="@d.Value.Descriptor" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                        <label>Descriptor</label>
+                    </div>
+                }
+            </article>
+        }
+    }
+</section>
+
+@code {
+    private bool CanConfigureWallet =>
+        !State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) &&
+        State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
+        State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
+
+    private async Task GenerateWallet()
+    {
+        try
+        {
+            await OnChainWalletManager.Generate();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error configuring wallet");
+        }
+    }
+}
