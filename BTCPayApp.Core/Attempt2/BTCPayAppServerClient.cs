@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
@@ -27,7 +27,7 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
     {
         _logger.LogInformation("NotifyNetwork: {network}", network);
         await OnNotifyNetwork?.Invoke(this, network);
-        
+
     }
 
     public async Task TransactionDetected(string identifier, string txId, string[] relatedScripts, bool confirmed)
@@ -79,6 +79,6 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
     public event AsyncEventHandler<string>? OnNewBlock;
     public event AsyncEventHandler<(string identifier, string txId, string[] relatedScripts, bool confirmed)>? OnTransactionDetected;
     public event AsyncEventHandler<string>? OnNotifyNetwork;
-    
-    
+
+
 }
