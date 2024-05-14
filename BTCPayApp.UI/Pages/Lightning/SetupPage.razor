@@ -29,18 +29,18 @@
         @if (_config is not null)
         {
             <h3>Lightning Node</h3>
-            <p>Alias: <code>@_config.Alias</code></p>
-            <p>Color: <code>@_config.Color</code></p>
-            <p>Derivation Path: <code>@_config.LightningDerivationPath</code></p>
+            <p>
+                Alias: <code>@_config.Alias</code>
+                <br />
+                Color: <code>@_config.Color</code>
+            </p>
         }
-        <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
-        @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
+        @if (!string.IsNullOrEmpty(_config?.LightningDerivationPath))
         {
-            <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
-        }
-        else if(State.Value.LightningNodeState is LightningNodeState.Loaded )
-        {
-            <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
+            <div class="form-floating">
+                <TruncateCenter Text="@_config.LightningDerivationPath" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                <label>Derivation Path</label>
+            </div>
         }
         var groupId = OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier;
         @if (!string.IsNullOrEmpty(groupId))
@@ -50,6 +50,17 @@
                 <label>Connection String</label>
             </div>
         }
+        <div class="d-grid d-sm-flex flex-wrap gap-3 buttons my-4">
+            @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
+            {
+                <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
+            }
+            else if (State.Value.LightningNodeState is LightningNodeState.Loaded )
+            {
+                <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
+            }
+            <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
+        </div>
     }
 </section>
 

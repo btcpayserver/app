@@ -22,21 +22,23 @@
     </Titlebar>
 </SectionContent>
 <section class="container">
-    @if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error)
-    {
-        <button class="btn btn-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY LN NODE</button>
-        @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
-        {
-            <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
-        }
-        else if(State.Value.LightningNodeState is LightningNodeState.Loaded )
-        {
-            <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
-        }
-    }
     @if (LightningNodeManager.State == LightningNodeState.Loaded)
     {
         <LN />
+    }
+    @if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error)
+    {
+        <div class="d-grid d-sm-flex flex-wrap gap-3 buttons my-4">
+            @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
+            {
+                <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
+            }
+            else if (State.Value.LightningNodeState is LightningNodeState.Loaded )
+            {
+                <button class="btn btn-outline-warning" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
+            }
+            <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
+        </div>
     }
 </section>
 

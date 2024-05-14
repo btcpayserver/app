@@ -8,6 +8,8 @@
 @using NodeInfo = BTCPayServer.Lightning.NodeInfo
 @using BTCPayApp.Core.Data
 @using BTCPayApp.Core.Helpers
+@inject LightningNodeManager LightningNodeManager
+@inject IDispatcher Dispatcher
 
 @if (Loading)
 {
@@ -15,164 +17,177 @@
 }
 else
 {
-    <button class="btn btn-primary" type="button" @onclick="FetchData">Refresh data</button>
-}
-
-@if (_nodeId is not null)
-{
-    <h3>Node ID: @_nodeId</h3>
-}
-@if (_peers is not null)
-{
-    <h3>Peers</h3>
-    <table>
-        <thead>
-        <tr>
-            <th>Node ID</th>
-            <th>Socket</th>
-            <th>X</th>
-        </tr>
-        </thead>
-        <tbody>
-        @{
-        var rememberedButUnconnected = _config.Peers.Keys.Where(peer => _peers.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
-    }
-        @foreach (var peer in _peers)
+    <div class="form-floating">
+        <TruncateCenter Text="@_nodeId" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+        <label>Node ID</label>
+    </div>
+    <article class="my-4">
+        <h3>Peers</h3>
+        @if (_peers.Any())
         {
-            var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
+            <table>
+                <thead>
+                <tr>
+                    <th>Node ID</th>
+                    <th>Socket</th>
+                    <th>X</th>
+                </tr>
+                </thead>
+                <tbody>
+                @{
+                var rememberedButUnconnected = _config.Peers.Keys.Where(peer => _peers.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
+                }
+                @foreach (var peer in _peers)
+                {
+                var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
 
-            <tr>
-                <td>@peer.nodeId</td>
-                <td>@peer.socket</td>
-                <td>
+                <tr>
+                    <td>@peer.nodeId</td>
+                    <td>@peer.socket</td>
+                    <td>
 
-                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
-                    @if (peerRemembered)
-                    {
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
+                        @if (peerRemembered)
+                        {
                         <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
                         <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Persistent})">Constant conn = @peerConfig.Persistent Toggle
                         </button>
                         <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
 
 
-                    }
-                    else if(peer.socket is not null)
-                    {
+                        }
+                        else if(peer.socket is not null)
+                        {
                         <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo(){Endpoint=peer.socket})">Remember peer</button>
-                    }
+                        }
 
 
-                </td>
-            </tr>
+                    </td>
+                </tr>
+                }
+                @foreach(var peer in rememberedButUnconnected)
+                {
+                var peerConfig = _config.Peers[peer];
+                <tr>
+                    <td>@peer</td>
+                    <td>@peerConfig.Endpoint</td>
+                    <td>
+
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">Constant conn = @peerConfig.Persistent Toggle
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
+                    </td>
+                </tr>
+                }
+                </tbody>
+                <tfoot>
+                <tr>
+                    <td colspan="3">
+                        <div class="input-group">
+                            <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
+                            <button class="btn btn-primary" type="button" @onclick="Connect">Connect</button></div>
+                    </td>
+                </tr>
+                </tfoot>
+            </table>
         }
-        @foreach(var peer in rememberedButUnconnected)
+        else
         {
-            var peerConfig = _config.Peers[peer];
-            <tr>
-                <td>@peer</td>
-                <td>@peerConfig.Endpoint</td>
-                <td>
-
-                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
-                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
-                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">Constant conn = @peerConfig.Persistent Toggle
-                    </button>
-                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
-                </td>
-            </tr>
+            <p class="text-muted">There are no peers, yet.</p>
         }
-        </tbody>
-        <tfoot>
-        <tr>
-            <td colspan="3">
-                <div class="input-group">
-                <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
-                <button class="btn btn-primary" type="button" @onclick="Connect">Connect</button></div>
-            </td>
-        </tr>
-        </tfoot>
-    </table>
-}
-@if (_channels is not null)
-{
-    <h3>Channels</h3>
-    <table>
-        <thead>
-        <tr>
-            <th>Channel ID</th>
-            <th>User Channel ID</th>
-            <th>Counterparty</th>
-            <th>Short Channel ID</th>
-            <th>Confirmations</th>
-            <th>Confirmations Required</th>
-            <th>Funding Transaction Hash</th>
-            <th>Usable</th>
-            <th>Ready</th>
-            <th>Balance</th>
-            <th>Inbound</th>
-            <th>Outbound</th>
-            <th>State</th>
-        </tr>
-        </thead>
-        <tbody>
-        @foreach (var channel in _channels)
+    </article>
+    <article class="my-4">
+        <h3>Channels</h3>
+        @if (_channels.Any())
         {
-            <tr>
-                <td>@channel.id</td>
-                <td>@channel.userId</td>
-                <td>@channel.counterparty</td>
-                <td>@channel.shortChannelId</td>
-                <td>@channel.confirmations</td>
-                <td>@channel.confirmationsRequired</td>
-                <td>@channel.fundingTransactionHash</td>
-                <td>@channel.usable</td>
-                <td>@channel.ready</td>
-                <td>@channel.Balance</td>
-                <td>@channel.Inbound</td>
-                <td>@channel.Outbound</td>
-                <td>@channel.State</td>
-            </tr>
+            <table>
+                <thead>
+                <tr>
+                    <th>Channel ID</th>
+                    <th>User Channel ID</th>
+                    <th>Counterparty</th>
+                    <th>Short Channel ID</th>
+                    <th>Confirmations</th>
+                    <th>Confirmations Required</th>
+                    <th>Funding Transaction Hash</th>
+                    <th>Usable</th>
+                    <th>Ready</th>
+                    <th>Balance</th>
+                    <th>Inbound</th>
+                    <th>Outbound</th>
+                    <th>State</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var channel in _channels)
+                {
+                    <tr>
+                        <td>@channel.id</td>
+                        <td>@channel.userId</td>
+                        <td>@channel.counterparty</td>
+                        <td>@channel.shortChannelId</td>
+                        <td>@channel.confirmations</td>
+                        <td>@channel.confirmationsRequired</td>
+                        <td>@channel.fundingTransactionHash</td>
+                        <td>@channel.usable</td>
+                        <td>@channel.ready</td>
+                        <td>@channel.Balance</td>
+                        <td>@channel.Inbound</td>
+                        <td>@channel.Outbound</td>
+                        <td>@channel.State</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
         }
-        </tbody>
-    </table>
-}
-@if (_payments is not null)
-{
-    <h3>Payments</h3>
-    <table>
-        <thead>
-        <tr>
-            <th>Payment Hash</th>
-            <th>Inbound</th>
-            <th>Id</th>
-            <th>Preimage</th>
-            <th>Secret</th>
-            <th>Timestamp</th>
-            <th>Value</th>
-            <th>Status</th>
-        </tr>
-        </thead>
-        <tbody>
-        @foreach (var payment in _payments)
+        else
         {
-            <tr>
-                <td>@payment.PaymentHash</td>
-                <td>@payment.Inbound</td>
-                <td>@payment.PaymentId</td>
-                <td>@payment.Preimage</td>
-                <td>@payment.Secret</td>
-                <td>@payment.Timestamp</td>
-                <td>@payment.Value</td>
-                <td>@payment.Status</td>
-            </tr>
+            <p class="text-muted">There are no channels, yet.</p>
         }
-        </tbody>
-    </table>
+    </article>
+    <article class="my-4">
+        <h3>Payments</h3>
+        @if (_payments.Any())
+        {
+            <table>
+                <thead>
+                <tr>
+                    <th>Payment Hash</th>
+                    <th>Inbound</th>
+                    <th>Id</th>
+                    <th>Preimage</th>
+                    <th>Secret</th>
+                    <th>Timestamp</th>
+                    <th>Value</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                @foreach (var payment in _payments)
+                {
+                <tr>
+                    <td>@payment.PaymentHash</td>
+                    <td>@payment.Inbound</td>
+                    <td>@payment.PaymentId</td>
+                    <td>@payment.Preimage</td>
+                    <td>@payment.Secret</td>
+                    <td>@payment.Timestamp</td>
+                    <td>@payment.Value</td>
+                    <td>@payment.Status</td>
+                </tr>
+                }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <p class="text-muted">There are no payments, yet.</p>
+        }
+    </article>
+    <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
 }
-
-
-@inject LightningNodeManager LightningNodeManager
-@inject IDispatcher Dispatcher
 
 @code {
     private string _nodeId;
