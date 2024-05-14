@@ -1,9 +1,9 @@
 ﻿@using BTCPayApp.UI.Features
-@inherits Fluxor.Blazor.Web.Components.FluxorLayout
+@inherits _Layout
 @inject IState<UIState> UiState
 
 <div id="SimpleLayout" class="layout">
-    <SectionOutlet SectionName="top" />
+    <SectionOutlet SectionId="Top" />
     @if (!string.IsNullOrEmpty(UiState.Value.LogoUrl))
     {
         <div>
@@ -16,10 +16,10 @@
     }
     <main id="MainContent">
         <div class="container">
-            <SectionOutlet SectionName="main-top"/>
+            <SectionOutlet SectionId="MainTop"/>
             @Body
-            <SectionOutlet SectionName="main-bottom"/>
+            <SectionOutlet SectionId="MainBottom"/>
         </div>
     </main>
-    <SectionOutlet SectionName="bottom" />
+    <SectionOutlet SectionId="Bottom" />
 </div>
