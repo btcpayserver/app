@@ -158,6 +158,12 @@
         return Task.CompletedTask;
     }
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // ensure the ElementReference is set
+        if (firstRender) StateHasChanged();
+    }
+
     private SetupState? SetupStateOnchain => _setupStatus?.SetupStateOnchain() ?? SetupState.Undetermined;
     private SetupState? SetupStateLightning => _setupStatus?.SetupStateLightning() ?? SetupState.Undetermined;
 }
