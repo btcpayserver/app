@@ -9,6 +9,7 @@ public class BTCPayAccount(string baseUri, string email)
     public string? AccessToken { get; set; }
     public string? RefreshToken { get; set; }
     public DateTimeOffset? AccessExpiry { get; set; }
+    public string? CurrentStoreId { get; set; }
 
     [JsonConstructor]
     public BTCPayAccount() : this(string.Empty, string.Empty) {}

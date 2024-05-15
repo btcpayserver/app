@@ -9,6 +9,8 @@ public static class Routes
     public const string Login = "/login";
     public const string Register = "/register";
     public const string ForgotPassword = "/forgot-password";
+    public const string Error = "/error";
+    public const string NotFound = "/not-found";
 
     // authorized
     public const string Dashboard = "/dashboard";
@@ -27,6 +29,10 @@ public static class Routes
     public const string Invoice = "/invoices/{InvoiceId}";
     public const string PointOfSale = "/pos";
     public const string Logout = "/logout";
+    public const string Store = "/store/{StoreId}";
+    public const string SelectStore = "/store/select";
+    public const string CreateStore = "/store/create";
 
     public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);
+    public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);
 }

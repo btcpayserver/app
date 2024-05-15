@@ -22,7 +22,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
     public AppUserInfo? GetUserInfo() => _userInfo;
 
     public AuthStateProvider(
-        BTCPayAppClient client, 
+        BTCPayAppClient client,
         IConfigProvider config,
         IOptionsMonitor<IdentityOptions> identityOptions)
     {
@@ -32,7 +32,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
 
         _client.AccessRefreshed += OnAccessRefresh;
     }
-    
+
     private SemaphoreSlim _semaphore = new(1, 1);
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -109,6 +109,23 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         _client.ClearAccess();
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+    }
+
+    public async Task SetCurrentStoreId(string storeId)
+    {
+        _account!.CurrentStoreId = storeId;
+        await _config.Set("account", _account);
+    }
+
+    public AppUserStoreInfo? GetUserStore(string storeId)
+    {
+        return _userInfo!.Stores?.FirstOrDefault(store => store.Id == storeId);
+    }
+
+    public AppUserStoreInfo? GetCurrentStore()
+    {
+        var storeId = _account?.CurrentStoreId;
+        return string.IsNullOrEmpty(storeId) ? null : GetUserStore(storeId);
     }
 
     private async Task SetAccount(BTCPayAccount account)

@@ -1,0 +1,83 @@
+﻿@attribute [Route(Routes.SelectStore)]
+@layout SimpleLayout
+@using BTCPayApp.CommonServer
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Select your store</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar>
+        <SectionContent SectionId="Titlebar.End">
+            <NavLink class="btn-close btn-back" href="@Routes.Dashboard">
+                <Icon symbol="close"/>
+            </NavLink>
+        </SectionContent>
+    </Titlebar>
+</SectionContent>
+
+<SectionContent SectionId="_Layout.MainTop">
+    <h1>Select your store</h1>
+</SectionContent>
+
+@if (_userInfo!.Stores?.Any() is true)
+{
+    <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="SelectStore" method="post">
+        <DataAnnotationsValidator />
+        <InputRadioGroup Name="StoreIds" @bind-Value="@Model.StoreId">
+            <ul class="list-group list-group-flush mb-3">
+                @foreach (var store in _userInfo.Stores)
+                {
+                    <li class="list-group-item">
+                        <label class="form-check-label stretched-link d-flex flex-wrap align-items-center justify-content-between gap-2">
+                            <InputRadio Name="StoreIds" Value="@store.Id" class="form-check-input m-0"/>
+                            <strong>@store.Name</strong>
+                            <span class="badge bg-light ms-auto">@store.RoleId</span>
+                        </label>
+                    </li>
+                }
+            </ul>
+        </InputRadioGroup>
+        <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@string.IsNullOrEmpty(Model.StoreId)">Select Store</button>
+    </EditForm>
+    <p class="mt-5 text-secondary text-center">In case you want to start with a blank slate, you can also create a new store for the app.</p>
+    <NavLink class="btn btn-outline-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
+}
+else
+{
+    <p class="text-secondary text-center">You don't have a store, yet.</p>
+    <NavLink class="btn btn-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
+}
+
+@code {
+    private AppUserInfo? _userInfo;
+    SelectStoreModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userInfo = AccountManager.GetUserInfo();
+
+        if (_userInfo!.Stores?.Any() is not true)
+        {
+            NavigationManager.NavigateTo(Routes.CreateStore);
+        }
+    }
+
+    private async Task  HandleValidSubmit()
+    {
+        await AccountManager.SetCurrentStoreId(Model.StoreId!);
+        NavigationManager.NavigateTo(Routes.Index);
+    }
+
+
+    private class SelectStoreModel
+    {
+        [Required]
+        public string? StoreId { get; set; }
+    }
+
+    private string GetCreateStoreUrl() => NavigationManager.GetUriWithQueryParameters(Routes.CreateStore, new Dictionary<string, object?> { {"backUrl", Routes.SelectStore } } );
+}

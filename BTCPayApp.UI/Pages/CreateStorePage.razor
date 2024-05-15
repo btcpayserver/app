@@ -1,0 +1,58 @@
+﻿@attribute [Route(Routes.CreateStore)]
+@layout SimpleLayout
+@using BTCPayApp.CommonServer
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>Create a new store</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back="@BackUrl">
+        <SectionContent SectionId="Titlebar.End">
+            <NavLink class="btn-close btn-back" href="@Routes.Dashboard">
+                <Icon symbol="close"/>
+            </NavLink>
+        </SectionContent>
+    </Titlebar>
+</SectionContent>
+
+<SectionContent SectionId="_Layout.MainTop">
+    <h1>Create a new store</h1>
+</SectionContent>
+
+<EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="CreateStore" method="post">
+    <DataAnnotationsValidator />
+    <div class="mb-3" hidden="@Model.Name">
+        <label for="Name" class="form-label">Name</label>
+        <InputText @bind-Value="Model.Name" id="Name" class="form-control"/>
+        <ValidationMessage For="@(() => Model.Name)" />
+    </div>
+    <button class="btn btn-primary w-100" type="submit" data-testid="CreateStoreButton" disabled="@string.IsNullOrEmpty(Model.Name)">Create Store</button>
+</EditForm>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? BackUrl { get; set; }
+
+    private AppUserInfo? _userInfo;
+    CreateStoreModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    private async Task  HandleValidSubmit()
+    {
+        // TODO: Create Store and assign CurrentStoreId
+        //await AccountManager.SetCurrentStoreId(store.id);
+    }
+
+    private class CreateStoreModel
+    {
+        [Required]
+        public string? Name { get; set; }
+    }
+}

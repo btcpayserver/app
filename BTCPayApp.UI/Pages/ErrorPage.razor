@@ -1,18 +1,19 @@
-﻿@attribute [AllowAnonymous]
+﻿@attribute [Route(Routes.Error)]
+@attribute [AllowAnonymous]
 @layout SimpleLayout
 
 <PageTitle>@Title</PageTitle>
 
 <div class="text-center">
     <h1>@Title</h1>
-    <p class="text-secondary fs-5 mb-5">@Message</p>
-    <NavLink class="btn btn-primary w-100" href="@Routes.Index" data-testid="GoBackButton">Go Back</NavLink>
+    <Alert Type="danger" Margin="5">@Message</Alert>
+    <NavLink class="btn btn-primary w-100" href="@Routes.Index" onclick="history.back();return false;" data-testid="GoBackButton">Go Back</NavLink>
 </div>
 
 @code {
-    [Parameter, EditorRequired]
+    [Parameter, EditorRequired, SupplyParameterFromQuery]
     public string? Title { get; set; }
 
-    [Parameter, EditorRequired]
+    [Parameter, EditorRequired, SupplyParameterFromQuery]
     public string? Message { get; set; }
 }

@@ -19,11 +19,15 @@
         var authState = await AuthenticationState;
         if (authState.User.Identity?.IsAuthenticated is true)
         {
-            NavigationManager.NavigateTo(Routes.Dashboard);
+            NavigationManager.NavigateTo(AccountManager.GetCurrentStore() == null
+                ? Routes.SelectStore
+                : Routes.Dashboard);
         }
         else
         {
-            NavigationManager.NavigateTo(AccountManager.GetAccount() != null ? Routes.Login : Routes.Welcome);
+            NavigationManager.NavigateTo(AccountManager.GetAccount() == null
+                ? Routes.Welcome
+                : Routes.Login);
         }
     }
 }

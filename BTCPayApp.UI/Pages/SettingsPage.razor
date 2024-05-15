@@ -12,7 +12,7 @@
 <PageTitle>Settings</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
-    <Titlebar Back="@Routes.Dashboard">
+    <Titlebar Back="@Routes.Index">
         <h1>Settings</h1>
     </Titlebar>
 </SectionContent>
@@ -48,7 +48,9 @@
                 {
                     <li>
                         <div>
-                            <strong>@store.Name</strong>
+                            <strong>
+                                <a href="@Routes.StorePath(store.Id)">@store.Name</a>
+                            </strong>
                             <span class="badge bg-light">@store.RoleId</span>
                             @if (store.Archived)
                             {

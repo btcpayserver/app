@@ -4,18 +4,18 @@
 
 <div id="SimpleLayout" class="layout">
     <SectionOutlet SectionId="Top" />
-    @if (!string.IsNullOrEmpty(UiState.Value.LogoUrl))
-    {
-        <div>
-            <img src="@UiState.Value.LogoUrl" alt="@(UiState.Value.ServerName ?? "BTCPay Server")" class="logo" />
-        </div>
-    }
-    else
-    {
-        <img src="_content/BTCPayApp.UI/img/logo-symbol.svg" alt="BTCPay Server" class="logo"/>
-    }
     <main id="MainContent">
         <div class="container">
+            @if (!string.IsNullOrEmpty(UiState.Value.LogoUrl))
+            {
+                <div>
+                    <img src="@UiState.Value.LogoUrl" alt="@(UiState.Value.ServerName ?? "BTCPay Server")" class="logo" />
+                </div>
+            }
+            else
+            {
+                <img src="_content/BTCPayApp.UI/img/logo-symbol.svg" alt="BTCPay Server" class="logo"/>
+            }
             <SectionOutlet SectionId="MainTop"/>
             @Body
             <SectionOutlet SectionId="MainBottom"/>

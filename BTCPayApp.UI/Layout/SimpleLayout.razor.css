@@ -10,11 +10,16 @@
   padding-top: var(--padding-vertical);
   padding-bottom: 3rem;
 }
+#SimpleLayout #MainContent {
+  min-height: auto;
+  padding-top: 0;
+}
 .logo {
   display: block;
   height: var(--logo-height);
   margin-left: auto;
   margin-right: auto;
+  margin-bottom: 1.5rem;
 }
 ::deep h1 {
   margin-bottom: 1.5rem;

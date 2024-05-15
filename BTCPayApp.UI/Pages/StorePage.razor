@@ -1,0 +1,55 @@
+﻿@attribute [Route(Routes.Store)]
+@using BTCPayApp.CommonServer
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
+@inject NavigationManager NavigationManager
+
+<PageTitle>@Store.Name</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back="@Routes.Index">
+        <h1>@Store.Name</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    <div>
+        <strong>@Store.Name</strong>
+        <span class="badge bg-light">@Store.RoleId</span>
+        @if (Store.Archived)
+        {
+            <span class="badge bg-info">archived</span>
+        }
+    </div>
+    @if (Store.Permissions?.Any() is true)
+    {
+        <ul>
+            @foreach (var permission in Store.Permissions)
+            {
+                <li>@permission</li>
+            }
+        </ul>
+    }
+    else
+    {
+        <p class="text-secondary">No permissions</p>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string? StoreId { get; set; }
+
+    private AppUserStoreInfo? Store { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Store = AccountManager.GetUserStore(StoreId);
+        if (Store == null)
+        {
+            NavigationManager.NavigateTo(Routes.NotFound, true, true);
+        }
+    }
+}

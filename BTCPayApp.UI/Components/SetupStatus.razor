@@ -1,15 +1,16 @@
 @using BTCPayApp.Core.Attempt2
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using Microsoft.AspNetCore.SignalR.Client
 @inject IState<RootState> State
+@inject IAccountManager AccountManager
+@inject NavigationManager NavigationManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <div class="status">
     @if (SetupStateOverall() == SetupState.Undetermined)
     {
-        <div class="spinner-border spinner-border-sm" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
+        <LoadingIndicator />
     }
     else
     {
@@ -20,32 +21,50 @@
 </div>
 
 @code {
+    public SetupState SetupStateConnection() {
+        return State.Value.BTCPayServerConnectionState switch
+        {
+            HubConnectionState.Connected => SetupState.Completed,
+            HubConnectionState.Connecting => SetupState.Pending,
+            HubConnectionState.Reconnecting => SetupState.Pending,
+            HubConnectionState.Disconnected => SetupState.Failed,
+            _ => SetupState.Undetermined
+        };
+    }
+
     public SetupState SetupStateOverall() {
         if (SetupStateOnchain() == SetupState.Undetermined || SetupStateLightning() == SetupState.Undetermined) return SetupState.Undetermined;
-        if (SetupStateOnchain() == SetupState.Completed || SetupStateLightning() == SetupState.Completed) return SetupState.Completed;
         if (SetupStateOnchain() == SetupState.Failed || SetupStateLightning() == SetupState.Failed) return SetupState.Failed;
-        return SetupState.Pending;
+        return SetupStateOnchain() == SetupState.Completed && SetupStateLightning() == SetupState.Completed && SetupStateAccount() == SetupState.Completed
+               ? SetupState.Completed
+               : SetupState.Pending;
+    }
+
+    public SetupState SetupStateAccount() {
+        return string.IsNullOrEmpty(AccountManager.GetAccount()?.CurrentStoreId) ? SetupState.Pending : SetupState.Completed;
     }
 
     public SetupState SetupStateOnchain() {
-        if (State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) ||
-            State.Value.OnchainWalletState is OnChainWalletState.Init or OnChainWalletState.Loading ||
-            State.Value.BTCPayServerConnectionState != HubConnectionState.Connected) return SetupState.Undetermined;
+        if (SetupStateConnection() != SetupState.Completed ||
+            State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) ||
+            State.Value.OnchainWalletState is OnChainWalletState.Init or OnChainWalletState.Loading) return SetupState.Undetermined;
         return State.Value.OnchainWalletState == OnChainWalletState.Loaded ? SetupState.Completed : SetupState.Pending;
     }
 
     public SetupState SetupStateLightning() {
-        if (State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) ||
-            State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loading ||
-            State.Value.BTCPayServerConnectionState != HubConnectionState.Connected) return SetupState.Undetermined;
+        if (SetupStateConnection() != SetupState.Completed ||
+            State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) ||
+            State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loading) return SetupState.Undetermined;
         if (State.Value.LightningNodeState is LightningNodeState.Error or LightningNodeState.Stopped) return SetupState.Failed;
         return State.Value.LightningNodeState == LightningNodeState.Loaded ? SetupState.Completed : SetupState.Pending;
     }
 
     private string GetLink()
     {
-        if (SetupStateOnchain() == SetupState.Failed || SetupStateOnchain() != SetupState.Completed) return Routes.WalletSetup;
-        if (SetupStateLightning() == SetupState.Failed || SetupStateLightning() != SetupState.Completed) return Routes.LightningSetup;
+        if (SetupStateConnection() == SetupState.Failed) return NavigationManager.GetUriWithQueryParameters(Routes.Error, new Dictionary<string, object?> { {"title", "Connection failed" }, {"message", "Unable to connect to the BTCPay Server instance." } } );
+        if (SetupStateAccount() != SetupState.Completed) return Routes.SelectStore;
+        if (SetupStateOnchain() != SetupState.Completed) return Routes.WalletSetup;
+        if (SetupStateLightning() != SetupState.Completed) return Routes.LightningSetup;
         return Routes.Dashboard;
     }
 }
