@@ -2,6 +2,7 @@
 @using BTCPayApp.CommonServer
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayServer.Client
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
@@ -36,6 +37,10 @@
     {
         <p class="text-secondary">No permissions</p>
     }
+
+    <AuthorizeView Policy="@Policies.CanModifyStoreSettings">
+        <p>You satisfy the 'CanModifyStoreSettings' policy.</p>
+    </AuthorizeView>
 </section>
 
 @code {

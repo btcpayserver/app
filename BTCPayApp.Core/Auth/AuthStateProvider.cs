@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.AspNetRip;
 using BTCPayApp.Core.Contracts;
+using BTCPayServer.Abstractions.Constants;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
@@ -80,7 +81,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
                 if (_userInfo.Roles?.Any() is true)
                     claims.AddRange(_userInfo.Roles.Select(role =>
                         new Claim(_identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, role)));
-                user = new ClaimsPrincipal(new ClaimsIdentity(claims, nameof(AuthStateProvider)));
+                user = new ClaimsPrincipal(new ClaimsIdentity(claims, AuthenticationSchemes.Bearer));
             }
 
             var res = new AuthenticationState(user);
