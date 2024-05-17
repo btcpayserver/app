@@ -64,14 +64,18 @@ else
         {
             NavigationManager.NavigateTo(Routes.CreateStore);
         }
+        else if (_userInfo!.Stores?.Count() == 1)
+        {
+            await AccountManager.SetCurrentStoreId(_userInfo!.Stores!.First().Id!);
+            NavigationManager.NavigateTo(Routes.Index);
+        }
     }
 
-    private async Task  HandleValidSubmit()
+    private async Task HandleValidSubmit()
     {
         await AccountManager.SetCurrentStoreId(Model.StoreId!);
         NavigationManager.NavigateTo(Routes.Index);
     }
-
 
     private class SelectStoreModel
     {
