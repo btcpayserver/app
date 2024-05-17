@@ -1,14 +1,16 @@
-<a href="#" class="notification d-flex align-items-center dropdown-item border-bottom border-light gap-3 py-3 px-4 @(Seen ? null : "bg-light")">
-    <div>
-        <Icon Symbol="@NotificationIcon(Type)" />
-    </div>
-    <div class="content">
-        <div class="fw-semibold text-wrap">
-            @Body
+<a href="#" class="border-bottom border-light @(Seen ? null : "bg-light")">
+    <div class="container d-flex align-items-center gap-3 py-3">
+        <div>
+            <Icon Symbol="@NotificationIcon(Type)"/>
         </div>
-        <small class="text-muted">
-            <DateDisplay DateTimeOffset="Created" />
-        </small>
+        <div class="content">
+            <div class="fw-semibold text-wrap">
+                @Body
+            </div>
+            <small class="text-muted">
+                <DateDisplay DateTimeOffset="Created"/>
+            </small>
+        </div>
     </div>
 </a>
 

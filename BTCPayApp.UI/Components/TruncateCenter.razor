@@ -1,14 +1,6 @@
 <span @attributes="InputAttributes" class="truncate-center @(Copy ? "truncate-center--copy" : null) @(Elastic ? "truncate-center--elastic" : null) @InputAttributes?["class"]">
     <span class="truncate-center-truncated" data-bs-toggle="@(IsTruncated ? "tooltip" : null)" title="@(IsTruncated ? Text : null)">
-        @if (Elastic)
-        {
-            <span class="truncate-center-start">@Text</span>
-        }
-        else
-        {
-            <span class="truncate-center-start">@Start</span>
-            <span>…</span>
-        }
+        <span class="truncate-center-start">@(Elastic || !IsTruncated ? Text : $"{Start}…")</span>
         @if (IsTruncated)
         {
             <span class="truncate-center-end">@End</span>

@@ -1,3 +1,7 @@
+a {
+  display: block;
+  color: var(--btcpay-body-text);
+}
 .invoice .badge-container {
   flex: 0 0 5.125rem;
   text-align: right;
