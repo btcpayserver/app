@@ -30,12 +30,12 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
 
     }
 
-    public async Task TransactionDetected(string identifier, string txId, string[] relatedScripts, bool confirmed)
+    public async Task TransactionDetected(TransactionDetectedRequest request)
     {
-       
-        _logger.LogInformation("OnTransactionDetected: {Txid}", txId);
-        await OnTransactionDetected?.Invoke(this, (identifier, txId, relatedScripts, confirmed));
+        _logger.LogInformation($"OnTransactionDetected: {request.TxId}" );
+        await OnTransactionDetected?.Invoke(this, request);
     }
+
 
     public async Task NewBlock(string block)
     {
@@ -77,7 +77,7 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
     }
 
     public event AsyncEventHandler<string>? OnNewBlock;
-    public event AsyncEventHandler<(string identifier, string txId, string[] relatedScripts, bool confirmed)>? OnTransactionDetected;
+    public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
     public event AsyncEventHandler<string>? OnNotifyNetwork;
 
 

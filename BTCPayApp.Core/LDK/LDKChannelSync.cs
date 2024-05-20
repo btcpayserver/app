@@ -1,4 +1,5 @@
-﻿using BTCPayApp.Core.Attempt2;
+﻿using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Helpers;
 using NBitcoin;
 using org.ldk.structs;
@@ -105,7 +106,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
             action => _appHubClient.OnNewBlock -= action, OnNewBlock,
             cancellationToken)); 
         
-        _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<(string identifier, string txId, string[] relatedScripts, bool confirmed)>(
+        _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<TransactionDetectedRequest>(
             action => _appHubClient.OnTransactionDetected += action,
             action => _appHubClient.OnTransactionDetected -= action, OnTransactionUpdate,
             cancellationToken));
@@ -113,12 +114,12 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
 
   
 
-    private async Task OnTransactionUpdate((string identifier, string txId, string[] relatedScripts, bool confirmed) txUpdate, CancellationToken cancellationToken)
+    private async Task OnTransactionUpdate( TransactionDetectedRequest txUpdate , CancellationToken cancellationToken)
     {
-        var txResult = await  _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(new[] {txUpdate.txId});
-        var tx = txResult.Txs[txUpdate.txId];
+        var txResult = await  _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(new[] {txUpdate.TxId});
+        var tx = txResult.Txs[txUpdate.TxId];
 
-        var txHash = new uint256(txUpdate.txId);
+        var txHash = new uint256(txUpdate.TxId);
         var txHashBytes = txHash.ToBytes();
         
         byte[]? headerBytes = null;
@@ -137,6 +138,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
             else
                 confirm.transactions_confirmed(headerBytes, [TwoTuple_usizeTransactionZ.of(1, txHashBytes)],blockHeight.Value);
         }
+        
     }
     private async Task OnNewBlock(string e, CancellationToken arg2)
     {

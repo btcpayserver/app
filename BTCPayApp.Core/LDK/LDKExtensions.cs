@@ -20,7 +20,7 @@ public static class LDKExtensions
     {
         return option is Option_u32Z.Option_u32Z_Some some ? some.some : null;
     }
-    
+
     public static string GetError(this APIError apiError)
     {
         return apiError switch
@@ -34,33 +34,40 @@ public static class LDKExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(apiError))
         };
     }
+
     public static Option_SocketAddressZ GetSocketAddress(this Socket socket)
     {
         if (socket.RemoteEndPoint is null)
         {
             return Option_SocketAddressZ.none();
         }
+
         var remote = socket.RemoteEndPoint?.ToString();
 
-        if(remote is null)
+        if (remote is null)
             return Option_SocketAddressZ.none();
         var ipe = ((IPEndPoint) socket.RemoteEndPoint);
-        
+
         // return Option_SocketAddressZ.some(SocketAddress.tcp_ip_v4(ipe.Address.GetAddressBytes(), (short) ipe.Port));
-        var socketAddress =SocketAddress.from_str(remote);
-       return !socketAddress.is_ok() ? Option_SocketAddressZ.none() : Option_SocketAddressZ.some(((Result_SocketAddressSocketAddressParseErrorZ.Result_SocketAddressSocketAddressParseErrorZ_OK)socketAddress).res);
+        var socketAddress = SocketAddress.from_str(remote);
+        return !socketAddress.is_ok()
+            ? Option_SocketAddressZ.none()
+            : Option_SocketAddressZ.some(
+                ((Result_SocketAddressSocketAddressParseErrorZ.Result_SocketAddressSocketAddressParseErrorZ_OK)
+                    socketAddress).res);
     }
-    
+
     public static SocketAddress? Endpoint(this EndPoint endPoint)
     {
         return SocketAddress.from_str(endPoint.ToString()) switch
         {
-            org.ldk.structs.Result_SocketAddressSocketAddressParseErrorZ.Result_SocketAddressSocketAddressParseErrorZ_OK ok => ok.res,
+            org.ldk.structs.Result_SocketAddressSocketAddressParseErrorZ.Result_SocketAddressSocketAddressParseErrorZ_OK
+                ok => ok.res,
             _ => null
         };
     }
-    
-    public class LDKEntropySource:EntropySourceInterface
+
+    public class LDKEntropySource : EntropySourceInterface
     {
         public byte[] get_secure_random_bytes()
         {
@@ -69,17 +76,19 @@ public static class LDKExtensions
     }
 
     public static IServiceCollection AddLDK(this IServiceCollection services)
-    { 
-
-        services.AddScoped<KeysManager>(provider => KeysManager.of(provider.GetRequiredService<LDKNode>().Seed, DateTimeOffset.Now.ToUnixTimeSeconds(),
+    {
+        services.AddScoped<KeysManager>(provider => KeysManager.of(provider.GetRequiredService<LDKNode>().Seed,
+            DateTimeOffset.Now.ToUnixTimeSeconds(),
             RandomUtils.GetInt32()));
         services.AddScoped(provider => provider.GetRequiredService<KeysManager>().as_NodeSigner());
+        services.AddScoped(provider => provider.GetRequiredService<KeysManager>().as_OutputSpender());
         services.AddScoped<LDKPersister>();
         services.AddScoped<Persister>(provider =>
             Persister.new_impl(provider.GetRequiredService<LDKPersister>()));
-        services.AddScoped(provider => provider.GetRequiredService<LDKNode>().GetConfig().GetAwaiter().GetResult().AsLDKUserConfig());
+        services.AddScoped(provider =>
+            provider.GetRequiredService<LDKNode>().GetConfig().GetAwaiter().GetResult().AsLDKUserConfig());
         services.AddScoped(provider => provider.GetRequiredService<OnChainWalletManager>().Network!);
-        
+
         services.AddScoped(provider =>
         {
             var feeEstimator = provider.GetRequiredService<FeeEstimator>();
@@ -101,32 +110,39 @@ public static class LDKExtensions
                 .GetResult();
             if (channelManagerSerialized is not null)
             {
-                return ChannelManagerHelper.Load(channelManagerSerialized.Value.channelMonitors, channelManagerSerialized.Value.serializedChannelManager, entropySource, signerProvider, nodeSigner,
+                return ChannelManagerHelper.Load(channelManagerSerialized.Value.channelMonitors,
+                    channelManagerSerialized.Value.serializedChannelManager, entropySource, signerProvider, nodeSigner,
                     feeEstimator, watch, broadcasterInterface, router, logger, userConfig, filter);
             }
-            return  ChannelManager.of(feeEstimator, watch, broadcasterInterface, router, logger,entropySource ,nodeSigner, signerProvider,userConfig,chainParameters,
+
+            return ChannelManager.of(feeEstimator, watch, broadcasterInterface, router, logger, entropySource,
+                nodeSigner, signerProvider, userConfig, chainParameters,
                 (int) DateTimeOffset.Now.ToUnixTimeSeconds());
         });
         services.AddScoped(provider => provider.GetRequiredService<ChannelManager>().as_ChannelMessageHandler());
         services.AddScoped(provider => provider.GetRequiredService<ChannelManager>().as_OffersMessageHandler());
         services.AddScoped<LDKNode>();
-        services.AddScoped(provider => P2PGossipSync.of(provider.GetRequiredService<NetworkGraph>(), Option_UtxoLookupZ.none(), provider.GetRequiredService<Logger>()));
+        services.AddScoped(provider => P2PGossipSync.of(provider.GetRequiredService<NetworkGraph>(),
+            Option_UtxoLookupZ.none(), provider.GetRequiredService<Logger>()));
         services.AddScoped(provider => GossipSync.p2_p(provider.GetRequiredService<P2PGossipSync>()));
-        services.AddScoped(provider => DefaultMessageRouter.of(provider.GetRequiredService<NetworkGraph>(),provider.GetRequiredService<EntropySource>()));
+        services.AddScoped(provider => DefaultMessageRouter.of(provider.GetRequiredService<NetworkGraph>(),
+            provider.GetRequiredService<EntropySource>()));
         services.AddScoped(provider => provider.GetRequiredService<P2PGossipSync>().as_RoutingMessageHandler());
-        services.AddScoped(provider =>  provider.GetRequiredService<DefaultMessageRouter>().as_MessageRouter());
-        services.AddScoped(provider =>  IgnoringMessageHandler.of().as_CustomOnionMessageHandler());
-        services.AddScoped(provider =>  IgnoringMessageHandler.of().as_CustomMessageHandler());
-        services.AddScoped<OnionMessenger>(provider => 
+        services.AddScoped(provider => provider.GetRequiredService<DefaultMessageRouter>().as_MessageRouter());
+        services.AddScoped(provider => IgnoringMessageHandler.of().as_CustomOnionMessageHandler());
+        services.AddScoped(provider => IgnoringMessageHandler.of().as_CustomMessageHandler());
+        services.AddScoped<NodeIdLookUp>(provider => EmptyNodeIdLookUp.of().as_NodeIdLookUp());
+        services.AddScoped<OnionMessenger>(provider =>
             OnionMessenger.of(
-                provider.GetRequiredService<EntropySource>(), 
-                provider.GetRequiredService<NodeSigner>(), 
+                provider.GetRequiredService<EntropySource>(),
+                provider.GetRequiredService<NodeSigner>(),
                 provider.GetRequiredService<Logger>(),
+                provider.GetRequiredService<NodeIdLookUp>(),
                 provider.GetRequiredService<MessageRouter>(),
                 provider.GetRequiredService<OffersMessageHandler>(),
                 provider.GetRequiredService<CustomOnionMessageHandler>()));
-        
-        
+
+
         services.AddScoped(provider => provider.GetRequiredService<OnionMessenger>().as_OnionMessageHandler());
         services.AddScoped<LDKBroadcaster>();
         services.AddScoped<PeerManager>(provider => PeerManager.of(
@@ -147,14 +163,15 @@ public static class LDKExtensions
             BumpTransactionEventHandler.of(provider.GetRequiredService<BroadcasterInterface>(),
                 provider.GetRequiredService<CoinSelectionSource>(), provider.GetRequiredService<SignerProvider>(),
                 provider.GetRequiredService<Logger>()));
-        
+
         services.AddLDKEventHandler<LDKBumpTransactionEventHandler>();
         services.AddLDKEventHandler<LDKFundingGenerationReadyEventHandler>();
+        services.AddLDKEventHandler<LDKSpendableOutputEventHandler>();
         services.AddLDKEventHandler<LDKOpenChannelRequestEventHandler>();
         services.AddLDKEventHandler<LDKPaymentEventsHandler>();
         services.AddLDKEventHandler<LDKPendingHTLCsForwardableEventHandler>();
         services.AddLDKEventHandler<LDKAnnouncementBroadcaster>();
-        
+
         services.AddScoped<LDKEventHandler>();
         services.AddScoped<org.ldk.structs.EventHandler>(provider =>
             org.ldk.structs.EventHandler.new_impl(provider.GetRequiredService<LDKEventHandler>()));
@@ -177,34 +194,57 @@ public static class LDKExtensions
             ));
         services.AddScoped<Watch>(provider => provider.GetRequiredService<ChainMonitor>().as_Watch());
         services.AddScoped<LDKFilter>();
+        services.AddScoped<LDKChangeDestinationSource>();
+        services.AddScoped<LDKKVStore>();
+        services.AddScoped<KVStore>(provider => KVStore.new_impl(provider.GetRequiredService<LDKKVStore>()));
+        services.AddScoped<ChangeDestinationSource>(provider => ChangeDestinationSource.new_impl(provider.GetRequiredService<LDKChangeDestinationSource>()));
         services.AddScoped<Filter>(provider => Filter.new_impl(provider.GetRequiredService<LDKFilter>()));
         services.AddScoped<Confirm, Confirm>(provider => provider.GetRequiredService<ChannelManager>().as_Confirm());
         services.AddScoped<Confirm, Confirm>(provider => provider.GetRequiredService<ChainMonitor>().as_Confirm());
+        services.AddScoped<Confirm, Confirm>(provider => provider.GetRequiredService<OutputSweeper>().as_Confirm());
         services.AddScoped<LDKChannelSync>();
         services.AddScoped<LDKPeerHandler>();
         services.AddScoped<LDKBackgroundProcessor>();
         services.AddScoped<LDKAnnouncementBroadcaster>();
         services.AddScoped<PaymentsManager>();
         services.AddScoped<BTCPayPaymentsNotifier>();
+        services.AddScoped<BTCPayPaymentsNotifier>();
+        // services.AddScoped<IScopedHostedService>(provider =>
+        //     provider.GetRequiredService<LDKSpendableOutputEventHandler>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKChannelSync>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKBackgroundProcessor>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKPeerHandler>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKAnnouncementBroadcaster>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<BTCPayPaymentsNotifier>());
 
-        services.AddScoped<LDKLogger>();
-        services.AddScoped<ChainParameters>(provider =>
+        services.AddScoped<OutputSweeper>(provider =>
         {
-            
             var connection = provider.GetRequiredService<BTCPayConnectionManager>();
             var resp = connection.HubProxy.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
             var hash = uint256.Parse(resp.BlockHash).ToBytes();
-            
+            var bestBlock = BestBlock.of(hash, (int) resp.BlockHeight);
+            return OutputSweeper.of(bestBlock,
+                provider.GetRequiredService<BroadcasterInterface>(),
+                provider.GetRequiredService<FeeEstimator>(),
+                Option_FilterZ.some(provider.GetRequiredService<Filter>()),
+                provider.GetRequiredService<OutputSpender>(),
+                provider.GetRequiredService<ChangeDestinationSource>(),
+                provider.GetRequiredService<KVStore>(),
+                provider.GetRequiredService<Logger>());
+        });
+
+        services.AddScoped<LDKLogger>();
+        services.AddScoped<ChainParameters>(provider =>
+        {
+            var connection = provider.GetRequiredService<BTCPayConnectionManager>();
+            var resp = connection.HubProxy.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
+            var hash = uint256.Parse(resp.BlockHash).ToBytes();
+
             var bestBlock = BestBlock.of(hash, (int) resp.BlockHeight);
             return ChainParameters.of(provider.GetRequiredService<Network>().GetLdkNetwork(), bestBlock);
         });
         services.AddScoped<Score>(provider => provider.GetRequiredService<ProbabilisticScorer>().as_Score());
-         services.AddScoped<MultiThreadedLockableScore>(provider =>
+        services.AddScoped<MultiThreadedLockableScore>(provider =>
             MultiThreadedLockableScore.of(provider.GetRequiredService<Score>()));
         services.AddScoped<LockableScore>(provider =>
             provider.GetRequiredService<MultiThreadedLockableScore>().as_LockableScore());
@@ -213,12 +253,13 @@ public static class LDKExtensions
 
         services.AddScoped<LDKWalletLogger>();
         services.AddScoped<Logger>(provider => Logger.new_impl(provider.GetRequiredService<LDKWalletLogger>()));
-      
-        
-        
+
+
         services.AddScoped<LDKEntropySource>();
-        services.AddScoped<EntropySource>(provider => EntropySource.new_impl(provider.GetRequiredService<LDKEntropySource>()));
-        services.AddScoped<ProbabilisticScoringDecayParameters>(provider => ProbabilisticScoringDecayParameters.with_default());
+        services.AddScoped<EntropySource>(provider =>
+            EntropySource.new_impl(provider.GetRequiredService<LDKEntropySource>()));
+        services.AddScoped<ProbabilisticScoringDecayParameters>(provider =>
+            ProbabilisticScoringDecayParameters.with_default());
         services.AddScoped<ProbabilisticScorer>(provider =>
         {
             var configProvider = provider.GetRequiredService<IConfigProvider>();
@@ -226,30 +267,33 @@ public static class LDKExtensions
             var logger = provider.GetRequiredService<Logger>();
             if (bytes is not null)
             {
-                var result =  ProbabilisticScorer.read(bytes, provider.GetRequiredService<ProbabilisticScoringDecayParameters>(), provider.GetRequiredService<NetworkGraph>(), logger);                
-                if(result is Result_ProbabilisticScorerDecodeErrorZ.Result_ProbabilisticScorerDecodeErrorZ_OK ok)
+                var result = ProbabilisticScorer.read(bytes,
+                    provider.GetRequiredService<ProbabilisticScoringDecayParameters>(),
+                    provider.GetRequiredService<NetworkGraph>(), logger);
+                if (result is Result_ProbabilisticScorerDecodeErrorZ.Result_ProbabilisticScorerDecodeErrorZ_OK ok)
                     return ok.res;
             }
-            
+
             return ProbabilisticScorer.of(ProbabilisticScoringDecayParameters.with_default(),
                 provider.GetRequiredService<NetworkGraph>(), logger);
         });
-        
+
         services.AddScoped<NetworkGraph>(provider =>
         {
             var configProvider = provider.GetRequiredService<IConfigProvider>();
             var bytes = configProvider.Get<byte[]>("NetworkGraph").ConfigureAwait(false).GetAwaiter().GetResult();
             if (bytes is not null)
             {
-                var result =  NetworkGraph.read(bytes, provider.GetRequiredService<Logger>());                
-                if(result is Result_NetworkGraphDecodeErrorZ.Result_NetworkGraphDecodeErrorZ_OK ok)
+                var result = NetworkGraph.read(bytes, provider.GetRequiredService<Logger>());
+                if (result is Result_NetworkGraphDecodeErrorZ.Result_NetworkGraphDecodeErrorZ_OK ok)
                     return ok.res;
             }
+
             return NetworkGraph.of(provider.GetRequiredService<Network>().GetLdkNetwork(),
                 provider.GetRequiredService<Logger>());
         });
         services.AddScoped<DefaultRouter>(provider => DefaultRouter.of(provider.GetRequiredService<NetworkGraph>(),
-            provider.GetRequiredService<Logger>(),provider.GetRequiredService<EntropySource>(),
+            provider.GetRequiredService<Logger>(), provider.GetRequiredService<EntropySource>(),
             provider.GetRequiredService<LockableScore>(),
             ProbabilisticScoringFeeParameters.with_default()));
         services.AddScoped<Router>(provider => provider.GetRequiredService<DefaultRouter>().as_Router());
@@ -257,15 +301,15 @@ public static class LDKExtensions
         return services;
     }
 
-    public static IServiceCollection AddLDKEventHandler<T>(this IServiceCollection services) where T : class, ILDKEventHandler
+    public static IServiceCollection AddLDKEventHandler<T>(this IServiceCollection services)
+        where T : class, ILDKEventHandler
     {
         services.TryAddScoped<T>();
         services.AddScoped<ILDKEventHandler>(provider => provider.GetRequiredService<T>());
         return services;
     }
-    
-    
-    
+
+
     public static org.ldk.enums.Network GetLdkNetwork(this Network network)
     {
         return network.ChainName switch
@@ -308,11 +352,12 @@ public static class LDKExtensions
     {
         return new NBitcoin.OutPoint(new uint256(outPoint.get_txid()), outPoint.get_index());
     }
-    public static  org.ldk.structs.OutPoint Outpoint(this NBitcoin.OutPoint  outPoint)
+
+    public static org.ldk.structs.OutPoint Outpoint(this NBitcoin.OutPoint outPoint)
     {
         return org.ldk.structs.OutPoint.of(outPoint.Hash.ToBytes(), (short) outPoint.N);
     }
-    
+
     public static org.ldk.structs.TxOut TxOut(this TxOut txOut)
     {
         return new org.ldk.structs.TxOut(txOut.Value.Satoshi, txOut.ScriptPubKey.ToBytes());
@@ -323,11 +368,23 @@ public static class LDKExtensions
     {
         switch (purpose)
         {
-            case PaymentPurpose.PaymentPurpose_InvoicePayment paymentPurposeInvoicePayment:
+            case PaymentPurpose.PaymentPurpose_Bolt11InvoicePayment paymentPurposeInvoicePayment:
                 secret = paymentPurposeInvoicePayment.payment_secret;
                 if (paymentPurposeInvoicePayment.payment_preimage is Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some
                     some)
                     return some.some;
+                return null;
+            case PaymentPurpose.PaymentPurpose_Bolt12OfferPayment paymentPurposeInvoicePayment:
+                secret = paymentPurposeInvoicePayment.payment_secret;
+                if (paymentPurposeInvoicePayment.payment_preimage is Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some
+                    somex)
+                    return somex.some;
+                return null;
+            case PaymentPurpose.PaymentPurpose_Bolt12RefundPayment paymentPurposeBolt12RefundPayment:
+                secret = paymentPurposeBolt12RefundPayment.payment_secret;
+                if (paymentPurposeBolt12RefundPayment.payment_preimage is Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some
+                    somey)
+                    return somey.some;
                 return null;
             case PaymentPurpose.PaymentPurpose_SpontaneousPayment paymentPurposeSpontaneousPayment:
                 secret = null;
@@ -336,6 +393,4 @@ public static class LDKExtensions
                 throw new ArgumentOutOfRangeException(nameof(purpose));
         }
     }
-    
-    
 }

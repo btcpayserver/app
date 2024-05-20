@@ -20,16 +20,16 @@ public class BTCPayPaymentsNotifier:IScopedHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _paymentsManager.OnPaymentUpdate+= OnOnPaymentUpdate;
+        _paymentsManager.OnPaymentUpdate+= OnPaymentUpdate;
     }
 
-    private async Task OnOnPaymentUpdate(object? sender, LightningPayment e)
+    private async Task OnPaymentUpdate(object? sender, LightningPayment e)
     {
         await _connectionManager.HubProxy.SendPaymentUpdate(_onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier, e);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _paymentsManager.OnPaymentUpdate-= OnOnPaymentUpdate;
+        _paymentsManager.OnPaymentUpdate-= OnPaymentUpdate;
     }
 }

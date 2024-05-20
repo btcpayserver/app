@@ -44,4 +44,10 @@ public class DatabaseConfigProvider: IConfigProvider
         await dbContext.Upsert(new Setting() {Key = key, Value = newValue}).RunAsync();
 
     }
+
+    public async Task<IEnumerable<string>> List(string prefix)
+    {
+        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        return await dbContext.Settings.Where(s => s.Key.StartsWith(prefix)).Select(s => s.Key).ToListAsync();
+    }
 }

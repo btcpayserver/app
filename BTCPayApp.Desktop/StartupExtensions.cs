@@ -107,6 +107,16 @@ public class DesktopConfigProvider : IConfigProvider
             await File.WriteAllTextAsync(dir, await WriteFromRaw(raw));
         }
     }
+
+    public async Task<IEnumerable<string>> List(string prefix)
+    {
+        var dir = await _configDir;
+        if (!Directory.Exists(dir))
+        {
+            return Array.Empty<string>();
+        }
+        return Directory.GetFiles(dir, $"{prefix}*").Select(Path.GetFileName).Where(p => p?.StartsWith(prefix) is true)!;
+    }
 }
 
 public class DesktopDataDirectoryProvider : IDataDirectoryProvider

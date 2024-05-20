@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using org.ldk.structs;
+using OutPoint = NBitcoin.OutPoint;
 
 namespace BTCPayApp.Core.Attempt2;
 
@@ -196,15 +197,16 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         var derivationKey = (await GetConfig()).ScriptDerivationKey;
         return await _onChainWalletManager.DeriveScript(derivationKey);
     }
-
-    public async Task TrackScripts(Script[] scripts)
+    
+    
+    public async Task TrackScripts(Script[] scripts, string derivation = WalletDerivation.LightningScripts)
     {
-        var identifier = _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier;
+        var identifier = _onChainWalletManager.WalletConfig.Derivations[derivation].Identifier;
         
         await _connectionManager.HubProxy.TrackScripts(identifier,scripts.Select(script => script.ToHex()).ToArray());
     }
 
-    public async Task UpdateChannel(string id, byte[] write)
+    public async Task UpdateChannel(string id, byte[] write, Script script)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         
@@ -223,6 +225,7 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
             channel.Id = id;
             channel.Data = write;
+            channel.FundingScript = script.ToHex();
         }
         else
         {
@@ -230,7 +233,8 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             {
                 Id = id,
                 Data = write,
-                Aliases = [id]
+                Aliases = [id],
+                FundingScript = script.ToHex()
             });
         }
         await context.SaveChangesAsync();

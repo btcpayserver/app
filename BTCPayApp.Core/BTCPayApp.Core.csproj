@@ -30,7 +30,7 @@
       <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
       <PackageReference Include="NBitcoin" Version="7.0.34" />
         <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.4" />
-        <PackageReference Include="org.ldk" Version="0.0.121.3" />
+        <PackageReference Include="org.ldk" Version="0.0.123" />
       <PackageReference Include="TypedSignalR.Client" Version="3.4.3">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

@@ -51,7 +51,7 @@ public class LDKPeerHandler : IScopedHostedService
     {
         while (!ctsToken.IsCancellationRequested)
         {
-                var connected = _peerManager.get_peer_node_ids().Select(p => Convert.ToHexString(p.get_a()));
+                var connected = _peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()));
                 var channelPeers =
                     _channelManager.list_channels()
                         .Select(details => Convert.ToHexString(details.get_counterparty().get_node_id())).Distinct();

@@ -14,7 +14,7 @@ public class LDKPersistInterface : PersistInterface
         _node = node;
     }
 
-    public ChannelMonitorUpdateStatus persist_new_channel(OutPoint channel_id, ChannelMonitor data,
+    public ChannelMonitorUpdateStatus persist_new_channel(OutPoint channel_funding_outpoint, ChannelMonitor data,
         MonitorUpdateId update_id)
     {
         //TODO: store update id  so that we can do this async
@@ -22,10 +22,12 @@ public class LDKPersistInterface : PersistInterface
         try
         {
             var outs = data.get_outputs_to_watch().SelectMany(zzzz => zzzz.get_b().Select(zz => Script.FromBytesUnsafe(zz.get_b()))).ToArray();
+            
             _node.TrackScripts(outs).GetAwaiter().GetResult();
-            var id = Convert.ToHexString(channel_id.to_channel_id());
-
-            _node.UpdateChannel(id, data.write()).GetAwaiter().GetResult();
+            ChannelId.v1_from_funding_outpoint(channel_funding_outpoint);
+            var id = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a());
+            
+            _node.UpdateChannel(id, data.write(), Script.FromBytesUnsafe(data.get_funding_txo().get_b())).GetAwaiter().GetResult();
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_Completed;
             
         }
@@ -37,10 +39,15 @@ public class LDKPersistInterface : PersistInterface
     }
 
 
-    public ChannelMonitorUpdateStatus update_persisted_channel(OutPoint channel_id, ChannelMonitorUpdate update,
+    public ChannelMonitorUpdateStatus update_persisted_channel(OutPoint channel_funding_outpoint, ChannelMonitorUpdate update,
         ChannelMonitor data, MonitorUpdateId update_id)
     {
-        _node.UpdateChannel(Convert.ToHexString(channel_id.to_channel_id()), data.write()).GetAwaiter().GetResult();
+        _node.UpdateChannel(Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()), data.write(), Script.FromBytesUnsafe(data.get_funding_txo().get_b()) ).GetAwaiter().GetResult();
         return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_Completed;
+    }
+
+    public void archive_persisted_channel(OutPoint channel_funding_outpoint)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -8,4 +8,5 @@ public class WalletDerivation
 
     public const string NativeSegwit = "segwit";
     public const string LightningScripts = "lightningScripts";
+    // public const string SpendableOutputs = "spendableOutputs";
 }

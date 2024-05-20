@@ -110,7 +110,8 @@ public class LightningNodeManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-            await _onChainWalletManager.RemoveDerivation(WalletDerivation.LightningScripts);
+            // await _onChainWalletManager.RemoveDerivation(WalletDerivation.LightningScripts,
+            //     WalletDerivation.SpendableOutputs);
             await using var context = await _dbContextFactory.CreateDbContextAsync();
             context.LightningPayments.RemoveRange(context.LightningPayments);
             context.LightningChannels.RemoveRange(context.LightningChannels);
@@ -137,6 +138,7 @@ public class LightningNodeManager : BaseHostedService
                     "Cannot configure lightning node without on-chain wallet and BTCPay connection");
 
             await _onChainWalletManager.AddDerivation(WalletDerivation.LightningScripts, "Lightning", null);
+            // await _onChainWalletManager.AddDerivation(WalletDerivation.SpendableOutputs, "Lightning Spendables", null);
             State = LightningNodeState.WaitingForConnection;
         }
         finally

@@ -1,4 +1,4 @@
-﻿using System.Data;
+﻿using System.ComponentModel.DataAnnotations;
 using BTCPayApp.CommonServer;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,12 +13,11 @@ public class AppDbContext : DbContext
     public DbSet<Setting> Settings { get; set; }
 
     public DbSet<Channel> LightningChannels { get; set; }
-
-//     public DbSet<OnchainCoin> OnchainCoins { get; set; }
-//     public DbSet<OnchainScript> OnchainScripts { get; set; }
-//     public List<OnChainTransaction> OnChainTransactions { get; set; }
     public DbSet<LightningPayment> LightningPayments { get; set; }
-// }
+    // public DbSet<SpendableCoin> SpendableCoins { get; set; }
+
+
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -27,4 +26,12 @@ public class AppDbContext : DbContext
             .HasKey(w => new {w.PaymentHash, w.Inbound});
         base.OnModelCreating(modelBuilder);
     }
+}
+
+public class SpendableCoin
+{
+    public string Script { get; set; }
+    [Key]
+    public string Outpoint { get; set; }
+    public byte[] Data { get; set; }
 }

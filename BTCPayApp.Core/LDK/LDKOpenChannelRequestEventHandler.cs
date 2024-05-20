@@ -16,19 +16,17 @@ public class LDKChannelEventsHandler:
         _channelManager = channelManager;
     }
 
-    public async Task Handle(Event.Event_ChannelClosed @event)
+    public async Task Handle(Event.Event_ChannelClosed evt)
     {
-        throw new NotImplementedException();
+        var spentUtxo = evt.channel_funding_txo.Outpoint();
     }
 
     public async Task Handle(Event.Event_ChannelPending @event)
     {
-        throw new NotImplementedException();
     }
 
     public async Task Handle(Event.Event_ChannelReady @event)
     {
-        throw new NotImplementedException();
     }
 }
 
@@ -45,7 +43,8 @@ public class LDKOpenChannelRequestEventHandler: ILDKEventHandler<Event.Event_Ope
     }
     public async Task Handle(Event.Event_OpenChannelRequest eventOpenChannelRequest)
     {
-        var userChannelId = new UInt128(eventOpenChannelRequest.temporary_channel_id.Take(16).ToArray());
+        
+        var userChannelId = new UInt128(eventOpenChannelRequest.temporary_channel_id.get_a().Take(16).ToArray());
         
         if (eventOpenChannelRequest.channel_type.supports_zero_conf())
         {
