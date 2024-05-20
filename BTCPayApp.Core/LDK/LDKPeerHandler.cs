@@ -175,11 +175,7 @@ public class LDKPeerHandler : IScopedHostedService
         _logger.LogInformation($"Connecting to {theirNodeId} at {remote}");
         var client = new TcpClient();
         await client.ConnectAsync(remote.IPEndPoint(), cancellationToken);
-        if (!client.Connected)
-        {
-            client.Dispose();
-            return null;
-        }
+       
         
         _logger.LogInformation($"{remote} {client.Connected} {client.Client.Connected} {client.Client.RemoteEndPoint} {client.Client.LocalEndPoint}");
         var result = LDKTcpDescriptor.Outbound(_peerManager, client, _logger, theirNodeId, _descriptors);

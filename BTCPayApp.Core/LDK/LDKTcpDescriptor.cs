@@ -18,6 +18,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
     public SocketDescriptor SocketDescriptor { get; set; }
     public string Id { get; set; }
     readonly SemaphoreSlim _readSemaphore = new(1, 1);
+    private readonly TaskCompletionSource _tcs;
 
     public static LDKTcpDescriptor? Inbound(PeerManager peerManager, TcpClient tcpClient, ILogger logger, ObservableConcurrentDictionary<string, LDKTcpDescriptor> descriptors)
     {
@@ -41,6 +42,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         if(saSocketAddress is null)
         {
             logger.LogWarning("Failed to get tcp client or socket address so cannot create outbound connection");
+            descriptor.disconnect_socket();
             return null;
         }
         var result = peerManager.new_outbound_connection(pubKey.ToBytes(), descriptor.SocketDescriptor,saSocketAddress);
@@ -52,6 +54,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         if (result.is_ok())
         {
             logger.LogInformation("New outbound connection accepted");
+            descriptor.Start();
             return descriptor;
         }
         descriptor.disconnect_socket();
@@ -69,12 +72,19 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         SocketDescriptor = SocketDescriptor.new_impl(this);
 
         _cts = new CancellationTokenSource();
+        _tcs = new TaskCompletionSource();
         _ = CheckConnection(_cts.Token);
         _ = ReadEvents(_cts.Token);
     }
 
+    private void Start()
+    {
+        _tcs.TrySetResult();
+    }
+
     private async Task CheckConnection(CancellationToken cancellationToken)
     {
+        await _tcs.Task.WaitAsync(cancellationToken);
         while (!cancellationToken.IsCancellationRequested && _tcpClient.Connected)
         {
             try
@@ -90,6 +100,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
 
     private async Task ReadEvents(CancellationToken cancellationToken)
     {
+        await _tcs.Task.WaitAsync(cancellationToken);
         var bufSz = 1024 * 16;
         var buffer = new byte[bufSz];
         while (_tcpClient.Connected && !_cts.IsCancellationRequested)

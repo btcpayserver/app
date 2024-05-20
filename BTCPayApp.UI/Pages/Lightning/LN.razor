@@ -53,7 +53,7 @@ else
                                 <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Persistent})">
                                     Constant conn = @peerConfig.Persistent Toggle
                                 </button>
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
+                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Trusted = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
                             }
                             else if (peer.socket is not null)
                             {
@@ -76,7 +76,7 @@ else
                             <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">
                                 Constant conn = @peerConfig.Persistent Toggle
                             </button>
-                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
                         </td>
                     </tr>
                 }
