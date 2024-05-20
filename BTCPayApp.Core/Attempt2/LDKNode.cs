@@ -68,6 +68,7 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         _logger.LogInformation("Starting LDKNode services");
         foreach (var service in services)
         {
+            _logger.LogInformation($"Starting {service.GetType().Name}");
             await service.StartAsync(cancellationToken);
         }
 
@@ -113,7 +114,7 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         if (!exists)
             return;
         var identifier = _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier;
-        await _connectionManager.HubProxy.MasterNodePong(identifier, false);
+        await _connectionManager.HubProxy.IdentifierActive(identifier, false);
         
         var services = ServiceProvider.GetServices<IScopedHostedService>();
         foreach (var service in services)

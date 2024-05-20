@@ -57,9 +57,18 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     {
         _authStateProvider.AuthenticationStateChanged += AuthStateProviderOnAuthenticationStateChanged;
         _btcPayAppServerClient.OnNotifyNetwork += BtcPayAppServerClientOnOnNotifyNetwork;
+        _btcPayAppServerClient.OnServerNodeInfo += BtcPayAppServerClientOnOnServerNodeInfo;
         await StartOrReplace();
         _ = TryStayConnected();
     }
+
+    private  async Task BtcPayAppServerClientOnOnServerNodeInfo(object? sender, string e)
+    {
+        ReportedNodeInfo = e;
+        
+    }
+
+    public string ReportedNodeInfo { get; set; }
 
     private async Task BtcPayAppServerClientOnOnNotifyNetwork(object? sender, string e)
     {

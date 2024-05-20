@@ -18,12 +18,12 @@
 else
 {
     <div class="form-floating">
-        <TruncateCenter Text="@_nodeId" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+        <TruncateCenter Text="@_nodeId" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
         <label>Node ID</label>
     </div>
     <article class="my-4">
         <h3>Peers</h3>
-        @if (_peers.Any())
+        @if (_peers.Any() ||  _config.Peers.Any())
         {
             <table>
                 <thead>
@@ -35,51 +35,50 @@ else
                 </thead>
                 <tbody>
                 @{
-                var rememberedButUnconnected = _config.Peers.Keys.Where(peer => _peers.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
+                    var rememberedButUnconnected = _config.Peers.Keys.Where(peer => _peers.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
                 }
                 @foreach (var peer in _peers)
                 {
-                var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
+                    var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
 
-                <tr>
-                    <td>@peer.nodeId</td>
-                    <td>@peer.socket</td>
-                    <td>
+                    <tr>
+                        <td>@peer.nodeId</td>
+                        <td>@peer.socket</td>
+                        <td>
 
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
-                        @if (peerRemembered)
-                        {
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Persistent})">Constant conn = @peerConfig.Persistent Toggle
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
+                            @if (peerRemembered)
+                            {
+                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
+                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Persistent})">
+                                    Constant conn = @peerConfig.Persistent Toggle
+                                </button>
+                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
+                            }
+                            else if (peer.socket is not null)
+                            {
+                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo() {Endpoint = peer.socket})">Remember peer</button>
+                            }
 
 
-                        }
-                        else if(peer.socket is not null)
-                        {
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo(){Endpoint=peer.socket})">Remember peer</button>
-                        }
-
-
-                    </td>
-                </tr>
+                        </td>
+                    </tr>
                 }
-                @foreach(var peer in rememberedButUnconnected)
+                @foreach (var peer in rememberedButUnconnected)
                 {
-                var peerConfig = _config.Peers[peer];
-                <tr>
-                    <td>@peer</td>
-                    <td>@peerConfig.Endpoint</td>
-                    <td>
-
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">Constant conn = @peerConfig.Persistent Toggle
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
-                    </td>
-                </tr>
+                    var peerConfig = _config.Peers[peer];
+                    <tr>
+                        <td>@peer</td>
+                        <td>@peerConfig.Endpoint</td>
+                        <td>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">
+                                Constant conn = @peerConfig.Persistent Toggle
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
+                        </td>
+                    </tr>
                 }
                 </tbody>
                 <tfoot>
@@ -87,7 +86,8 @@ else
                     <td colspan="3">
                         <div class="input-group">
                             <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
-                            <button class="btn btn-primary" type="button" @onclick="Connect">Connect</button></div>
+                            <button class="btn btn-primary" type="button" @onclick="Connect">Connect</button>
+                        </div>
                     </td>
                 </tr>
                 </tfoot>
@@ -96,6 +96,11 @@ else
         else
         {
             <p class="text-muted">There are no peers, yet.</p>
+            
+            <div class="input-group">
+                <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
+                <button class="btn btn-primary" type="button" @onclick="Connect">Connect</button>
+            </div>
         }
     </article>
     <article class="my-4">
@@ -167,16 +172,16 @@ else
                 <tbody>
                 @foreach (var payment in _payments)
                 {
-                <tr>
-                    <td>@payment.PaymentHash</td>
-                    <td>@payment.Inbound</td>
-                    <td>@payment.PaymentId</td>
-                    <td>@payment.Preimage</td>
-                    <td>@payment.Secret</td>
-                    <td>@payment.Timestamp</td>
-                    <td>@payment.Value</td>
-                    <td>@payment.Status</td>
-                </tr>
+                    <tr>
+                        <td>@payment.PaymentHash</td>
+                        <td>@payment.Inbound</td>
+                        <td>@payment.PaymentId</td>
+                        <td>@payment.Preimage</td>
+                        <td>@payment.Secret</td>
+                        <td>@payment.Timestamp</td>
+                        <td>@payment.Value</td>
+                        <td>@payment.Status</td>
+                    </tr>
                 }
                 </tbody>
             </table>
@@ -284,13 +289,11 @@ else
             await _semaphore.WaitAsync();
 
             await Node.Peer(toString, value);
-
         }
         finally
         {
             Loading = false;
             _semaphore.Release();
-
         }
     }
 
@@ -301,15 +304,13 @@ else
             Loading = true;
             await _semaphore.WaitAsync();
 
-            EndPointParser.TryParse(peerConfig.Endpoint,9735, out var endpoint);
+            EndPointParser.TryParse(peerConfig.Endpoint, 9735, out var endpoint);
             await PeerHandler.ConnectAsync(new PubKey(peer), endpoint);
-
         }
         finally
         {
             Loading = false;
             _semaphore.Release();
-
         }
     }
 

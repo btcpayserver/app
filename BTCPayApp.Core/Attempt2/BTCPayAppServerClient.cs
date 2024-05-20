@@ -30,6 +30,12 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
 
     }
 
+    public async Task NotifyServerNode(string nodeInfo)
+    {
+        _logger.LogInformation("NotifyServerNode: {nodeInfo}", nodeInfo);
+        await OnServerNodeInfo?.Invoke(this, nodeInfo);
+    }
+
     public async Task TransactionDetected(TransactionDetectedRequest request)
     {
         _logger.LogInformation($"OnTransactionDetected: {request.TxId}" );
@@ -79,6 +85,7 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
     public event AsyncEventHandler<string>? OnNewBlock;
     public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
     public event AsyncEventHandler<string>? OnNotifyNetwork;
+    public event AsyncEventHandler<string>? OnServerNodeInfo;
 
 
 }

@@ -212,7 +212,7 @@ public class LightningNodeManager : BaseHostedService
                 case LightningNodeState.Loaded:
                     await _controlSemaphore.WaitAsync();
 
-                    await _btcPayConnectionManager.HubProxy.MasterNodePong(_onChainWalletManager.WalletConfig
+                    await _btcPayConnectionManager.HubProxy.IdentifierActive(_onChainWalletManager.WalletConfig
                         .Derivations[WalletDerivation.LightningScripts].Identifier, true);
                     _controlSemaphore.Release();
                     break;

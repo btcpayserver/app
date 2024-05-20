@@ -37,8 +37,13 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         PubKey pubKey, ObservableConcurrentDictionary<string, LDKTcpDescriptor> descriptors)
     {
         var descriptor = new LDKTcpDescriptor(peerManager, tcpClient, logger, s => descriptors.TryRemove(s, out _));
-        var result = peerManager.new_outbound_connection(pubKey.ToBytes(), descriptor.SocketDescriptor,
-            tcpClient.Client.GetSocketAddress());
+        var saSocketAddress = tcpClient.Client?.GetSocketAddress();
+        if(saSocketAddress is null)
+        {
+            logger.LogWarning("Failed to get tcp client or socket address so cannot create outbound connection");
+            return null;
+        }
+        var result = peerManager.new_outbound_connection(pubKey.ToBytes(), descriptor.SocketDescriptor,saSocketAddress);
         if (result is Result_CVec_u8ZPeerHandleErrorZ.Result_CVec_u8ZPeerHandleErrorZ_OK ok)
         {
             descriptor.send_data(ok.res, true);
