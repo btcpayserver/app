@@ -1,14 +1,8 @@
-﻿@attribute [Route(Routes.PointOfSale)]
-@layout BaseLayout
+@attribute [Route(Routes.PointOfSale)]
 @using System.Globalization
-@using BTCPayApp.UI.Components.Layout
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Point Of Sale</PageTitle>
-
-<SectionContent SectionId="_Layout.Top">
-    <Titlebar Back="@Routes.Index" Fixed="false" />
-</SectionContent>
 
 <section class="container">
     <Keypad CurrencyInfo="@CurrencyInfo" CurrencyCode="EUR"

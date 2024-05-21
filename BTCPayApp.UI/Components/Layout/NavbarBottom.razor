@@ -1,29 +1,30 @@
 @using BTCPayApp.UI.Features
 @inject IState<UIState> UiState
+@inject NavigationManager NavigationManager
 
 <nav id="NavbarBottom">
     <div class="container d-flex align-items-center justify-content-between">
         <ul class="navbar-nav">
             <li class="nav-item">
-                <NavLink class="nav-link" href="@Routes.Index" Match="NavLinkMatch.All">
+                <NavLink href="@Routes.Dashboard" Match="NavLinkMatch.All" class="@HomeCssClass()">
                     <Icon symbol="nav-store"/>
                     <span>Home</span>
                 </NavLink>
             </li>
             <li class="nav-item">
-                <NavLink class="nav-link" href="@Routes.PointOfSale" Match="NavLinkMatch.All">
+                <NavLink href="@Routes.PointOfSale" Match="NavLinkMatch.All" class="nav-link">
                     <Icon symbol="nav-keypad"/>
                     <span>Keypad</span>
                 </NavLink>
             </li>
             <li class="nav-item">
-                <NavLink class="nav-link" href="@Routes.Invoices" Match="NavLinkMatch.Prefix">
+                <NavLink href="@Routes.Invoices" Match="NavLinkMatch.Prefix" class="nav-link">
                     <Icon symbol="nav-invoices"/>
                     <span>Invoices</span>
                 </NavLink>
             </li>
             <li class="nav-item">
-                <NavLink class="nav-link" href="@Routes.Settings" Match="NavLinkMatch.Prefix">
+                <NavLink href="@Routes.Settings" Match="NavLinkMatch.Prefix" class="nav-link">
                     <Icon symbol="settings"/>
                     <span>Settings</span>
                 </NavLink>
@@ -31,3 +32,25 @@
         </ul>
     </div>
 </nav>
+
+@code {
+
+    protected override void OnInitialized()
+    {
+        NavigationManager.LocationChanged += new EventHandler<LocationChangedEventArgs>(OnLocationChanged);
+    }
+
+    private string HomeCssClass()
+    {
+        var rel = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        var c = "nav-link";
+        if (rel.StartsWith(Routes.WalletSend)) c += " active";
+        if (rel.StartsWith(Routes.WalletReceive)) c += " active";
+        return c;
+    }
+
+    private void OnLocationChanged(object sender, LocationChangedEventArgs args)
+    {
+        StateHasChanged();
+    }
+}
