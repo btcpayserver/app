@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="DEV ALL" type="CompoundRunConfigurationType">
-    <toRun name="BTCPayApp.Server: https" type="LaunchSettings" />
-    <toRun name="BTCPayServer: Bitcoin-HTTPS" type="LaunchSettings" />
+    <toRun name="App-Server" type="LaunchSettings" />
+    <toRun name="Server" type="LaunchSettings" />
     <method v="2" />
   </configuration>
 </component>

@@ -108,4 +108,7 @@ Global
 		{4FB69019-D06C-4A99-892E-CA04E65DB908} = {1F7B46F8-2965-48B8-B402-E69A157709C1}
 		{7EC90BF3-9326-46AE-B514-4A3A43CFF07D} = {1F7B46F8-2965-48B8-B402-E69A157709C1}
 	EndGlobalSection
+	GlobalSection(RiderSharedRunConfigurations) = postSolution
+		File = Server.run.xml
+	EndGlobalSection
 EndGlobal
