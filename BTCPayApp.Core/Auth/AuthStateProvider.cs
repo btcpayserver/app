@@ -81,6 +81,9 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
                 if (_userInfo.Roles?.Any() is true)
                     claims.AddRange(_userInfo.Roles.Select(role =>
                         new Claim(_identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, role)));
+                if (_userInfo.Stores?.Any() is true)
+                    claims.AddRange(_userInfo.Stores.Select(store =>
+                        new Claim(store.Id, string.Join(',', store.Permissions))));
                 user = new ClaimsPrincipal(new ClaimsIdentity(claims, AuthenticationSchemes.GreenfieldBearer));
             }
 

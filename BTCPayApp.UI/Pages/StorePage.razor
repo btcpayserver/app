@@ -38,7 +38,7 @@
         <p class="text-secondary">No permissions</p>
     }
 
-    <AuthorizeView Policy="@Policies.CanModifyStoreSettings">
+    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
         <p>You satisfy the 'CanModifyStoreSettings' policy.</p>
     </AuthorizeView>
 </section>
