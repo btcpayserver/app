@@ -18,37 +18,37 @@
                 <div class="fw-semibold">
                     @context.User.Identity?.Name
                 </div>
-                <NavLink class="btn btn-sm rounded-pill py-1 px-3 btn-outline-light" href="@Routes.Logout" Match="NavLinkMatch.All">
+                <a class="btn btn-sm rounded-pill py-1 px-3 btn-outline-light" href="@Routes.Logout">
                     <span>Logout</span>
-                </NavLink>
+                </a>
             </div>
             <div class="notifications">
-                <NavLink class="btn btn-light rounded-circle" href="@Routes.Notifications" Match="NavLinkMatch.All">
+                <a class="btn btn-light rounded-circle" href="@Routes.Notifications">
                     <Icon symbol="nav-notifications"/>
                     <span class="visually-hidden">Notifications</span>
-                </NavLink>
+                </a>
             </div>
         </header>
         @if (SetupStateOnchain == SetupState.Completed)
         {
-            <section class="container d-flex flex-column gap-4 py-3">
+            <section class="container d-flex flex-column gap-4 py-3 wallet">
                 <div class="amount text-center">
                     <div class="sats fw-bold fs-1">615,000,000 sats</div>
                     <div class="fiat fw-semibold text-muted">$174,465.79</div>
                 </div>
                 <nav class="d-flex align-items-center gap-3 mx-auto">
-                    <NavLink class="btn btn-light rounded-pill w-125px" href="@Routes.WalletSend" Match="NavLinkMatch.All">
+                    <a class="btn btn-light rounded-pill" href="@Routes.WalletSend">
                         <Icon symbol="payment-send"/>
                         <span>Send</span>
-                    </NavLink>
-                    <NavLink class="btn btn-light rounded-pill w-125px" href="@Routes.WalletReceive" Match="NavLinkMatch.All">
+                    </a>
+                    <a class="btn btn-light rounded-pill" href="@Routes.WalletReceive">
                         <Icon symbol="payment-receive"/>
                         <span>Receive</span>
-                    </NavLink>
+                    </a>
                 </nav>
             </section>
         }
-        <section class="container py-3">
+        <section class="container px-4 py-3">
             <h2>Getting started</h2>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
@@ -124,7 +124,7 @@
                 </ul>
             </div>
         </section>
-        <section class="container py-3">
+        <section class="container px-4 py-3">
             <h2>Recent Activity</h2>
             <ul class="list-group list-group-flush">
                 <li class="list-group-item">
