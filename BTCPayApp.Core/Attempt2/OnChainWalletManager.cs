@@ -313,7 +313,8 @@ public class OnChainWalletManager : BaseHostedService
         Task<PSBT> Sign(PSBT psbt);
     }
     
-    private async Task<IEnumerable<ICoin>> GetUTXOS()
+    
+    public async Task<IEnumerable<ICoin>> GetUTXOS()
     {
         var identifiers = WalletConfig.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
         var utxos = await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers);
@@ -362,41 +363,27 @@ public class OnChainWalletManager : BaseHostedService
     }
     
 
-    public async Task<(NBitcoin.Transaction Tx, ICoin[] SpentCoins, NBitcoin.Script Change)?> CreateTransaction(
-        List<TxOut> txOuts, FeeRate feeRate, List<Coin> explicitIns = null)
+    public async Task<(NBitcoin.Transaction Tx, ICoin[] SpentCoins, NBitcoin.Script Change)> CreateTransaction(
+        List<TxOut> txOuts, FeeRate? feeRate, List<Coin> explicitIns = null)
     {
-        var identifiers = WalletConfig.Derivations.Values.Where(derivation => derivation.Descriptor is not null)
-            .Select(derivation => derivation.Identifier).ToArray();
-        var utxos = await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers);
-
-        var rootKey = new Mnemonic(WalletConfig.Mnemonic).DeriveExtKey();
-        var coins = utxos.Select(response => (new Coin()
-                {
-                    Outpoint = OutPoint.Parse(response.Outpoint),
-                    ScriptPubKey = Script.FromHex(response.Script),
-                    Amount = Money.Coins(response.Value),
-                    TxOut = new TxOut(Money.Coins(response.Value), Script.FromHex(response.Script))
-                }, KeyPath.Parse(response.Path),
-                WalletConfig.Derivations.Values.First(derivation => derivation.Identifier == response.Identifier)))
-            .ToDictionary(tuple => tuple.Item1.Outpoint, tuple => tuple);
-
-        var availableCoins = coins.Values.Select(tuple => tuple.Item1).ToList();
-
-
+        var availableCoins = (await GetUTXOS()).ToList();
+        feeRate ??= new FeeRate(await _btcPayConnectionManager.HubProxy.GetFeeRate(1));
+//TODO: do not hardcode this constant
         var changeScript = await DeriveScript(WalletDerivation.NativeSegwit);
-        var txBuilder = Network.CreateTransactionBuilder().SetChange(changeScript)
+        var txBuilder = Network
+            .CreateTransactionBuilder()
+            .SetChange(changeScript)
             .SendEstimatedFees(feeRate);
 
         txBuilder = txOuts.Aggregate(txBuilder, (current, c) => current.Send(c.ScriptPubKey, c.Value));
         txBuilder.SendAllRemainingToChange();
 
-        var mnemonic = new Mnemonic(WalletConfig.Mnemonic).DeriveExtKey()!;
         NBitcoin.Transaction? tx;
         if (explicitIns?.Any() is true)
         {
             txBuilder.AddCoins(explicitIns.ToArray());
         }
-        while (availableCoins.Any())
+        while (true)
         {
             try
             {
@@ -405,18 +392,18 @@ public class OnChainWalletManager : BaseHostedService
             }
             catch (NotEnoughFundsException e)
             {
+                if (!availableCoins.Any())
+                    throw;
                 var newCoin = availableCoins.First();
-                var data = coins[newCoin.Outpoint];
-
-                var key = mnemonic.Derive(data.Item3.Descriptor.ExtractFromDescriptor(Network).Value.Item2.KeyPath)
-                    .Derive(data.Item2);
-                txBuilder.AddCoins(newCoin);
-                txBuilder.AddKeys(key);
+                //TODO: switch to nuilding a psbt and signing with the ISignableCoin interface
+                if(newCoin is CoinWithKey newCoinWithKey)
+                {
+                    txBuilder.AddCoins(newCoin);
+                    txBuilder.AddKeys(newCoinWithKey.Key);
+                }
                 availableCoins.Remove(newCoin);
             }
         }
-
-        return null;
     }
 
     public async Task RemoveDerivation(params string[] key)
@@ -437,6 +424,11 @@ public class OnChainWalletManager : BaseHostedService
         {
             _controlSemaphore.Release();
         }
+    }
+
+    public async Task BroadcastTransaction(Transaction valueTx, CancellationToken cancellationToken = default)
+    {
+        await _btcPayConnectionManager.HubProxy.BroadcastTransaction(valueTx.ToHex());
     }
 }
 

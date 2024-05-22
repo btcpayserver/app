@@ -6,17 +6,17 @@ namespace BTCPayApp.Core.LDK;
 
 public class LDKBroadcaster : BroadcasterInterfaceInterface
 {
-    private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly Network _network;
     private readonly IEnumerable<IBroadcastGateKeeper> _broadcastGateKeepers;
+    private readonly OnChainWalletManager _onChainWalletManager;
 
-    public LDKBroadcaster(BTCPayConnectionManager btcPayConnectionManager, 
+    public LDKBroadcaster(
         Network network,
-        IEnumerable<IBroadcastGateKeeper> broadcastGateKeepers)
+        IEnumerable<IBroadcastGateKeeper> broadcastGateKeepers, OnChainWalletManager onChainWalletManager)
     {
-        _btcPayConnectionManager = btcPayConnectionManager;
         _network = network;
         _broadcastGateKeepers = broadcastGateKeepers;
+        _onChainWalletManager = onChainWalletManager;
     }
 
     public void broadcast_transactions(byte[][] txs)
@@ -34,7 +34,7 @@ public class LDKBroadcaster : BroadcasterInterfaceInterface
 
     public async Task Broadcast(Transaction transaction, CancellationToken cancellationToken = default)
     {
-        await _btcPayConnectionManager.HubProxy.BroadcastTransaction(transaction.ToHex());
+        await _onChainWalletManager.BroadcastTransaction(transaction, cancellationToken);
     }
 }
 

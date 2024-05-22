@@ -31,19 +31,20 @@ public class LDKFundingGenerationReadyEventHandler: ILDKEventHandler<Event.Event
             new(Money.Satoshis(eventFundingGenerationReady.channel_value_satoshis),
                 Script.FromBytesUnsafe(eventFundingGenerationReady.output_script))
         };
-        var tx = await _onChainWalletManager.CreateTransaction(txOuts, feeRate);
-        if (tx is null)
+        try
         {
-            _channelManager.close_channel(eventFundingGenerationReady.temporary_channel_id, eventFundingGenerationReady.counterparty_node_id);
-        }
-        else
-        {
+
+            var tx = await _onChainWalletManager.CreateTransaction(txOuts, feeRate);
             var result =   _channelManager.funding_transaction_generated(eventFundingGenerationReady.temporary_channel_id,
-                eventFundingGenerationReady.counterparty_node_id, tx.Value.Tx.ToBytes());
+                eventFundingGenerationReady.counterparty_node_id, tx.Tx.ToBytes());
             if (result.is_ok())
             {
-                await FundingTransactionGenerated?.Invoke(this, new FundingTransactionGeneratedEvent(eventFundingGenerationReady, tx.Value.Tx))!;
+                await FundingTransactionGenerated?.Invoke(this, new FundingTransactionGeneratedEvent(eventFundingGenerationReady, tx.Tx))!;
             }
+        }
+        catch (Exception e)
+        {
+            _channelManager.close_channel(eventFundingGenerationReady.temporary_channel_id, eventFundingGenerationReady.counterparty_node_id);
         }
     }
 }

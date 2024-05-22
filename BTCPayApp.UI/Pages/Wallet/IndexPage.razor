@@ -3,9 +3,12 @@
 @using BTCPayApp.UI.Features
 @using Microsoft.AspNetCore.SignalR.Client
 @using BTCPayApp.Core.Attempt2
+@using BTCPayApp.Core.Data
 @using BTCPayApp.UI.Components.Layout
+@using NBitcoin
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject NavigationManager NavigationManager
+@inject OnChainWalletManager OnChainWalletManager 
 @inject IState<RootState> State
 
 <PageTitle>Wallet</PageTitle>
@@ -25,9 +28,58 @@
         <li>Connection state: @State.Value.BTCPayServerConnectionState</li>
         <li>Onchain wallet state: @State.Value.OnchainWalletState</li>
     </ul>
+
+
+    @if (loading)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <button type="button" @onclick="GetBalance">Get current balance</button>
+        @if (_balanceResponse is not null)
+        {
+            <p>@_balanceResponse</p>
+        }
+
+        <button type="button" @onclick="GetAddress">Get onchain address</button>
+        @if (_addressResponse is not null)
+        {
+            <p>@_addressResponse</p>
+        }
+
+        @if (_balanceResponseAmt is not null && _balanceResponseAmt > 0)
+        {
+            <div>
+                <label for="sendAmount">Amount to send</label>
+                <input max="@_balanceResponseAmt" step="any" min="0" type="number" id="sendAmount" @bind="SendAmount"/>
+                <label for="sendDest">Destination address</label>
+                <input type="text" id="sendDest" @bind="SendDest"/>
+                <button type="button" @onclick="CreateTx">Create transaction</button>
+                @if (_txResponse is not null)
+                {
+                    <p>@_txResponse</p>
+                }
+
+                <pre>
+            @if (transaction is not null)
+            {
+                @transaction.Value.Tx.ToString()
+            }
+            </pre>
+                @if (transaction is not null)
+                {
+                    <button type="button" @onclick="BroadcastTx">Broadcast transaction</button>
+                }
+
+
+            </div>
+        }
+    }
 </section>
 
 @code {
+
     private bool CanConfigureWallet =>
         !State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) &&
         State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
@@ -40,4 +92,115 @@
             NavigationManager.NavigateTo(Routes.WalletSetup);
         }
     }
+
+    private string? _balanceResponse = null;
+    private decimal? _balanceResponseAmt = null;
+    private bool loading = false;
+
+    private async Task GetBalance()
+    {
+        if (loading)
+            return;
+        loading = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var resp = await OnChainWalletManager.GetUTXOS();
+            var totalValue = resp.Sum(r => r.TxOut.Value.ToDecimal(MoneyUnit.BTC));
+            _balanceResponse = $"Total balance: {totalValue} BTC ({resp.Count()} UTXOs) ";
+            _balanceResponseAmt = totalValue;
+        }
+        catch (Exception ex)
+        {
+            _balanceResponse = $"Error: {ex.Message}";
+            _balanceResponseAmt = null;
+        }
+        finally
+        {
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private string? _addressResponse = null;
+
+    private async Task GetAddress()
+    {
+        if (loading)
+            return;
+        loading = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var address = await OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);
+            _addressResponse = $"Address: {address.GetDestinationAddress(OnChainWalletManager.Network)}";
+        }
+        catch (Exception ex)
+        {
+            _addressResponse = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private decimal? SendAmount { get; set; }
+    private string? SendDest { get; set; }
+    private string? _txResponse { get; set; }
+    private (Transaction Tx, ICoin[] SpentCoins, Script Change)? transaction { get; set; }
+
+    private async Task CreateTx()
+    {
+        if (loading || _balanceResponseAmt is null ||SendAmount is null || SendAmount <= 0 || string.IsNullOrWhiteSpace(SendDest))
+            return;
+        loading = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            var txout = new TxOut(Money.Coins(SendAmount.Value), BitcoinAddress.Create(SendDest, OnChainWalletManager.Network));
+            transaction = await OnChainWalletManager.CreateTransaction(new List<TxOut>() {txout}, null, null);
+            if (transaction is null)
+                throw new Exception("Transaction creation failed");
+            var changeAmt = transaction.Value.Tx.Outputs.Where(o => o.IsTo(transaction.Value.Change.GetDestinationAddress(OnChainWalletManager.Network))).Sum(o => o.Value.ToDecimal(MoneyUnit.BTC));
+            var feeaMT = transaction.Value.Tx.GetFee(transaction.Value.SpentCoins).ToDecimal(MoneyUnit.BTC);
+            _txResponse = $"Created transaction {transaction.Value.Tx.GetHash()} spending {transaction.Value.SpentCoins.Sum(c => c.TxOut.Value.ToDecimal(MoneyUnit.BTC))} BTC, with change of {changeAmt} BTC and fee of {feeaMT} BTC";
+        }
+        catch (Exception ex)
+        {
+            _txResponse = $"Error: {ex.Message}";
+            transaction = null;
+        }
+        finally
+        {
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task BroadcastTx()
+    {
+        if (loading || transaction is null)
+            return;
+        loading = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            await OnChainWalletManager.BroadcastTransaction(transaction.Value.Tx);
+            _txResponse = $"Transaction {transaction.Value.Tx.GetHash()} broadcasted";
+            transaction = null;
+        }
+        catch (Exception ex)
+        {
+            _txResponse = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+
 }
