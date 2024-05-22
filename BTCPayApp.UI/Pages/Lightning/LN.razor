@@ -358,24 +358,28 @@ else
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            var amt = new Money(channelOpenAmount.Value, MoneyUnit.BTC);
-            var pubkey = new PubKey(selectedPeer).ToBytes();
+            await Task.Run(() =>
+            {
+                var amt = new Money(channelOpenAmount.Value, MoneyUnit.BTC);
+                var pubkey = new PubKey(selectedPeer).ToBytes();
 
-            var temporaryChannelId = ChannelId.temporary_from_entropy_source(EntropySource);
+                var temporaryChannelId = ChannelId.temporary_from_entropy_source(EntropySource);
 
             
-            var userChannelId = new UInt128(temporaryChannelId.get_a().Take(16).ToArray());
-            var result = ChannelManager.create_channel(pubkey, amt.Satoshi, 0, userChannelId, temporaryChannelId, UserConfig);
-            if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
-            {
-                channelResponse = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
-                channelOpenAmount = null;
-                selectedPeer = null;
-            }
-            else if(result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
-            {
-                channelResponse = $"Error: {err.err.GetError()}";
-            }
+                var userChannelId = new UInt128(temporaryChannelId.get_a().Take(16).ToArray());
+                var result = ChannelManager.create_channel(pubkey, amt.Satoshi, 0, userChannelId, temporaryChannelId, UserConfig);
+                if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
+                {
+                    channelResponse = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
+                    channelOpenAmount = null;
+                    selectedPeer = null;
+                }
+                else if(result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
+                {
+                    channelResponse = $"Error: {err.err.GetError()}";
+                }
+            } );
+            
         }
         finally
         {
