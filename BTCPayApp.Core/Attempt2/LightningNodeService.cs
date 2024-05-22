@@ -110,12 +110,12 @@ public class LightningNodeManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-            // await _onChainWalletManager.RemoveDerivation(WalletDerivation.LightningScripts,
-            //     WalletDerivation.SpendableOutputs);
+            await _onChainWalletManager.RemoveDerivation(WalletDerivation.LightningScripts);
             await using var context = await _dbContextFactory.CreateDbContextAsync();
             context.LightningPayments.RemoveRange(context.LightningPayments);
             context.LightningChannels.RemoveRange(context.LightningChannels);
             context.Settings.RemoveRange(context.Settings.Where(s => new string[]{"ChannelManager","NetworkGraph","Score","lightningconfig"}.Contains(s.Key)));
+            
             await context.SaveChangesAsync();
         }
         finally

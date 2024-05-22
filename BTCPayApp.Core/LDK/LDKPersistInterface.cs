@@ -27,7 +27,7 @@ public class LDKPersistInterface : PersistInterface
             ChannelId.v1_from_funding_outpoint(channel_funding_outpoint);
             var id = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a());
             
-            _node.UpdateChannel(id, data.write(), Script.FromBytesUnsafe(data.get_funding_txo().get_b())).GetAwaiter().GetResult();
+            _node.UpdateChannel(id, data.write()).GetAwaiter().GetResult();
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_Completed;
             
         }
@@ -42,7 +42,7 @@ public class LDKPersistInterface : PersistInterface
     public ChannelMonitorUpdateStatus update_persisted_channel(OutPoint channel_funding_outpoint, ChannelMonitorUpdate update,
         ChannelMonitor data, MonitorUpdateId update_id)
     {
-        _node.UpdateChannel(Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()), data.write(), Script.FromBytesUnsafe(data.get_funding_txo().get_b()) ).GetAwaiter().GetResult();
+        _node.UpdateChannel(Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()), data.write()).GetAwaiter().GetResult();
         return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_Completed;
     }
 

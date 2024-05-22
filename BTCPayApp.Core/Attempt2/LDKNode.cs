@@ -207,7 +207,7 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         await _connectionManager.HubProxy.TrackScripts(identifier,scripts.Select(script => script.ToHex()).ToArray());
     }
 
-    public async Task UpdateChannel(string id, byte[] write, Script script)
+    public async Task UpdateChannel(string id, byte[] write)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         
@@ -226,7 +226,6 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
             channel.Id = id;
             channel.Data = write;
-            channel.FundingScript = script.ToHex();
         }
         else
         {
@@ -234,8 +233,7 @@ public class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             {
                 Id = id,
                 Data = write,
-                Aliases = [id],
-                FundingScript = script.ToHex()
+                Aliases = [id]
             });
         }
         await context.SaveChangesAsync();
