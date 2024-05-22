@@ -1,4 +1,5 @@
-﻿using System.Collections.Specialized;
+﻿using System.Collections.Concurrent;
+using System.Collections.Specialized;
 using System.Net;
 using System.Net.Sockets;
 using BTCPayApp.CommonServer;
@@ -166,37 +167,67 @@ public class LDKPeerHandler : IScopedHostedService
         return await ConnectAsync(nodeInfo.NodeId, remote, cancellationToken);
     }
 
+    private readonly ConcurrentDictionary<string, Task<LDKTcpDescriptor?>> _connectionTasks = new();
+
     public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey theirNodeId, EndPoint remote,
         CancellationToken cancellationToken = default)
     {
-        if (_channelManager.get_our_node_id().SequenceEqual(theirNodeId.ToBytes()))
-            return null;
+        //cache this task so that we dont have multiple attempts to connect to the same place
 
-        _logger.LogInformation($"Connecting to {theirNodeId} at {remote}");
-        var client = new TcpClient();
-        await client.ConnectAsync(remote.IPEndPoint(), cancellationToken);
-       
-        
-        _logger.LogInformation($"{remote} {client.Connected} {client.Client.Connected} {client.Client.RemoteEndPoint} {client.Client.LocalEndPoint}");
-        var result = LDKTcpDescriptor.Outbound(_peerManager, client, _logger, theirNodeId, _descriptors);
-        if (result is not null)
+        if (_connectionTasks.TryGetValue(theirNodeId.ToString(), out var task))
         {
-            _descriptors.TryAdd(result.Id, result);
-            _peerManager.process_events();
-
-            var config = await _node.GetConfig();
-            if (!config.Peers.TryGetValue(theirNodeId.ToString(), out var peer))
-            {
-                peer = new PeerInfo();
-            }
-
-            if (peer.Endpoint != remote.ToString())
-            {
-                peer.Endpoint = remote.ToString()!;
-                await _node.Peer(theirNodeId.ToString(), peer);
-            }
+            _logger.LogInformation($"Already attempting to connect to {theirNodeId}");
+            return await task.WithCancellation(cancellationToken);
         }
 
-        return result;
+        var tcs = new TaskCompletionSource<LDKTcpDescriptor?>();
+        try
+        {
+            if (!_connectionTasks.TryAdd(theirNodeId.ToString(), tcs.Task))
+            {
+                return null;
+            }
+
+            if (_channelManager.get_our_node_id().SequenceEqual(theirNodeId.ToBytes()))
+                return null;
+
+            _logger.LogInformation($"Connecting to {theirNodeId} at {remote}");
+            var client = new TcpClient();
+            await client.ConnectAsync(remote.IPEndPoint(), cancellationToken);
+
+
+            _logger.LogInformation(
+                $"{remote} {client.Connected} {client.Client.Connected} {client.Client.RemoteEndPoint} {client.Client.LocalEndPoint}");
+            var result = LDKTcpDescriptor.Outbound(_peerManager, client, _logger, theirNodeId, _descriptors);
+            if (result is not null)
+            {
+                _descriptors.TryAdd(result.Id, result);
+                _peerManager.process_events();
+
+                var config = await _node.GetConfig();
+                if (!config.Peers.TryGetValue(theirNodeId.ToString(), out var peer))
+                {
+                    peer = new PeerInfo();
+                }
+
+                if (peer.Endpoint != remote.ToString())
+                {
+                    peer.Endpoint = remote.ToString()!;
+                    await _node.Peer(theirNodeId.ToString(), peer);
+                }
+            }
+
+            tcs.TrySetResult(result);
+        }
+        catch (Exception e)
+        {
+            tcs.TrySetException(e);
+        }
+        finally
+        {
+            _connectionTasks.TryRemove(theirNodeId.ToString(), out _);
+        }
+
+        return await tcs.Task;
     }
 }
