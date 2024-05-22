@@ -1,0 +1,18 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Docker compose" type="docker-deploy" factoryName="docker-compose.yml" server-name="Docker2">
+    <deployment type="docker-compose.yml">
+      <settings>
+        <option name="envFilePath" value="" />
+        <option name="removeVolumesOnComposeDown" value="true" />
+        <option name="services">
+          <list>
+            <option value="dev" />
+          </list>
+        </option>
+        <option name="sourceFilePath" value="submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" />
+      </settings>
+    </deployment>
+    <EXTENSION ID="com.jetbrains.rider.docker.debug" isFastModeEnabled="true" isSslEnabled="false" />
+    <method v="2" />
+  </configuration>
+</component>
