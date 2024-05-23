@@ -48,8 +48,9 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
         _logger.LogInformation("NewBlock: {block}", block);
         await OnNewBlock?.Invoke(this, block);
     }
-    
-    private PaymentsManager PaymentsManager => _serviceProvider.GetRequiredService<LightningNodeManager>().Node.ServiceProvider.GetRequiredService<PaymentsManager>();
+
+    private PaymentsManager PaymentsManager =>
+        _serviceProvider.GetRequiredService<LightningNodeManager>().Node.PaymentsManager;
 
     public async Task<LightningPayment> CreateInvoice(CreateLightningInvoiceRequest createLightningInvoiceRequest)
     {

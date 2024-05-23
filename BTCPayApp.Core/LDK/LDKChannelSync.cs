@@ -1,6 +1,7 @@
 ﻿using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Helpers;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using org.ldk.structs;
 
@@ -14,6 +15,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     private readonly Network _network;
     private readonly Watch _watch;
     private readonly BTCPayAppServerClient _appHubClient;
+    private readonly ILogger<LDKChannelSync> _logger;
     private readonly List<IDisposable> _disposables = new();
     
 
@@ -23,7 +25,8 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         LDKNode node,
         Network network,
         Watch watch,
-        BTCPayAppServerClient appHubClient)
+        BTCPayAppServerClient appHubClient,
+        ILogger<LDKChannelSync> logger)
     {
         _confirms = confirms.ToArray();
         _connectionManager = connectionManager;
@@ -31,11 +34,18 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         _network = network;
         _watch = watch;
         _appHubClient = appHubClient;
+        _logger = logger;
+        
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    private async Task LOlz(uint256[] txIds = null)
     {
-        _disposables.Clear();
+        if (txIds is null)
+        {
+            
+            var channels = await _node.GetChannels();
+            txIds = channels.Select(zz => new uint256(zz.get_funding_txo().get_txid())).ToArray();
+        }
         var txs1 = _confirms.SelectMany(confirm => confirm.get_relevant_txids().Select(zz =>
             (TransactionId: new uint256(zz.get_a()),
                 Height: zz.get_b(),
@@ -43,8 +53,14 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
                     ? new uint256(some.some)
                     : null))).ToDictionary(tuple => tuple.TransactionId, tuple => tuple);
 
+        foreach (var txid in txIds)
+        {
+            txs1.TryAdd(txid, (txid, 0, null));
+
+        }
+        _logger.LogInformation($"Fetching {txs1.Count} transactions");
         var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(txs1.Select(zz => zz.Key.ToString()).ToArray());
-        
+        _logger.LogInformation($"Fetched {result.Txs.Count} transactions");
         
         Dictionary<uint256, List<TwoTuple_usizeTransactionZ>> confirmedTxList = new();
         foreach (var transactionResult in result.Txs)
@@ -87,7 +103,20 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
                 confirm.transactions_confirmed(headerBytes, confirmedTxListItem.Value.ToArray(),  height);
             }
         }
+    }
+    
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        _disposables.Clear();
+        var monitors = await _node.GetInitialChannelMonitors();
+        var txsToCheck = monitors.Select(zz => zz.get_funding_txo().get_a().Outpoint().Hash).ToArray();
+        foreach (var channelMonitor in monitors)
+        {
+            _watch.watch_channel(channelMonitor.get_funding_txo().get_a(), channelMonitor);
+        }
 
+        await LOlz(txsToCheck);
+        
         var bb = await  _connectionManager.HubProxy.GetBestBlock();
        var bbHeader = BlockHeader.Parse( bb.BlockHeader, _network).ToBytes();
         foreach (var confirm in _confirms)
@@ -95,11 +124,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
             confirm.best_block_updated(bbHeader, bb.BlockHeight);
         }
 
-        var monitors = await _node.GetInitialChannelMonitors();
-        foreach (var channelMonitor in monitors)
-        {
-            _watch.watch_channel(channelMonitor.get_funding_txo().get_a(), channelMonitor);
-        }
+        
         
         _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<string>(
             action =>_appHubClient.OnNewBlock += action,
@@ -116,6 +141,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
 
     private async Task OnTransactionUpdate( TransactionDetectedRequest txUpdate , CancellationToken cancellationToken)
     {
+        _logger.LogInformation($"Transaction update {txUpdate.TxId}");
         var txResult = await  _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(new[] {txUpdate.TxId});
         var tx = txResult.Txs[txUpdate.TxId];
 
@@ -126,6 +152,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         int? blockHeight = null;
         if (tx.BlockHash is not null )
         {
+            _logger.LogInformation($"Transaction {txUpdate.TxId} is confirmed");
             var header = txResult.Blocks[tx.BlockHash];
             blockHeight = txResult.BlockHeghts[tx.BlockHash];
             headerBytes = BlockHeader.Parse(header, _network).ToBytes();
@@ -138,10 +165,12 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
             else
                 confirm.transactions_confirmed(headerBytes, [TwoTuple_usizeTransactionZ.of(1, txHashBytes)],blockHeight.Value);
         }
+        _logger.LogInformation($"Transaction update {txUpdate.TxId} processed");
         
     }
     private async Task OnNewBlock(string e, CancellationToken arg2)
     {
+        _logger.LogInformation($"New block {e}");
         var blockHeaderResponse = await _connectionManager.HubProxy.GetBestBlock();
         var header = BlockHeader.Parse(blockHeaderResponse.BlockHeader, _network);
         var headerBytes = header.ToBytes();
@@ -149,6 +178,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         {
             confirm.best_block_updated(headerBytes, blockHeaderResponse.BlockHeight);
         }
+        _logger.LogInformation($"New block {e} processed");
     }
 
 

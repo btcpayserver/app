@@ -29,6 +29,12 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
             logger.LogInformation("New inbound connection accepted");
             return descriptor;
         }
+        else if(result is Result_NonePeerHandleErrorZ.Result_NonePeerHandleErrorZ_Err err)
+        {
+            logger.LogError($"Failed to create inbound connection");
+            tcpClient.Dispose();
+            return null;
+        }
 
         descriptor.disconnect_socket();
         return null;
@@ -56,6 +62,11 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
             logger.LogInformation("New outbound connection accepted");
             // descriptor.Start();
             return descriptor;
+        }else if(result is Result_CVec_u8ZPeerHandleErrorZ.Result_CVec_u8ZPeerHandleErrorZ_Err err)
+        {
+            logger.LogError($"Failed to create outbound connection: {err.err}");
+            tcpClient.Dispose();
+            return null;
         }
         descriptor.disconnect_socket();
         return null;

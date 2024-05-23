@@ -171,6 +171,7 @@ public static class LDKExtensions
         services.AddLDKEventHandler<LDKPaymentEventsHandler>();
         services.AddLDKEventHandler<LDKPendingHTLCsForwardableEventHandler>();
         services.AddLDKEventHandler<LDKAnnouncementBroadcaster>();
+        services.AddLDKEventHandler<LDKNode>();
 
         services.AddScoped<LDKEventHandler>();
         services.AddScoped<org.ldk.structs.EventHandler>(provider =>

@@ -9,16 +9,14 @@ public class LDKAnnouncementBroadcaster : IScopedHostedService, ILDKEventHandler
 {
     private readonly LDKPeerHandler _ldkPeerHandler;
     private readonly PeerManager _peerManager;
-    private readonly ChannelManager _channelManager;
     private readonly LDKNode _ldkNode;
     private CancellationTokenSource? _cts;
 
     public LDKAnnouncementBroadcaster(LDKPeerHandler ldkPeerHandler,
-        PeerManager peerManager, ChannelManager channelManager, LDKNode ldkNode)
+        PeerManager peerManager,  LDKNode ldkNode)
     {
         _ldkPeerHandler = ldkPeerHandler;
         _peerManager = peerManager;
-        _channelManager = channelManager;
         _ldkNode = ldkNode;
     }
 
@@ -34,7 +32,8 @@ public class LDKAnnouncementBroadcaster : IScopedHostedService, ILDKEventHandler
     {
         while (cancellationToken.IsCancellationRequested == false)
         {
-            if (_channelManager.list_channels().Any(details => details.get_is_public()))
+            var channels = await _ldkNode.GetChannels(cancellationToken);
+            if (channels.Any(details => details.get_is_public()))
             {
                 var endpoint = _ldkPeerHandler.Endpoint?.Endpoint();
                 var config = await _ldkNode.GetConfig();

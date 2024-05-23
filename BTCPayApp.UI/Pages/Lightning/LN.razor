@@ -87,7 +87,7 @@ else
                     <td colspan="3">
                         <div class="input-group">
                             <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
-                            <button class="btn btn-primary" type="button" @onclick="Connect">Connect</button>
+                            <button class="btn btn-primary" type="button" @onclick="ConnectToNewPeer">Connect</button>
                         </div>
                     </td>
                 </tr>
@@ -100,7 +100,7 @@ else
             
             <div class="input-group">
                 <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
-                <button class="btn btn-primary" type="button" @onclick="Connect">Connect</button>
+                <button class="btn btn-primary" type="button" @onclick="ConnectToNewPeer">Connect</button>
             </div>
         }
     </article>
@@ -221,12 +221,7 @@ else
     private (string nodeId, string? socket)[] _peers;
     private List<LightningPayment?> _payments;
     public LDKNode Node => LightningNodeManager.Node;
-    public EntropySource EntropySource => LightningNodeManager.Node.ServiceProvider.GetService<EntropySource>();
-    public ChannelManager ChannelManager => LightningNodeManager.Node.ServiceProvider.GetService<ChannelManager>();
-    public LDKPeerHandler PeerHandler => LightningNodeManager.Node.ServiceProvider.GetService<LDKPeerHandler>();
-    public PeerManager PeerManager => LightningNodeManager.Node.ServiceProvider.GetService<PeerManager>();
-    public PaymentsManager PaymentsManager => LightningNodeManager.Node.ServiceProvider.GetService<PaymentsManager>();
-    public UserConfig UserConfig => LightningNodeManager.Node.ServiceProvider.GetService<UserConfig>();
+
 
     protected override void OnInitialized()
     {
@@ -246,10 +241,10 @@ else
         {
             await _semaphore.WaitAsync();
             _config = await Node.GetConfig();
-            _nodeId = Convert.ToHexString(ChannelManager.get_our_node_id());
-            _channels = ChannelManager.list_channels().Select(details => (id: Convert.ToHexString(details.get_channel_id().get_a()), userId: Convert.ToHexString(details.get_user_channel_id().getLEBytes()), counterparty: Convert.ToHexString(details.get_counterparty().get_node_id()), shortChannelId: details.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some1 ? some1.some : (long?) null, confirmations: details.get_confirmations() is Option_u32Z.Option_u32Z_Some some2 ? some2.some : (int?) null, confirmationsRequired: details.get_confirmations_required() is Option_u32Z.Option_u32Z_Some some3 ? some3.some : (int?) null, fundingTransactionHash: new uint256(details.get_funding_txo().get_txid()).ToString(), usable: details.get_is_usable(), ready: details.get_is_channel_ready(), Balance: LightMoney.MilliSatoshis(details.get_balance_msat()), Inbound: LightMoney.MilliSatoshis(details.get_inbound_capacity_msat()), Outbound: LightMoney.MilliSatoshis(details.get_outbound_capacity_msat()), State: details.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some4 ? some4.some.ToString() : null)).ToArray();
-            _peers = PeerManager.list_peers().Select(peer => (nodeId: Convert.ToHexString(peer.get_counterparty_node_id()), socket: peer.get_socket_address() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null)).ToArray();
-            _payments = await PaymentsManager.List(payments => payments);
+            _nodeId = Node.NodeId.ToString();
+            _channels = (await Node.GetChannels()).Select(details => (id: Convert.ToHexString(details.get_channel_id().get_a()), userId: Convert.ToHexString(details.get_user_channel_id().getLEBytes()), counterparty: Convert.ToHexString(details.get_counterparty().get_node_id()), shortChannelId: details.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some1 ? some1.some : (long?) null, confirmations: details.get_confirmations() is Option_u32Z.Option_u32Z_Some some2 ? some2.some : (int?) null, confirmationsRequired: details.get_confirmations_required() is Option_u32Z.Option_u32Z_Some some3 ? some3.some : (int?) null, fundingTransactionHash: new uint256(details.get_funding_txo().get_txid()).ToString(), usable: details.get_is_usable(), ready: details.get_is_channel_ready(), Balance: LightMoney.MilliSatoshis(details.get_balance_msat()), Inbound: LightMoney.MilliSatoshis(details.get_inbound_capacity_msat()), Outbound: LightMoney.MilliSatoshis(details.get_outbound_capacity_msat()), State: details.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some4 ? some4.some.ToString() : null)).ToArray();
+            _peers = (await Node.GetPeers()).Select(peer => (nodeId: Convert.ToHexString(peer.get_counterparty_node_id()), socket: peer.get_socket_address() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null)).ToArray();
+            _payments = await LightningNodeManager.Node.PaymentsManager.List(payments => payments);
         }
         finally
         {
@@ -260,7 +255,7 @@ else
     }
 
 
-    private async Task Connect()
+    private async Task ConnectToNewPeer()
     {
         try
         {
@@ -273,7 +268,7 @@ else
             }
 
 
-            var result = await PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
+            var result = await LightningNodeManager.Node.PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
             if (result is null)
             {
                 return;
@@ -299,7 +294,7 @@ else
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
 
-            PeerManager.disconnect_by_node_id(new PubKey(nodeId).ToBytes());
+            await LightningNodeManager.Node.PeerHandler.DisconnectAsync(new PubKey(nodeId));
         }
         finally
         {
@@ -336,7 +331,7 @@ else
             await _semaphore.WaitAsync();
 
             EndPointParser.TryParse(peerConfig.Endpoint, 9735, out var endpoint);
-            await PeerHandler.ConnectAsync(new PubKey(peer), endpoint);
+            await LightningNodeManager.Node.PeerHandler.ConnectAsync(new PubKey(peer), endpoint);
         }
         finally
         {
@@ -358,27 +353,17 @@ else
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            await Task.Run(() =>
+            var result = await Node.OpenChannel(Money.Satoshis(channelOpenAmount.Value), new PubKey(selectedPeer) );
+            if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
             {
-                var amt = new Money(channelOpenAmount.Value, MoneyUnit.BTC);
-                var pubkey = new PubKey(selectedPeer).ToBytes();
-
-                var temporaryChannelId = ChannelId.temporary_from_entropy_source(EntropySource);
-
-            
-                var userChannelId = new UInt128(temporaryChannelId.get_a().Take(16).ToArray());
-                var result = ChannelManager.create_channel(pubkey, amt.Satoshi, 0, userChannelId, temporaryChannelId, UserConfig);
-                if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
-                {
-                    channelResponse = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
-                    channelOpenAmount = null;
-                    selectedPeer = null;
-                }
-                else if(result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
-                {
-                    channelResponse = $"Error: {err.err.GetError()}";
-                }
-            } );
+                channelResponse = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
+                channelOpenAmount = null;
+                selectedPeer = null;
+            }
+            else if(result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
+            {
+                channelResponse = $"Error: {err.err.GetError()}";
+            }
             
         }
         finally
