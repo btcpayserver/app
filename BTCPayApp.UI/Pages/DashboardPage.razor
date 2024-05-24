@@ -4,8 +4,11 @@
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
+@using NBitcoin
+@using NBXplorer.Models
 @inject IState<RootState> State
 @inject IAccountManager AccountManager
+@inject OnChainWalletManager OnChainWalletManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Dashboard</PageTitle>
@@ -33,8 +36,15 @@
         {
             <section class="container d-flex flex-column gap-4 py-3 wallet">
                 <div class="amount text-center">
-                    <div class="sats fw-bold fs-1">615,000,000 sats</div>
-                    <div class="fiat fw-semibold text-muted">$174,465.79</div>
+                    @if (_balance == null)
+                    {
+                        <LoadingIndicator />
+                    }
+                    else
+                    {
+                        <div class="sats fw-bold fs-1">@_balance.ToUnit(MoneyUnit.Satoshi) sats</div>
+                        <div class="fiat fw-semibold text-muted">$174,465.79</div>
+                    }
                 </div>
                 <nav class="d-flex align-items-center gap-3 mx-auto">
                     <a class="btn btn-light rounded-pill" href="@Routes.WalletSend">
@@ -167,18 +177,43 @@
     private AppUserInfo? _userInfo;
     private BTCPayAccount? _account;
     private SetupStatus? _setupStatus;
+    private Money? _balance;
 
-    protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
         _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();
-        return Task.CompletedTask;
+
+        OnChainWalletManager.StateChanged += RefreshBalance;
+        if (OnChainWalletManager.State == OnChainWalletState.Loaded) await GetBalance();
     }
 
     protected override void OnAfterRender(bool firstRender)
     {
         // ensure the ElementReference is set
         if (firstRender) StateHasChanged();
+    }
+
+    private async Task RefreshBalance(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
+    {
+        if (e is { New: OnChainWalletState.Loaded }) await GetBalance();
+    }
+
+    private async Task GetBalance()
+    {
+        try
+        {
+            var resp = await OnChainWalletManager.GetUTXOS();
+            _balance = new Money(resp.Sum(r => r.TxOut.Value.ToDecimal(MoneyUnit.BTC)), MoneyUnit.BTC);
+        }
+        catch (Exception ex)
+        {
+            _balance = null;
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private SetupState? SetupStateConnection => _setupStatus?.SetupStateConnection() ?? SetupState.Undetermined;
