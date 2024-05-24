@@ -27,14 +27,13 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
     public event AsyncEventHandler<HubConnectionState>? ConnectionChanged;
     private HubConnectionState _lastAdvertisedState = HubConnectionState.Disconnected;
-
+    private HubConnectionState ConnectionState => Connection?.State ?? HubConnectionState.Disconnected;
     private void InvokeConnectionChange()
     {
-        if (_lastAdvertisedState != Connection?.State)
-        {
-            _lastAdvertisedState = Connection?.State ?? HubConnectionState.Disconnected;
-            ConnectionChanged?.Invoke(this, _lastAdvertisedState);
-        }
+        if (_lastAdvertisedState == ConnectionState) return;
+        _logger.LogInformation("Connection state changed: {State}", ConnectionState);
+        ConnectionChanged?.Invoke(this, ConnectionState);
+        _lastAdvertisedState = ConnectionState;
     }
 
     public BTCPayConnectionManager(
@@ -63,7 +62,6 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     private  async Task BtcPayAppServerClientOnOnServerNodeInfo(object? sender, string e)
     {
         ReportedNodeInfo = e;
-
     }
 
     public string ReportedNodeInfo { get; set; }
@@ -98,9 +96,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         {
             try
             {
-                if (Connection is not null && Connection.State == HubConnectionState.Disconnected)
+                if (Connection is not null && ConnectionState == HubConnectionState.Disconnected)
                 {
-                    _logger.LogInformation("Connecting to BTCPayServer...");
                     var startTsk = Connection.StartAsync();
                     InvokeConnectionChange();
                     await startTsk;
@@ -114,7 +111,6 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error while connecting to BTCPayServer");
                 InvokeConnectionChange();
                 await Task.Delay(1000);
             }
@@ -142,7 +138,6 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
             .AddNewtonsoftJsonProtocol()
             .WithUrl(new Uri(new Uri(account.BaseUri), "hub/btcpayapp").ToString(), options =>
             {
-
                 options.AccessTokenProvider = () => Task.FromResult(_accountManager.GetAccount()?.AccessToken);
             })
             .WithAutomaticReconnect()

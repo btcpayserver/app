@@ -27,7 +27,7 @@
             HubConnectionState.Connected => SetupState.Completed,
             HubConnectionState.Connecting => SetupState.Pending,
             HubConnectionState.Reconnecting => SetupState.Pending,
-            HubConnectionState.Disconnected => SetupState.Failed,
+            HubConnectionState.Disconnected => SetupState.Pending,
             _ => SetupState.Undetermined
         };
     }
