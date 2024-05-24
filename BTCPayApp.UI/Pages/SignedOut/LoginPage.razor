@@ -38,9 +38,15 @@
         <ValidationMessage For="@(() => Model.Email)" />
     </div>
     <div class="mb-3" hidden="@Model.RequireTwoFactor">
-        <label for="Password" class="form-label">Password</label>
+        <div class="d-flex justify-content-between">
+            <label for="Password" class="form-label">Password</label>
+            @if (InstanceInfo != null)
+            {
+                <NavLink href="@GetForgotPasswordUrl()">Forgot password?</NavLink>
+            }
+        </div>
         <InputText @bind-Value="Model.Password" type="password" id="Password" autocomplete="current-password" class="form-control"/>
-        <ValidationMessage For="@(() => Model.Password)" />
+        <ValidationMessage For="@(() => Model.Password)"/>
     </div>
     @if (Model.RequireTwoFactor)
     {
@@ -51,17 +57,12 @@
         </div>
     }
     <button type="submit" class="btn btn-primary w-100" data-testid="LoginButton" disabled="@(InstanceInfo == null)">Login</button>
-
     @if (!Model.RequireTwoFactor && InstanceInfo != null)
     {
-        <p class="mt-4 text-center">
-            <NavLink href="@GetForgotPasswordUrl()">Forgot your password?</NavLink>
-        </p>
-
         @if (InstanceInfo.RegistrationEnabled)
         {
             <p class="mt-4 text-center">
-                <NavLink href="@GetRegisterUrl()">Register new account</NavLink>
+                <NavLink href="@GetRegisterUrl()">Create an account</NavLink>
             </p>
         }
     }
