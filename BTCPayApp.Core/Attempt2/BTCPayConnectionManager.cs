@@ -22,13 +22,11 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     private IDisposable? _subscription;
 
     public IBTCPayAppHubServer? HubProxy { get; private set; }
-
     public HubConnection? Connection { get; private set; }
+    public Network? ReportedNetwork { get; private set; }
+
     public event AsyncEventHandler<HubConnectionState>? ConnectionChanged;
     private HubConnectionState _lastAdvertisedState = HubConnectionState.Disconnected;
-
-
-    public Network? ReportedNetwork { get; private set; }
 
     private void InvokeConnectionChange()
     {
@@ -65,7 +63,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     private  async Task BtcPayAppServerClientOnOnServerNodeInfo(object? sender, string e)
     {
         ReportedNodeInfo = e;
-        
+
     }
 
     public string ReportedNodeInfo { get; set; }
@@ -144,7 +142,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
             .AddNewtonsoftJsonProtocol()
             .WithUrl(new Uri(new Uri(account.BaseUri), "hub/btcpayapp").ToString(), options =>
             {
-                
+
                 options.AccessTokenProvider = () => Task.FromResult(_accountManager.GetAccount()?.AccessToken);
             })
             .WithAutomaticReconnect()
