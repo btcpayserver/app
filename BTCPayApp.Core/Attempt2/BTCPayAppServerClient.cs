@@ -27,7 +27,6 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
     {
         _logger.LogInformation("NotifyNetwork: {network}", network);
         await OnNotifyNetwork?.Invoke(this, network);
-
     }
 
     public async Task NotifyServerNode(string nodeInfo)
@@ -38,7 +37,7 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
 
     public async Task TransactionDetected(TransactionDetectedRequest request)
     {
-        _logger.LogInformation($"OnTransactionDetected: {request.TxId}" );
+        _logger.LogInformation($"OnTransactionDetected: {request.TxId}");
         await OnTransactionDetected?.Invoke(this, request);
     }
 
@@ -54,8 +53,10 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
 
     public async Task<LightningPayment> CreateInvoice(CreateLightningInvoiceRequest createLightningInvoiceRequest)
     {
-        var descHash =  new uint256(Hashes.SHA256(Encoding.UTF8.GetBytes(createLightningInvoiceRequest.Description)), false);
-        return await PaymentsManager.RequestPayment(createLightningInvoiceRequest.Amount, createLightningInvoiceRequest.Expiry, descHash);
+        var descHash = new uint256(Hashes.SHA256(Encoding.UTF8.GetBytes(createLightningInvoiceRequest.Description)),
+            false);
+        return await PaymentsManager.RequestPayment(createLightningInvoiceRequest.Amount,
+            createLightningInvoiceRequest.Expiry, descHash);
     }
 
     public async Task<LightningPayment?> GetLightningInvoice(string paymentHash)
@@ -63,7 +64,6 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
         var invs = await PaymentsManager.List(payments =>
             payments.Where(payment => payment.Inbound && payment.PaymentHash == paymentHash));
         return invs.FirstOrDefault();
-
     }
 
     public async Task<LightningPayment?> GetLightningPayment(string paymentHash)
@@ -83,10 +83,40 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
         return await PaymentsManager.List(payments => payments.Where(payment => payment.Inbound), default);
     }
 
+    public async Task<PayResponse> PayInvoice(string bolt11, long? amountMilliSatoshi)
+    {
+        var network = _serviceProvider.GetRequiredService<OnChainWalletManager>().Network;
+        var bolt = BOLT11PaymentRequest.Parse(bolt11, network);
+        try
+        {
+            var result = await PaymentsManager.PayInvoice(bolt,
+                amountMilliSatoshi is null ? null : LightMoney.MilliSatoshis(amountMilliSatoshi.Value));
+            return new PayResponse()
+                {
+                    Result = result.Status switch
+                    {
+                        LightningPaymentStatus.Unknown => PayResult.Unknown,
+                        LightningPaymentStatus.Pending => PayResult.Unknown,
+                        LightningPaymentStatus.Complete => PayResult.Ok,
+                        LightningPaymentStatus.Failed => PayResult.Error,
+                        _ => throw new ArgumentOutOfRangeException()
+                    },
+                    Details = new PayDetails()
+                    {
+                        Preimage = result.Preimage is not null ? new uint256(result.Preimage) : null,
+                        Status = result.Status
+                    }
+                };
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error paying invoice");
+            return new PayResponse(PayResult.Error, e.Message);
+        }
+    }
+
     public event AsyncEventHandler<string>? OnNewBlock;
     public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
     public event AsyncEventHandler<string>? OnNotifyNetwork;
     public event AsyncEventHandler<string>? OnServerNodeInfo;
-
-
 }

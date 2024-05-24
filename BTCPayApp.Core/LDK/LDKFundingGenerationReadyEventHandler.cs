@@ -10,22 +10,20 @@ namespace BTCPayApp.Core.LDK;
 
 public class LDKFundingGenerationReadyEventHandler: ILDKEventHandler<Event.Event_FundingGenerationReady>
 {
-    private readonly LDKFeeEstimator _feeEstimator;
     private readonly OnChainWalletManager _onChainWalletManager;
     private readonly ChannelManager _channelManager;
 
     public record FundingTransactionGeneratedEvent(Event.Event_FundingGenerationReady evt, Transaction tx);
     public event AsyncEventHandler<FundingTransactionGeneratedEvent>? FundingTransactionGenerated;
 
-    public LDKFundingGenerationReadyEventHandler(LDKFeeEstimator feeEstimator, OnChainWalletManager onChainWalletManager, ChannelManager channelManager)
+    public LDKFundingGenerationReadyEventHandler( OnChainWalletManager onChainWalletManager, ChannelManager channelManager)
     {
-        _feeEstimator = feeEstimator;
         _onChainWalletManager = onChainWalletManager;
         _channelManager = channelManager;
     }
     public async Task Handle(Event.Event_FundingGenerationReady eventFundingGenerationReady)
     {
-        var feeRate = await _feeEstimator.GetFeeRate();
+        var feeRate = await _onChainWalletManager.GetFeeRate(1);
         var txOuts = new List<TxOut>()
         {
             new(Money.Satoshis(eventFundingGenerationReady.channel_value_satoshis),

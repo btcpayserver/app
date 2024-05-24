@@ -168,7 +168,7 @@ public static class LDKExtensions
         services.AddLDKEventHandler<LDKFundingGenerationReadyEventHandler>();
         services.AddLDKEventHandler<LDKSpendableOutputEventHandler>();
         services.AddLDKEventHandler<LDKOpenChannelRequestEventHandler>();
-        services.AddLDKEventHandler<LDKPaymentEventsHandler>();
+        services.AddLDKEventHandler<PaymentsManager>();
         services.AddLDKEventHandler<LDKPendingHTLCsForwardableEventHandler>();
         services.AddLDKEventHandler<LDKAnnouncementBroadcaster>();
         services.AddLDKEventHandler<LDKNode>();

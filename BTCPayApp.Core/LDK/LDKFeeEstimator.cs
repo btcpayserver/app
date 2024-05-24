@@ -7,11 +7,11 @@ namespace BTCPayApp.Core.LDK;
 
 public class LDKFeeEstimator : FeeEstimatorInterface
 {
-    private readonly BTCPayConnectionManager _connectionManager;
+    private readonly OnChainWalletManager _onChainWalletManager;
 
-    public LDKFeeEstimator(BTCPayConnectionManager connectionManager)
+    public LDKFeeEstimator( OnChainWalletManager onChainWalletManager)
     {
-        _connectionManager = connectionManager;
+        _onChainWalletManager = onChainWalletManager;
     }
 
     public int get_est_sat_per_1000_weight(ConfirmationTarget confirmation_target)
@@ -34,12 +34,6 @@ public class LDKFeeEstimator : FeeEstimatorInterface
             ConfirmationTarget.LDKConfirmationTarget_ChannelCloseMinimum => 144, // Within a day or so (144-250 blocks)
             _ => throw new ArgumentOutOfRangeException(nameof(confirmation_target), confirmation_target, null)
         };
-        return (int) GetFeeRate(targetBlocks).ConfigureAwait(false).GetAwaiter().GetResult().FeePerK.Satoshi;
-    }
-
-    public async Task<FeeRate> GetFeeRate(int blockTarget = 3)
-    {
-        var result =  await _connectionManager.HubProxy.GetFeeRate(blockTarget);
-        return new FeeRate(result);
+        return (int) _onChainWalletManager.GetFeeRate(targetBlocks).ConfigureAwait(false).GetAwaiter().GetResult().FeePerK.Satoshi;
     }
 }

@@ -438,6 +438,13 @@ public class OnChainWalletManager : BaseHostedService
     {
         await _btcPayConnectionManager.HubProxy.BroadcastTransaction(valueTx.ToHex());
     }
+
+    public async Task<FeeRate> GetFeeRate(int blockTarget)
+    {
+        
+        var result =  await _btcPayConnectionManager.HubProxy.GetFeeRate(blockTarget);
+        return new FeeRate(result);
+    }
 }
 
 public enum OnChainWalletState
