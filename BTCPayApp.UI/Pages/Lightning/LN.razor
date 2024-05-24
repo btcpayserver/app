@@ -8,7 +8,9 @@
 @using NodeInfo = BTCPayServer.Lightning.NodeInfo
 @using BTCPayApp.Core.Data
 @using BTCPayApp.Core.Helpers
+@using NBitcoin.Crypto
 @using UInt128 = org.ldk.util.UInt128
+@using System.Text
 @inject LightningNodeManager LightningNodeManager
 @inject IDispatcher Dispatcher
 
@@ -186,6 +188,7 @@ else
                     <th>Timestamp</th>
                     <th>Value</th>
                     <th>Status</th>
+                    <th>Invoices</th>
                 </tr>
                 </thead>
                 <tbody>
@@ -200,6 +203,7 @@ else
                         <td>@payment.Timestamp</td>
                         <td>@payment.Value</td>
                         <td>@payment.Status</td>
+                        <td>@string.Join('\n', payment.PaymentRequests)</td>
                     </tr>
                 }
                 </tbody>
@@ -209,6 +213,27 @@ else
         {
             <p class="text-muted">There are no payments, yet.</p>
         }
+        
+        <div>
+        
+            <div class="input-group">
+                <input type="number" class="form-control" min="0" @bind="paymentRequestAmt"/>
+                <button type="button" class=" btn btn-primary" @onclick="ReceivePayment">Receive payment</button>
+            </div>
+            
+            
+              <div class="input-group">
+                            <input type="number" class="form-control"  min="0" @bind="paymentRequestAmt"/>
+                            <input type="text"class="form-control" @bind="paymentRequestSend"/>
+                            <button type="button" class=" btn btn-primary"  @onclick="SendPayment">Send payment</button>
+                        </div>
+            
+            
+            @if (paymentResponse is not null)
+            {
+                <p>@paymentResponse</p>
+            }
+            </div>
     </article>
     <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
 }
@@ -374,4 +399,64 @@ else
         }
     }
 
+    private decimal? paymentRequestAmt;
+    private string? paymentRequestSend;
+    private string? paymentResponse;
+    private async void ReceivePayment()
+    {
+        if(Loading || paymentRequestAmt is null)
+            return;
+        try
+        {
+            Loading = true;
+            await InvokeAsync(StateHasChanged);
+            await _semaphore.WaitAsync();
+            var hash = new uint256(Hashes.SHA256(RandomUtils.GetBytes(32)));
+            var result = await Node.PaymentsManager.RequestPayment(LightMoney.Satoshis(paymentRequestAmt??0), TimeSpan.FromDays(1), hash);
+            
+            paymentResponse = $"Payment request created with invs {string.Join(',',result.PaymentRequests)}";
+            paymentRequestAmt = null;
+            
+        }
+        catch (Exception e)
+        {
+            paymentResponse = $"Error: {e.Message}";
+        }
+        finally
+        {
+            Loading = false;
+            await InvokeAsync(StateHasChanged);
+            _semaphore.Release();
+        }
+    }
+    public async void SendPayment()
+    {
+        if(Loading ||  paymentRequestSend is null)
+            return;
+        try
+        {
+            Loading = true;
+            await InvokeAsync(StateHasChanged);
+            await _semaphore.WaitAsync();
+            var invoice = BOLT11PaymentRequest.Parse(paymentRequestSend, Node.Network );
+            
+            
+            
+            var result = await Node.PaymentsManager.PayInvoice(invoice, paymentRequestAmt is null? null: LightMoney.Satoshis((long)paymentRequestAmt.Value));
+            paymentResponse = $"Payment {result.PaymentId} sent with status {result.Status}";
+            paymentRequestAmt = null;
+            paymentRequestSend = null;
+        }
+        catch (Exception e)
+        {
+            paymentResponse = $"Error: {e.Message}";
+        }
+        finally
+        {
+            Loading = false;
+            await InvokeAsync(StateHasChanged);
+            _semaphore.Release();
+        }
+    }
+    
 }

@@ -131,6 +131,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     private TaskCompletionSource? _started;
     private readonly SemaphoreSlim _semaphore = new(1);
 
+    public Network Network => ServiceProvider.GetRequiredService<Network>();
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         bool exists;
