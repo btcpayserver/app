@@ -6,6 +6,7 @@
 @using BTCPayApp.Core.Data
 @using BTCPayApp.UI.Components.Layout
 @using NBitcoin
+@using BTCPayApp.CommonServer
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject NavigationManager NavigationManager
 @inject OnChainWalletManager OnChainWalletManager 
@@ -75,6 +76,30 @@
 
             </div>
         }
+        <button type="button" @onclick="GetTxs">Get transactions</button>
+        
+        @if(_txs is not null)
+        {
+            <table>
+                <tr>
+                    <th>Hash</th>
+                    <th>Amount</th>
+                    <th>Confirmations</th>
+                    <th>Time</th>
+                    
+                </tr>
+                @foreach (var tx in _txs)
+                {
+                    <tr>
+                        <td>@tx.TransactionId</td>
+                        <td>@tx.BalanceChange</td>
+                        <td>@tx.Confirmations</td>
+                        <td>@tx.Timestamp</td>
+                    </tr>   
+                }
+            </table>
+        }
+        
     }
 </section>
 
@@ -106,6 +131,7 @@
         try
         {
             var resp = await OnChainWalletManager.GetUTXOS();
+
             var totalValue = resp.Sum(r => r.TxOut.Value.ToDecimal(MoneyUnit.BTC));
             _balanceResponse = $"Total balance: {totalValue} BTC ({resp.Count()} UTXOs) ";
             _balanceResponseAmt = totalValue;
@@ -123,6 +149,7 @@
     }
 
     private string? _addressResponse = null;
+    private TxResp[] _txs;
 
     private async Task GetAddress()
     {
@@ -153,7 +180,7 @@
 
     private async Task CreateTx()
     {
-        if (loading || _balanceResponseAmt is null ||SendAmount is null || SendAmount <= 0 || string.IsNullOrWhiteSpace(SendDest))
+        if (loading || _balanceResponseAmt is null || SendAmount is null || SendAmount <= 0 || string.IsNullOrWhiteSpace(SendDest))
             return;
         loading = true;
         await InvokeAsync(StateHasChanged);
@@ -202,5 +229,27 @@
         }
     }
 
+
+    private async Task  GetTxs()
+    {
+        if (loading)
+            return;
+        loading = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+           
+            _txs  =  await OnChainWalletManager.GetTransactions();;
+        }
+        catch (Exception ex)
+        {
+            _txResponse = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 
 }

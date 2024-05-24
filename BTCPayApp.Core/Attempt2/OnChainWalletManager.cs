@@ -312,6 +312,14 @@ public class OnChainWalletManager : BaseHostedService
     {
         Task<PSBT> Sign(PSBT psbt);
     }
+
+    public async Task<TxResp[]> GetTransactions()
+    {
+        var identifiersWhichWeCanDeriveKeysFor = WalletConfig.Derivations.Values
+            .Where(derivation => derivation.Descriptor is not null).Select(derivation => derivation.Identifier).ToArray();
+        var res= await _btcPayConnectionManager.HubProxy.GetTransactions(identifiersWhichWeCanDeriveKeysFor);
+        return res.SelectMany(pair => pair.Value).OrderByDescending(resp => resp.Timestamp).ToArray();
+    }
     
     
     public async Task<IEnumerable<ICoin>> GetUTXOS()
