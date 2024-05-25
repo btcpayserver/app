@@ -30,10 +30,7 @@ git checkout mobile-working-branch
 docker-compose up dev
 ```
 
-Now you can open up the IDE and run both, the server and the app:
-
-- Server: `BTCPayServer: Bitcoin` (the one without https, because otherwise you'll run into problem with the self-signed certificate when trying to connect the app)
-- App: `BTCPayApp.Server: https`
+Now you can open up the IDE and run `DEV ALL` profile which builds both the App and the BTCPay Server.
 
 The app should open in the browser and you should see the Welcome screen.
 Click the Connect button, use `http://localhost:14142` as the server URL and an existing account for the server.
