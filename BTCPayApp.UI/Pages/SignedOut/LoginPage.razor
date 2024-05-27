@@ -118,7 +118,7 @@
             if (result.Messages?.Contains("RequiresTwoFactor") is true)
                 Model.RequireTwoFactor = true;
             else
-                _errorMessage = result.Messages?.Contains("Failed") is false
+                _errorMessage = result.Messages?.Contains("Request failed") is false
                     ? string.Join(",", result.Messages)
                     : "Invalid login attempt.";
         }
@@ -129,7 +129,7 @@
         try
         {
             InstanceInfo = !string.IsNullOrEmpty(Model.Uri)
-                ? await AppClient.Get<AppInstanceInfo>(Model.Uri, "instance")
+                ? await AppClient.GetInstanceInfo(Model.Uri)
                 : null;
 
             _errorMessage = !string.IsNullOrEmpty(Model.Uri) && InstanceInfo == null

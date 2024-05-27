@@ -11,10 +11,6 @@
 </EditForm>
 
 @code {
-
-    [Parameter(CaptureUnmatchedValues = true)]
-    public Dictionary<string, object> InputAttributes { get; set; }
-
     [Parameter]
     public object Model { get; set; }
 
@@ -24,7 +20,29 @@
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
+    [Parameter]
+    public EventCallback OnValidSubmit { get; set; }
+
+    [Parameter]
+    public EventCallback OnInvalidSubmit { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object> InputAttributes { get; set; }
+
     public EditContext EditContext { get; set; }
+    public ValidationMessageStore MessageStore { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        EditContext = new EditContext(Model);
+        MessageStore = new ValidationMessageStore(EditContext);
+        EditContext.OnFieldChanged += EditContextOnOnFieldChanged;
+        EditContext.OnValidationRequested += EditContextOnOnValidationRequested;
+        EditContext.OnValidationStateChanged += EditContextOnOnValidationStateChanged;
+        EditContext.Validate();
+    }
 
     private void EditContextOnOnValidationRequested(object? sender, ValidationRequestedEventArgs e)
     {
@@ -37,28 +55,9 @@
         EditContext.NotifyValidationStateChanged();
     }
 
-    [Parameter]
-    public EventCallback OnValidSubmit { get; set; }
-
-    [Parameter]
-    public EventCallback OnInvalidSubmit { get; set; }
-
-    public ValidationMessageStore MessageStore { get; set; }
-
     public void NotifyFieldChanged(Expression<Func<object>> field)
     {
         EditContext.NotifyFieldChanged(FieldIdentifier.Create(field));
-    }
-
-    protected override void OnInitialized()
-    {
-        base.OnInitialized();
-
-        EditContext = new EditContext(Model);
-        MessageStore = new ValidationMessageStore(EditContext);
-        EditContext.OnFieldChanged += EditContextOnOnFieldChanged;
-        EditContext.OnValidationRequested += EditContextOnOnValidationRequested;
-        EditContext.OnValidationStateChanged += EditContextOnOnValidationStateChanged;
     }
 
     private void EditContextOnOnValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
@@ -95,5 +94,4 @@
         EditContext.OnValidationRequested -= EditContextOnOnValidationRequested;
         EditContext.OnValidationStateChanged -= EditContextOnOnValidationStateChanged;
     }
-
 }

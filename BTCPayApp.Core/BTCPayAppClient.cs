@@ -1,59 +1,82 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
+using System.Text;
 using BTCPayApp.CommonServer.Models;
+using BTCPayServer.Client.Models;
+using Newtonsoft.Json;
 using AccessTokenResponse = BTCPayApp.Core.AspNetRip.AccessTokenResponse;
-using ProblemDetails = BTCPayApp.Core.AspNetRip.ProblemDetails;
 using RefreshRequest = BTCPayApp.Core.AspNetRip.RefreshRequest;
 
 namespace BTCPayApp.Core;
 
 public class BTCPayAppClient(IHttpClientFactory clientFactory)
 {
+    private const string MediaType = "application/json";
     private readonly HttpClient _httpClient = clientFactory.CreateClient();
-    private readonly string[] _unauthenticatedPaths = ["instance", "login", "register", "forgot-password", "reset-password"];
+    private readonly string[] _unauthenticatedPaths = ["btcpayapp/instance", "btcpayapp/login", "btcpayapp/register", "btcpayapp/forgot-password", "btcpayapp/reset-password"];
     private DateTimeOffset? AccessExpiry { get; set; } // TODO: Incorporate in refresh check
     private string? AccessToken { get; set; }
     private string? RefreshToken { get; set; }
 
     public event EventHandler<AccessTokenResult>? AccessRefreshed;
 
-    public async Task<TResponse> Get<TResponse>(string baseUrl, string path, CancellationToken cancellation = default, bool isRetry = false)
+    public async Task<TResponse> Get<TResponse>(string baseUrl, string path, CancellationToken cancellation = default)
     {
-        return await Send<EmptyRequestModel, TResponse>(HttpMethod.Get, baseUrl, path, null, cancellation, isRetry);
+        return await Send<EmptyRequestModel, TResponse>(HttpMethod.Get, baseUrl, path, null, cancellation);
     }
 
-    public async Task Post<TRequest>(string baseUrl, string path, TRequest payload, CancellationToken cancellation = default, bool isRetry = false)
+    public async Task Post<TRequest>(string baseUrl, string path, TRequest payload, CancellationToken cancellation = default)
     {
-        await Send<TRequest, EmptyResponseModel>(HttpMethod.Post, baseUrl, path, payload, cancellation, isRetry);
+        await Send<TRequest, EmptyResponseModel>(HttpMethod.Post, baseUrl, path, payload, cancellation);
     }
 
-    public async Task<TResponse> Post<TRequest, TResponse>(string baseUrl, string path, TRequest payload, CancellationToken cancellation = default, bool isRetry = false)
+    public async Task<TResponse> Post<TRequest, TResponse>(string baseUrl, string path, TRequest payload, CancellationToken cancellation = default)
     {
-        return await Send<TRequest, TResponse>(HttpMethod.Post, baseUrl, path, payload, cancellation, isRetry);
+        return await Send<TRequest, TResponse>(HttpMethod.Post, baseUrl, path, payload, cancellation);
+    }
+
+    public async Task Put<TRequest>(string baseUrl, string path, TRequest payload, CancellationToken cancellation = default)
+    {
+        await Send<TRequest, EmptyResponseModel>(HttpMethod.Put, baseUrl, path, payload, cancellation);
+    }
+
+    public async Task<TResponse> Put<TRequest, TResponse>(string baseUrl, string path, TRequest payload, CancellationToken cancellation = default)
+    {
+        return await Send<TRequest, TResponse>(HttpMethod.Put, baseUrl, path, payload, cancellation);
+    }
+
+    public async Task Delete<TRequest>(string baseUrl, string path, TRequest payload, CancellationToken cancellation = default)
+    {
+        await Send<TRequest, EmptyResponseModel>(HttpMethod.Delete, baseUrl, path, payload, cancellation);
+    }
+
+    public async Task<TResponse> Delete<TRequest, TResponse>(string baseUrl, string path, TRequest payload, CancellationToken cancellation = default)
+    {
+        return await Send<TRequest, TResponse>(HttpMethod.Delete, baseUrl, path, payload, cancellation);
     }
 
     private async Task<TResponse> Send<TRequest, TResponse>(HttpMethod method, string baseUrl, string path, TRequest? payload, CancellationToken cancellation, bool isRetry = false)
     {
         var req = new HttpRequestMessage
         {
-            RequestUri = new Uri(WithTrailingSlash(baseUrl) + $"btcpayapp/{path}"),
+            RequestUri = new Uri(WithTrailingSlash(baseUrl) + path),
             Method = method,
-            Content = payload == null ? null : JsonContent.Create(payload)
+            Content = payload == null ? null : new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, MediaType)
         };
         req.Headers.Accept.Clear();
-        req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-        req.Headers.Add("User-Agent", "BTCPayServerAppApiClient");
+        req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(MediaType));
+        req.Headers.Add("User-Agent", "BTCPayAppClient");
 
         if (!_unauthenticatedPaths.Contains(path))
         {
             if (string.IsNullOrEmpty(AccessToken))
-                throw new BTCPayAppClientException(401, "Authentication required");
+                throw new BTCPayAppClientException(HttpStatusCode.Unauthorized, "Authentication required");
 
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
         }
 
         var res = await _httpClient.SendAsync(req, cancellation);
+        var str = await res.Content.ReadAsStringAsync(cancellation);
         if (!res.IsSuccessStatusCode)
         {
             if (res.StatusCode == HttpStatusCode.Unauthorized)
@@ -68,12 +91,20 @@ public class BTCPayAppClient(IHttpClientFactory clientFactory)
                 ClearAccess();
             }
             // otherwise handle the error response
-            var problem = res.StatusCode == HttpStatusCode.NotFound
-                ? new ProblemDetails { Instance = baseUrl, Status = 404, Detail = "This server does not seem to support the BTCPay app." }
-                : await res.Content.ReadFromJsonAsync<ProblemDetails>(cancellationToken: cancellation);
-            var statusCode = problem?.Status ?? (int)res.StatusCode;
-            var message = problem?.Detail ?? res.ReasonPhrase;
-            throw new BTCPayAppClientException(statusCode, message ?? "Request failed");
+            if (res.StatusCode == HttpStatusCode.NotFound && path.StartsWith("btcpayapp"))
+            {
+                throw new BTCPayAppClientException(HttpStatusCode.NotFound, "This server does not seem to support the BTCPay app.");
+            }
+
+            if (res.StatusCode == HttpStatusCode.UnprocessableEntity)
+            {
+                var validationErrors = JsonConvert.DeserializeObject<GreenfieldValidationError[]>(str);
+                var message = string.Join(", ", validationErrors.Select(ve => $"{ve.Path}: {ve.Message}"));
+                throw new BTCPayAppClientException(HttpStatusCode.UnprocessableEntity, message);
+            }
+
+            var err = JsonConvert.DeserializeObject<GreenfieldAPIError>(str);
+            throw new BTCPayAppClientException(res.StatusCode, err?.Message ?? "Request failed");
         }
 
         if (typeof(TResponse) == typeof(EmptyResponseModel))
@@ -81,7 +112,7 @@ public class BTCPayAppClient(IHttpClientFactory clientFactory)
             return (TResponse)(object)new EmptyResponseModel();
         }
 
-        var response = await res.Content.ReadFromJsonAsync<TResponse>(cancellationToken: cancellation);
+        var response = JsonConvert.DeserializeObject<TResponse>(str);
         return response != null ? response : (TResponse)(object)new EmptyResponseModel();
     }
 
@@ -98,7 +129,7 @@ public class BTCPayAppClient(IHttpClientFactory clientFactory)
         var now = DateTimeOffset.Now;
         try
         {
-            var response = await Post<RefreshRequest, AccessTokenResponse>(serverUrl, "refresh", payload, cancellation.GetValueOrDefault(), true);
+            var response = await Send<RefreshRequest, AccessTokenResponse>(HttpMethod.Post, serverUrl, "btcpayapp/refresh", payload, cancellation.GetValueOrDefault(), true);
             var res = HandleAccessTokenResponse(response, now);
             AccessRefreshed?.Invoke(this, res);
             return (res, null);
@@ -120,6 +151,12 @@ public class BTCPayAppClient(IHttpClientFactory clientFactory)
         AccessToken = accessToken;
         RefreshToken = refreshToken;
         AccessExpiry = expiry;
+    }
+
+
+    public async Task<AppInstanceInfo?> GetInstanceInfo(string serverUrl)
+    {
+        return await Get<AppInstanceInfo>(serverUrl, "btcpayapp/instance");
     }
 
     private static string WithTrailingSlash(string str) => str.EndsWith('/') ? str : str + "/";

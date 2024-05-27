@@ -1,5 +1,4 @@
-﻿@using BTCPayApp.CommonServer.Models
-@using BTCPayApp.Core
+﻿@using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Pages
@@ -53,7 +52,7 @@
         {
             try
             {
-                var instanceInfo = await AppClient.Get<AppInstanceInfo>(account.BaseUri, "instance");
+                var instanceInfo = await AppClient.GetInstanceInfo(account.BaseUri);
                 Dispatcher.Dispatch(new UIState.SetInstance(instanceInfo));
             }
             catch (Exception e)

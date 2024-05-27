@@ -1,11 +1,11 @@
-<div class="alert alert-@Type @(Dismissible ? "alert-dismissible" : null)mb-@(Margin)" role="alert">
+<div class="alert alert-@Type mb-@(Margin) @(Dismissible ? "alert-dismissible" : null)" role="alert">
+    @ChildContent
     @if (Dismissible)
     {
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close">
             <Icon Symbol="close" />
         </button>
     }
-    @ChildContent
 </div>
 
 @code {

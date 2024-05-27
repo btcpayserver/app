@@ -31,6 +31,12 @@
                 </a>
             </div>
         </header>
+        @if (!string.IsNullOrEmpty(_successMessage))
+        {
+            <section class="container px-4 py-3">
+                <Alert Type="success" Margin="0" Dismissible>@_successMessage</Alert>
+            </section>
+        }
         @if (SetupStateOnchain == SetupState.Completed)
         {
             <section class="container d-flex flex-column gap-4 py-3 wallet">
@@ -173,13 +179,23 @@
 </AuthorizeView>
 
 @code {
+    [SupplyParameterFromQuery]
+    public string? Success { get; set; }
+
     private AppUserInfo? _userInfo;
     private BTCPayAccount? _account;
     private SetupStatus? _setupStatus;
     private Money? _balance;
 
+    private string? _successMessage;
+
     protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrEmpty(Success))
+        {
+            _successMessage = Uri.UnescapeDataString(Success);
+        }
+
         _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();
 

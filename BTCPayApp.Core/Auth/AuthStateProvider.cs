@@ -60,14 +60,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
             var oldUserInfo = _userInfo;
             if (_account != null && _userInfo == null)
             {
-                try
-                {
-                    _userInfo = await _client.Get<AppUserInfo>(_account!.BaseUri, "user");
-                }
-                catch
-                {
-                    /* ignored */
-                }
+                await FetchUserInfo();
             }
 
             if (_userInfo != null)
@@ -99,8 +92,22 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         }
     }
 
-    public async Task<bool> CheckAuthenticated()
+    public async Task<AppUserInfo?> FetchUserInfo()
     {
+        try
+        {
+            _userInfo = await Get<AppUserInfo>("btcpayapp/user");
+        }
+        catch
+        {
+            /* ignored */
+        }
+        return _userInfo;
+    }
+
+    public async Task<bool> CheckAuthenticated(bool refreshUser = false)
+    {
+        if (refreshUser) await FetchUserInfo();
         await GetAuthenticationStateAsync();
         return _userInfo != null;
     }
@@ -117,6 +124,8 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
 
     public async Task SetCurrentStoreId(string storeId)
     {
+        var store = GetUserStore(storeId);
+        if (store == null) throw new ArgumentException($"Store with ID '{storeId}' does not exist or belong to the user.");
         _account!.CurrentStoreId = storeId;
         await _config.Set("account", _account);
     }
@@ -159,7 +168,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         try
         {
             var expiryOffset = DateTimeOffset.Now;
-            var response = await _client.Post<LoginRequest, AccessTokenResponse>(serverUrl, "login", payload, cancellation.GetValueOrDefault());
+            var response = await _client.Post<LoginRequest, AccessTokenResponse>(serverUrl, "btcpayapp/login", payload, cancellation.GetValueOrDefault());
             var account = new BTCPayAccount(serverUrl, email);
             account.SetAccess(response.AccessToken, response.RefreshToken, response.ExpiresIn, expiryOffset);
             await SetAccount(account);
@@ -180,7 +189,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         };
         try
         {
-            var response = await _client.Post<SignupRequest, SignupResult>(serverUrl, "register", payload, cancellation.GetValueOrDefault());
+            var response = await _client.Post<SignupRequest, SignupResult>(serverUrl, "btcpayapp/register", payload, cancellation.GetValueOrDefault());
             var account = new BTCPayAccount(serverUrl, email);
             await SetAccount(account);
             var message = "Account created.";
@@ -207,7 +216,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         try
         {
             var isForgotStep = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword);
-            var path = isForgotStep ? "forgot-password" : "reset-password";
+            var path = isForgotStep ? "btcpayapp/forgot-password" : "btcpayapp/reset-password";
             await _client.Post(serverUrl, path, payload, cancellation.GetValueOrDefault());
             return new FormResult(true, isForgotStep
                 ? "You should have received an email with a password reset code."
@@ -217,5 +226,40 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
         {
             return new FormResult(false, e.Message);
         }
+    }
+
+    public async Task<TResponse> Get<TResponse>(string path, CancellationToken cancellation = default)
+    {
+        return await _client.Get<TResponse>(_account!.BaseUri, path, cancellation);
+    }
+
+    public async Task Post<TRequest>(string path, TRequest payload, CancellationToken cancellation = default)
+    {
+        await _client.Post(_account!.BaseUri, path, payload, cancellation);
+    }
+
+    public async Task<TResponse> Post<TRequest, TResponse>(string path, TRequest payload, CancellationToken cancellation = default)
+    {
+        return await _client.Post<TRequest, TResponse>(_account!.BaseUri, path, payload, cancellation);
+    }
+
+    public async Task Put<TRequest>(string path, TRequest payload, CancellationToken cancellation = default)
+    {
+        await _client.Put(_account!.BaseUri, path, payload, cancellation);
+    }
+
+    public async Task<TResponse?> Put<TRequest, TResponse>(string path, TRequest payload, CancellationToken cancellation = default)
+    {
+        return await _client.Put<TRequest, TResponse>(_account!.BaseUri, path, payload, cancellation);
+    }
+
+    public async Task Delete<TRequest>(string path, TRequest payload, CancellationToken cancellation = default)
+    {
+        await _client.Delete(_account!.BaseUri, path, payload, cancellation);
+    }
+
+    public async Task<TResponse?> Delete<TRequest, TResponse>(string path, TRequest payload, CancellationToken cancellation = default)
+    {
+        return await _client.Delete<TRequest, TResponse>(_account!.BaseUri, path, payload, cancellation);
     }
 }

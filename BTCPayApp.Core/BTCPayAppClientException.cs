@@ -1,7 +1,9 @@
+using System.Net;
+
 namespace BTCPayApp.Core;
 
-public class BTCPayAppClientException(int statusCode, string message) : Exception
+public class BTCPayAppClientException(HttpStatusCode statusCode, string message) : Exception
 {
-    public int StatusCode { get; init; } = statusCode;
+    public HttpStatusCode StatusCode { get; init; } = statusCode;
     public override string Message => message;
 }

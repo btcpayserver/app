@@ -94,7 +94,7 @@
         try
         {
             InstanceInfo = !string.IsNullOrEmpty(Model.Uri)
-                ? await AppClient.Get<AppInstanceInfo>(Model.Uri, "instance")
+                ? await AppClient.GetInstanceInfo(Model.Uri)
                 : null;
 
             _errorMessage = InstanceInfo is { RegistrationEnabled: false }
