@@ -179,6 +179,29 @@ var paySecret = Convert.ToHexString(invoice.payment_secret());
         return outbound;
     }
 
+    public async Task Cancel(string id, bool inbound)
+    {
+        if (!inbound)
+        {
+            _ = Task.Run(() => _channelManager.abandon_payment(Convert.FromHexString(id)) );
+            
+            // return;
+        }
+        
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var payment = await context.LightningPayments.FirstOrDefaultAsync(lightningPayment =>
+            lightningPayment.Status == LightningPaymentStatus.Pending &&
+            
+            ((inbound && lightningPayment.Inbound && lightningPayment.PaymentHash == id) ||
+             (!inbound && !lightningPayment.Inbound && lightningPayment.PaymentId == id)));
+        if (payment is not null)
+        {
+            payment.Status = LightningPaymentStatus.Failed;
+            await context.SaveChangesAsync();
+        }
+        
+    }
+
 
     private async Task Payment(LightningPayment lightningPayment, CancellationToken cancellationToken = default)
     {

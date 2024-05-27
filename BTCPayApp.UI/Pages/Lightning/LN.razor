@@ -177,9 +177,11 @@ else
         <h3>Payments</h3>
         @if (_payments.Any())
         {
-            <table>
+            <div class="table-responsive">
+            <table class="table">
                 <thead>
                 <tr>
+                    <th></th>
                     <th>Payment Hash</th>
                     <th>Inbound</th>
                     <th>Id</th>
@@ -195,6 +197,13 @@ else
                 @foreach (var payment in _payments)
                 {
                     <tr>
+                        <td>
+                            @if (payment.Status == LightningPaymentStatus.Pending)
+                            {
+                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => Cancel(payment.PaymentId, payment.Inbound)">Cancel</button>
+                            }
+                            
+                        </td>
                         <td>@payment.PaymentHash</td>
                         <td>@payment.Inbound</td>
                         <td>@payment.PaymentId</td>
@@ -208,6 +217,7 @@ else
                 }
                 </tbody>
             </table>
+            </div>
         }
         else
         {
@@ -378,7 +388,7 @@ else
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            var result = await Node.OpenChannel(Money.Satoshis(channelOpenAmount.Value), new PubKey(selectedPeer) );
+            var result = await Node.OpenChannel(Money.Coins(channelOpenAmount.Value), new PubKey(selectedPeer) );
             if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
             {
                 channelResponse = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
@@ -450,6 +460,24 @@ else
         catch (Exception e)
         {
             paymentResponse = $"Error: {e.Message}";
+        }
+        finally
+        {
+            Loading = false;
+            await InvokeAsync(StateHasChanged);
+            _semaphore.Release();
+        }
+    } 
+    public async void Cancel(string paymentId, bool inb)
+    {
+        if(Loading)
+            return;
+        try
+        {
+            Loading = true;
+            await InvokeAsync(StateHasChanged);
+            await _semaphore.WaitAsync();
+            await Node.PaymentsManager.Cancel(paymentId, inb);
         }
         finally
         {
