@@ -266,6 +266,7 @@ var paySecret = Convert.ToHexString(invoice.payment_secret());
         var preimage = eventPaymentClaimed.purpose.GetPreimage(out var secret);
         await Payment(new LightningPayment()
         {
+            PaymentId = "default",
             PaymentHash = Convert.ToHexString(eventPaymentClaimed.payment_hash),
             Inbound = true,
             Secret = secret is null ? null : Convert.ToHexString(secret),

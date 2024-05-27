@@ -23,7 +23,7 @@ public class AppDbContext : DbContext
     {
         //TODO: add paymentId to the primary key and generate a random one if not provided
         modelBuilder.Entity<LightningPayment>()
-            .HasKey(w => new {w.PaymentHash, w.Inbound});
+            .HasKey(w => new {w.PaymentHash, w.Inbound, w.PaymentId});
         base.OnModelCreating(modelBuilder);
     }
 }
