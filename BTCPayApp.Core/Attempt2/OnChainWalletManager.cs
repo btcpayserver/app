@@ -4,6 +4,7 @@ using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Scripting;
@@ -20,6 +21,7 @@ public class OnChainWalletManager : BaseHostedService
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly ILogger<OnChainWalletManager> _logger;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly IMemoryCache _memoryCache;
     private OnChainWalletState _state = OnChainWalletState.Init;
 
     public WalletConfig? WalletConfig { get; private set; }
@@ -45,13 +47,15 @@ public class OnChainWalletManager : BaseHostedService
         BTCPayAppServerClient btcPayAppServerClient,
         BTCPayConnectionManager btcPayConnectionManager,
         ILogger<OnChainWalletManager> logger,
-        IDbContextFactory<AppDbContext> dbContextFactory)
+        IDbContextFactory<AppDbContext> dbContextFactory,
+        IMemoryCache memoryCache)
     {
         _configProvider = configProvider;
         _btcPayAppServerClient = btcPayAppServerClient;
         _btcPayConnectionManager = btcPayConnectionManager;
         _logger = logger;
         _dbContextFactory = dbContextFactory;
+        _memoryCache = memoryCache;
     }
 
     protected override async Task ExecuteStartAsync(CancellationToken cancellationToken)
@@ -86,6 +90,12 @@ public class OnChainWalletManager : BaseHostedService
         {
             await Track();
         }
+
+        if (e.New is OnChainWalletState.Loading)
+        {
+            DetermineState();
+        }
+        
     }
 
     public async Task Generate()
@@ -172,15 +182,24 @@ public class OnChainWalletManager : BaseHostedService
 
     private async Task ConnectionChanged(object? sender, HubConnectionState hubConnectionState)
     {
-        if (!IsHubConnected)
+        DetermineState();
+    }
+
+
+    private void DetermineState()
+    {
+        var result = OnChainWalletState.Loading;
+        if (IsHubConnected && IsConfigured)
         {
-            State = OnChainWalletState.WaitingForConnection;
-        }
-        else if (IsConfigured)
+            result = OnChainWalletState.Loaded;
+        }else if (!IsHubConnected)
         {
-            await Track();
-            State = OnChainWalletState.Loaded;
+            result = OnChainWalletState.WaitingForConnection;
+        }else if (!IsConfigured)
+        {
+            result = OnChainWalletState.NotConfigured;
         }
+        State = result;
     }
 
     private async Task Track()
@@ -440,8 +459,19 @@ public class OnChainWalletManager : BaseHostedService
 
     public async Task<FeeRate> GetFeeRate(int blockTarget)
     {
-        var result =  await _btcPayConnectionManager.HubProxy.GetFeeRate(blockTarget);
-        return new FeeRate(result);
+        try
+        {
+            return await _memoryCache.GetOrCreateAsync($"feerate_{blockTarget}", async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+                return new FeeRate(await _btcPayConnectionManager.HubProxy.GetFeeRate(blockTarget));
+            });
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error getting fee rate, using hardcoded 100");
+            return new FeeRate(100m);
+        }
     }
 }
 
