@@ -38,26 +38,33 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         
     }
 
-    private async Task LOlz(uint256[] txIds = null)
+    private async Task LOlz(uint256[]? txIds = null)
     {
+        Dictionary<uint256, (uint256 TransactionId, int Height, uint256? Block)> txs1;
         if (txIds is null)
         {
             
             var channels = await _node.GetChannels();
             txIds = channels.Select(zz => new uint256(zz.get_funding_txo().get_txid())).ToArray();
-        }
-        var txs1 = _confirms.SelectMany(confirm => confirm.get_relevant_txids().Select(zz =>
-            (TransactionId: new uint256(zz.get_a()),
-                Height: zz.get_b(),
-                Block: zz.get_c() is Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some some
-                    ? new uint256(some.some)
-                    : null))).ToDictionary(tuple => tuple.TransactionId, tuple => tuple);
+            txs1 = _confirms.SelectMany(confirm => confirm.get_relevant_txids().Select(zz =>
+                (TransactionId: new uint256(zz.get_a()),
+                    Height: zz.get_b(),
+                    Block: zz.get_c() is Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some some
+                        ? new uint256(some.some)
+                        : null))).ToDictionary(tuple => tuple.TransactionId, tuple => tuple);
 
-        foreach (var txid in txIds)
+            foreach (var txid in txIds)
+            {
+                txs1.TryAdd(txid, (txid, 0, null));
+
+            }
+        }
+        else
         {
-            txs1.TryAdd(txid, (txid, 0, null));
+            txs1 = txIds.ToDictionary(zz => zz, (uint256 TransactionId, int Height, uint256? Block) (uint256) => (uint256, 0, null));
 
         }
+       
         _logger.LogInformation($"Fetching {txs1.Count} transactions");
         var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(txs1.Select(zz => zz.Key.ToString()).ToArray());
         _logger.LogInformation($"Fetched {result.Txs.Count} transactions");
@@ -109,13 +116,12 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     {
         _disposables.Clear();
         var monitors = await _node.GetInitialChannelMonitors();
-        var txsToCheck = monitors.Select(zz => zz.get_funding_txo().get_a().Outpoint().Hash).ToArray();
         foreach (var channelMonitor in monitors)
         {
             _watch.watch_channel(channelMonitor.get_funding_txo().get_a(), channelMonitor);
         }
 
-        await LOlz(txsToCheck);
+        await LOlz();
         
         var bb = await  _connectionManager.HubProxy.GetBestBlock();
        var bbHeader = BlockHeader.Parse( bb.BlockHeader, _network).ToBytes();
@@ -142,29 +148,8 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     private async Task OnTransactionUpdate( TransactionDetectedRequest txUpdate , CancellationToken cancellationToken)
     {
         _logger.LogInformation($"Transaction update {txUpdate.TxId}");
-        var txResult = await  _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(new[] {txUpdate.TxId});
-        var tx = txResult.Txs[txUpdate.TxId];
 
-        var txHash = new uint256(txUpdate.TxId);
-        var txHashBytes = txHash.ToBytes();
-        
-        byte[]? headerBytes = null;
-        int? blockHeight = null;
-        if (tx.BlockHash is not null )
-        {
-            _logger.LogInformation($"Transaction {txUpdate.TxId} is confirmed");
-            var header = txResult.Blocks[tx.BlockHash];
-            blockHeight = txResult.BlockHeghts[tx.BlockHash];
-            headerBytes = BlockHeader.Parse(header, _network).ToBytes();
-        }
-
-        foreach (var confirm in _confirms)
-        {
-            if (blockHeight is null)
-                confirm.transaction_unconfirmed(txHashBytes);
-            else
-                confirm.transactions_confirmed(headerBytes, [TwoTuple_usizeTransactionZ.of(1, txHashBytes)],blockHeight.Value);
-        }
+        await LOlz([new uint256(txUpdate.TxId)]);
         _logger.LogInformation($"Transaction update {txUpdate.TxId} processed");
         
     }
@@ -178,6 +163,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         {
             confirm.best_block_updated(headerBytes, blockHeaderResponse.BlockHeight);
         }
+        await LOlz();
         _logger.LogInformation($"New block {e} processed");
     }
 
