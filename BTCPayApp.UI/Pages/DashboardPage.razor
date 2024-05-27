@@ -39,7 +39,7 @@
         }
         @if (SetupStateOnchain == SetupState.Completed)
         {
-            <section class="container d-flex flex-column gap-4 py-3 wallet">
+            <section class="container d-flex flex-column gap-4 py-3 px-4 wallet">
                 <div class="amount text-center">
                     @if (_balance == null)
                     {
@@ -51,7 +51,7 @@
                         <div class="fiat fw-semibold text-muted">$174,465.79</div>
                     }
                 </div>
-                <nav class="d-flex align-items-center gap-3 mx-auto">
+                <nav class="d-flex flex-wrap align-items-center gap-3 mx-auto">
                     <a class="btn btn-light rounded-pill" href="@Routes.WalletSend">
                         <Icon symbol="payment-send"/>
                         <span>Send</span>

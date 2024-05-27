@@ -10,6 +10,7 @@ h2 {
 
 .wallet a.btn {
   width: 10rem;
+  flex-grow: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
