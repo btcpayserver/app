@@ -118,16 +118,13 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         var buffer = new byte[bufSz];
         while (_tcpClient.Connected && !_cts.IsCancellationRequested)
         {
-            int read = 0;
-            try
+            int read = await _stream.ReadAsync(buffer,cancellationToken);
+            
+            if (read == 0)
             {
-                read = await _stream.ReadAtLeastAsync(buffer,1,true, cancellationToken);
-            }
-            catch (EndOfStreamException endOfStreamException)
-            {
-                _logger.LogWarning("End of stream exception: {Error}", endOfStreamException);
-                await Task.Delay(1000, cancellationToken);
-
+                _logger.LogWarning("Read 0 bytes of data from peer");
+                disconnect_socket();
+                return;
             }
            
             var data = buffer[..read];
