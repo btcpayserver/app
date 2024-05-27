@@ -156,24 +156,34 @@ var paySecret = Convert.ToHexString(invoice.payment_secret());
         };
         await context.LightningPayments.AddAsync(outbound);
         await context.SaveChangesAsync();
-        
-        var payParams =
-            PaymentParameters.from_node_id(invoice.payee_pub_key(), (int) invoice.min_final_cltv_expiry_delta());
-        // payParams.set_expiry_time(Option_u64Z.some(invoice.expiry_time()));
 
-        var lastHops = invoice.route_hints();
-        var payee = Payee.clear(invoice.payee_pub_key(), lastHops, invoice.features(),
-            (int) invoice.min_final_cltv_expiry_delta());
-        payParams.set_payee(payee);
-        var routeParams = RouteParameters.from_payment_params_and_value(payParams, amt);
-
-        var result = _channelManager.send_payment(invoice.payment_hash(),
-            RecipientOnionFields.secret_only(invoice.payment_secret()),
-            id, routeParams, Retry.attempts(1));
-
-        if (result is Result_NoneRetryableSendFailureZ.Result_NoneRetryableSendFailureZ_Err err)
+        try
         {
-            throw new Exception(err.err.ToString());
+            var pubkey = paymentRequest.GetPayeePubKey().ToBytes();
+            var payParams =
+                PaymentParameters.from_node_id(pubkey, paymentRequest.MinFinalCLTVExpiry);
+            payParams.set_expiry_time(Option_u64Z.some(paymentRequest.ExpiryDate.ToUnixTimeSeconds()));
+
+            var lastHops = invoice.route_hints();
+            var payee = Payee.clear(pubkey, lastHops, invoice.features(),paymentRequest.MinFinalCLTVExpiry);
+            payParams.set_payee(payee);
+            var routeParams = RouteParameters.from_payment_params_and_value(payParams, amt);
+
+            var result = _channelManager.send_payment(invoice.payment_hash(),
+                RecipientOnionFields.secret_only(invoice.payment_secret()),
+                id, routeParams, Retry.timeout(5));
+
+            if (result is Result_NoneRetryableSendFailureZ.Result_NoneRetryableSendFailureZ_Err err)
+            {
+                throw new Exception(err.err.ToString());
+            }
+        }
+        catch (Exception e)
+        {
+            
+            outbound.Status = LightningPaymentStatus.Failed;
+            await context.SaveChangesAsync();
+            throw;
         }
 
         return outbound;
