@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using BTCPayApp.CommonServer;
+using BTCPayApp.CommonServer.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayApp.Core.Data;

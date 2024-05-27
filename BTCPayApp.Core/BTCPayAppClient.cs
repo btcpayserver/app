@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using BTCPayApp.CommonServer;
+using BTCPayApp.CommonServer.Models;
 using AccessTokenResponse = BTCPayApp.Core.AspNetRip.AccessTokenResponse;
 using ProblemDetails = BTCPayApp.Core.AspNetRip.ProblemDetails;
 using RefreshRequest = BTCPayApp.Core.AspNetRip.RefreshRequest;

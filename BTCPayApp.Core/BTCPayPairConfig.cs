@@ -1,6 +1,4 @@
-﻿using BTCPayApp.CommonServer;
-
-namespace BTCPayApp.Core;
+﻿namespace BTCPayApp.Core;
 
 // public class BTCPayPairConfig
 // {

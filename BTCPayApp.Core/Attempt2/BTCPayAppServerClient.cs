@@ -8,7 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Crypto;
-using LightningPayment = BTCPayApp.CommonServer.LightningPayment;
+using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment;
 
 namespace BTCPayApp.Core.Attempt2;
 

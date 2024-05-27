@@ -1,4 +1,4 @@
-﻿using BTCPayApp.CommonServer;
+﻿using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;

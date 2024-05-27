@@ -1,7 +1,7 @@
 ﻿@attribute [Route(Routes.Register)]
 @attribute [AllowAnonymous]
 @layout SimpleLayout
-@using BTCPayApp.CommonServer
+@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @inject BTCPayAppClient AppClient
@@ -18,24 +18,24 @@
     }
 </SectionContent>
 
-<EditForm Model="@Model" OnValidSubmit="HandleValidSubmit" FormName="Register" method="post">
+<EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="Register" method="post">
     <DataAnnotationsValidator />
-    <div class="mb-3">
+    <div class="form-group">
         <label for="Uri" class="form-label">Server URL</label>
         <InputText @bind-Value="Model.Uri" @bind-Value:after="ResolveInstanceInfo" type="url" id="Uri" class="form-control"/>
         <ValidationMessage For="@(() => Model.Uri)" />
     </div>
-    <div class="mb-3">
+    <div class="form-group">
         <label for="Email" class="form-label">Email</label>
         <InputText @bind-Value="Model.Email" type="email" id="Email" class="form-control" disabled="@GetRegistrationEnabled()"/>
         <ValidationMessage For="@(() => Model.Email)" />
     </div>
-    <div class="mb-3">
+    <div class="form-group">
         <label for="Password" class="form-label">Password</label>
         <InputText @bind-Value="Model.Password" type="password" id="Password" class="form-control" disabled="@GetRegistrationEnabled()"/>
         <ValidationMessage For="@(() => Model.Password)" />
     </div>
-    <div class="mb-3">
+    <div class="form-group">
         <label for="ConfirmPassword" class="form-label">Confirm Password</label>
         <InputText @bind-Value="Model.ConfirmPassword" type="password" id="ConfirmPassword" class="form-control" disabled="@GetRegistrationEnabled()"/>
         <ValidationMessage For="@(() => Model.ConfirmPassword)" />

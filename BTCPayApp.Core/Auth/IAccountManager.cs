@@ -1,4 +1,4 @@
-using BTCPayApp.CommonServer;
+using BTCPayApp.CommonServer.Models;
 
 namespace BTCPayApp.Core.Auth;
 

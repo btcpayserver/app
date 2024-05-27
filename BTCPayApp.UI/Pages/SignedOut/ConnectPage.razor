@@ -1,4 +1,4 @@
-﻿@using BTCPayApp.CommonServer
+﻿@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.UI.Features
 @using Microsoft.Extensions.Logging
@@ -27,7 +27,7 @@
 
 <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="ConnectServer" method="post">
     <DataAnnotationsValidator />
-    <div class="mb-3">
+    <div class="form-group">
         <label for="Uri" class="form-label visually-hidden">Server URL or invite link</label>
         <div class="d-flex align-items-center justify-content-between gap-3">
             <InputText @bind-Value="Model.Uri" @bind-Value:after="ResolveInstanceInfo" id="Uri" class="form-control flex-grow-1" placeholder="Enter server URL or invite link"/>

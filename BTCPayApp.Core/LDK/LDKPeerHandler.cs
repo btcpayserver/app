@@ -2,7 +2,6 @@
 using System.Collections.Specialized;
 using System.Net;
 using System.Net.Sockets;
-using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
@@ -13,7 +12,7 @@ using NodeInfo = BTCPayServer.Lightning.NodeInfo;
 
 namespace BTCPayApp.Core.LDK;
 
-//TODO: If we have channels open, we should be storing the last endpoint that we connected to the counterpoarty uso that we attempt to keep a connection established. 
+//TODO: If we have channels open, we should be storing the last endpoint that we connected to the counterpoarty uso that we attempt to keep a connection established.
 public class LDKPeerHandler : IScopedHostedService
 {
     private readonly ILogger<LDKPeerHandler> _logger;
@@ -134,7 +133,7 @@ public class LDKPeerHandler : IScopedHostedService
         _node.ConfigUpdated -= ConfigUpdated;
 
         _btcPayAppServerClient.OnServerNodeInfo -= BtcPayAppServerClientOnOnServerNodeInfo;
-        
+
         _descriptors.CollectionChanged -= DescriptorsOnCollectionChanged;
     }
 
@@ -239,13 +238,13 @@ public class LDKPeerHandler : IScopedHostedService
 
         return await tcs.Task;
     }
-    
-    
+
+
     public async Task DisconnectAsync(PubKey id)
     {
        _logger.LogInformation($"Disconnecting from {id}");
        _peerManager.disconnect_by_node_id(id.ToBytes());
        _logger.LogInformation($"Disconnected from {id}");
-        
+
     }
 }

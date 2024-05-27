@@ -1,5 +1,4 @@
-﻿using System.Net.Http.Headers;
-using BTCPayApp.CommonServer;
+﻿using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Helpers;
 using Microsoft.AspNetCore.Components.Authorization;

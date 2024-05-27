@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using NBitcoin;
 using org.ldk.structs;
 // using BTCPayServer.Lightning;
-using LightningPayment = BTCPayApp.CommonServer.LightningPayment;
+using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment;
 
 namespace BTCPayApp.Core.LDK;
 

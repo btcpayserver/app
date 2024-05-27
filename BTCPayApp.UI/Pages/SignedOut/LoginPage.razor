@@ -1,7 +1,7 @@
 ﻿@attribute [Route(Routes.Login)]
 @attribute [AllowAnonymous]
 @layout SimpleLayout
-@using BTCPayApp.CommonServer
+@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
@@ -25,19 +25,19 @@
     }
 </SectionContent>
 
-<EditForm Model="@Model" OnValidSubmit="HandleValidSubmit" FormName="Login" method="post">
+<EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="Login" method="post">
     <DataAnnotationsValidator />
-    <div class="mb-3" hidden="@Model.RequireTwoFactor">
+    <div class="form-group" hidden="@Model.RequireTwoFactor">
         <label for="Uri" class="form-label">Server URL</label>
         <InputText @bind-Value="Model.Uri" @bind-Value:after="ResolveInstanceInfo" type="url" id="Uri" class="form-control"/>
         <ValidationMessage For="@(() => Model.Uri)" />
     </div>
-    <div class="mb-3" hidden="@Model.RequireTwoFactor">
+    <div class="form-group" hidden="@Model.RequireTwoFactor">
         <label for="Email" class="form-label">Email</label>
         <InputText @bind-Value="Model.Email" type="email" id="Email" class="form-control"/>
         <ValidationMessage For="@(() => Model.Email)" />
     </div>
-    <div class="mb-3" hidden="@Model.RequireTwoFactor">
+    <div class="form-group" hidden="@Model.RequireTwoFactor">
         <div class="d-flex justify-content-between">
             <label for="Password" class="form-label">Password</label>
             @if (InstanceInfo != null)
@@ -50,7 +50,7 @@
     </div>
     @if (Model.RequireTwoFactor)
     {
-        <div class="mb-3">
+        <div class="form-group">
             <label for="TwoFactorCode" class="form-label">Two Factor Code</label>
             <InputText @bind-Value="Model.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin"/>
             <ValidationMessage For="@(() => Model.TwoFactorCode)" />

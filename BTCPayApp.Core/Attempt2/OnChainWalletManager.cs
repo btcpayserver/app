@@ -8,8 +8,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Scripting;
-using org.ldk.structs;
-using org.ldk.util;
 using OutPoint = NBitcoin.OutPoint;
 using TxOut = NBitcoin.TxOut;
 

@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using BTCPayApp.CommonServer;
+using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.AspNetRip;
 using BTCPayApp.Core.Contracts;
 using BTCPayServer.Abstractions.Constants;
