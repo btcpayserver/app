@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.Helpers;
 using Microsoft.Extensions.Logging;
 using org.ldk.enums;
 using org.ldk.structs;
@@ -8,18 +9,64 @@ using Script = NBitcoin.Script;
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKPersistInterface : PersistInterface
+public class LDKPersistInterface : PersistInterface//, IScopedHostedService
 {
     private readonly LDKNode _node;
     private readonly ILogger<LDKPersistInterface> _logger;
+    private readonly ChainMonitor _chainMonitor;
 
-    public LDKPersistInterface(LDKNode node, ILogger<LDKPersistInterface> logger)
+    public LDKPersistInterface(LDKNode node, ILogger<LDKPersistInterface> logger, ChainMonitor chainMonitor )
     {
         _node = node;
         _logger = logger;
+        _chainMonitor = chainMonitor;
     }
 
     private ConcurrentDictionary<long, Task> updateTasks = new();
+    
+    // private async Task ProcessPendingUpdates()
+    // {
+    //
+    //
+    //     foreach (var updateTask in updateTasks)
+    //     {
+    //         if (updateTask.Value.IsCompleted)
+    //         {
+    //             _chainMonitor.channel_monitor_updated()
+    //             updateTasks.TryRemove(updateTask.Key, out _);
+    //         }
+    //     }
+    //     
+    //     
+    //     
+    //     //TODO: carefully look at the upodate tasks and what chainmonitor tells us, and try to persist the monitor to resolve any jams
+    //      var pending = _chainMonitor.list_pending_monitor_updates();
+    //
+    //     foreach (var monitorUpdateIdZze in pending)
+    //     {
+    //         var outpoint = monitorUpdateIdZze.get_a();
+    //         var update = monitorUpdateIdZze.get_b();
+    //         foreach (var updateId in update)
+    //         {
+    //             var data = _chainMonitor.get_monitor(outpoint);
+    //             if (data is Result_LockedChannelMonitorNoneZ.Result_LockedChannelMonitorNoneZ_Err err)
+    //             {
+    //                 _logger.LogError($"Error getting monitor for outpoint {outpoint.Outpoint()}");
+    //                 continue;
+    //             }else if(data is Result_LockedChannelMonitorNoneZ.Result_LockedChannelMonitorNoneZ_OK ok)
+    //             {
+    //                 ok.
+    //             }
+    //             var status = update_persisted_channel(outpoint, data, monitorUpdateIdZze.get_c());
+    //             if (status == ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_Completed)
+    //             {
+    //                 _chainMonitor.channel_monitor_updated(outpoint, updateId);
+    //             }
+    //         }
+    //         
+    //     }
+    // }
+    
     
     public ChannelMonitorUpdateStatus persist_new_channel(OutPoint channel_funding_outpoint, ChannelMonitor data,
         MonitorUpdateId update_id)
@@ -33,7 +80,7 @@ public class LDKPersistInterface : PersistInterface
             
             var updateId = update_id.hash();
 
-            var taskResult = updateTasks.GetOrAdd(updateId, l =>
+            var taskResult = updateTasks.GetOrAdd(updateId, async l =>
             {
 
                 var outs = data.get_outputs_to_watch()
@@ -42,7 +89,9 @@ public class LDKPersistInterface : PersistInterface
                 var id = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a());
                 var trackTask = _node.TrackScripts(outs);
                 var updateTask = _node.UpdateChannel(id, data.write());
-                return Task.WhenAll(trackTask, updateTask);
+                await  Task.WhenAll(trackTask, updateTask);
+                
+                _chainMonitor.channel_monitor_updated(channel_funding_outpoint, update_id);
             });
 
             if (taskResult.IsFaulted)
@@ -78,9 +127,13 @@ public class LDKPersistInterface : PersistInterface
         
         var updateId = update_id.hash();
 
-        var taskResult = updateTasks.GetOrAdd(updateId, l => _node.UpdateChannel(
-            Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()),
-            data.write()));
+        var taskResult = updateTasks.GetOrAdd(updateId, async l =>
+        {
+            await _node.UpdateChannel(
+                Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()),
+                data.write());
+            _chainMonitor.channel_monitor_updated(channel_funding_outpoint, update_id);
+        });
 
         if (taskResult.IsFaulted)
         {
@@ -104,4 +157,14 @@ public class LDKPersistInterface : PersistInterface
     {
         //TODO: add archive column to channels table
     }
+    //
+    // public async Task StartAsync(CancellationToken cancellationToken)
+    // {
+    //     throw new NotImplementedException();
+    // }
+    //
+    // public async Task StopAsync(CancellationToken cancellationToken)
+    // {
+    //     throw new NotImplementedException();
+    // }
 }
