@@ -5,11 +5,12 @@ using BTCPayApp.Core.Contracts;
 using BTCPayServer.Abstractions.Constants;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
 namespace BTCPayApp.Core.Auth;
 
-public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
+public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IHostedService
 {
     private bool _isInitialized;
     private BTCPayAccount? _account;
@@ -261,5 +262,15 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager
     public async Task<TResponse?> Delete<TRequest, TResponse>(string path, TRequest payload, CancellationToken cancellation = default)
     {
         return await _client.Delete<TRequest, TResponse>(_account!.BaseUri, path, payload, cancellation);
+    }
+
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        _ = GetAuthenticationStateAsync();
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
     }
 }

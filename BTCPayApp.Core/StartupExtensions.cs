@@ -32,7 +32,9 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<LightningNodeManager>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<OnChainWalletManager>());
         serviceCollection.AddSingleton<BTCPayAppClient>();
-        serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>();
+        serviceCollection.AddSingleton<AuthStateProvider>();
+        serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>( provider => provider.GetRequiredService<AuthStateProvider>());
+        serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<AuthStateProvider>());
         serviceCollection.AddSingleton(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddSingleton<IConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddLDK();
@@ -40,6 +42,7 @@ public static class StartupExtensions
         return serviceCollection;
     }
 }
+
 
 public class AppDatabaseMigrator: IHostedService
 {
