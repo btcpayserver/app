@@ -38,7 +38,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         
     }
 
-    private async Task LOlz(uint256[]? txIds = null)
+    private async Task PollForTransactionUpdates(uint256[]? txIds = null)
     {
         Dictionary<uint256, (uint256 TransactionId, int Height, uint256? Block)> txs1;
         if (txIds is null)
@@ -121,7 +121,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
             _watch.watch_channel(channelMonitor.get_funding_txo().get_a(), channelMonitor);
         }
 
-        await LOlz();
+        await PollForTransactionUpdates();
         
         var bb = await  _connectionManager.HubProxy.GetBestBlock();
        var bbHeader = BlockHeader.Parse( bb.BlockHeader, _network).ToBytes();
@@ -149,7 +149,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     {
         _logger.LogInformation($"Transaction update {txUpdate.TxId}");
 
-        await LOlz([new uint256(txUpdate.TxId)]);
+        await PollForTransactionUpdates([new uint256(txUpdate.TxId)]);
         _logger.LogInformation($"Transaction update {txUpdate.TxId} processed");
         
     }
@@ -163,7 +163,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         {
             confirm.best_block_updated(headerBytes, blockHeaderResponse.BlockHeight);
         }
-        await LOlz();
+        await PollForTransactionUpdates();
         _logger.LogInformation($"New block {e} processed");
     }
 
