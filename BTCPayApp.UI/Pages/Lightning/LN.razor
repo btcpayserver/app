@@ -200,7 +200,7 @@ else
                         <td>
                             @if (payment.Status == LightningPaymentStatus.Pending)
                             {
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => Cancel(payment.PaymentId, payment.Inbound)">Cancel</button>
+                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => Cancel( payment.Inbound? payment.PaymentHash:payment.PaymentId, payment.Inbound)">Cancel</button>
                             }
                             
                         </td>
