@@ -1,4 +1,6 @@
-﻿using BTCPayApp.Core.Helpers;
+﻿using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.Helpers;
+using Microsoft.Extensions.DependencyInjection;
 using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;
@@ -11,14 +13,14 @@ using Microsoft.Extensions.Logging;
 
 public class LDKPendingHTLCsForwardableEventHandler : IScopedHostedService, ILDKEventHandler<Event.Event_PendingHTLCsForwardable>
 {
-    private readonly ChannelManager _channelManager;
     private readonly ConcurrentQueue<DateTimeOffset> _scheduledTimes;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<LDKPendingHTLCsForwardableEventHandler> _logger;
 
-    public LDKPendingHTLCsForwardableEventHandler(ChannelManager channelManager, ILogger<LDKPendingHTLCsForwardableEventHandler> logger)
+    public LDKPendingHTLCsForwardableEventHandler(IServiceProvider serviceProvider, ILogger<LDKPendingHTLCsForwardableEventHandler> logger)
     {
-        _channelManager = channelManager;
         _scheduledTimes = new ConcurrentQueue<DateTimeOffset>();
+        _serviceProvider = serviceProvider;
         _logger = logger;
     }
 
@@ -45,7 +47,7 @@ public class LDKPendingHTLCsForwardableEventHandler : IScopedHostedService, ILDK
 
                 _logger.LogDebug("Processing pending HTLC forwards");
                
-                Task.Run(() => _channelManager.process_pending_htlc_forwards());
+                _ = Task.Run(() => _serviceProvider.GetRequiredService<ChannelManager>().process_pending_htlc_forwards(), stoppingToken);
             }
 
             await Task.Delay(1000, stoppingToken); // Polling delay
