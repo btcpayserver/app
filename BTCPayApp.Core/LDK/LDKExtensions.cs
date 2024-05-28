@@ -217,6 +217,7 @@ public static class LDKExtensions
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKPeerHandler>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKAnnouncementBroadcaster>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<BTCPayPaymentsNotifier>());
+        services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKPendingHTLCsForwardableEventHandler>());
 
         services.AddScoped<OutputSweeper>(provider =>
         {
