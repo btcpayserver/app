@@ -266,7 +266,17 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _ = GetAuthenticationStateAsync();
+        _ = PingOccasionally();
+    }
+    
+    private async Task PingOccasionally()
+    {
+        while (true)
+        {
+            
+            await GetAuthenticationStateAsync();
+            await Task.Delay(TimeSpan.FromSeconds(5));
+        }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
