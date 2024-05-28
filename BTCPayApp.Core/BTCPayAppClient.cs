@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using BTCPayApp.CommonServer.Models;
+using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
 using Newtonsoft.Json;
 using AccessTokenResponse = BTCPayApp.Core.AspNetRip.AccessTokenResponse;
@@ -17,6 +18,18 @@ public class BTCPayAppClient(IHttpClientFactory clientFactory)
     private DateTimeOffset? AccessExpiry { get; set; } // TODO: Incorporate in refresh check
     private string? AccessToken { get; set; }
     private string? RefreshToken { get; set; }
+    public BTCPayServerClient? GreenfieldClient(Uri uri)
+    {
+            if (AccessToken is null)
+            {
+                return null;
+            }
+            var httpClient = clientFactory.CreateClient();
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
+            return new BTCPayServerClient(uri,httpClient);
+
+        
+    }
 
     public event EventHandler<AccessTokenResult>? AccessRefreshed;
 

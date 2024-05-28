@@ -3,13 +3,20 @@
 @using BTCPayApp.UI.Features
 @using Microsoft.AspNetCore.SignalR.Client
 @using BTCPayApp.Core.Attempt2
+@using BTCPayApp.Core.Auth
 @using Microsoft.Extensions.Logging
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.Core
+@using BTCPayApp.Core.Helpers
+@using BTCPayServer.Client.Models
+@using Newtonsoft.Json.Linq
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject OnChainWalletManager OnChainWalletManager
 @inject IState<RootState> State
 @inject ILogger<IndexPage> Logger
 
+@inject BTCPayAppClient BTCPayAppClient
+@inject IAccountManager AuthStateProvider
 <PageTitle>Wallet Setup</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
@@ -53,6 +60,7 @@
                         <TruncateCenter Text="@d.Value.Identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
                         <label>Identifier</label>
                     </div>
+                    
                 }
                 @if (!string.IsNullOrEmpty(d.Value.Descriptor))
                 {
@@ -60,6 +68,10 @@
                         <TruncateCenter Text="@d.Value.Descriptor" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
                         <label>Descriptor</label>
                     </div>
+                }
+                @if (d.Value.Descriptor is not null && d.Value.Identifier is not null && (StorePaymentMethodIdentifier is null || !d.Value.Identifier.Contains(StorePaymentMethodIdentifier)))
+                {
+                    <button class="btn btn-primary" @onclick="() => SetStorePaymentMethod(d.Key)">Set as Store Payment Method</button>
                 }
             </article>
         }
@@ -71,6 +83,66 @@
         !State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) &&
         State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
         State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
+
+    private string? StorePaymentMethodIdentifier = null;
+
+    private async Task SetStorePaymentMethod(string key)
+    {
+        
+        try
+        {
+            if (!OnChainWalletManager.WalletConfig.Derivations.TryGetValue(key, out var derivation) || derivation.Descriptor is null)
+            {
+                return;
+                
+            }
+
+            var xpub = derivation.Descriptor.ExtractFromDescriptor(OnChainWalletManager.Network);
+            var identifierSUffix = derivation.Identifier.Split(':').Last();
+            var acc = AuthStateProvider.GetAccount();
+            if (acc?.CurrentStoreId is null)
+                return;
+            var gfClient = BTCPayAppClient.GreenfieldClient(new Uri(acc.BaseUri));
+            var pm = await  gfClient.UpdateStorePaymentMethod(acc.CurrentStoreId, "BTC-CHAIN", new UpdatePaymentMethodRequest()
+            {
+                Enabled = true,
+                Config = derivation.Descriptor
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error setting store payment method");
+        }
+       
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetStorePaymentMethod();
+    }
+    
+    private async Task GetStorePaymentMethod()
+    {
+        try
+        {
+            if(CanConfigureWallet)
+                return;
+            var acc = AuthStateProvider.GetAccount();
+            if (acc?.CurrentStoreId is null)
+                return;
+            var gfClient = BTCPayAppClient.GreenfieldClient(new Uri(acc.BaseUri));
+            var pm = await  gfClient.GetStorePaymentMethod(acc.CurrentStoreId, "BTC-CHAIN", true);
+            if (pm?.Config is JObject configObj && configObj.TryGetValue("accountDerivation", out var derivationSchemeToken) && derivationSchemeToken.Value<string>() is {} derivationScheme)
+            {
+                StorePaymentMethodIdentifier = derivationScheme;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error getting store payment method");
+        }
+    }
+
 
     private async Task GenerateWallet()
     {

@@ -6,11 +6,17 @@
 @using BTCPayApp.Core.Data
 @using Microsoft.Extensions.Logging
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.Core
+@using BTCPayApp.Core.Auth
+@using BTCPayServer.Client.Models
+@using Newtonsoft.Json.Linq
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject OnChainWalletManager OnChainWalletManager
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
 @inject ILogger<IndexPage> Logger
+@inject BTCPayAppClient BTCPayAppClient
+@inject IAccountManager AuthStateProvider
 
 <PageTitle>Lightning Node</PageTitle>
 
@@ -42,13 +48,16 @@
                 <label>Derivation Path</label>
             </div>
         }
-        var groupId = OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier;
-        @if (!string.IsNullOrEmpty(groupId))
+        @if (!string.IsNullOrEmpty(ConnectionString))
         {
             <div class="form-floating">
-                <TruncateCenter Text="@($"type=app;group={groupId}")" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
                 <label>Connection String</label>
             </div>
+            @if (ConfiguredConnectionString != ConnectionString )
+            {
+                <button class="btn btn-primary" @onclick="SetStoreLNWallet">Set as Store Payment Method</button>
+            }
         }
         <div class="d-grid d-sm-flex flex-wrap gap-3 buttons my-4">
             @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
@@ -73,7 +82,9 @@
 
     private LightningConfig? _config;
 
-
+    private string? ConfiguredConnectionString = null;
+private string ConnectionString => $"type=app;group={OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier}";
+    
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -81,6 +92,65 @@
         if (LightningNodeManager?.Node is not null)
         {
             _config = await LightningNodeManager.Node.GetConfig();
+        }
+        var acc = AuthStateProvider.GetAccount();
+        if (acc?.CurrentStoreId != null)
+        {
+            
+            var gfClient = BTCPayAppClient.GreenfieldClient(new Uri(acc.BaseUri));
+
+            try
+            {
+                var pm = await  gfClient.GetStorePaymentMethod(acc.CurrentStoreId, "BTC-LN", true);
+                if(
+               
+                    pm?.Config is JObject configObj && 
+                    configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) && 
+                    configuredConnectionStringToken.Value<string>() is {} configuredConnectionString)
+                {
+                    ConfiguredConnectionString = configuredConnectionString;
+                }
+                else
+                {
+                    ConfiguredConnectionString = null;
+                }
+            }
+            catch (Exception e)
+            {
+                ConfiguredConnectionString = null;
+            }
+          
+
+        }
+        
+       
+    }
+
+    private async Task SetStoreLNWallet()
+    {
+        
+        var acc = AuthStateProvider.GetAccount();
+        if (acc?.CurrentStoreId != null)
+        {
+            
+            var gfClient = BTCPayAppClient.GreenfieldClient(new Uri(acc.BaseUri));
+            var pm = await  gfClient.UpdateStorePaymentMethod(acc.CurrentStoreId, "BTC-LN", new UpdatePaymentMethodRequest()
+            {
+                Enabled = true,
+                Config = new JObject
+                {
+                    ["connectionString"] = ConnectionString
+                
+            }
+            });
+            if(
+               
+                pm?.Config is JObject configObj && 
+                configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) && 
+                configuredConnectionStringToken.Value<string>() is {} configuredConnectionString)
+            {
+                ConfiguredConnectionString = configuredConnectionString;
+            }
         }
     }
 
