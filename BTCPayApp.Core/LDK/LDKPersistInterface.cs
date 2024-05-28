@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Helpers;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using org.ldk.enums;
 using org.ldk.structs;
@@ -13,13 +14,16 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
 {
     private readonly LDKNode _node;
     private readonly ILogger<LDKPersistInterface> _logger;
-    private readonly ChainMonitor _chainMonitor;
 
-    public LDKPersistInterface(LDKNode node, ILogger<LDKPersistInterface> logger, ChainMonitor chainMonitor )
+    private readonly IServiceProvider _serviceProvider;
+    // private readonly ChainMonitor _chainMonitor;
+
+    public LDKPersistInterface(LDKNode node, ILogger<LDKPersistInterface> logger, IServiceProvider serviceProvider  )
     {
         _node = node;
         _logger = logger;
-        _chainMonitor = chainMonitor;
+        _serviceProvider = serviceProvider;
+        // _chainMonitor = chainMonitor;
     }
 
     private ConcurrentDictionary<long, Task> updateTasks = new();
@@ -90,8 +94,8 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
                 var trackTask = _node.TrackScripts(outs);
                 var updateTask = _node.UpdateChannel(id, data.write());
                 await  Task.WhenAll(trackTask, updateTask);
-                
-                _chainMonitor.channel_monitor_updated(channel_funding_outpoint, update_id);
+                _serviceProvider.GetRequiredService<ChainMonitor>().channel_monitor_updated(channel_funding_outpoint, update_id);
+                // _chainMonitor.channel_monitor_updated(channel_funding_outpoint, update_id);
             });
 
             if (taskResult.IsFaulted)
@@ -132,7 +136,7 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
             await _node.UpdateChannel(
                 Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()),
                 data.write());
-            _chainMonitor.channel_monitor_updated(channel_funding_outpoint, update_id);
+            _serviceProvider.GetRequiredService<ChainMonitor>().channel_monitor_updated(channel_funding_outpoint, update_id);
         });
 
         if (taskResult.IsFaulted)
