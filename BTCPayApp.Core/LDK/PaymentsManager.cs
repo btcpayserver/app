@@ -50,8 +50,7 @@ public class PaymentsManager :
     public async Task<LightningPayment> RequestPayment(LightMoney amount, TimeSpan expiry, uint256 descriptionHash)
     {
         var amt = amount == LightMoney.Zero ? Option_u64Z.none() : Option_u64Z.some(amount.MilliSatoshi);
-        var preimage = RandomNumberGenerator.GetBytes(32);
-        var paymentHash = SHA256.HashData(preimage);
+        
         var epoch = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         // var result =
         //     org.ldk.util.UtilMethods.create_invoice_from_channelmanager_and_duration_since_epoch_with_payment_hash(
@@ -67,7 +66,6 @@ public class PaymentsManager :
                 _channelManager, _nodeSigner, _logger,
                 _network.GetLdkCurrency(), amt, descHashBytes, epoch, (int) Math.Ceiling(expiry.TotalSeconds),
                 Option_u16Z.none());
-
         if (result is Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_Err err)
         {
             throw new Exception(err.err.to_str());
@@ -75,16 +73,26 @@ public class PaymentsManager :
 
         var invoice = ((Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_OK) result)
             .res;
-
+        var preimageResult = _channelManager.get_payment_preimage(invoice.payment_hash(), invoice.payment_secret());
+        byte[] preimage = null;
+        if (preimageResult is
+            Result_ThirtyTwoBytesAPIErrorZ.Result_ThirtyTwoBytesAPIErrorZ_Err errx)
+        {
+            
+            throw new Exception(errx.err.GetError());
+        }else if (preimageResult is Result_ThirtyTwoBytesAPIErrorZ.Result_ThirtyTwoBytesAPIErrorZ_OK ok)
+        {
+            preimage = ok.res;
+        }
         var bolt11 = invoice.to_str();
         var lp = new LightningPayment()
         {
             Inbound = true,
             PaymentId = "default",
             Value = amount.MilliSatoshi,
-            PaymentHash = Convert.ToHexString(paymentHash),
+            PaymentHash = Convert.ToHexString(invoice.payment_hash()),
             Secret = Convert.ToHexString(invoice.payment_secret()),
-            Preimage = Convert.ToHexString(preimage),
+            Preimage = Convert.ToHexString(preimage!),
             Status = LightningPaymentStatus.Pending,
             Timestamp = DateTimeOffset.FromUnixTimeSeconds(epoch),
             PaymentRequests = [bolt11]
