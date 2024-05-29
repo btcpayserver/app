@@ -1,0 +1,10 @@
+.spinner-border {
+  --spinner-size: 1rem;
+  --btcpay-spinner-width: var(--spinner-size);
+  --btcpay-spinner-height: var(--spinner-size);
+  --btcpay-spinner-border-width: .15rem;
+}
+
+.spinner-border.spinner-border-lg {
+  --spinner-size: 5rem;
+}

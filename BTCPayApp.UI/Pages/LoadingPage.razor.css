@@ -1,0 +1,9 @@
+.container {
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--btcpay-space-m);
+}

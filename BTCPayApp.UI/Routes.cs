@@ -10,6 +10,7 @@ public static class Routes
     public const string Register = "/register";
     public const string ForgotPassword = "/forgot-password";
     public const string Error = "/error";
+    public const string Loading = "/loading";
     public const string NotFound = "/not-found";
 
     // authorized
