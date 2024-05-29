@@ -30,8 +30,9 @@ public static class Routes
     public const string PointOfSale = "/pos";
     public const string Logout = "/logout";
     public const string Store = "/store/{StoreId}";
-    public const string SelectStore = "/store/select";
     public const string CreateStore = "/store/create";
+    public const string SelectStore = "/settings/select-store";
+    public const string User = "/settings/user";
 
     public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);
     public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);

@@ -1,0 +1,74 @@
+﻿@attribute [Route(Routes.User)]
+@using BTCPayApp.CommonServer.Models
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Components.Layout
+@inject IAccountManager AccountManager
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>Settings</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back="@Routes.Settings">
+        <h1>User</h1>
+    </Titlebar>
+</SectionContent>
+@if (_userInfo != null)
+{
+    <section class="container">
+        <p>
+            ID: @_userInfo.UserId<br/>
+            Email: @_userInfo.Email<br/>
+            Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
+        </p>
+        @if (_userInfo.Stores?.Any() is true)
+        {
+            <ul>
+                @foreach (var store in _userInfo.Stores)
+                {
+                    <li>
+                        <div>
+                            <strong>
+                                <a href="@Routes.StorePath(store.Id)">@store.Name</a>
+                            </strong>
+                            <span class="badge bg-light">@store.RoleId</span>
+                            @if (store.Archived)
+                            {
+                                <span class="badge bg-info">archived</span>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(store.PosAppId))
+                        {
+                            <div>POS App ID: @store.PosAppId</div>
+                        }
+                        @if (store.Permissions?.Any() is true)
+                        {
+                            <ul>
+                                @foreach (var permission in store.Permissions)
+                                {
+                                    <li>@permission</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p class="text-secondary">No permissions</p>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="text-secondary">No stores</p>
+        }
+    </section>
+}
+
+@code {
+    private AppUserInfo? _userInfo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userInfo = AccountManager.GetUserInfo();
+    }
+}

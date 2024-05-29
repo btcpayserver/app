@@ -50,52 +50,14 @@
                         <Icon symbol="caret-right"/>
                     </NavLink>
                 </li>
+                <li class="list-group-item">
+                    <NavLink class="nav-link" href="@Routes.User">
+                        <span>User Details</span>
+                        <Icon symbol="caret-right"/>
+                    </NavLink>
+                </li>
             </ul>
         </div>
-    </section>
-    <section class="container">
-        <p>
-            ID: @_userInfo.UserId<br/>
-            Email: @_userInfo.Email<br/>
-            Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
-        </p>
-        @if (_userInfo.Stores?.Any() is true)
-        {
-            <ul>
-                @foreach (var store in _userInfo.Stores)
-                {
-                    <li>
-                        <div>
-                            <strong>
-                                <a href="@Routes.StorePath(store.Id)">@store.Name</a>
-                            </strong>
-                            <span class="badge bg-light">@store.RoleId</span>
-                            @if (store.Archived)
-                            {
-                                <span class="badge bg-info">archived</span>
-                            }
-                        </div>
-                        @if (store.Permissions?.Any() is true)
-                        {
-                            <ul>
-                                @foreach (var permission in store.Permissions)
-                                {
-                                    <li>@permission</li>
-                                }
-                            </ul>
-                        }
-                        else
-                        {
-                            <p class="text-secondary">No permissions</p>
-                        }
-                    </li>
-                }
-            </ul>
-        }
-        else
-        {
-            <p class="text-secondary">No stores</p>
-        }
     </section>
 }
 
