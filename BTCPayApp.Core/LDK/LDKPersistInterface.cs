@@ -28,55 +28,9 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
 
     private ConcurrentDictionary<long, Task> updateTasks = new();
     
-    // private async Task ProcessPendingUpdates()
-    // {
-    //
-    //
-    //     foreach (var updateTask in updateTasks)
-    //     {
-    //         if (updateTask.Value.IsCompleted)
-    //         {
-    //             _chainMonitor.channel_monitor_updated()
-    //             updateTasks.TryRemove(updateTask.Key, out _);
-    //         }
-    //     }
-    //     
-    //     
-    //     
-    //     //TODO: carefully look at the upodate tasks and what chainmonitor tells us, and try to persist the monitor to resolve any jams
-    //      var pending = _chainMonitor.list_pending_monitor_updates();
-    //
-    //     foreach (var monitorUpdateIdZze in pending)
-    //     {
-    //         var outpoint = monitorUpdateIdZze.get_a();
-    //         var update = monitorUpdateIdZze.get_b();
-    //         foreach (var updateId in update)
-    //         {
-    //             var data = _chainMonitor.get_monitor(outpoint);
-    //             if (data is Result_LockedChannelMonitorNoneZ.Result_LockedChannelMonitorNoneZ_Err err)
-    //             {
-    //                 _logger.LogError($"Error getting monitor for outpoint {outpoint.Outpoint()}");
-    //                 continue;
-    //             }else if(data is Result_LockedChannelMonitorNoneZ.Result_LockedChannelMonitorNoneZ_OK ok)
-    //             {
-    //                 ok.
-    //             }
-    //             var status = update_persisted_channel(outpoint, data, monitorUpdateIdZze.get_c());
-    //             if (status == ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_Completed)
-    //             {
-    //                 _chainMonitor.channel_monitor_updated(outpoint, updateId);
-    //             }
-    //         }
-    //         
-    //     }
-    // }
-    
-    
     public ChannelMonitorUpdateStatus persist_new_channel(OutPoint channel_funding_outpoint, ChannelMonitor data,
         MonitorUpdateId update_id)
     {
-        //TODO: store update id  so that we can do this async
-        
         try
         {
             _logger.LogDebug(
@@ -91,10 +45,22 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
                     .SelectMany(zzzz => zzzz.get_b().Select(zz => Script.FromBytesUnsafe(zz.get_b()))).ToArray();
 
                 var id = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a());
-                var trackTask = _node.TrackScripts(outs);
-                var updateTask = _node.UpdateChannel(id, data.write());
+                var trackTask = _node.TrackScripts(outs).ContinueWith(task => _logger.LogDebug($"Tracking scripts finished for  updateid: {update_id.hash()}"));;
+                var updateTask = _node.UpdateChannel(id, data.write()).ContinueWith(task => _logger.LogDebug($"Updating channel finished for  updateid: {update_id.hash()}"));;
                 await  Task.WhenAll(trackTask, updateTask);
-                _serviceProvider.GetRequiredService<ChainMonitor>().channel_monitor_updated(channel_funding_outpoint, update_id);
+                
+                await Task.Run(() =>
+                {
+                    _logger.LogDebug(
+                        $"Calling channel_monitor_updated, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
+
+                    _serviceProvider.GetRequiredService<ChainMonitor>()
+                        .channel_monitor_updated(channel_funding_outpoint, update_id);
+                    _logger.LogDebug(
+                        $"Persisted new channel, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
+                    updateTasks.TryRemove(updateId, out _);
+                });
+
                 // _chainMonitor.channel_monitor_updated(channel_funding_outpoint, update_id);
             });
 
@@ -136,7 +102,19 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
             await _node.UpdateChannel(
                 Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()),
                 data.write());
-            _serviceProvider.GetRequiredService<ChainMonitor>().channel_monitor_updated(channel_funding_outpoint, update_id);
+
+            await Task.Run(() =>
+            {
+                _logger.LogDebug(
+                    $"Calling channel_monitor_updated, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
+
+                _serviceProvider.GetRequiredService<ChainMonitor>()
+                    .channel_monitor_updated(channel_funding_outpoint, update_id);
+                _logger.LogDebug(
+                    $"Persisted update channel, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
+                updateTasks.TryRemove(updateId, out _);
+            });
+
         });
 
         if (taskResult.IsFaulted)

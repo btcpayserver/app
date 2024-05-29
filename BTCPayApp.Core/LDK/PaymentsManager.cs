@@ -61,11 +61,11 @@ public class PaymentsManager :
 
         var descHashBytes = Sha256.from_bytes(descriptionHash.ToBytes());
 
-        var result =
+        var result = await  Task.Run(() =>
             org.ldk.util.UtilMethods.create_invoice_from_channelmanager_with_description_hash_and_duration_since_epoch(
                 _channelManager, _nodeSigner, _logger,
                 _network.GetLdkCurrency(), amt, descHashBytes, epoch, (int) Math.Ceiling(expiry.TotalSeconds),
-                Option_u16Z.none());
+                Option_u16Z.none()));
         if (result is Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_Err err)
         {
             throw new Exception(err.err.to_str());
@@ -177,9 +177,9 @@ var paySecret = Convert.ToHexString(invoice.payment_secret());
             payParams.set_payee(payee);
             var routeParams = RouteParameters.from_payment_params_and_value(payParams, amt);
 
-            var result = _channelManager.send_payment(invoice.payment_hash(),
+            var result = await Task.Run(() => _channelManager.send_payment(invoice.payment_hash(),
                 RecipientOnionFields.secret_only(invoice.payment_secret()),
-                id, routeParams, Retry.timeout(5));
+                id, routeParams, Retry.timeout(5)));
 
             if (result is Result_NoneRetryableSendFailureZ.Result_NoneRetryableSendFailureZ_Err err)
             {
@@ -201,7 +201,7 @@ var paySecret = Convert.ToHexString(invoice.payment_secret());
     {
         if (!inbound)
         {
-            _ = Task.Run(() => _channelManager.abandon_payment(Convert.FromHexString(id)) );
+            await  Task.Run(() => _channelManager.abandon_payment(Convert.FromHexString(id)) );
             
             // return;
         }
@@ -282,17 +282,8 @@ var paySecret = Convert.ToHexString(invoice.payment_secret());
     public async Task Handle(Event.Event_PaymentClaimed eventPaymentClaimed)
     {
         var preimage = eventPaymentClaimed.purpose.GetPreimage(out var secret);
-        await Payment(new LightningPayment()
-        {
-            PaymentId = "default",
-            PaymentHash = Convert.ToHexString(eventPaymentClaimed.payment_hash),
-            Inbound = true,
-            Secret = secret is null ? null : Convert.ToHexString(secret),
-            Timestamp = DateTimeOffset.UtcNow,
-            Preimage = preimage is null ? null : Convert.ToHexString(preimage),
-            Value = eventPaymentClaimed.amount_msat,
-            Status = LightningPaymentStatus.Complete
-        });
+        
+        await PaymentUpdate( Convert.ToHexString(eventPaymentClaimed.payment_hash), true, "default", false, preimage is null ? null : Convert.ToHexString(preimage));
     }
 
     public async Task Handle(Event.Event_PaymentFailed @eventPaymentFailed)
