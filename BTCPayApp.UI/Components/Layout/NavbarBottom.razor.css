@@ -31,6 +31,10 @@
   color: var(--btcpay-body-text-muted);
 }
 
+::deep .nav-link.disabled {
+  opacity: .5;
+}
+
 ::deep .nav-link span {
   font-size: var(--btcpay-font-size-s);
   font-weight: var(--btcpay-font-weight-semibold);

@@ -1,6 +1,8 @@
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @inject IState<UIState> UiState
 @inject NavigationManager NavigationManager
+@inject IAccountManager AccountManager
 
 <nav id="NavbarBottom">
     <div class="container d-flex align-items-center justify-content-between">
@@ -12,13 +14,13 @@
                 </NavLink>
             </li>
             <li class="nav-item">
-                <NavLink href="@Routes.PointOfSale" Match="NavLinkMatch.All" class="nav-link">
+                <NavLink href="@(HasStore ? Routes.PointOfSale : null)" Match="NavLinkMatch.All" class=" @(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
                     <Icon symbol="nav-keypad"/>
                     <span>Keypad</span>
                 </NavLink>
             </li>
             <li class="nav-item">
-                <NavLink href="@Routes.Invoices" Match="NavLinkMatch.Prefix" class="nav-link">
+                <NavLink href="@(HasStore ? Routes.Invoices : null)" Match="NavLinkMatch.All" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
                     <Icon symbol="nav-invoices"/>
                     <span>Invoices</span>
                 </NavLink>
@@ -34,10 +36,9 @@
 </nav>
 
 @code {
-
     protected override void OnInitialized()
     {
-        NavigationManager.LocationChanged += new EventHandler<LocationChangedEventArgs>(OnLocationChanged);
+        NavigationManager.LocationChanged += OnLocationChanged;
     }
 
     private string HomeCssClass()
@@ -53,4 +54,6 @@
     {
         StateHasChanged();
     }
+
+    private bool HasStore => AccountManager.GetCurrentStore() != null;
 }

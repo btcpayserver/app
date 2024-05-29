@@ -3,6 +3,7 @@ using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.AspNetRip;
 using BTCPayApp.Core.Contracts;
 using BTCPayServer.Abstractions.Constants;
+using BTCPayServer.Client.Models;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Hosting;
@@ -123,12 +124,34 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
 
-    public async Task SetCurrentStoreId(string storeId)
+    public async Task<FormResult> SetCurrentStoreId(string storeId)
     {
         var store = GetUserStore(storeId);
-        if (store == null) throw new ArgumentException($"Store with ID '{storeId}' does not exist or belong to the user.");
+        if (store == null) return new FormResult(false, $"Store with ID '{storeId}' does not exist or belong to the user.");
+
+        string? message = null;
+
+        // create associated POS app if there is none
+        if (string.IsNullOrEmpty(store.PosAppId))
+        {
+            try
+            {
+                var posConfig = new CreatePointOfSaleAppRequest { AppName = "Keypad", DefaultView = PosViewType.Light };
+                var app = await Post<CreatePointOfSaleAppRequest, PointOfSaleAppData>($"api/v1/stores/{store.Id}/apps/pos", posConfig);
+                message = $"The Point Of Sale called \"{app!.Name}\" has been created for use with the app.";
+
+                await FetchUserInfo();
+            }
+            catch (BTCPayAppClientException e)
+            {
+                return new FormResult(false, e.Message);
+            }
+        }
+
         _account!.CurrentStoreId = storeId;
         await _config.Set("account", _account);
+
+        return new FormResult(true, string.IsNullOrEmpty(message) ? null : [message]);
     }
 
     public AppUserStoreInfo? GetUserStore(string storeId)
@@ -239,7 +262,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         await _client.Post(_account!.BaseUri, path, payload, cancellation);
     }
 
-    public async Task<TResponse> Post<TRequest, TResponse>(string path, TRequest payload, CancellationToken cancellation = default)
+    public async Task<TResponse?> Post<TRequest, TResponse>(string path, TRequest payload, CancellationToken cancellation = default)
     {
         return await _client.Post<TRequest, TResponse>(_account!.BaseUri, path, payload, cancellation);
     }
@@ -268,12 +291,12 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
     {
         _ = PingOccasionally();
     }
-    
+
     private async Task PingOccasionally()
     {
         while (true)
         {
-            
+
             await GetAuthenticationStateAsync();
             await Task.Delay(TimeSpan.FromSeconds(5));
         }

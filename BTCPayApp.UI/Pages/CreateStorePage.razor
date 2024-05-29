@@ -58,7 +58,16 @@ else if (_data is not null)
             <div class="form-text mt-2 only-for-js">The recommended price source gets chosen based on the default currency.</div>
             <ValidationMessage For="@(() => Model.PreferredExchange)"/>
         </div>
-        <button class="btn btn-primary w-100" type="submit" data-testid="CreateStoreButton" disabled="@_validationEditContext.Invalid">Create Store</button>
+        <button class="btn btn-primary w-100" type="submit" data-testid="CreateStoreButton" disabled="@(_validationEditContext.Invalid || _sending)">
+            @if (_sending)
+            {
+                <LoadingIndicator />
+            }
+            else
+            {
+                <span>Create Store</span>
+            }
+        </button>
     </ValidationEditContext>
 }
 
@@ -66,9 +75,10 @@ else if (_data is not null)
     [SupplyParameterFromQuery] public string? BackUrl { get; set; }
 
     private bool _loading;
+    private bool _sending;
     private string? _errorMessage;
     private CreateStoreData? _data;
-    private ValidationEditContext _validationEditContext;
+    private ValidationEditContext? _validationEditContext;
     CreateStoreModel Model { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
@@ -95,6 +105,7 @@ else if (_data is not null)
 
     private async Task HandleValidSubmit()
     {
+        _sending = true;
         _errorMessage = null;
 
         var request = new CreateStoreRequest
@@ -108,21 +119,35 @@ else if (_data is not null)
             var store = await AccountManager.Post<CreateStoreRequest, StoreData>("api/v1/stores", request);
             if (store != null)
             {
+                // set rate configuration
                 var rateConfig = new StoreRateConfiguration { PreferredSource = Model.PreferredExchange };
                 await AccountManager.Put($"api/v1/stores/{store.Id}/rates/configuration", rateConfig);
 
-                // refresh store info and set id  of new store
+                // refresh store info and set id of new store
                 await AccountManager.CheckAuthenticated(true);
-                await AccountManager.SetCurrentStoreId(store.Id);
-
-                var uri = NavigationManager.GetUriWithQueryParameters(Routes.Dashboard,
-                    new Dictionary<string, object?> { {"success", $"The store \"{store.Name}\" has been created." } } );
-                NavigationManager.NavigateTo(uri);
+                var result = await AccountManager.SetCurrentStoreId(store.Id);
+                var resultMessage = result.Messages != null ? string.Join(",", result.Messages) : null;
+                if (result.Succeeded)
+                {
+                    var message = $"The store \"{store.Name}\" has been created.";
+                    if (resultMessage != null) message += " " + resultMessage;
+                    var uri = NavigationManager.GetUriWithQueryParameters(Routes.Dashboard,
+                        new Dictionary<string, object?> { { "success", message } });
+                    NavigationManager.NavigateTo(uri);
+                }
+                else
+                {
+                    _errorMessage = resultMessage ?? "Store creation failed.";
+                }
             }
         }
         catch (Exception e)
         {
             _errorMessage = e.Message;
+        }
+        finally
+        {
+            _sending = false;
         }
     }
 

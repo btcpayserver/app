@@ -21,11 +21,15 @@
 
 <SectionContent SectionId="_Layout.MainTop">
     <h1>Select your store</h1>
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+    <Alert Type="danger">@_errorMessage</Alert>
+    }
 </SectionContent>
 
 @if (_userInfo!.Stores?.Any() is true)
 {
-    <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="SelectStore" method="post">
+    <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" FormName="SelectStore" method="post">
         <DataAnnotationsValidator />
         <InputRadioGroup Name="StoreIds" @bind-Value="@Model.StoreId">
             <ul class="list-group list-group-flush mb-3">
@@ -33,7 +37,7 @@
                 {
                     <li class="list-group-item">
                         <label class="form-check-label stretched-link d-flex flex-wrap align-items-center justify-content-between gap-2">
-                            <InputRadio Name="StoreIds" Value="@store.Id" class="form-check-input m-0"/>
+                            <InputRadio Name="StoreIds" Value="@store.Id" class="form-check-input m-0" Se/>
                             <strong>@store.Name</strong>
                             <span class="badge bg-light ms-auto">@store.RoleId</span>
                         </label>
@@ -41,8 +45,17 @@
                 }
             </ul>
         </InputRadioGroup>
-        <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@string.IsNullOrEmpty(Model.StoreId)">Select Store</button>
-    </EditForm>
+        <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext.Invalid || _sending)">
+            @if (_sending)
+            {
+                <LoadingIndicator />
+            }
+            else
+            {
+                <span>Select Store</span>
+            }
+        </button>
+    </ValidationEditContext>
     <p class="mt-5 text-secondary text-center">In case you want to start with a blank slate, you can also create a new store for the app.</p>
     <NavLink class="btn btn-outline-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
 }
@@ -53,7 +66,10 @@ else
 }
 
 @code {
+    private bool _sending;
+    private string? _errorMessage;
     private AppUserInfo? _userInfo;
+    private ValidationEditContext? _validationEditContext;
     SelectStoreModel Model { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
@@ -66,15 +82,47 @@ else
         }
         else if (_userInfo!.Stores?.Count() == 1)
         {
-            await AccountManager.SetCurrentStoreId(_userInfo!.Stores!.First().Id!);
-            NavigationManager.NavigateTo(Routes.Index);
+            await SelectStore(_userInfo!.Stores!.First().Id!);
         }
+
+        Model.StoreId = AccountManager.GetCurrentStore()?.Id;
     }
 
     private async Task HandleValidSubmit()
     {
-        await AccountManager.SetCurrentStoreId(Model.StoreId!);
-        NavigationManager.NavigateTo(Routes.Index);
+        await SelectStore(Model.StoreId!);
+    }
+
+    private async Task SelectStore(string storeId)
+    {
+        _sending = true;
+        _errorMessage = null;
+
+        try
+        {
+            var result = await AccountManager.SetCurrentStoreId(storeId);
+            var resultMessage = result.Messages != null ? string.Join(",", result.Messages) : null;
+            var uri = Routes.Dashboard;
+            if (result.Succeeded)
+            {
+                if (!string.IsNullOrEmpty(resultMessage))
+                    uri = NavigationManager.GetUriWithQueryParameters(uri,
+                        new Dictionary<string, object?> { {"success", resultMessage } } );
+                NavigationManager.NavigateTo(uri);
+            }
+            else
+            {
+                _errorMessage = resultMessage ?? "Store selection failed.";
+            }
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        finally
+        {
+            _sending = false;
+        }
     }
 
     private class SelectStoreModel
