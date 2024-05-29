@@ -38,7 +38,7 @@
     <section class="container py-3">
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
-                @if (_userInfo!.Stores?.Count() < 2)
+                @if (_userInfo!.Stores?.Count() > 1)
                 {
                     <li class="list-group-item">
                         <NavLink class="nav-link" href="@Routes.SelectStore">

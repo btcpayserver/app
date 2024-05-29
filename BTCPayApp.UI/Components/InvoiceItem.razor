@@ -1,4 +1,4 @@
-@using BTCPayApp.Core.Auth
+@using BTCPayServer.Client.Models
 <a href="@Routes.InvoicePath(Id)" class="list-group-item list-group-item-action">
     <div class="container d-flex align-items-center gap-3 py-3">
         <div class="d-flex align-items-baseline justify-content-between flex-wrap flex-grow-1 gap-2">
@@ -21,7 +21,7 @@
     public string? OrderId { get; set; }
 
     [Parameter]
-    public string? Status { get; set; }
+    public InvoiceStatus Status { get; set; }
 
     [Parameter]
     public DateTimeOffset Date { get; set; }
@@ -33,17 +33,17 @@
     public decimal Amount { get; set; }
 
     [Parameter]
-    public Invoice Invoice {
+    public InvoiceData Invoice {
         set
         {
             Id = value.Id;
-            OrderId = value.OrderId;
+            OrderId = value.Metadata["orderId"]?.ToString();
             Status = value.Status;
-            Date = value.Date;
+            Date = value.CreatedTime;
             Currency = value.Currency;
             Amount = value.Amount;
         }
     }
 
-    private string State => Status?.ToLowerInvariant() ?? "unknown";
+    private string State => Status.ToString().ToLowerInvariant();
 }
