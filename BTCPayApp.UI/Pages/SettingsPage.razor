@@ -38,12 +38,15 @@
     <section class="container py-3">
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
-                <li class="list-group-item">
-                    <NavLink class="nav-link" href="@Routes.SelectStore">
-                        <span>Select Store</span>
-                        <Icon symbol="caret-right"/>
-                    </NavLink>
-                </li>
+                @if (_userInfo!.Stores?.Count() < 2)
+                {
+                    <li class="list-group-item">
+                        <NavLink class="nav-link" href="@Routes.SelectStore">
+                            <span>Select Store</span>
+                            <Icon symbol="caret-right"/>
+                        </NavLink>
+                    </li>
+                }
                 <li class="list-group-item">
                     <NavLink class="nav-link" href="@Routes.ChangePasscode">
                         <span>Passcode</span>
