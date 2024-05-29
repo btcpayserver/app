@@ -1,68 +1,81 @@
 ﻿@attribute [Route(Routes.Notifications)]
-@using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
 
 <PageTitle>Notifications</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back="@Routes.Index">
+        <SectionContent SectionId="Titlebar.End">
+            <button type="button" class="btn-icon" @onclick="LoadNotifications" disabled="@_loading">
+                @if (_loading)
+                {
+                    <LoadingIndicator/>
+                }
+                else
+                {
+                    <Icon Symbol="actions-refresh"/>
+                }
+            </button>
+        </SectionContent>
         <h1>Notifications</h1>
     </Titlebar>
 </SectionContent>
 
-<section>
-    @if (Model.Notifications.Any())
+@if (!string.IsNullOrEmpty(_errorMessage))
+{
+    <section class="container">
+        <Alert Type="danger">@_errorMessage</Alert>
+    </section>
+}
+@if (_notifications is not null)
+{
+    @if (_notifications.Any())
     {
         <div class="notifications">
-            @foreach (var n in Model.Notifications)
+            @foreach (var n in _notifications)
             {
-                <NotificationItem Id="@n.Id" Type="@n.Type" Created="@n.Created" Seen="@n.Seen" Body="@n.Body"/>
+                <NotificationItem Notification="@n"/>
             }
         </div>
     }
     else
     {
-        <p class="text-muted">There are no transactions, yet.</p>
+        <section class="container">
+            <p class="text-muted">There are no transactions, yet.</p>
+        </section>
     }
-</section>
+}
 
 @code {
-    private NotificationsModel Model { get; set; } = new();
+
+    private bool _loading;
+    private string? _errorMessage;
+    private NotificationData[]? _notifications;
 
     protected override async Task OnInitializedAsync()
     {
-        Model.Notifications =
-        [
-            new Notification
-            {
-                Id = "1",
-                Type = "invoice_confirmed",
-                Created = DateTimeOffset.Now - TimeSpan.FromSeconds(21),
-                Body = "Invoice GZ090Z03 is settled.",
-                Seen = false
-            },
-            new Notification
-            {
-                Id = "2",
-                Type = "payout_awaitingapproval",
-                Created = DateTimeOffset.Now - TimeSpan.FromHours(6),
-                Body = "A new payout is awaiting your approval.",
-                Seen = true
-            },
-            new Notification
-            {
-                Id = "3",
-                Type = "invoice_failedtoconfirm",
-                Created = DateTimeOffset.Now - TimeSpan.FromDays(3),
-                Body = "Invoice GZ090Z03 has payments that failed to confirm on time.",
-                Seen = true
-            }
-        ];
+        await LoadNotifications();
     }
 
-    private class NotificationsModel
+    private async Task LoadNotifications()
     {
-        public Notification[] Notifications { get; set; } = [];
+        try
+        {
+            _loading = true;
+            _errorMessage = null;
+            _notifications = await AccountManager.Get<NotificationData[]>($"api/v1/users/me/notifications");
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.InnerException?.Message ?? e.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
     }
 }

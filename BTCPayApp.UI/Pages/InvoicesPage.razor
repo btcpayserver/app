@@ -13,8 +13,15 @@
         @if (Store is not null)
         {
             <SectionContent SectionId="Titlebar.End">
-                <button type="button" class="btn btn-link p-0" @onclick="LoadInvoices">
-                    <Icon Symbol="actions-refresh"/>
+                <button type="button" class="btn-icon" @onclick="LoadInvoices" disabled="@_loading">
+                    @if (_loading)
+                    {
+                        <LoadingIndicator/>
+                    }
+                    else
+                    {
+                        <Icon Symbol="actions-refresh"/>
+                    }
                 </button>
             </SectionContent>
         }
@@ -34,12 +41,6 @@
         <Alert Type="danger">@_errorMessage</Alert>
     </section>
 }
-@if (_loading)
-{
-    <section class="container p-3 text-center">
-        <LoadingIndicator/>
-    </section>
-}
 @if (_invoices is not null)
 {
     @if (_invoices.Any())
@@ -51,7 +52,7 @@
             }
         </div>
     }
-    else if (!_loading)
+    else
     {
         <section class="container">
             <p class="text-muted">There are no invoices, yet.</p>

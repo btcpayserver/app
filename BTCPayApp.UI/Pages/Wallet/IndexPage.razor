@@ -9,7 +9,7 @@
 @using BTCPayApp.CommonServer
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject NavigationManager NavigationManager
-@inject OnChainWalletManager OnChainWalletManager 
+@inject OnChainWalletManager OnChainWalletManager
 @inject IState<RootState> State
 
 <PageTitle>Wallet</PageTitle>
@@ -18,7 +18,7 @@
     <Titlebar Back="@Routes.Index">
         <h1>Wallet</h1>
         <SectionContent SectionId="Titlebar.End">
-            <NavLink class="btn-close btn-back" href="@Routes.WalletSetup">
+            <NavLink class="btn-icon" href="@Routes.WalletSetup">
                 <Icon symbol="settings"/>
             </NavLink>
         </SectionContent>
@@ -77,7 +77,7 @@
             </div>
         }
         <button type="button" @onclick="GetTxs">Get transactions</button>
-        
+
         @if(_txs is not null)
         {
             <table>
@@ -86,7 +86,7 @@
                     <th>Amount</th>
                     <th>Confirmations</th>
                     <th>Time</th>
-                    
+
                 </tr>
                 @foreach (var tx in _txs)
                 {
@@ -95,11 +95,11 @@
                         <td>@tx.BalanceChange</td>
                         <td>@tx.Confirmations</td>
                         <td>@tx.Timestamp</td>
-                    </tr>   
+                    </tr>
                 }
             </table>
         }
-        
+
     }
 </section>
 
@@ -238,7 +238,7 @@
         await InvokeAsync(StateHasChanged);
         try
         {
-           
+
             _txs  =  await OnChainWalletManager.GetTransactions();;
         }
         catch (Exception ex)

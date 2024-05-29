@@ -1,7 +1,8 @@
+@using BTCPayServer.Client.Models
 <a href="#" class="border-bottom border-light @(Seen ? null : "bg-light")">
     <div class="container d-flex align-items-center gap-3 py-3">
         <div>
-            <Icon Symbol="@NotificationIcon(Type)"/>
+            <Icon Symbol="@NotificationIcon(Identifier)"/>
         </div>
         <div class="content">
             <div class="fw-semibold text-wrap">
@@ -15,22 +16,38 @@
 </a>
 
 @code {
-    [Parameter, EditorRequired]
+    [Parameter]
     public string? Id { get; set; }
 
-    [Parameter, EditorRequired]
+    [Parameter]
     public string? Type { get; set; }
 
-    [Parameter, EditorRequired]
+    [Parameter]
+    public string? Identifier { get; set; }
+
+    [Parameter]
     public DateTimeOffset Created { get; set; }
 
-    [Parameter, EditorRequired]
+    [Parameter]
     public string? Body { get; set; }
 
     [Parameter]
     public bool Seen { get; set; }
 
-    private static string NotificationIcon(string type)
+    [Parameter]
+    public NotificationData Notification {
+        set
+        {
+            Id = value.Id;
+            Type = value.Type;
+            Identifier = value.Identifier;
+            Created = value.CreatedTime;
+            Body = value.Body;
+            Seen = value.Seen;
+        }
+    }
+
+    private static string NotificationIcon(string? type)
     {
         return type switch
         {

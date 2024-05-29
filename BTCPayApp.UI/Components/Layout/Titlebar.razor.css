@@ -29,18 +29,41 @@
   margin: 0 auto;
   padding: var(--btcpay-space-xs) var(--btcpay-space-s);
 }
-::deep .btn-close {
+
+::deep .btn-icon {
   --icon-size: 1.5rem;
 
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: var(--icon-size);
+  height: var(--icon-size);
   padding: .5rem;
+  box-sizing: content-box;
+  color: var(--btcpay-body-text);
+  background: transparent;
+  border: 0;
+  outline: 0;
+  border-radius: var(--btcpay-border-radius);
+  opacity: .5;
+  text-decoration: none;
 }
 
-::deep .btn-close .icon {
+::deep .btn-icon:focus,
+::deep .btn-icon:hover {
+  opacity: .75;
+}
+
+::deep .btn-icon:disabled,
+::deep .btn-icon.disabled {
+  pointer-events: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  opacity: .25;
+}
+
+::deep .btn-icon .icon {
   position: static;
   top: auto;
   width: var(--icon-size);
