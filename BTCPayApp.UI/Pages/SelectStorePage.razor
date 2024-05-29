@@ -1,5 +1,4 @@
 ﻿@attribute [Route(Routes.SelectStore)]
-@layout SimpleLayout
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
@@ -10,64 +9,67 @@
 <PageTitle>Select your store</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
-    <Titlebar>
-        <SectionContent SectionId="Titlebar.End">
-            <NavLink class="btn-close btn-back" href="@Routes.Dashboard">
-                <Icon symbol="close"/>
-            </NavLink>
-        </SectionContent>
+    <Titlebar Back="@(string.IsNullOrEmpty(_initialStoreId) ? null : Routes.Settings)">
+        @if (string.IsNullOrEmpty(_initialStoreId))
+        {
+            <SectionContent SectionId="Titlebar.End">
+                <NavLink class="btn-close btn-back" href="@Routes.Dashboard">
+                    <Icon symbol="close"/>
+                </NavLink>
+            </SectionContent>
+        }
+        <h1>Select your store</h1>
     </Titlebar>
 </SectionContent>
 
-<SectionContent SectionId="_Layout.MainTop">
-    <h1>Select your store</h1>
+<section class="container">
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
-    <Alert Type="danger">@_errorMessage</Alert>
+        <Alert Type="danger">@_errorMessage</Alert>
     }
-</SectionContent>
-
-@if (_userInfo!.Stores?.Any() is true)
-{
-    <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" FormName="SelectStore" method="post">
-        <DataAnnotationsValidator />
-        <InputRadioGroup Name="StoreIds" @bind-Value="@Model.StoreId">
-            <ul class="list-group list-group-flush mb-3">
-                @foreach (var store in _userInfo.Stores)
+    @if (_userInfo!.Stores?.Any() is true)
+    {
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" FormName="SelectStore" method="post">
+            <DataAnnotationsValidator />
+            <InputRadioGroup Name="StoreIds" @bind-Value="@Model.StoreId">
+                <ul class="list-group list-group-flush mb-3">
+                    @foreach (var store in _userInfo.Stores)
+                    {
+                        <li class="list-group-item">
+                            <label class="form-check-label stretched-link d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                <InputRadio Name="StoreIds" Value="@store.Id" class="form-check-input m-0" Se/>
+                                <strong>@store.Name</strong>
+                                <span class="badge bg-light ms-auto">@store.RoleId</span>
+                            </label>
+                        </li>
+                    }
+                </ul>
+            </InputRadioGroup>
+            <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext.Invalid || _sending)">
+                @if (_sending)
                 {
-                    <li class="list-group-item">
-                        <label class="form-check-label stretched-link d-flex flex-wrap align-items-center justify-content-between gap-2">
-                            <InputRadio Name="StoreIds" Value="@store.Id" class="form-check-input m-0" Se/>
-                            <strong>@store.Name</strong>
-                            <span class="badge bg-light ms-auto">@store.RoleId</span>
-                        </label>
-                    </li>
+                    <LoadingIndicator />
                 }
-            </ul>
-        </InputRadioGroup>
-        <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext.Invalid || _sending)">
-            @if (_sending)
-            {
-                <LoadingIndicator />
-            }
-            else
-            {
-                <span>Select Store</span>
-            }
-        </button>
-    </ValidationEditContext>
-    <p class="mt-5 text-secondary text-center">In case you want to start with a blank slate, you can also create a new store for the app.</p>
-    <NavLink class="btn btn-outline-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
-}
-else
-{
-    <p class="text-secondary text-center">You don't have a store, yet.</p>
-    <NavLink class="btn btn-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
-}
+                else
+                {
+                    <span>Select Store</span>
+                }
+            </button>
+        </ValidationEditContext>
+        <p class="mt-5 text-secondary text-center">In case you want to start with a blank slate, you can also create a new store for the app.</p>
+        <NavLink class="btn btn-outline-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
+    }
+    else
+    {
+        <p class="text-secondary text-center">You don't have a store, yet.</p>
+        <NavLink class="btn btn-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
+    }
+</section>
 
 @code {
     private bool _sending;
     private string? _errorMessage;
+    private string? _initialStoreId;
     private AppUserInfo? _userInfo;
     private ValidationEditContext? _validationEditContext;
     SelectStoreModel Model { get; set; } = new();
@@ -75,6 +77,8 @@ else
     protected override async Task OnInitializedAsync()
     {
         _userInfo = AccountManager.GetUserInfo();
+        _initialStoreId = AccountManager.GetCurrentStore()?.Id;
+        Model.StoreId = _initialStoreId;
 
         if (_userInfo!.Stores?.Any() is not true)
         {
@@ -84,8 +88,6 @@ else
         {
             await SelectStore(_userInfo!.Stores!.First().Id!);
         }
-
-        Model.StoreId = AccountManager.GetCurrentStore()?.Id;
     }
 
     private async Task HandleValidSubmit()
