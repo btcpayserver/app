@@ -64,7 +64,7 @@
             </section>
         }
         <section class="container px-4 py-3">
-            <h2>Getting started</h2>
+            <h2 class="mb-3">Getting started</h2>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item @(SetupStateConnection == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateConnection == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateConnection.ToString().ToLowerInvariant()">
@@ -142,7 +142,7 @@
         <section class="container px-4 py-3">
             <h2>Recent Activity</h2>
             <ul class="list-group list-group-flush">
-                <li class="list-group-item">
+                <li class="list-group-item py-2">
                     <div class="d-flex align-items-center justify-content-between mb-1">
                         <TruncateCenter Text="CDOy6cOibCWEdsRiZuaHf8dSGGJRYuBGC" Link="@Routes.InvoicePath("CDOy6cOibCWEdsRiZuaHf8dSGGJRYuBGC")" class="truncate-center-id"/>
                         <span class="text-end">$29.13</span>
@@ -154,7 +154,7 @@
                         <span class="text-muted text-end">177,032 sats</span>
                     </div>
                 </li>
-                <li class="list-group-item">
+                <li class="list-group-item py-2">
                     <div class="d-flex align-items-center justify-content-between mb-1">
                         <TruncateCenter Text="WpYu7PQz4QOOjznTuLwp1PNZXZKP8U1pB2" Link="@Routes.InvoicePath("WpYu7PQz4QOOjznTuLwp1PNZXZKP8U1pB2")" class="truncate-center-id"/>
                         <span class="text-end">$29.13</span>
