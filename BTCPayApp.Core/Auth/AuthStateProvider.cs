@@ -16,27 +16,32 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
     private bool _isInitialized;
     private BTCPayAccount? _account;
     private AppUserInfo? _userInfo;
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly ClaimsPrincipal _unauthenticated = new(new ClaimsIdentity());
     private readonly IOptionsMonitor<IdentityOptions> _identityOptions;
     private readonly IConfigProvider _config;
-    private readonly BTCPayAppClient _client;
 
     public BTCPayAccount? GetAccount() => _account;
     public AppUserInfo? GetUserInfo() => _userInfo;
 
     public AuthStateProvider(
-        BTCPayAppClient client,
         IConfigProvider config,
         IOptionsMonitor<IdentityOptions> identityOptions)
     {
-        _client = client;
         _config = config;
         _identityOptions = identityOptions;
-
-        _client.AccessRefreshed += OnAccessRefresh;
     }
 
-    private SemaphoreSlim _semaphore = new(1, 1);
+    public BTCPayAppClient GetClient(string? baseUri = null)
+    {
+        if (string.IsNullOrEmpty(baseUri) && string.IsNullOrEmpty(_account?.BaseUri))
+            throw new ArgumentException("No base URI present or provided.", nameof(baseUri));
+        var client = new BTCPayAppClient(baseUri ?? _account!.BaseUri);
+        if (!string.IsNullOrEmpty(_account?.AccessToken) && !string.IsNullOrEmpty(_account.RefreshToken))
+            client.SetAccess(_account.AccessToken, _account.RefreshToken, _account.AccessExpiry.GetValueOrDefault());
+        client.AccessRefreshed += OnAccessRefresh;
+        return client;
+    }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
@@ -51,16 +56,11 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
             if (!_isInitialized && _account == null)
             {
                 _account = await _config.Get<BTCPayAccount>("account");
-                if (!string.IsNullOrEmpty(_account?.AccessToken) && !string.IsNullOrEmpty(_account.RefreshToken))
-                    _client.SetAccess(_account.AccessToken, _account.RefreshToken,
-                        _account.AccessExpiry.GetValueOrDefault());
-                else
-                    _client.ClearAccess();
                 _isInitialized = true;
             }
 
             var oldUserInfo = _userInfo;
-            if (_account != null && _userInfo == null)
+            if (_userInfo == null && _account?.HasTokens is true)
             {
                 await FetchUserInfo();
             }
@@ -94,19 +94,6 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         }
     }
 
-    public async Task<AppUserInfo?> FetchUserInfo()
-    {
-        try
-        {
-            _userInfo = await Get<AppUserInfo>("btcpayapp/user");
-        }
-        catch
-        {
-            /* ignored */
-        }
-        return _userInfo;
-    }
-
     public async Task<bool> CheckAuthenticated(bool refreshUser = false)
     {
         if (refreshUser) await FetchUserInfo();
@@ -119,7 +106,6 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         _userInfo = null;
         _account!.ClearAccess();
         await _config.Set("account", _account);
-        _client.ClearAccess();
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
@@ -137,8 +123,8 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
             try
             {
                 var posConfig = new CreatePointOfSaleAppRequest { AppName = "Keypad", DefaultView = PosViewType.Light };
-                var app = await Post<CreatePointOfSaleAppRequest, PointOfSaleAppData>($"api/v1/stores/{store.Id}/apps/pos", posConfig);
-                message = $"The Point Of Sale called \"{app!.Name}\" has been created for use with the app.";
+                var app = await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
+                message = $"The Point Of Sale called \"{app.Name}\" has been created for use with the app.";
 
                 await FetchUserInfo();
             }
@@ -169,9 +155,20 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
     {
         _account = account;
         await _config.Set("account", _account);
-        _client.SetAccess(_account.AccessToken!, _account.RefreshToken!, _account.AccessExpiry.GetValueOrDefault());
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+    }
+
+    private async Task FetchUserInfo()
+    {
+        try
+        {
+            _userInfo = await GetClient().GetUserInfo();
+        }
+        catch
+        {
+            /* ignored */
+        }
     }
 
     private async void OnAccessRefresh(object? sender, AccessTokenResult access)
@@ -192,7 +189,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         try
         {
             var expiryOffset = DateTimeOffset.Now;
-            var response = await _client.Post<LoginRequest, AccessTokenResponse>(serverUrl, "btcpayapp/login", payload, cancellation.GetValueOrDefault());
+            var response = await GetClient(serverUrl).Login(payload, cancellation.GetValueOrDefault());
             var account = new BTCPayAccount(serverUrl, email);
             account.SetAccess(response.AccessToken, response.RefreshToken, response.ExpiresIn, expiryOffset);
             await SetAccount(account);
@@ -213,7 +210,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         };
         try
         {
-            var response = await _client.Post<SignupRequest, SignupResult>(serverUrl, "btcpayapp/register", payload, cancellation.GetValueOrDefault());
+            var response = await new BTCPayAppClient(serverUrl).RegisterUser(payload, cancellation.GetValueOrDefault());
             var account = new BTCPayAccount(serverUrl, email);
             await SetAccount(account);
             var message = "Account created.";
@@ -240,8 +237,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         try
         {
             var isForgotStep = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword);
-            var path = isForgotStep ? "btcpayapp/forgot-password" : "btcpayapp/reset-password";
-            await _client.Post(serverUrl, path, payload, cancellation.GetValueOrDefault());
+            await new BTCPayAppClient(serverUrl).ResetPassword(payload, cancellation.GetValueOrDefault());
             return new FormResult(true, isForgotStep
                 ? "You should have received an email with a password reset code."
                 : "Your password has been reset.");
@@ -252,41 +248,6 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         }
     }
 
-    public async Task<TResponse> Get<TResponse>(string path, CancellationToken cancellation = default)
-    {
-        return await _client.Get<TResponse>(_account!.BaseUri, path, cancellation);
-    }
-
-    public async Task Post<TRequest>(string path, TRequest payload, CancellationToken cancellation = default)
-    {
-        await _client.Post(_account!.BaseUri, path, payload, cancellation);
-    }
-
-    public async Task<TResponse?> Post<TRequest, TResponse>(string path, TRequest payload, CancellationToken cancellation = default)
-    {
-        return await _client.Post<TRequest, TResponse>(_account!.BaseUri, path, payload, cancellation);
-    }
-
-    public async Task Put<TRequest>(string path, TRequest payload, CancellationToken cancellation = default)
-    {
-        await _client.Put(_account!.BaseUri, path, payload, cancellation);
-    }
-
-    public async Task<TResponse?> Put<TRequest, TResponse>(string path, TRequest payload, CancellationToken cancellation = default)
-    {
-        return await _client.Put<TRequest, TResponse>(_account!.BaseUri, path, payload, cancellation);
-    }
-
-    public async Task Delete<TRequest>(string path, TRequest payload, CancellationToken cancellation = default)
-    {
-        await _client.Delete(_account!.BaseUri, path, payload, cancellation);
-    }
-
-    public async Task<TResponse?> Delete<TRequest, TResponse>(string path, TRequest payload, CancellationToken cancellation = default)
-    {
-        return await _client.Delete<TRequest, TResponse>(_account!.BaseUri, path, payload, cancellation);
-    }
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _ = PingOccasionally();
@@ -294,9 +255,8 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
 
     private async Task PingOccasionally()
     {
-        while (true)
+        while (_userInfo != null)
         {
-
             await GetAuthenticationStateAsync();
             await Task.Delay(TimeSpan.FromSeconds(5));
         }

@@ -87,7 +87,7 @@ else if (_data is not null)
         {
             _loading = true;
             _errorMessage = null;
-            _data = await AccountManager.Get<CreateStoreData>("btcpayapp/create-store");
+            _data = await AccountManager.GetClient().GetCreateStore();
 
             Model.DefaultCurrency = _data.DefaultCurrency;
             Model.PreferredExchange = _data.RecommendedExchangeId;
@@ -116,12 +116,12 @@ else if (_data is not null)
 
         try
         {
-            var store = await AccountManager.Post<CreateStoreRequest, StoreData>("api/v1/stores", request);
+            var store = await AccountManager.GetClient().CreateStore(request);
             if (store != null)
             {
                 // set rate configuration
                 var rateConfig = new StoreRateConfiguration { PreferredSource = Model.PreferredExchange };
-                await AccountManager.Put($"api/v1/stores/{store.Id}/rates/configuration", rateConfig);
+                await AccountManager.GetClient().UpdateStoreRateConfiguration(store.Id, rateConfig);
 
                 // refresh store info and set id of new store
                 await AccountManager.CheckAuthenticated(true);

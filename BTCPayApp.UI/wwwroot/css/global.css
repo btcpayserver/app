@@ -144,7 +144,6 @@
 
 /* List Group */
 .list-group-flush .list-group-item {
-  --btcpay-list-group-item-padding-y: 0;
   --btcpay-list-group-item-padding-x: 0;
   --btcpay-list-group-bg: transparent;
 }
@@ -152,6 +151,10 @@
 .list-group-flush .list-group-item.disabled,
 .list-group-flush .list-group-item:disabled {
   --btcpay-list-group-disabled-bg: transparent;
+}
+
+.list-group-flush.list-group-links .list-group-item {
+  --btcpay-list-group-item-padding-y: 0;
 }
 
 .list-group-flush.list-group-links .list-group-item > a {

@@ -4,7 +4,6 @@
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
-@inject BTCPayAppClient AppClient
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 
@@ -94,7 +93,7 @@
         try
         {
             InstanceInfo = !string.IsNullOrEmpty(Model.Uri)
-                ? await AppClient.GetInstanceInfo(Model.Uri)
+                ? await new BTCPayAppClient(Model.Uri).GetInstanceInfo()
                 : null;
 
             _errorMessage = InstanceInfo is { RegistrationEnabled: false }

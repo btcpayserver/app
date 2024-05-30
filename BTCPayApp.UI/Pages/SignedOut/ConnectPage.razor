@@ -6,7 +6,6 @@
 @attribute [AllowAnonymous]
 @layout SimpleLayout
 @inject IJSRuntime JS
-@inject BTCPayAppClient AppClient
 @inject ILogger<ConnectPage> Logger
 @inject NavigationManager NavigationManager
 @inject IDispatcher Dispatcher
@@ -67,7 +66,7 @@
         try
         {
             InstanceInfo = !string.IsNullOrEmpty(Model!.Uri)
-                ? await AppClient.GetInstanceInfo(Model.Uri)
+                ? await new BTCPayAppClient(Model.Uri).GetInstanceInfo()
                 : null;
 
             _errorMessage = !string.IsNullOrEmpty(Model.Uri) && InstanceInfo == null

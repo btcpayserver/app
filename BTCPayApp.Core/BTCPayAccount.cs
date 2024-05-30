@@ -32,5 +32,7 @@ public class BTCPayAccount(string baseUri, string email)
         AccessToken = RefreshToken = null;
         AccessExpiry = null;
     }
+
+    public bool HasTokens => !string.IsNullOrEmpty(AccessToken) && !string.IsNullOrEmpty(RefreshToken);
 }
 

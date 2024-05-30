@@ -6,7 +6,6 @@
 @using BTCPayApp.Core.Data
 @using Microsoft.Extensions.Logging
 @using BTCPayApp.UI.Components.Layout
-@using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayServer.Client.Models
 @using Newtonsoft.Json.Linq
@@ -15,8 +14,7 @@
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
 @inject ILogger<IndexPage> Logger
-@inject BTCPayAppClient BTCPayAppClient
-@inject IAccountManager AuthStateProvider
+@inject IAccountManager AccountManager
 
 <PageTitle>Lightning Node</PageTitle>
 
@@ -84,7 +82,7 @@
 
     private string? ConfiguredConnectionString = null;
 private string ConnectionString => $"type=app;group={OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier}";
-    
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -93,19 +91,16 @@ private string ConnectionString => $"type=app;group={OnChainWalletManager.Wallet
         {
             _config = await LightningNodeManager.Node.GetConfig();
         }
-        var acc = AuthStateProvider.GetAccount();
+        var acc = AccountManager.GetAccount();
         if (acc?.CurrentStoreId != null)
         {
-            
-            var gfClient = BTCPayAppClient.GreenfieldClient(new Uri(acc.BaseUri));
-
             try
             {
-                var pm = await  gfClient.GetStorePaymentMethod(acc.CurrentStoreId, "BTC-LN", true);
+                var pm = await AccountManager.GetClient().GetStorePaymentMethod(acc.CurrentStoreId, "BTC-LN", true);
                 if(
-               
-                    pm?.Config is JObject configObj && 
-                    configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) && 
+
+                    pm?.Config is JObject configObj &&
+                    configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) &&
                     configuredConnectionStringToken.Value<string>() is {} configuredConnectionString)
                 {
                     ConfiguredConnectionString = configuredConnectionString;
@@ -119,34 +114,25 @@ private string ConnectionString => $"type=app;group={OnChainWalletManager.Wallet
             {
                 ConfiguredConnectionString = null;
             }
-          
-
         }
-        
-       
     }
 
     private async Task SetStoreLNWallet()
     {
-        
-        var acc = AuthStateProvider.GetAccount();
+
+        var acc = AccountManager.GetAccount();
         if (acc?.CurrentStoreId != null)
         {
-            
-            var gfClient = BTCPayAppClient.GreenfieldClient(new Uri(acc.BaseUri));
-            var pm = await  gfClient.UpdateStorePaymentMethod(acc.CurrentStoreId, "BTC-LN", new UpdatePaymentMethodRequest()
+            var pm = await  AccountManager.GetClient().UpdateStorePaymentMethod(acc.CurrentStoreId, "BTC-LN", new UpdatePaymentMethodRequest()
             {
                 Enabled = true,
                 Config = new JObject
                 {
                     ["connectionString"] = ConnectionString
-                
-            }
+                }
             });
-            if(
-               
-                pm?.Config is JObject configObj && 
-                configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) && 
+            if (pm?.Config is JObject configObj &&
+                configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) &&
                 configuredConnectionStringToken.Value<string>() is {} configuredConnectionString)
             {
                 ConfiguredConnectionString = configuredConnectionString;

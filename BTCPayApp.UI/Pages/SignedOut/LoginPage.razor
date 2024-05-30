@@ -6,7 +6,6 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
-@inject BTCPayAppClient AppClient
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 @inject IDispatcher Dispatcher
@@ -129,7 +128,7 @@
         try
         {
             InstanceInfo = !string.IsNullOrEmpty(Model.Uri)
-                ? await AppClient.GetInstanceInfo(Model.Uri)
+                ? await new BTCPayAppClient(Model.Uri).GetInstanceInfo()
                 : null;
 
             _errorMessage = !string.IsNullOrEmpty(Model.Uri) && InstanceInfo == null

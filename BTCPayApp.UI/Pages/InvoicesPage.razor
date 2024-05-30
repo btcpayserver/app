@@ -63,7 +63,7 @@
 @code {
     private bool _loading;
     private string? _errorMessage;
-    private InvoiceData[]? _invoices;
+    private IEnumerable<InvoiceData>? _invoices;
 
     protected override async Task OnInitializedAsync()
     {
@@ -76,7 +76,7 @@
         {
             _loading = true;
             _errorMessage = null;
-            _invoices = await AccountManager.Get<InvoiceData[]>($"api/v1/stores/{Store!.Id}/invoices");
+            _invoices = await AccountManager.GetClient().GetInvoices(Store!.Id);
         }
         catch (Exception e)
         {

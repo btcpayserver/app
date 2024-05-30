@@ -14,9 +14,7 @@
 @inject OnChainWalletManager OnChainWalletManager
 @inject IState<RootState> State
 @inject ILogger<IndexPage> Logger
-
-@inject BTCPayAppClient BTCPayAppClient
-@inject IAccountManager AuthStateProvider
+@inject IAccountManager AccountManager
 <PageTitle>Wallet Setup</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
@@ -60,7 +58,7 @@
                         <TruncateCenter Text="@d.Value.Identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
                         <label>Identifier</label>
                     </div>
-                    
+
                 }
                 @if (!string.IsNullOrEmpty(d.Value.Descriptor))
                 {
@@ -88,22 +86,21 @@
 
     private async Task SetStorePaymentMethod(string key)
     {
-        
+
         try
         {
             if (!OnChainWalletManager.WalletConfig.Derivations.TryGetValue(key, out var derivation) || derivation.Descriptor is null)
             {
                 return;
-                
+
             }
 
             var xpub = derivation.Descriptor.ExtractFromDescriptor(OnChainWalletManager.Network);
             var identifierSUffix = derivation.Identifier.Split(':').Last();
-            var acc = AuthStateProvider.GetAccount();
+            var acc = AccountManager.GetAccount();
             if (acc?.CurrentStoreId is null)
                 return;
-            var gfClient = BTCPayAppClient.GreenfieldClient(new Uri(acc.BaseUri));
-            var pm = await  gfClient.UpdateStorePaymentMethod(acc.CurrentStoreId, "BTC-CHAIN", new UpdatePaymentMethodRequest()
+            var pm = await AccountManager.GetClient().UpdateStorePaymentMethod(acc.CurrentStoreId, "BTC-CHAIN", new UpdatePaymentMethodRequest()
             {
                 Enabled = true,
                 Config = derivation.Descriptor
@@ -113,25 +110,24 @@
         {
             Logger.LogError(ex, "Error setting store payment method");
         }
-       
+
     }
 
     protected override async Task OnInitializedAsync()
     {
         await GetStorePaymentMethod();
     }
-    
+
     private async Task GetStorePaymentMethod()
     {
         try
         {
             if(CanConfigureWallet)
                 return;
-            var acc = AuthStateProvider.GetAccount();
+            var acc = AccountManager.GetAccount();
             if (acc?.CurrentStoreId is null)
                 return;
-            var gfClient = BTCPayAppClient.GreenfieldClient(new Uri(acc.BaseUri));
-            var pm = await  gfClient.GetStorePaymentMethod(acc.CurrentStoreId, "BTC-CHAIN", true);
+            var pm = await AccountManager.GetClient().GetStorePaymentMethod(acc.CurrentStoreId, "BTC-CHAIN", true);
             if (pm?.Config is JObject configObj && configObj.TryGetValue("accountDerivation", out var derivationSchemeToken) && derivationSchemeToken.Value<string>() is {} derivationScheme)
             {
                 StorePaymentMethodIdentifier = derivationScheme;

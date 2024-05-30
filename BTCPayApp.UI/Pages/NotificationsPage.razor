@@ -54,7 +54,7 @@
 
     private bool _loading;
     private string? _errorMessage;
-    private NotificationData[]? _notifications;
+    private IEnumerable<NotificationData>? _notifications;
 
     protected override async Task OnInitializedAsync()
     {
@@ -67,7 +67,7 @@
         {
             _loading = true;
             _errorMessage = null;
-            _notifications = await AccountManager.Get<NotificationData[]>($"api/v1/users/me/notifications");
+            _notifications = await AccountManager.GetClient().GetNotifications();
         }
         catch (Exception e)
         {
