@@ -1,5 +1,4 @@
-﻿@attribute [AllowAnonymous]
-@attribute [Route(Routes.Settings)]
+﻿@attribute [Route(Routes.Settings)]
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
@@ -16,53 +15,50 @@
         <h1>Settings</h1>
     </Titlebar>
 </SectionContent>
-<section class="container">
-    <div class="form-group">
-        @if (UiState.Value.CustomThemeExtension is null)
-        {
-            <label class="form-label">Theme</label>
-            <InputSelect class="form-select w-auto" @bind-Value="Model.Theme" @bind-Value:after="OnThemeChange">
-                <option value="@Themes.System">System</option>
-                <option value="@Themes.Light">Light</option>
-                <option value="@Themes.Dark">Dark</option>
-            </InputSelect>
-        }
-        else
-        {
-            <div>Custom Theme</div>
-        }
+
+<section class="container py-3">
+    <div class="box">
+        <ul class="list-group list-group-flush list-group-links">
+            @if (_userInfo!.Stores?.Count() > 1)
+            {
+                <li class="list-group-item">
+                    <a href="@Routes.SelectStore">
+                        <span>Select Store</span>
+                        <Icon symbol="caret-right"/>
+                    </a>
+                </li>
+            }
+            <li class="list-group-item">
+                <a href="@Routes.ChangePasscode">
+                    <span>Passcode</span>
+                    <Icon symbol="caret-right"/>
+                </a>
+            </li>
+            <li class="list-group-item">
+                <a href="@Routes.User">
+                    <span>User Details</span>
+                    <Icon symbol="caret-right"/>
+                </a>
+            </li>
+            @if (UiState.Value.CustomThemeExtension is null)
+            {
+                <li class="list-group-item">
+                    <div class="py-1">
+                        <span>Theme</span>
+                        <div class="d-flex align-items-center gap-2">
+                            @foreach (var theme in ThemeList)
+                            {
+                                <button type="button" class="btn-icon @(Model.Theme == theme ? "active" : null)" title="@theme" @onclick="() => SetTheme(theme)">
+                                    <Icon Symbol="@($"themes-{theme.ToLower()}")"/>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
     </div>
 </section>
-@if (_userInfo != null)
-{
-    <section class="container py-3">
-        <div class="box">
-            <ul class="list-group list-group-flush list-group-links">
-                @if (_userInfo!.Stores?.Count() > 1)
-                {
-                    <li class="list-group-item">
-                        <NavLink class="nav-link" href="@Routes.SelectStore">
-                            <span>Select Store</span>
-                            <Icon symbol="caret-right"/>
-                        </NavLink>
-                    </li>
-                }
-                <li class="list-group-item">
-                    <NavLink class="nav-link" href="@Routes.ChangePasscode">
-                        <span>Passcode</span>
-                        <Icon symbol="caret-right"/>
-                    </NavLink>
-                </li>
-                <li class="list-group-item">
-                    <NavLink class="nav-link" href="@Routes.User">
-                        <span>User Details</span>
-                        <Icon symbol="caret-right"/>
-                    </NavLink>
-                </li>
-            </ul>
-        </div>
-    </section>
-}
 
 @code {
     private AppUserInfo? _userInfo;
@@ -74,8 +70,9 @@
         Model.Theme = UiState.Value.SelectedTheme;
     }
 
-    private void OnThemeChange()
+    private void SetTheme(string theme)
     {
+        Model.Theme = theme;
         Dispatcher.Dispatch(new UIState.ApplyUserTheme(Model.Theme));
     }
 
@@ -83,4 +80,6 @@
     {
         public string Theme { get; set; } = Themes.System;
     }
+
+    private static string[] ThemeList => [Themes.System, Themes.Light, Themes.Dark];
 }
