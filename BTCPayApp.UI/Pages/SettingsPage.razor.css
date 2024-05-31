@@ -1,0 +1,42 @@
+header {
+  margin-bottom: var(--btcpay-space-m);
+}
+
+header .btn-icon {
+  --icon-size: 2rem;
+  padding: 0;
+}
+
+h1 {
+  font-size: var(--btcpay-font-size-xl);
+  margin-bottom: 0;
+}
+
+h2 {
+  font-size: var(--btcpay-font-size-l);
+  margin-bottom: var(--btcpay-space-s);
+}
+
+.user {
+  --profile-picture-size: 3rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--btcpay-space-m);
+  color: var(--btcpay-nav-link-color);
+  font-weight: var(--btcpay-font-weight-semibold);
+}
+
+.user:hover {
+  color: var(--btcpay-nav-link-hover-color);
+}
+
+.user h5 {
+  font-weight: var(--btcpay-font-weight-semibold);
+  margin-bottom: var(--btcpay-space-xs);
+}
+
+.box {
+  margin-bottom: var(--btcpay-space-l);
+}

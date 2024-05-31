@@ -50,9 +50,6 @@
     [SupplyParameterFromQuery, EditorRequired]
     public string? ServerUrl { get; set; }
 
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationState { get; set; }
-
     private RegisterModel Model { get; set; } = new();
     private AppInstanceInfo? InstanceInfo { get; set; }
 

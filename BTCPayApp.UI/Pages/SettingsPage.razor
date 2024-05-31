@@ -2,7 +2,6 @@
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
-@using BTCPayApp.UI.Components.Layout
 @inject IState<UIState> UiState
 @inject IDispatcher Dispatcher
 @inject IAccountManager AccountManager
@@ -10,16 +9,47 @@
 
 <PageTitle>Settings</PageTitle>
 
-<SectionContent SectionId="_Layout.Top">
-    <Titlebar Back="@Routes.Index">
-        <h1>Settings</h1>
-    </Titlebar>
-</SectionContent>
+<section class="container py-4">
+    <header class="d-flex align-items-center justify-content-between gap-3">
+        @if (UiState.Value.CustomThemeExtension is null)
+        {
+            <h1>Settings</h1>
+            <div class="d-flex align-items-center gap-1">
+                @foreach (var theme in ThemeList)
+                {
+                    <button type="button" class="btn-icon @(Model.Theme == theme ? "active" : null)" title="@theme" @onclick="() => SetTheme(theme)">
+                        <Icon Symbol="@($"themes-{theme.ToLower()}")"/>
+                    </button>
+                }
+            </div>
+        }
+    </header>
+    @if (_userInfo != null)
+    {
+        <a href="@Routes.User" class="box user">
+            <div class="profile-picture"></div>
+            <div class="me-auto">
+                <h5>@(_userInfo.Name ?? _userInfo.Email)</h5>
+                <span>@_userInfo.Email</span>
+            </div>
+            <Icon symbol="caret-right"/>
+        </a>
+    }
 
-<section class="container py-3">
+    <h2>Store</h2>
     <div class="box">
         <ul class="list-group list-group-flush list-group-links">
-            @if (_userInfo!.Stores?.Count() > 1)
+            @{ var store = AccountManager.GetCurrentStore(); }
+            @if (store != null)
+            {
+                <li class="list-group-item">
+                    <a href="@Routes.StorePath(store.Id!, Routes.Settings)">
+                        <span>@store.Name</span>
+                        <Icon symbol="caret-right"/>
+                    </a>
+                </li>
+            }
+            @if (_userInfo!.Stores?.Count() > 1 || AccountManager.GetCurrentStore() == null)
             {
                 <li class="list-group-item">
                     <a href="@Routes.SelectStore">
@@ -28,34 +58,18 @@
                     </a>
                 </li>
             }
+        </ul>
+    </div>
+
+    <h2>Security</h2>
+    <div class="box">
+        <ul class="list-group list-group-flush list-group-links">
             <li class="list-group-item">
                 <a href="@Routes.ChangePasscode">
                     <span>Passcode</span>
                     <Icon symbol="caret-right"/>
                 </a>
             </li>
-            <li class="list-group-item">
-                <a href="@Routes.User">
-                    <span>User Details</span>
-                    <Icon symbol="caret-right"/>
-                </a>
-            </li>
-            @if (UiState.Value.CustomThemeExtension is null)
-            {
-                <li class="list-group-item">
-                    <div class="py-1">
-                        <span>Theme</span>
-                        <div class="d-flex align-items-center gap-2">
-                            @foreach (var theme in ThemeList)
-                            {
-                                <button type="button" class="btn-icon @(Model.Theme == theme ? "active" : null)" title="@theme" @onclick="() => SetTheme(theme)">
-                                    <Icon Symbol="@($"themes-{theme.ToLower()}")"/>
-                                </button>
-                            }
-                        </div>
-                    </div>
-                </li>
-            }
         </ul>
     </div>
 </section>

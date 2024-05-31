@@ -10,13 +10,13 @@
 
 @code {
     [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationState { get; set; }
+    private Task<AuthenticationState>? AuthState { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
-        if (AuthenticationState == null) return;
+        if (AuthState == null) return;
 
-        var authState = await AuthenticationState;
+        var authState = await AuthState;
         if (authState.User.Identity?.IsAuthenticated is true)
         {
             NavigationManager.NavigateTo(AccountManager.GetCurrentStore() == null

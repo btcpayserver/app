@@ -29,7 +29,7 @@
 
 @code {
     [CascadingParameter]
-    private Task<AuthenticationState>? AuthenticationState { get; set; }
+    private Task<AuthenticationState>? AuthState { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -44,8 +44,8 @@
         }
 
         // signed in
-        if (AuthenticationState == null) return;
-        var authState = await AuthenticationState;
+        if (AuthState == null) return;
+        var authState = await AuthState;
         var account = AccountManager.GetAccount();
         if (authState.User.Identity?.IsAuthenticated is true && !string.IsNullOrEmpty(account?.BaseUri))
         {

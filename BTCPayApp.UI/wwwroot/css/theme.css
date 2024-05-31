@@ -158,9 +158,9 @@
   --btcpay-font-size-xs: 10px;
   --btcpay-font-size-s: 12px;
   --btcpay-font-size-m: 14px;
-  --btcpay-font-size-l: 18px;
-  --btcpay-font-size-xl: 36px;
-  --btcpay-font-size-xxl: 45px;
+  --btcpay-font-size-l: 20px;
+  --btcpay-font-size-xl: 28px;
+  --btcpay-font-size-xxl: 36px;
   --btcpay-font-weight-normal: 400;
   --btcpay-font-weight-semibold: 600;
   --btcpay-font-weight-bold: 700;
@@ -454,7 +454,7 @@
   --btcpay-bg-tile: var(--btcpay-bg-dark);
   --btcpay-body-bg-light: var(--btcpay-neutral-50);
   --btcpay-body-bg-hover: var(--btcpay-neutral-50);
-  --btcpay-body-bg-rgb: 13, 17, 23;
+  --btcpay-body-bg-rgb: 22, 27, 34;
   --btcpay-body-text: var(--btcpay-white);
   --btcpay-body-text-muted: var(--btcpay-neutral-600);
   --btcpay-body-text-warning-rgb: 255, 192, 67;
@@ -504,7 +504,7 @@
     --btcpay-bg-tile: var(--btcpay-bg-dark);
     --btcpay-body-bg-light: var(--btcpay-neutral-50);
     --btcpay-body-bg-hover: var(--btcpay-neutral-50);
-    --btcpay-body-bg-rgb: 13, 17, 23;
+    --btcpay-body-bg-rgb: 22, 27, 34;
     --btcpay-body-text: var(--btcpay-white);
     --btcpay-body-text-muted: var(--btcpay-neutral-600);
     --btcpay-body-text-warning-rgb: 255, 192, 67;

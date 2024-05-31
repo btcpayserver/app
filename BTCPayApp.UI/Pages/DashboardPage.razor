@@ -20,9 +20,6 @@
                 <div class="fw-semibold">
                     @context.User.Identity?.Name
                 </div>
-                <a class="btn btn-sm rounded-pill py-1 px-3 btn-outline-light" href="@Routes.Logout">
-                    <span>Logout</span>
-                </a>
             </div>
             <div class="notifications">
                 <a class="btn btn-light rounded-circle" href="@Routes.Notifications">
@@ -169,13 +166,6 @@
             </ul>
         </section>
     </Authorized>
-    <Authorizing>
-        <section class="d-flex justify-content-center min-vh-100">
-            <div class="spinner-border" role="status">
-                <span class="visually-hidden">Authorizing...</span>
-            </div>
-        </section>
-    </Authorizing>
 </AuthorizeView>
 
 @code {

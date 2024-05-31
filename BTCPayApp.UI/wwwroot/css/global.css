@@ -142,6 +142,15 @@
   margin-bottom: calc(var(--btcpay-space-s) * -1);
 }
 
+/* Profile Picture */
+.profile-picture {
+  height: var(--profile-picture-size, 2.1rem);
+  width: var(--profile-picture-size, 2.1rem);
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--btcpay-neutral-500);
+}
+
 /* List Group */
 .list-group-flush .list-group-item {
   --btcpay-list-group-item-padding-x: 0;
@@ -171,6 +180,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--btcpay-space-m);
   font-weight: var(--btcpay-font-weight-semibold);
 }
 

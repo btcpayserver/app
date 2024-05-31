@@ -10,7 +10,7 @@
 <PageTitle>@Store.Name</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
-    <Titlebar Back="@Routes.Index">
+    <Titlebar Back="@BackUrl">
         <h1>@Store.Name</h1>
     </Titlebar>
 </SectionContent>
@@ -46,6 +46,9 @@
 @code {
     [Parameter, EditorRequired]
     public string? StoreId { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? BackUrl { get; set; }
 
     private AppUserStoreInfo? Store { get; set; }
 
