@@ -128,7 +128,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
 
                 await FetchUserInfo();
             }
-            catch (BTCPayAppClientException e)
+            catch (Exception e)
             {
                 return new FormResult(false, e.Message);
             }
@@ -195,7 +195,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
             await SetAccount(account);
             return new FormResult(true);
         }
-        catch (BTCPayAppClientException e)
+        catch (Exception e)
         {
             return new FormResult(false, e.Message);
         }
@@ -220,7 +220,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
                 message += " The new account requires approval by an admin before you can log in.";
             return new FormResult(true, message);
         }
-        catch (BTCPayAppClientException e)
+        catch (Exception e)
         {
             return new FormResult(false, e.Message);
         }
@@ -242,7 +242,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
                 ? "You should have received an email with a password reset code."
                 : "Your password has been reset.");
         }
-        catch (BTCPayAppClientException e)
+        catch (Exception e)
         {
             return new FormResult(false, e.Message);
         }
