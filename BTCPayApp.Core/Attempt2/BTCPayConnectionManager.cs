@@ -24,15 +24,21 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     public HubConnection? Connection { get; private set; }
     public Network? ReportedNetwork { get; private set; }
 
-    public event AsyncEventHandler<HubConnectionState>? ConnectionChanged;
-    private HubConnectionState _lastAdvertisedState = HubConnectionState.Disconnected;
-    private HubConnectionState ConnectionState => Connection?.State ?? HubConnectionState.Disconnected;
-    private void InvokeConnectionChange()
+    public event AsyncEventHandler<(HubConnectionState Old, HubConnectionState New)>? ConnectionChanged;
+    private HubConnectionState _connectionState = HubConnectionState.Disconnected;
+
+    public HubConnectionState ConnectionState
     {
-        if (_lastAdvertisedState == ConnectionState) return;
-        _logger.LogInformation("Connection state changed: {State}", ConnectionState);
-        ConnectionChanged?.Invoke(this, ConnectionState);
-        _lastAdvertisedState = ConnectionState;
+        get => Connection?.State ?? HubConnectionState.Disconnected;
+        private set
+        {
+            if (_connectionState == value)
+                return;
+            var old = _connectionState;
+            _connectionState = value;
+            _logger.LogInformation("Connection state changed: {State}", _connectionState);
+            ConnectionChanged?.Invoke(this, (old, _connectionState));
+        }
     }
 
     public BTCPayConnectionManager(
@@ -97,32 +103,27 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
             {
                 if (Connection is not null && ConnectionState == HubConnectionState.Disconnected)
                 {
-                    var startTsk = Connection.StartAsync();
-                    InvokeConnectionChange();
-                    await startTsk;
-                    InvokeConnectionChange();
+                    await Connection.StartAsync();
+                    ConnectionState = HubConnectionState.Connected;
                 }
                 else
                 {
-                    InvokeConnectionChange();
                     await Task.Delay(5000);
                 }
             }
             catch (Exception e)
             {
-                InvokeConnectionChange();
                 await Task.Delay(1000);
             }
         }
     }
-
 
     private async Task Kill()
     {
         if (Connection is not null)
             await Connection.StopAsync();
         Connection = null;
-        InvokeConnectionChange();
+        ConnectionState = HubConnectionState.Disconnected;
         _subscription?.Dispose();
         HubProxy = null;
     }
@@ -142,7 +143,6 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
             .WithAutomaticReconnect()
             .Build();
 
-        InvokeConnectionChange();
         _subscription = Connection.Register(_btcPayAppServerClientInterface);
         HubProxy = Connection.CreateHubProxy<IBTCPayAppHubServer>();
     }
@@ -156,22 +156,22 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
     public Task OnClosed(Exception? exception)
     {
-        InvokeConnectionChange();
         _logger.LogError(exception, "OnClosed");
+        ConnectionState = HubConnectionState.Disconnected;
         return Task.CompletedTask;
     }
 
     public Task OnReconnected(string? connectionId)
     {
-        InvokeConnectionChange();
         _logger.LogInformation("OnReconnected: {ConnectionId}", connectionId);
+        ConnectionState = HubConnectionState.Connected;
         return Task.CompletedTask;
     }
 
     public Task OnReconnecting(Exception? exception)
     {
-        InvokeConnectionChange();
         _logger.LogError(exception, "OnReconnecting");
+        ConnectionState = HubConnectionState.Connecting;
         return Task.CompletedTask;
     }
 }

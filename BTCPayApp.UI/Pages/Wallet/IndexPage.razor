@@ -26,7 +26,7 @@
 </SectionContent>
 <section class="container">
     <ul>
-        <li>Connection state: @State.Value.BTCPayServerConnectionState</li>
+        <li>Connection state: @State.Value.ConnectionState</li>
         <li>Onchain wallet state: @State.Value.OnchainWalletState</li>
     </ul>
 
@@ -106,9 +106,8 @@
 @code {
 
     private bool CanConfigureWallet =>
-        !State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) &&
         State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
-        State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
+        State.Value.ConnectionState == HubConnectionState.Connected;
 
     protected override async Task OnInitializedAsync()
     {

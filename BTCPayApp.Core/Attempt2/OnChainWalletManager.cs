@@ -34,6 +34,7 @@ public class OnChainWalletManager : BaseHostedService
                 return;
             var old = _state;
             _state = value;
+            _logger.LogInformation("Wallet state changed: {State}", _state);
             StateChanged?.Invoke(this, (old, value));
         }
     }
@@ -79,7 +80,7 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
-    private bool IsHubConnected => _btcPayConnectionManager.Connection?.State is HubConnectionState.Connected;
+    private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is HubConnectionState.Connected;
     private bool IsConfigured => WalletConfig is not null;
 
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
@@ -93,7 +94,6 @@ public class OnChainWalletManager : BaseHostedService
         {
             DetermineState();
         }
-        
     }
 
     public async Task Generate()
@@ -178,25 +178,20 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
-    private async Task ConnectionChanged(object? sender, HubConnectionState hubConnectionState)
+    private async Task ConnectionChanged(object? sender, (HubConnectionState Old, HubConnectionState New) _)
     {
         DetermineState();
     }
-
 
     private void DetermineState()
     {
         var result = OnChainWalletState.Loading;
         if (IsHubConnected && IsConfigured)
-        {
             result = OnChainWalletState.Loaded;
-        }else if (!IsHubConnected)
-        {
+        else if (!IsHubConnected)
             result = OnChainWalletState.WaitingForConnection;
-        }else if (!IsConfigured)
-        {
+        else if (!IsConfigured)
             result = OnChainWalletState.NotConfigured;
-        }
         State = result;
     }
 

@@ -73,15 +73,14 @@
 
 @code {
     private bool CanConfigureLNWallet =>
-        !State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) &&
+        State.Value.ConnectionState == HubConnectionState.Connected &&
         State.Value.OnchainWalletState == OnChainWalletState.Loaded &&
-        State.Value.LightningNodeState == LightningNodeState.NodeNotConfigured &&
-        State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
+        State.Value.LightningNodeState == LightningNodeState.NotConfigured;
 
     private LightningConfig? _config;
 
-    private string? ConfiguredConnectionString = null;
-private string ConnectionString => $"type=app;group={OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier}";
+    private string? ConfiguredConnectionString;
+    private string ConnectionString => $"type=app;group={OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier}";
 
     protected override async Task OnInitializedAsync()
     {

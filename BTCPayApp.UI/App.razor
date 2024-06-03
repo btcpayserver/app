@@ -1,4 +1,4 @@
-﻿@using BTCPayApp.Core
+@using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Pages
@@ -33,7 +33,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        LoadingStateSelection.Select(state => state.Loading);
         var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
         if (state != null)
         {

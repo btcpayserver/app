@@ -44,10 +44,9 @@
 
 @code {
     private bool CanConfigureLNWallet =>
-        !State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) &&
+        State.Value.ConnectionState == HubConnectionState.Connected &&
         State.Value.OnchainWalletState == OnChainWalletState.Loaded &&
-        State.Value.LightningNodeState == LightningNodeState.NodeNotConfigured &&
-        State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
+        State.Value.LightningNodeState == LightningNodeState.NotConfigured;
 
     protected override async Task OnInitializedAsync()
     {

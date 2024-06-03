@@ -22,7 +22,7 @@
 
 @code {
     public SetupState SetupStateConnection() {
-        return State.Value.BTCPayServerConnectionState switch
+        return State.Value.ConnectionState switch
         {
             HubConnectionState.Connected => SetupState.Completed,
             HubConnectionState.Connecting => SetupState.Pending,
@@ -46,14 +46,12 @@
 
     public SetupState SetupStateOnchain() {
         if (SetupStateConnection() != SetupState.Completed ||
-            State.Value.Loading.Contains(RootState.LoadingHandles.LightningState) ||
             State.Value.OnchainWalletState is OnChainWalletState.Init or OnChainWalletState.Loading) return SetupState.Undetermined;
         return State.Value.OnchainWalletState == OnChainWalletState.Loaded ? SetupState.Completed : SetupState.Pending;
     }
 
     public SetupState SetupStateLightning() {
         if (SetupStateConnection() != SetupState.Completed ||
-            State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) ||
             State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loading) return SetupState.Undetermined;
         if (State.Value.LightningNodeState is LightningNodeState.Error or LightningNodeState.Stopped) return SetupState.Failed;
         return State.Value.LightningNodeState == LightningNodeState.Loaded ? SetupState.Completed : SetupState.Pending;

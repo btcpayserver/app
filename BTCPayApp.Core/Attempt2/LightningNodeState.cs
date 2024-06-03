@@ -3,7 +3,7 @@
 public enum LightningNodeState
 {
     Init,
-    NodeNotConfigured,
+    NotConfigured,
     WaitingForConnection,
     Loading,
     Loaded,

@@ -78,9 +78,8 @@
 
 @code {
     private bool CanConfigureWallet =>
-        !State.Value.Loading.Contains(RootState.LoadingHandles.WalletState) &&
         State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
-        State.Value.BTCPayServerConnectionState == HubConnectionState.Connected;
+        State.Value.ConnectionState == HubConnectionState.Connected;
 
     private string? StorePaymentMethodIdentifier = null;
 
