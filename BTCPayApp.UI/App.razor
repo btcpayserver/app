@@ -1,4 +1,4 @@
-@using BTCPayApp.Core
+﻿@using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Pages
@@ -12,7 +12,7 @@
 @inject ILogger<App> Logger
 
 <PageTitle>BTCPay Server</PageTitle>
-<Fluxor.Blazor.Web.StoreInitializer/>
+<Fluxor.Blazor.Web.StoreInitializer @rendermode="new InteractiveAutoRenderMode()" />
 <CascadingAuthenticationState>
     <AuthorizeView>
         <Authorized>
