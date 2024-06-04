@@ -24,10 +24,7 @@
                 </div>
             </div>
             <div class="notifications">
-                <a class="btn btn-light rounded-circle" href="@Routes.Notifications">
-                    <Icon symbol="nav-notifications"/>
-                    <span class="visually-hidden">Notifications</span>
-                </a>
+                <NotificationsBell />
             </div>
         </header>
         @if (!string.IsNullOrEmpty(_successMessage))

@@ -57,6 +57,9 @@
             {
                 Logger.LogError(e, "Could not resolve instance info for {BaseUri}", account.BaseUri);
             }
+
+            // notifications
+            Dispatcher.Dispatch(new NotificationState.FetchNotifications());
         }
 
         // store

@@ -1,0 +1,10 @@
+a {
+  position: relative;
+}
+
+a .badge {
+  position: absolute;
+  top: -.375rem;
+  right: -.375rem;
+  min-width: 1.75em;
+}

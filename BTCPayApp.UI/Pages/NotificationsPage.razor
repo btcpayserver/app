@@ -1,17 +1,18 @@
 ﻿@attribute [Route(Routes.Notifications)]
-@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@inject IAccountManager AccountManager
+@inject IDispatcher Dispatcher
+@inject IState<NotificationState> NotificationState
 
 <PageTitle>Notifications</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back="@Routes.Index">
         <SectionContent SectionId="Titlebar.End">
-            <button type="button" class="btn-icon" @onclick="LoadNotifications" disabled="@_loading">
-                @if (_loading)
+            <button type="button" class="btn-icon" @onclick="LoadNotifications" disabled="@Loading">
+                @if (Loading)
                 {
                     <LoadingIndicator/>
                 }
@@ -25,18 +26,18 @@
     </Titlebar>
 </SectionContent>
 
-@if (!string.IsNullOrEmpty(_errorMessage))
+@if (!string.IsNullOrEmpty(Error))
 {
     <section class="container">
-        <Alert Type="danger">@_errorMessage</Alert>
+        <Alert Type="danger">@Error</Alert>
     </section>
 }
-@if (_notifications is not null)
+@if (Notifications is not null)
 {
-    @if (_notifications.Any())
+    @if (Notifications.Any())
     {
         <div class="notifications">
-            @foreach (var n in _notifications)
+            @foreach (var n in Notifications)
             {
                 <NotificationItem Notification="@n"/>
             }
@@ -51,31 +52,12 @@
 }
 
 @code {
-
-    private bool _loading;
-    private string? _errorMessage;
-    private IEnumerable<NotificationData>? _notifications;
-
-    protected override async Task OnInitializedAsync()
+    private void LoadNotifications()
     {
-        await LoadNotifications();
+        Dispatcher.Dispatch(new NotificationState.FetchNotifications());
     }
 
-    private async Task LoadNotifications()
-    {
-        try
-        {
-            _loading = true;
-            _errorMessage = null;
-            _notifications = await AccountManager.GetClient().GetNotifications();
-        }
-        catch (Exception e)
-        {
-            _errorMessage = e.InnerException?.Message ?? e.Message;
-        }
-        finally
-        {
-            _loading = false;
-        }
-    }
+    private IEnumerable<NotificationData>? Notifications => NotificationState.Value.Notifications?.Data;
+    private bool Loading => NotificationState.Value.Notifications?.Loading is true;
+    private string? Error => NotificationState.Value.Notifications?.Error;
 }
