@@ -16,3 +16,8 @@ h2 {
   justify-content: center;
   gap: var(--btcpay-space-s);
 }
+
+.invoices ::deep .container {
+  padding-left: 0;
+  padding-right: 0;
+}
