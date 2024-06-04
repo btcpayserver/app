@@ -38,7 +38,7 @@
   max-width: 100%;
 }
 
-.truncate-center button.btn .icon {
+.truncate-center ::deep .icon {
   --icon-size: 1rem;
 }
 
@@ -57,13 +57,8 @@
   font-weight: var(--btcpay-font-weight-semibold);
 }
 
-.truncate-center.form-control-plaintext button.btn .icon {
-  --icon-size: 1.25rem;
-}
-
 .truncate-center-id {
-  background: var(--btcpay-neutral-100);
-  border: 1px solid var(--btcpay-neutral-200);
+  border: 1px solid var(--btcpay-body-border-medium);
   border-radius: var(--btcpay-border-radius-l);
   padding: var(--btcpay-space-xs) var(--btcpay-space-s);
 }

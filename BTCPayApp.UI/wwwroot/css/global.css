@@ -3,6 +3,7 @@
   --navbar-top-height: 4rem;
   --navbar-bottom-height: 4rem;
   --sidebar-width: 280px;
+  --icon-size: 1.5rem;
 }
 
 ::-moz-focus-inner {
@@ -26,8 +27,8 @@
   transform: rotate(-180deg);
 }
 
-.btn .icon-scan-qr {
-  --icon-size: 1.1875rem;
+.btn .icon {
+  --icon-size: inherit;
 }
 
 /* Layout */
@@ -186,8 +187,6 @@
 
 /* Icon Button */
 .btn-icon {
-  --icon-size: 1.5rem;
-
   display: flex;
   align-items: center;
   justify-content: center;

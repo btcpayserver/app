@@ -16,8 +16,3 @@ h2 {
   justify-content: center;
   gap: var(--btcpay-space-s);
 }
-
-.notifications a.btn ::deep .icon,
-.wallet a.btn ::deep .icon {
-  --icon-size: 1.5rem;
-}

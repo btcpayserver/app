@@ -20,9 +20,6 @@
   z-index: 1;
 }
 
-#RecentTransactionsToggle .icon {
-  --icon-size: 2.25em;
-}
 #RecentTransactionsRefresh[disabled] .icon {
   animation: 1.25s linear infinite spinner-border;
 }
