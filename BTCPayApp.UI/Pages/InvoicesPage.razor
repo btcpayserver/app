@@ -2,9 +2,12 @@
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
+@inject IDispatcher Dispatcher
+@inject IState<StoreState> StoreState
 
 <PageTitle>Invoices</PageTitle>
 
@@ -13,8 +16,8 @@
         @if (Store is not null)
         {
             <SectionContent SectionId="Titlebar.End">
-                <button type="button" class="btn-icon" @onclick="LoadInvoices" disabled="@_loading">
-                    @if (_loading)
+                <button type="button" class="btn-icon" @onclick="LoadInvoices" disabled="@Loading">
+                    @if (Loading)
                     {
                         <LoadingIndicator/>
                     }
@@ -35,18 +38,18 @@
         <Alert Type="info">Please configure a store first.</Alert>
     </section>
 }
-@if (!string.IsNullOrEmpty(_errorMessage))
+@if (!string.IsNullOrEmpty(Error))
 {
     <section class="container">
-        <Alert Type="danger">@_errorMessage</Alert>
+        <Alert Type="danger">@Error</Alert>
     </section>
 }
-@if (_invoices is not null)
+@if (Invoices is not null)
 {
-    @if (_invoices.Any())
+    @if (Invoices.Any())
     {
         <div class="list-group list-group-flush">
-            @foreach (var i in _invoices)
+            @foreach (var i in Invoices)
             {
                 <InvoiceItem Invoice="@i"/>
             }
@@ -61,32 +64,14 @@
 }
 
 @code {
-    private bool _loading;
-    private string? _errorMessage;
-    private IEnumerable<InvoiceData>? _invoices;
-
-    protected override async Task OnInitializedAsync()
+    private void LoadInvoices()
     {
-        if (Store is not null) await LoadInvoices();
-    }
-
-    private async Task LoadInvoices()
-    {
-        try
-        {
-            _loading = true;
-            _errorMessage = null;
-            _invoices = await AccountManager.GetClient().GetInvoices(Store!.Id);
-        }
-        catch (Exception e)
-        {
-            _errorMessage = e.InnerException?.Message ?? e.Message;
-        }
-        finally
-        {
-            _loading = false;
-        }
+        if (Store is not null)
+            Dispatcher.Dispatch(new StoreState.FetchInvoices(Store.Id));
     }
 
     private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
+    private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data;
+    private bool Loading => StoreState.Value.Invoices?.Loading is true;
+    private string? Error => StoreState.Value.Invoices?.Error;
 }

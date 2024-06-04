@@ -58,6 +58,13 @@
                 Logger.LogError(e, "Could not resolve instance info for {BaseUri}", account.BaseUri);
             }
         }
+
+        // store
+        var store = AccountManager.GetCurrentStore();
+        if (store != null)
+        {
+            Dispatcher.Dispatch(new StoreState.SetStoreInfo(store));
+        }
     }
 
     RenderFragment RouterWithLayout(Type layoutType) => __builder =>

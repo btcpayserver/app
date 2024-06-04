@@ -2,10 +2,12 @@
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
-
+@inject IState<StoreState> StoreState
+@inject IDispatcher Dispatcher
 <PageTitle>Select your store</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
@@ -107,6 +109,9 @@
             var uri = Routes.Dashboard;
             if (result.Succeeded)
             {
+                var store = AccountManager.GetUserStore(storeId);
+                Dispatcher.Dispatch(new StoreState.SetStoreInfo(store));
+
                 if (!string.IsNullOrEmpty(resultMessage))
                     uri = NavigationManager.GetUriWithQueryParameters(uri,
                         new Dictionary<string, object?> { {"success", resultMessage } } );
