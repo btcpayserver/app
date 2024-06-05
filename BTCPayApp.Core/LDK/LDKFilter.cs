@@ -16,17 +16,18 @@ public class LDKFilter : FilterInterface
     public void register_tx(byte[] txid, byte[] script_pubkey)
     {
         var script = Script.FromBytesUnsafe(script_pubkey);
-        Track(script).GetAwaiter().GetResult();
+        Track(script);
     }
 
     public void register_output(WatchedOutput output)
     {
         var script = Script.FromBytesUnsafe(output.get_script_pubkey());
-        Track(script).GetAwaiter().GetResult();
+        Track(script);
+       
     }
 
-    private async Task Track(Script script)
+    private void Track(Script script)
     {
-        await _ldkNode.TrackScripts(new[] {script});
+        Task.Run(async () => await _ldkNode.TrackScripts(new[] {script}));
     }
 }

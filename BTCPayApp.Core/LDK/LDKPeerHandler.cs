@@ -86,10 +86,10 @@ public class LDKPeerHandler : IScopedHostedService
     {
         while (!ctsToken.IsCancellationRequested)
         {
-            var connected = _peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()));
+            var connected = _peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()).ToLower());
             var channels = await _node.GetChannels(ctsToken);
             var channelPeers = channels
-                .Select(details => Convert.ToHexString(details.get_counterparty().get_node_id())).Distinct();
+                .Select(details => Convert.ToHexString(details.get_counterparty().get_node_id()).ToLower()).Distinct();
             var config = await _node.GetConfig();
             var missingConnections = config.Peers
                 .Where(pair => pair.Value.Persistent || channelPeers.Contains(pair.Key)).Select(pair => pair.Key)

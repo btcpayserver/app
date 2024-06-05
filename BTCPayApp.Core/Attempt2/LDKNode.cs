@@ -303,13 +303,24 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         var derivationKey = (await GetConfig()).ScriptDerivationKey;
         return await _onChainWalletManager.DeriveScript(derivationKey);
     }
-    
-    
+
+
     public async Task TrackScripts(Script[] scripts, string derivation = WalletDerivation.LightningScripts)
     {
-        var identifier = _onChainWalletManager.WalletConfig.Derivations[derivation].Identifier;
-        
-        await _connectionManager.HubProxy.TrackScripts(identifier,scripts.Select(script => script.ToHex()).ToArray());
+        try
+        {
+
+            _logger.LogDebug("Tracking scripts {scripts}", string.Join(",", scripts.Select(script => script.ToHex())));
+            var identifier = _onChainWalletManager.WalletConfig.Derivations[derivation].Identifier;
+
+            await _connectionManager.HubProxy.TrackScripts(identifier,
+                scripts.Select(script => script.ToHex()).ToArray());
+            _logger.LogDebug("Tracked scripts {scripts}", string.Join(",", scripts.Select(script => script.ToHex())));
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error tracking scripts {scripts}", string.Join(",", scripts.Select(script => script.ToHex())));
+        }
     }
 
     public async Task UpdateChannel(string id, byte[] write)

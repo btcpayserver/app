@@ -23,7 +23,7 @@ public class LDKOpenChannelRequestEventHandler: ILDKEventHandler<Event.Event_Ope
         
         if (eventOpenChannelRequest.channel_type.supports_zero_conf())
         {
-           var nodeId =  Convert.ToHexString(eventOpenChannelRequest.counterparty_node_id);
+           var nodeId =  Convert.ToHexString(eventOpenChannelRequest.counterparty_node_id).ToLower();
             
             var config = await _node.GetConfig();
             if(config.Peers.TryGetValue(nodeId, out var peer) && peer.Trusted)

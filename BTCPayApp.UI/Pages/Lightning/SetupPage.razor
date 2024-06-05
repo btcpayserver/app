@@ -80,7 +80,7 @@
     private LightningConfig? _config;
 
     private string? ConfiguredConnectionString;
-    private string ConnectionString => $"type=app;group={OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier}";
+    private string ConnectionString => $"type=app;group={OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier}".ToLower();
 
     protected override async Task OnInitializedAsync()
     {

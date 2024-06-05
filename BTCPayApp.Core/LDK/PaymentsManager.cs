@@ -90,9 +90,9 @@ public class PaymentsManager :
             Inbound = true,
             PaymentId = "default",
             Value = amount.MilliSatoshi,
-            PaymentHash = Convert.ToHexString(invoice.payment_hash()),
-            Secret = Convert.ToHexString(invoice.payment_secret()),
-            Preimage = Convert.ToHexString(preimage!),
+            PaymentHash = Convert.ToHexString(invoice.payment_hash()).ToLower(),
+            Secret = Convert.ToHexString(invoice.payment_secret()).ToLower(),
+            Preimage = Convert.ToHexString(preimage!).ToLower(),
             Status = LightningPaymentStatus.Pending,
             Timestamp = DateTimeOffset.FromUnixTimeSeconds(epoch),
             PaymentRequests = [bolt11]
@@ -115,8 +115,8 @@ public class PaymentsManager :
 
         //check if we have a db record with same pay hash but has the preimage set
 
-var payHash = Convert.ToHexString(invoice.payment_hash());
-var paySecret = Convert.ToHexString(invoice.payment_secret());
+var payHash = Convert.ToHexString(invoice.payment_hash()).ToLower();
+var paySecret = Convert.ToHexString(invoice.payment_secret()).ToLower();
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var inbound = await context.LightningPayments.FirstOrDefaultAsync(lightningPayment =>
             lightningPayment.PaymentHash == payHash && lightningPayment.Inbound);
@@ -131,7 +131,7 @@ var paySecret = Convert.ToHexString(invoice.payment_secret());
                 Secret = paySecret,
                 Status = LightningPaymentStatus.Complete,
                 Timestamp = DateTimeOffset.UtcNow,
-                PaymentId = Convert.ToHexString(id),
+                PaymentId = Convert.ToHexString(id).ToLower(),
                 PaymentRequests = [invoiceStr],
                 Preimage = inbound.Preimage
             };
@@ -159,7 +159,7 @@ var paySecret = Convert.ToHexString(invoice.payment_secret());
             Secret = paySecret,
             Status = LightningPaymentStatus.Pending,
             Timestamp = DateTimeOffset.UtcNow,
-            PaymentId = Convert.ToHexString(id),
+            PaymentId = Convert.ToHexString(id).ToLower(),
             PaymentRequests = [invoiceStr],
         };
         await context.LightningPayments.AddAsync(outbound);
@@ -266,7 +266,7 @@ var paySecret = Convert.ToHexString(invoice.payment_secret());
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var accept = await context.LightningPayments.FirstOrDefaultAsync(payment =>
-            payment.PaymentHash == Convert.ToHexString(eventPaymentClaimable.payment_hash) &&
+            payment.PaymentHash == Convert.ToHexString(eventPaymentClaimable.payment_hash).ToLower() &&
             payment.Inbound && payment.Status == LightningPaymentStatus.Pending);
 
 
@@ -283,20 +283,20 @@ var paySecret = Convert.ToHexString(invoice.payment_secret());
     {
         var preimage = eventPaymentClaimed.purpose.GetPreimage(out var secret);
         
-        await PaymentUpdate( Convert.ToHexString(eventPaymentClaimed.payment_hash), true, "default", false, preimage is null ? null : Convert.ToHexString(preimage));
+        await PaymentUpdate( Convert.ToHexString(eventPaymentClaimed.payment_hash).ToLower(), true, "default", false, preimage is null ? null : Convert.ToHexString(preimage).ToLower());
     }
 
     public async Task Handle(Event.Event_PaymentFailed @eventPaymentFailed)
     {
-        await PaymentUpdate(Convert.ToHexString(eventPaymentFailed.payment_hash), false,
-            Convert.ToHexString(eventPaymentFailed.payment_id), true, null);
+        await PaymentUpdate(Convert.ToHexString(eventPaymentFailed.payment_hash).ToLower(), false,
+            Convert.ToHexString(eventPaymentFailed.payment_id).ToLower(), true, null);
     }
 
     public async Task Handle(Event.Event_PaymentSent eventPaymentSent)
     {
-        await PaymentUpdate(Convert.ToHexString(eventPaymentSent.payment_hash), false,
+        await PaymentUpdate(Convert.ToHexString(eventPaymentSent.payment_hash).ToLower(), false,
             Convert.ToHexString(
-                ((Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some) eventPaymentSent.payment_id).some), false,
-            Convert.ToHexString(eventPaymentSent.payment_preimage));
+                ((Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some) eventPaymentSent.payment_id).some).ToLower(), false,
+            Convert.ToHexString(eventPaymentSent.payment_preimage).ToLower());
     }
 }

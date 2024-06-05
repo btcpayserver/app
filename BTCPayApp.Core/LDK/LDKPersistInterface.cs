@@ -44,13 +44,16 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
                 var outs = data.get_outputs_to_watch()
                     .SelectMany(zzzz => zzzz.get_b().Select(zz => Script.FromBytesUnsafe(zz.get_b()))).ToArray();
 
-                var id = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a());
-                var trackTask = _node.TrackScripts(outs).ContinueWith(task => _logger.LogDebug($"Tracking scripts finished for  updateid: {update_id.hash()}"));;
+                var id = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()).ToLower();
+                // var trackTask = _node.TrackScripts(outs).ContinueWith(task => _logger.LogDebug($"Tracking scripts finished for  updateid: {update_id.hash()}"));;
                 var updateTask = _node.UpdateChannel(id, data.write()).ContinueWith(task => _logger.LogDebug($"Updating channel finished for  updateid: {update_id.hash()}"));;
-                await  Task.WhenAll(trackTask, updateTask);
+                await updateTask;
                 
                 await Task.Run(() =>
                 {
+                    try
+                    {
+                         
                     _logger.LogDebug(
                         $"Calling channel_monitor_updated, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
 
@@ -59,7 +62,13 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
                     _logger.LogDebug(
                         $"Persisted new channel, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
                     updateTasks.TryRemove(updateId, out _);
-                });
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, "Error calling channel_monitor_updated for new channel ");
+                        updateTasks.TryRemove(updateId, out _);
+                    }
+                    });
 
                 // _chainMonitor.channel_monitor_updated(channel_funding_outpoint, update_id);
             });
@@ -100,7 +109,7 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
         var taskResult = updateTasks.GetOrAdd(updateId, async l =>
         {
             await _node.UpdateChannel(
-                Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()),
+                Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()).ToLower(),
                 data.write());
 
             await Task.Run(() =>
