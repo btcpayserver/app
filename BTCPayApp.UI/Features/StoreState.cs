@@ -8,14 +8,18 @@ namespace BTCPayApp.UI.Features;
 [FeatureState]
 public record StoreState(
     AppUserStoreInfo? StoreInfo,
+    RemoteData<PointOfSaleAppData>? PointOfSale,
     RemoteData<IEnumerable<InvoiceData>>? Invoices)
 {
     public AppUserStoreInfo? StoreInfo = StoreInfo;
+    public RemoteData<PointOfSaleAppData>? PointOfSale = PointOfSale;
     public RemoteData<IEnumerable<InvoiceData>>? Invoices = Invoices;
 
-    public StoreState() : this(null, new RemoteData<IEnumerable<InvoiceData>>(null))
+
+    public StoreState() : this(null, null, null)
     {
     }
+
 
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
 
@@ -26,6 +30,7 @@ public record StoreState(
             return state with
             {
                 StoreInfo = action.StoreInfo,
+                PointOfSale = new RemoteData<PointOfSaleAppData>(null),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(null)
             };
         }
@@ -58,6 +63,33 @@ public record StoreState(
         }
     }
 
+    public record FetchPointOfSale(string? AppId);
+
+    protected class FetchPointOfSaleReducer : Reducer<StoreState, FetchPointOfSale>
+    {
+        public override StoreState Reduce(StoreState state, FetchPointOfSale action)
+        {
+            return state with
+            {
+                PointOfSale = new RemoteData<PointOfSaleAppData>(state.PointOfSale?.Data, true)
+            };
+        }
+    }
+
+    protected record FetchedPointOfSale(PointOfSaleAppData? AppData, string? Error);
+
+    protected class FetchedPointOfSaleReducer : Reducer<StoreState, FetchedPointOfSale>
+    {
+        public override StoreState Reduce(StoreState state, FetchedPointOfSale action)
+        {
+            var appData = action.AppData ?? state.PointOfSale?.Data;
+            return state with
+            {
+                PointOfSale = new RemoteData<PointOfSaleAppData>(appData, false, action.Error)
+            };
+        }
+    }
+
     public class StoreEffects(IAccountManager accountManager)
     {
         [EffectMethod]
@@ -67,8 +99,24 @@ public record StoreState(
             if (store != null)
             {
                 dispatcher.Dispatch(new FetchInvoices(store.Id));
+                dispatcher.Dispatch(new FetchPointOfSale(store.PosAppId));
             }
             return Task.CompletedTask;
+        }
+
+        [EffectMethod]
+        public async Task FetchPointOfSaleEffect(FetchPointOfSale action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var appData = await accountManager.GetClient().GetPosApp(action.AppId);
+                dispatcher.Dispatch(new FetchedPointOfSale(appData, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new FetchedPointOfSale(null, error));
+            }
         }
 
         [EffectMethod]

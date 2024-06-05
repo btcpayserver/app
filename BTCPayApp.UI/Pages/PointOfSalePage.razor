@@ -1,38 +1,56 @@
 @attribute [Route(Routes.PointOfSale)]
 @using System.Globalization
-@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Features
+@using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
+@inject IState<StoreState> StoreState
 
 <PageTitle>Point Of Sale</PageTitle>
 
-<SectionContent SectionId="_Layout.MainTop">
-    @if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <Alert Type="danger">@_errorMessage</Alert>
-    }
-</SectionContent>
-
 @if (!string.IsNullOrEmpty(AppId))
 {
-    <section class="container">
-        <form method="post" target="checkout" action="@GetFormAction()">
-            <Keypad CurrencyInfo="@CurrencyInfo" CurrencyCode="EUR"
-                    IsDiscountEnabled="true" IsTipEnabled="true" CustomTipPercentages="new[] { 5, 10, 21 }"/>
-        </form>
-    </section>
-    <iframe name="checkout" width="480" height="270" allow="autoplay;encrypted-media" allowfullscreen></iframe>
+    @*<section class="container">
+        @
+        else if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
+        else if (AppData is not null)
+        {
+            <form method="post" target="checkout" action="@FormAction">
+                <Keypad CurrencyInfo="@CurrencyInfo"
+                        CurrencyCode="@AppData.Currency"
+                        IsDiscountEnabled="@AppData.ShowDiscount"
+                        IsTipEnabled="@AppData.EnableTips"
+                        CustomTipPercentages="new[] { 5, 10, 21 }"/>
+            </form>
+        }
+    </section>*@
+    <iframe name="pos" src="@PosUrl" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>
 }
 else
 {
-    <Alert Type="info">Please configure a store with keypad point of sale first.</Alert>
+    <section class="container">
+        @if (Loading)
+        {
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
+        else
+        {
+            <Alert Type="info">Please configure a store with keypad point of sale first.</Alert>
+        }
+    </section>
 }
 
 @code {
-    private bool _loading;
-    private string? _errorMessage;
-
     private NumberFormatInfo CurrencyInfo { get; set; } = new()
     {
         CurrencySymbol = "\u20ac",
@@ -41,13 +59,9 @@ else
         CurrencyGroupSeparator = "."
     };
 
-    private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
-    private string? AppId => Store?.PosAppId;
-
-    private string? GetFormAction()
-    {
-        if (string.IsNullOrEmpty(AppId)) return null;
-        var baseUri = AccountManager.GetAccount()!.BaseUri;
-        return $"{baseUri}apps/{AppId}/pos";
-    }
+    private string? AppId => AppData?.Id;
+    private string? PosUrl => string.IsNullOrEmpty(AppId) ? null : $"{AccountManager.GetAccount()!.BaseUri}apps/{AppId}/pos";
+    private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;
+    private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
+    private string? Error => StoreState.Value.PointOfSale?.Error;
 }
