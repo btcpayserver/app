@@ -5,11 +5,13 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
+@using BTCPayServer.Services
 @using NBitcoin
 @inject IState<RootState> State
 @inject IState<StoreState> StoreState
 @inject IAccountManager AccountManager
 @inject OnChainWalletManager OnChainWalletManager
+@inject DisplayFormatter DisplayFormatter
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Dashboard</PageTitle>
@@ -46,7 +48,10 @@
                 {
                     <div class="amount text-center">
                         <div class="sats fw-bold fs-1">@_balance.ToUnit(MoneyUnit.Satoshi) sats</div>
-                        <div class="fiat fw-semibold text-muted">$174,465.79</div>
+                        @if (CurrencyValue.HasValue)
+                        {
+                            <div class="fiat fw-semibold text-muted">@DisplayFormatter.Currency(CurrencyValue.Value, Currency, DisplayFormatter.CurrencyFormat.Symbol)</div>
+                        }
                     </div>
                     <nav class="d-flex flex-wrap align-items-center gap-3 mx-auto">
                         <a class="btn btn-light rounded-pill" href="@Routes.WalletSend">
@@ -236,4 +241,10 @@
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data?.Take(5);
     private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;
     private string? InvoicesError => StoreState.Value.Invoices?.Error;
+
+    private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
+    private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
+    private decimal? CurrencyValue => _balance != null && Rate.HasValue && !string.IsNullOrEmpty(Currency)
+        ? _balance.ToDecimal(MoneyUnit.BTC) * Rate.Value
+        : null;
 }

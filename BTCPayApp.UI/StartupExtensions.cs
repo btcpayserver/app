@@ -1,9 +1,12 @@
 ﻿using BTCPayServer.Client;
 using BTCPayServer.Security;
 using BTCPayServer.Security.GreenField;
+using BTCPayServer.Services;
+using BTCPayServer.Services.Rates;
 using Fluxor;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace BTCPayApp.UI;
 
@@ -13,6 +16,8 @@ public static class StartupExtensions
     {
         serviceCollection.AddOptions();
         serviceCollection.AddSingleton<IAuthorizationHandler, BearerAuthorizationHandler>();
+        serviceCollection.AddSingleton<DisplayFormatter>();
+        serviceCollection.AddSingleton(CurrencyNameTable.Instance);
         serviceCollection.AddAuthorizationCore(options =>
         {
             foreach (var policy in Policies.AllPolicies)

@@ -9,17 +9,19 @@ namespace BTCPayApp.UI.Features;
 public record StoreState(
     AppUserStoreInfo? StoreInfo,
     RemoteData<PointOfSaleAppData>? PointOfSale,
+    RemoteData<IEnumerable<StoreRateResult>>? Rates,
     RemoteData<IEnumerable<InvoiceData>>? Invoices)
 {
     public AppUserStoreInfo? StoreInfo = StoreInfo;
     public RemoteData<PointOfSaleAppData>? PointOfSale = PointOfSale;
+    public RemoteData<IEnumerable<StoreRateResult>>? Rates = Rates;
     public RemoteData<IEnumerable<InvoiceData>>? Invoices = Invoices;
 
+    private static string[] RateFetchExcludes = ["BTC", "SATS"];
 
-    public StoreState() : this(null, null, null)
+    public StoreState() : this(null, null, null, null)
     {
     }
-
 
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
 
@@ -31,6 +33,7 @@ public record StoreState(
             {
                 StoreInfo = action.StoreInfo,
                 PointOfSale = new RemoteData<PointOfSaleAppData>(null),
+                Rates = new RemoteData<IEnumerable<StoreRateResult>>(null),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(null)
             };
         }
@@ -59,6 +62,33 @@ public record StoreState(
             return state with
             {
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(invoices, false, action.Error)
+            };
+        }
+    }
+
+    public record FetchRates(string? StoreId, string? Currency);
+
+    protected class FetchRatesReducer : Reducer<StoreState, FetchRates>
+    {
+        public override StoreState Reduce(StoreState state, FetchRates action)
+        {
+            return state with
+            {
+                Rates = new RemoteData<IEnumerable<StoreRateResult>>(state.Rates?.Data, true)
+            };
+        }
+    }
+
+    protected record FetchedRates(IEnumerable<StoreRateResult>? Rates, string? Error);
+
+    protected class FetchedRatesReducer : Reducer<StoreState, FetchedRates>
+    {
+        public override StoreState Reduce(StoreState state, FetchedRates action)
+        {
+            var rates = action.Rates ?? state.Rates?.Data;
+            return state with
+            {
+                Rates = new RemoteData<IEnumerable<StoreRateResult>>(rates, false, action.Error)
             };
         }
     }
@@ -100,6 +130,8 @@ public record StoreState(
             {
                 dispatcher.Dispatch(new FetchInvoices(store.Id));
                 dispatcher.Dispatch(new FetchPointOfSale(store.PosAppId));
+                if (!RateFetchExcludes.Contains(store.DefaultCurrency))
+                    dispatcher.Dispatch(new FetchRates(store.Id, store.DefaultCurrency));
             }
             return Task.CompletedTask;
         }
@@ -116,6 +148,21 @@ public record StoreState(
             {
                 var error = e.InnerException?.Message ?? e.Message;
                 dispatcher.Dispatch(new FetchedPointOfSale(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchRatesEffect(FetchRates action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var rates = await accountManager.GetClient().GetStoreRates(action.StoreId, [$"BTC_{action.Currency}"]);
+                dispatcher.Dispatch(new FetchedRates(rates, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new FetchedRates(null, error));
             }
         }
 
