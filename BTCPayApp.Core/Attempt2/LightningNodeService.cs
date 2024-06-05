@@ -198,16 +198,25 @@ public class LightningNodeManager : BaseHostedService
                         newState = LightningNodeState.NotConfigured;
                         break;
                     }
-
-                    await StartNode();
+                    var result = await _btcPayConnectionManager.HubProxy.IdentifierActive(_onChainWalletManager.WalletConfig
+                        .Derivations[WalletDerivation.LightningScripts].Identifier, true);
+                    if (result)
+                    {
+                        
+                        await StartNode();
+                    }
+                    else
+                    {
+                        //TODO: Introduce a new state so that this node knows that another instance is active
+                        newState = LightningNodeState.Error;
+                    }
 
                     break;
 
                 case LightningNodeState.Loaded:
                     await _controlSemaphore.WaitAsync();
 
-                    await _btcPayConnectionManager.HubProxy.IdentifierActive(_onChainWalletManager.WalletConfig
-                        .Derivations[WalletDerivation.LightningScripts].Identifier, true);
+                    
                     _controlSemaphore.Release();
                     break;
                 // case LightningNodeState.Unloading:
