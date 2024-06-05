@@ -12,7 +12,6 @@ using NodeInfo = BTCPayServer.Lightning.NodeInfo;
 
 namespace BTCPayApp.Core.LDK;
 
-//TODO: If we have channels open, we should be storing the last endpoint that we connected to the counterpoarty uso that we attempt to keep a connection established.
 public class LDKPeerHandler : IScopedHostedService
 {
     private readonly ILogger<LDKPeerHandler> _logger;

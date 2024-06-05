@@ -226,14 +226,14 @@ else
         <div>
 
             <div class="input-group">
-                <input type="number" class="form-control" min="0" @bind="paymentRequestAmt"/>
+                <input type="number" class="form-control" min="0" @bind="paymentRequestAmt" placeholder="sats"/>
                 <button type="button" class=" btn btn-primary" @onclick="ReceivePayment">Receive payment</button>
             </div>
 
 
               <div class="input-group">
-                            <input type="number" class="form-control"  min="0" @bind="paymentRequestAmt"/>
-                            <input type="text"class="form-control" @bind="paymentRequestSend"/>
+                            <input type="number" class="form-control" placeholder="explicit amount in sats, optional" min="0" @bind="paymentRequestAmt"/>
+                            <input type="text"class="form-control" placeholder="bolt11" @bind="paymentRequestSend"/>
                             <button type="button" class=" btn btn-primary"  @onclick="SendPayment">Send payment</button>
                         </div>
 
