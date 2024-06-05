@@ -31,6 +31,10 @@
   --icon-size: inherit;
 }
 
+.btn-close .icon {
+  --icon-size: .75rem;
+}
+
 /* Layout */
 #MainContent {
   flex: 1;
