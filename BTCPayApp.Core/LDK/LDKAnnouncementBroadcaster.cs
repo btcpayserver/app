@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Helpers;
+using NBitcoin;
 using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;
@@ -49,7 +50,7 @@ public class LDKAnnouncementBroadcaster : IScopedHostedService, ILDKEventHandler
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        await (_cts?.CancelAsync() ?? Task.CompletedTask);
+        await (_cts?.CancelAsync().WithCancellation(cancellationToken) ?? Task.CompletedTask);
     }
 
     public async Task Handle(Event.Event_ChannelReady @event)

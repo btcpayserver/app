@@ -24,35 +24,44 @@
     </Titlebar>
 </SectionContent>
 <section class="container">
+    @if(State.Value.LightningNodeState is LightningNodeState.Error)
+    {
+        <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading">Error</h4>
+            <p>There was an error with the lightning node. Please try again later.</p>
+        </div>
+    }
     @if (CanConfigureLNWallet)
     {
         <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
     }
-    else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error)
+    else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error or LightningNodeState.Stopped)
     {
         @if (_config is not null)
         {
             <h3>Lightning Node</h3>
             <p>
                 Alias: <code>@_config.Alias</code>
-                <br />
+                <br/>
                 Color: <code>@_config.Color</code>
             </p>
         }
+
         @if (!string.IsNullOrEmpty(_config?.LightningDerivationPath))
         {
             <div class="form-floating">
-                <TruncateCenter Text="@_config.LightningDerivationPath" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                <TruncateCenter Text="@_config.LightningDerivationPath" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                 <label>Derivation Path</label>
             </div>
         }
+
         @if (!string.IsNullOrEmpty(ConnectionString))
         {
             <div class="form-floating">
-                <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                 <label>Connection String</label>
             </div>
-            @if (ConfiguredConnectionString != ConnectionString )
+            @if (ConfiguredConnectionString != ConnectionString)
             {
                 <button class="btn btn-primary" @onclick="SetStoreLNWallet">Set as Store Payment Method</button>
             }
@@ -62,7 +71,7 @@
             {
                 <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
             }
-            else if (State.Value.LightningNodeState is LightningNodeState.Loaded )
+            else if (State.Value.LightningNodeState is LightningNodeState.Loaded)
             {
                 <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
             }

@@ -107,7 +107,8 @@ else
         <h3>Channels</h3>
         @if (_channels?.Any() is true)
         {
-            <table>
+            <div class="table-responsive">
+            <table class="table">
                 <thead>
                 <tr>
                     <th>Channel ID</th>
@@ -146,6 +147,7 @@ else
                 }
                 </tbody>
             </table>
+            </div>
         }
         else
         {

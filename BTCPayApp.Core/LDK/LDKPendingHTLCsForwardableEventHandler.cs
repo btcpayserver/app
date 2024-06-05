@@ -1,6 +1,7 @@
 ﻿using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Helpers;
 using Microsoft.Extensions.DependencyInjection;
+using NBitcoin;
 using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;
@@ -64,6 +65,6 @@ public class LDKPendingHTLCsForwardableEventHandler : IScopedHostedService, ILDK
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        await _cancellationTokenSource.CancelAsync();
+        await _cancellationTokenSource.CancelAsync().WithCancellation(cancellationToken);
     }
 }

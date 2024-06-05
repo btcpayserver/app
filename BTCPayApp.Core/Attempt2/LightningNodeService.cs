@@ -86,12 +86,19 @@ public class LightningNodeManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-            await Node.StopAsync(CancellationToken.None);
-            _nodeScope.Dispose();
-            _nodeScope = null;
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token);
+            cts.CancelAfter(5000);
+            await Node.StopAsync(cts.Token);
+           
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error while stopping lightning node");
         }
         finally
         {
+            _nodeScope?.Dispose();
+            _nodeScope = null;
             _controlSemaphore.Release();
             State = LightningNodeState.Stopped;
         }

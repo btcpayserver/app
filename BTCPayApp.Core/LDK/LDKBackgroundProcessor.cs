@@ -48,6 +48,9 @@ public class LDKBackgroundProcessor : IScopedHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _processor?.stop();
+        await Task.Run(() =>
+        {
+            _processor?.stop();
+        }, cancellationToken);
     }
 }

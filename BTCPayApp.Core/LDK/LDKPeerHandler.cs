@@ -126,10 +126,14 @@ public class LDKPeerHandler : IScopedHostedService
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         if (_cts is not null)
-            await _cts.CancelAsync();
+            await _cts.CancelAsync().WithCancellation(cancellationToken);
 
-        _logger.LogInformation("Stopping, disconnecting all peers");
-        _peerManager.disconnect_all_peers();
+        await Task.Run(() =>
+        {
+            _logger.LogInformation("Stopping, disconnecting all peers");
+            _peerManager.disconnect_all_peers();
+
+        }, cancellationToken);
         _node.ConfigUpdated -= ConfigUpdated;
 
         _btcPayAppServerClient.OnServerNodeInfo -= BtcPayAppServerClientOnOnServerNodeInfo;

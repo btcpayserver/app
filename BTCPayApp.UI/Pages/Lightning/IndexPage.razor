@@ -22,18 +22,19 @@
     </Titlebar>
 </SectionContent>
 <section class="container">
-    @if (LightningNodeManager.State == LightningNodeState.Loaded)
-    {
-        <LN />
-    }
+   
     @if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error)
     {
+        @if (State.Value.LightningNodeState == LightningNodeState.Loaded)
+        {
+            <LN/>
+        }
         <div class="d-grid d-sm-flex flex-wrap gap-3 buttons my-4">
             @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
             {
                 <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
             }
-            else if (State.Value.LightningNodeState is LightningNodeState.Loaded )
+            else if (State.Value.LightningNodeState is LightningNodeState.Loaded)
             {
                 <button class="btn btn-outline-warning" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
             }

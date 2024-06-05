@@ -220,12 +220,17 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         var identifier = _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier;
         
         
+        _logger.LogInformation("Stopping LDKNode services");
         var services = ServiceProvider.GetServices<IScopedHostedService>();
-        foreach (var service in services)
+        var tasks = services.Select(async service =>
         {
-            await service.StopAsync(cancellationToken);
-        }
-        await _connectionManager.HubProxy.IdentifierActive(identifier, false);
+            _logger.LogInformation($"Stopping {service.GetType().Name}");
+            await  service.StopAsync(cancellationToken);
+            _logger.LogInformation($"Stopped {service.GetType().Name}");
+        }).ToArray();
+        await Task.WhenAll(tasks);
+        _ = _connectionManager.HubProxy.IdentifierActive(identifier, false);
+        
     }
 
     public void Dispose() => DisposeAsync().GetAwaiter().GetResult();

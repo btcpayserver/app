@@ -39,11 +39,12 @@ public class StateMiddleware : Middleware
             {
                 await _configProvider.Set(UiStateConfigKey, (UIState)uiStateFeature.GetState());
             };
+
+            store.Initialized.ContinueWith(task => ListenIn(dispatcher));
         }
 
         await base.InitializeAsync(dispatcher, store);
 
-        ListenIn(dispatcher);
     }
 
     private void ListenIn(IDispatcher dispatcher)
