@@ -3,9 +3,9 @@ header {
   padding: .75rem var(--btcpay-space-m);
 }
 
-h2 {
-  font-size: var(--btcpay-font-size-m);
-  font-weight: var(--btcpay-font-weight-semibold);
+.wallet {
+  margin-top: var(--btcpay-space-m);
+  margin-bottom: var(--btcpay-space-xl);
 }
 
 .wallet a.btn {

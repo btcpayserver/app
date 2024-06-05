@@ -10,3 +10,18 @@
     scroll-padding: var(--content-padding-top);
   }
 }
+
+#MainContent ::deep h1 {
+  font-size: var(--btcpay-font-size-xl);
+  margin-bottom: 0;
+}
+
+#MainContent ::deep h2 {
+  font-size: var(--btcpay-font-size-l);
+  font-weight: var(--btcpay-font-weight-semibold);
+  margin-bottom: var(--btcpay-space-m);
+}
+
+#MainContent ::deep .box {
+  margin-bottom: var(--btcpay-space-l);
+}

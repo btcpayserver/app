@@ -7,16 +7,6 @@ header .btn-icon {
   padding: 0;
 }
 
-h1 {
-  font-size: var(--btcpay-font-size-xl);
-  margin-bottom: 0;
-}
-
-h2 {
-  font-size: var(--btcpay-font-size-l);
-  margin-bottom: var(--btcpay-space-s);
-}
-
 .user {
   --profile-picture-size: 3rem;
 
@@ -35,8 +25,4 @@ h2 {
 .user h5 {
   font-weight: var(--btcpay-font-weight-semibold);
   margin-bottom: var(--btcpay-space-xs);
-}
-
-.box {
-  margin-bottom: var(--btcpay-space-l);
 }

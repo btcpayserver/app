@@ -16,7 +16,7 @@
 
 <AuthorizeView>
     <Authorized>
-        <header class="container d-flex align-items-center justify-content-between py-2 px-4">
+        <header class="container d-flex align-items-center justify-content-between py-2">
             <div class="d-flex align-items-center justify-content-between gap-2">
                 <SetupStatus @ref="_setupStatus" />
                 <div class="fw-semibold">
@@ -29,38 +29,40 @@
         </header>
         @if (!string.IsNullOrEmpty(_successMessage))
         {
-            <section class="container px-4 py-3">
+            <section class="container py-3">
                 <Alert Type="success" Margin="0" Dismissible>@_successMessage</Alert>
             </section>
         }
         @if (SetupStateOnchain == SetupState.Completed)
         {
-            <section class="container d-flex flex-column gap-4 py-3 px-4 wallet">
-                <div class="amount text-center">
-                    @if (_balance == null)
-                    {
-                        <LoadingIndicator />
-                    }
-                    else
-                    {
+            <section class="container d-flex flex-column gap-4 wallet">
+                @if (_balance == null)
+                {
+                    <div class="p-3 text-center">
+                        <LoadingIndicator/>
+                    </div>
+                }
+                else
+                {
+                    <div class="amount text-center">
                         <div class="sats fw-bold fs-1">@_balance.ToUnit(MoneyUnit.Satoshi) sats</div>
                         <div class="fiat fw-semibold text-muted">$174,465.79</div>
-                    }
-                </div>
-                <nav class="d-flex flex-wrap align-items-center gap-3 mx-auto">
-                    <a class="btn btn-light rounded-pill" href="@Routes.WalletSend">
-                        <Icon symbol="payment-send"/>
-                        <span>Send</span>
-                    </a>
-                    <a class="btn btn-light rounded-pill" href="@Routes.WalletReceive">
-                        <Icon symbol="payment-receive"/>
-                        <span>Receive</span>
-                    </a>
-                </nav>
+                    </div>
+                    <nav class="d-flex flex-wrap align-items-center gap-3 mx-auto">
+                        <a class="btn btn-light rounded-pill" href="@Routes.WalletSend">
+                            <Icon symbol="payment-send"/>
+                            <span>Send</span>
+                        </a>
+                        <a class="btn btn-light rounded-pill" href="@Routes.WalletReceive">
+                            <Icon symbol="payment-receive"/>
+                            <span>Receive</span>
+                        </a>
+                    </nav>
+                }
             </section>
         }
-        <section class="container px-4 py-3">
-            <h2 class="mb-3">Getting started</h2>
+        <section class="container">
+            <h2>Getting Started</h2>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item @(SetupStateConnection == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateConnection == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateConnection.ToString().ToLowerInvariant()">
@@ -138,8 +140,8 @@
 
         @if (StoreState.Value.StoreInfo is not null && InvoicesLoading || Invoices is not null)
         {
-            <section class="container px-4 py-3">
-                <h2 class="mb-3">Recent Invoices</h2>
+            <section class="container">
+                <h2>Recent Invoices</h2>
                 <div class="box">
                     @if (InvoicesLoading)
                     {
@@ -231,7 +233,7 @@
     private SetupState? SetupStateOnchain => _setupStatus?.SetupStateOnchain() ?? SetupState.Undetermined;
     private SetupState? SetupStateLightning => _setupStatus?.SetupStateLightning() ?? SetupState.Undetermined;
 
-    private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data;
+    private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data?.Take(5);
     private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;
     private string? InvoicesError => StoreState.Value.Invoices?.Error;
 }
