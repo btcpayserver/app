@@ -13,7 +13,6 @@ public class VSSApiEncryptorClient: IVSSAPI
     {
         _vssApi = vssApi;
         _encryptor = encryptor;
-        _encryptor = encryptor;
     }
 
     public async Task<GetObjectResponse> GetObjectAsync(GetObjectRequest request)
