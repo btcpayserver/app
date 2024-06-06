@@ -1,18 +1,15 @@
-using System.Text.Json.Serialization;
-
 namespace BTCPayApp.Core;
 
 public class BTCPayAccount(string baseUri, string email)
 {
-    public string BaseUri { get; set; } = baseUri;
-    public string Email { get; set; } = email;
+    public string Id = $"{new Uri(baseUri).Host}:{email}";
+    public string BaseUri { get; private set; } = baseUri;
+    public string Email { get; private set; } = email;
     public string? AccessToken { get; set; }
     public string? RefreshToken { get; set; }
     public DateTimeOffset? AccessExpiry { get; set; }
     public string? CurrentStoreId { get; set; }
 
-    [JsonConstructor]
-    public BTCPayAccount() : this(string.Empty, string.Empty) {}
 
     public void SetAccess(string accessToken, string refreshToken, long expiresInSeconds, DateTimeOffset? expiryOffset = null)
     {
