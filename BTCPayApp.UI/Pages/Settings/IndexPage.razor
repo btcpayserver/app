@@ -1,31 +1,34 @@
 ﻿@attribute [Route(Routes.Settings)]
 @using BTCPayApp.CommonServer.Models
+@using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
+@using Plugin.Fingerprint.Abstractions
 @inject IState<UIState> UiState
 @inject IDispatcher Dispatcher
 @inject IAccountManager AccountManager
+@inject IFingerprint Fingerprint
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Settings</PageTitle>
 
-<section class="container py-4">
-    <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
-        @if (UiState.Value.CustomThemeExtension is null)
-        {
-            <h1>Settings</h1>
-            <div class="d-flex align-items-center gap-1">
-                @foreach (var theme in ThemeList)
-                {
-                    <button type="button" class="btn-icon @(Model.Theme == theme ? "active" : null)" title="@theme" @onclick="() => SetTheme(theme)">
-                        <Icon Symbol="@($"themes-{theme.ToLower()}")"/>
-                    </button>
-                }
-            </div>
-        }
-    </header>
-    @if (_userInfo != null)
-    {
+@if (_account != null && _userInfo != null)
+{
+    <section class="container py-4">
+        <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+            @if (UiState.Value.CustomThemeExtension is null)
+            {
+                <h1>Settings</h1>
+                <div class="d-flex align-items-center gap-1">
+                    @foreach (var theme in ThemeList)
+                    {
+                        <button type="button" class="btn-icon @(Model.Theme == theme ? "active" : null)" title="@theme" @onclick="() => SetTheme(theme)">
+                            <Icon Symbol="@($"themes-{theme.ToLower()}")"/>
+                        </button>
+                    }
+                </div>
+            }
+        </header>
         <a href="@Routes.User" class="box user">
             <div class="profile-picture"></div>
             <div class="me-auto">
@@ -34,54 +37,90 @@
             </div>
             <Icon symbol="caret-right"/>
         </a>
-    }
 
-    <h2>Store</h2>
-    <div class="box">
-        <ul class="list-group list-group-flush list-group-links">
-            @{ var store = AccountManager.GetCurrentStore(); }
-            @if (store != null)
-            {
+        <h2>Store</h2>
+        <div class="box">
+            <ul class="list-group list-group-flush list-group-links">
+                @{ var store = AccountManager.GetCurrentStore(); }
+                @if (store != null)
+                {
+                    <li class="list-group-item">
+                        <a href="@Routes.StorePath(store.Id!, Routes.Settings)">
+                            <span>@store.Name</span>
+                            <Icon symbol="caret-right"/>
+                        </a>
+                    </li>
+                }
+                @if (_userInfo.Stores?.Count() > 1 || AccountManager.GetCurrentStore() == null)
+                {
+                    <li class="list-group-item">
+                        <a href="@Routes.SelectStore">
+                            <span>Select Store</span>
+                            <Icon symbol="caret-right"/>
+                        </a>
+                    </li>
+                }
+            </ul>
+        </div>
+
+        <h2>Security</h2>
+        <div class="box">
+            <ul class="list-group list-group-flush list-group-links">
                 <li class="list-group-item">
-                    <a href="@Routes.StorePath(store.Id!, Routes.Settings)">
-                        <span>@store.Name</span>
+                    <a href="@Routes.ChangePasscode">
+                        <span>@(_account.HasPasscode ? "Change" : "Set") Passcode</span>
                         <Icon symbol="caret-right"/>
                     </a>
                 </li>
-            }
-            @if (_userInfo!.Stores?.Count() > 1 || AccountManager.GetCurrentStore() == null)
-            {
-                <li class="list-group-item">
-                    <a href="@Routes.SelectStore">
-                        <span>Select Store</span>
-                        <Icon symbol="caret-right"/>
-                    </a>
-                </li>
-            }
-        </ul>
-    </div>
-
-    <h2>Security</h2>
-    <div class="box">
-        <ul class="list-group list-group-flush list-group-links">
-            <li class="list-group-item">
-                <a href="@Routes.ChangePasscode">
-                    <span>Passcode</span>
-                    <Icon symbol="caret-right"/>
-                </a>
-            </li>
-        </ul>
-    </div>
-</section>
+                @if (_account.HasPasscode)
+                {
+                    @if (_biometricAuthAvailable is true)
+                    {
+                        <li class="list-group-item">
+                            <button class="btn btn-link text-danger" type="button" @onclick="ToggleBiometricAuth">@(_account.UseBiometricAuth is true ? "Disable" : "Enable") biometric authentication</button>
+                        </li>
+                    }
+                    <li class="list-group-item">
+                        <button class="btn btn-link text-danger" type="button" @onclick="RemovePasscode">Remove passcode</button>
+                    </li>
+                }
+            </ul>
+        </div>
+    </section>
+}
 
 @code {
     private AppUserInfo? _userInfo;
+    private BTCPayAccount? _account;
+    private bool? _biometricAuthAvailable;
     private SettingsModel Model { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
-        _userInfo = AccountManager.GetUserInfo();
         Model.Theme = UiState.Value.SelectedTheme;
+        _userInfo = AccountManager.GetUserInfo();
+        _account = AccountManager.GetAccount();
+        _biometricAuthAvailable = await Fingerprint.IsAvailableAsync();
+    }
+
+    // TODO: Guard with biometric auth
+    private async Task ToggleBiometricAuth()
+    {
+        if (_account != null)
+        {
+            _account.UseBiometricAuth = !_account.UseBiometricAuth;
+            await AccountManager.UpdateAccount(_account);
+        }
+    }
+
+    // TODO: Guard with passcode entering
+    private async Task RemovePasscode()
+    {
+        if (_account?.HasPasscode is true)
+        {
+            _account.Passcode = null;
+            await AccountManager.UpdateAccount(_account);
+        }
     }
 
     private void SetTheme(string theme)

@@ -94,6 +94,6 @@
     private async Task RemoveAccount()
     {
         await Logout();
-        await AccountManager.RemoveAccount(_account);
+        await AccountManager.RemoveAccount(_account!);
     }
 }

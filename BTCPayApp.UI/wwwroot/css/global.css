@@ -27,14 +27,6 @@
   transform: rotate(-180deg);
 }
 
-.btn .icon {
-  --icon-size: inherit;
-}
-
-.btn-close .icon {
-  --icon-size: .75rem;
-}
-
 /* Layout */
 #MainContent {
   flex: 1;
@@ -238,6 +230,18 @@
   top: auto;
   width: var(--icon-size);
   height: var(--icon-size);
+}
+
+.btn-icon .icon.icon-close {
+  --icon-size: 1.25rem;
+}
+
+.btn .icon {
+  --icon-size: inherit;
+}
+
+.btn-close .icon {
+  --icon-size: .75rem;
 }
 
 /* Forms */
