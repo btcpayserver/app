@@ -1,7 +1,3 @@
-header {
-  margin-bottom: var(--btcpay-space-m);
-}
-
 header .btn-icon {
   --icon-size: 2rem;
   padding: 0;

@@ -16,60 +16,62 @@
 @if (_userInfo != null)
 {
     <section class="container">
-        <p>
+        <h1 class="mb-3">@_userInfo.Email</h1>
+        <div class="box">
             ID: @_userInfo.UserId<br/>
-            Email: @_userInfo.Email<br/>
             Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
-        </p>
-        @if (_userInfo.Stores?.Any() is true)
-        {
-            <ul>
-                @foreach (var store in _userInfo.Stores)
-                {
-                    <li>
-                        <div>
-                            <strong>
-                                <a href="@Routes.StorePath(store.Id)">@store.Name</a>
-                            </strong>
-                            <span class="badge bg-light">@store.RoleId</span>
-                            @if (store.Archived)
-                            {
-                                <span class="badge bg-info">archived</span>
-                            }
-                        </div>
-                        @if (!string.IsNullOrEmpty(store.PosAppId))
-                        {
-                            <div>POS App ID: @store.PosAppId</div>
-                        }
-                        @if (store.Permissions?.Any() is true)
-                        {
-                            <ul>
-                                @foreach (var permission in store.Permissions)
+        </div>
+
+        <h2>Stores</h2>
+        <div class="box">
+            @if (_userInfo.Stores?.Any() is true)
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var store in _userInfo.Stores)
+                    {
+                        <li class="list-group-item">
+                            <h3>
+                                @store.Name
+                                <span class="badge bg-light">@store.RoleId</span>
+                                @if (store.Archived)
                                 {
-                                    <li>@permission</li>
+                                    <span class="badge bg-info">archived</span>
                                 }
-                            </ul>
-                        }
-                        else
-                        {
-                            <p class="text-secondary">No permissions</p>
-                        }
-                    </li>
-                }
+                            </h3>
+                            @if (store.Permissions?.Any() is true)
+                            {
+                                <ul>
+                                    @foreach (var permission in store.Permissions)
+                                    {
+                                    <li>@permission</li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p class="text-secondary">No permissions</p>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p class="text-secondary">No stores</p>
+            }
+        </div>
+
+        <h2>Account</h2>
+        <div class="box">
+            <ul class="list-group list-group-flush list-group-links">
+                <li class="list-group-item">
+                    <button class="btn btn-link text-danger" type="button" @onclick="Logout">Logout</button>
+                </li>
+                <li class="list-group-item">
+                    <button class="btn btn-link text-danger" type="button" @onclick="RemoveAccount">Remove account</button>
+                </li>
             </ul>
-        }
-        else
-        {
-            <p class="text-secondary">No stores</p>
-        }
-
-        <button class="btn btn-outline-danger" type="button" @onclick="Logout">
-            <span>Logout</span>
-        </button>
-
-        <button class="btn btn-outline-danger" type="button" @onclick="RemoveAccount">
-            <span>Logout and remove account</span>
-        </button>
+        </div>
     </section>
 }
 

@@ -22,6 +22,12 @@
   margin-bottom: var(--btcpay-space-m);
 }
 
+#MainContent ::deep h3 {
+  font-size: var(--btcpay-font-size-m);
+  font-weight: var(--btcpay-font-weight-semibold);
+  margin-bottom: var(--btcpay-space-s);
+}
+
 #MainContent ::deep .box {
   margin-bottom: var(--btcpay-space-l);
 }

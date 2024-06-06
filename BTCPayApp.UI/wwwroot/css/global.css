@@ -147,6 +147,10 @@
   margin-bottom: calc(var(--btcpay-space-s) * -1);
 }
 
+.box > :last-child {
+  margin-bottom: 0;
+}
+
 /* Profile Picture */
 .profile-picture {
   height: var(--profile-picture-size, 2.1rem);
@@ -171,17 +175,21 @@
   --btcpay-list-group-item-padding-y: 0;
 }
 
-.list-group-flush.list-group-links .list-group-item > a {
+.list-group-flush.list-group-links .list-group-item > a,
+.list-group-flush.list-group-links .list-group-item > button {
+  width: 100%;
   padding: .75rem 0;
   color: var(--btcpay-nav-link-color);
 }
 
-.list-group-flush.list-group-links .list-group-item > a:hover {
+.list-group-flush.list-group-links .list-group-item > a:hover,
+.list-group-flush.list-group-links .list-group-item > button:hover {
   color: var(--btcpay-nav-link-hover-color);
 }
 
 .list-group-flush.list-group-links .list-group-item > a,
-.list-group-flush.list-group-links .list-group-item > div {
+.list-group-flush.list-group-links .list-group-item > div,
+.list-group-flush.list-group-links .list-group-item > button {
   display: flex;
   align-items: center;
   justify-content: space-between;
