@@ -25,9 +25,10 @@
         }
         else
         {
-            NavigationManager.NavigateTo(AccountManager.GetAccount() == null
-                ? Routes.Welcome
-                : Routes.Login);
+            var accounts = await AccountManager.GetAccounts();
+            NavigationManager.NavigateTo(accounts.Any()
+                ? Routes.Login
+                : Routes.Welcome);
         }
     }
 }

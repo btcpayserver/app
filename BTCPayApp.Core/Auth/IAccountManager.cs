@@ -5,6 +5,7 @@ namespace BTCPayApp.Core.Auth;
 public interface IAccountManager
 {
     public BTCPayAccount? GetAccount();
+    public Task<IEnumerable<BTCPayAccount>> GetAccounts(string? hostFilter = null);
     public AppUserInfo? GetUserInfo();
     public BTCPayAppClient GetClient(string? baseUri = null);
     public Task<bool> CheckAuthenticated(bool refreshUser = false);
@@ -15,4 +16,6 @@ public interface IAccountManager
     public AppUserStoreInfo? GetCurrentStore();
     public AppUserStoreInfo? GetUserStore(string storeId);
     public Task Logout();
+    public Task UpdateAccount(BTCPayAccount account);
+    public Task RemoveAccount(BTCPayAccount account);
 }

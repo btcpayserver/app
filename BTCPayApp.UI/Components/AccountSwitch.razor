@@ -1,0 +1,50 @@
+@using BTCPayApp.CommonServer.Models
+@using BTCPayApp.Core
+@using BTCPayApp.Core.Auth
+@inject IAccountManager AccountManager
+
+@if (_account != null)
+{
+    <button class="d-inline-flex align-items-center btn btn-link text-body dropdown-toggle dropdown-toggle-no-caret p-0 gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <div class="profile-picture"></div>
+        <span class="fw-semibold">@_account.Email</span>
+        <Icon Symbol="caret-down"/>
+    </button>
+    <ul class="dropdown-menu">
+        @foreach (var account in _accounts)
+        {
+            if (account.Id == _account.Id) continue;
+            <li>
+                <button class="d-inline-flex align-items-center dropdown-item gap-2" type="button">
+                    <div class="profile-picture"></div>
+                    <span class="fw-semibold">@account.Email</span>
+                </button>
+            </li>
+        }
+
+        @if (_accounts.Count() > 1)
+        {
+            <li><hr class="dropdown-divider"></li>
+        }
+        <li>
+            <a class="dropdown-item fw-semibold text-danger" href="@Routes.Logout">
+                <span>Logout @_account.Email</span>
+            </a>
+        </li>
+    </ul>
+}
+
+
+
+@code {
+    private AppUserInfo? _userInfo;
+    private BTCPayAccount? _account;
+    private IEnumerable<BTCPayAccount> _accounts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userInfo = AccountManager.GetUserInfo();
+        _account = AccountManager.GetAccount();
+        _accounts = await AccountManager.GetAccounts();
+    }
+}

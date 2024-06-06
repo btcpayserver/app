@@ -250,6 +250,29 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
 
     private static string GetKey(string accountId) => $"{AccountKeyPrefix}:{accountId}";
 
+    public async Task<IEnumerable<BTCPayAccount>> GetAccounts(string? hostFilter = null)
+    {
+        var prefix = $"{AccountKeyPrefix}:" + (hostFilter == null ? "" : $"{hostFilter}:");
+        var keys = (await _config.List(prefix)).ToArray();
+        var accounts = new List<BTCPayAccount>();
+        foreach (var key in keys)
+        {
+            var account = await _config.Get<BTCPayAccount>(key);
+            accounts.Add(account!);
+        }
+        return accounts;
+    }
+
+    public async Task UpdateAccount(BTCPayAccount account)
+    {
+        await _config.Set(GetKey(account.Id), _account);
+    }
+
+    public async Task RemoveAccount(BTCPayAccount account)
+    {
+        await _config.Set<BTCPayAccount>(GetKey(account.Id), null);
+    }
+
     private async Task<BTCPayAccount?> GetCurrentAccount()
     {
         var accountId = await _config.Get<string>(CurrentAccountKey);
@@ -264,11 +287,6 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         _account = account;
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
-    }
-
-    private async Task UpdateAccount(BTCPayAccount account)
-    {
-        await _config.Set(GetKey(account.Id), _account);
     }
 
     private async Task FetchUserInfo()

@@ -1,5 +1,6 @@
 ﻿@attribute [Route(Routes.User)]
 @using BTCPayApp.CommonServer.Models
+@using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
 @inject IAccountManager AccountManager
@@ -62,17 +63,35 @@
             <p class="text-secondary">No stores</p>
         }
 
-        <a class="btn btn-outline-danger" href="@Routes.Logout">
+        <button class="btn btn-outline-danger" type="button" @onclick="Logout">
             <span>Logout</span>
-        </a>
+        </button>
+
+        <button class="btn btn-outline-danger" type="button" @onclick="RemoveAccount">
+            <span>Logout and remove account</span>
+        </button>
     </section>
 }
 
 @code {
     private AppUserInfo? _userInfo;
+    private BTCPayAccount? _account;
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         _userInfo = AccountManager.GetUserInfo();
+        _account = AccountManager.GetAccount();
+        return Task.CompletedTask;
+    }
+
+    private async Task Logout()
+    {
+        await AccountManager.Logout();
+    }
+
+    private async Task RemoveAccount()
+    {
+        await Logout();
+        await AccountManager.RemoveAccount(_account);
     }
 }
