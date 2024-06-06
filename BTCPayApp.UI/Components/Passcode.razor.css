@@ -1,15 +1,18 @@
 .passcode-wrap {
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: space-between;
   gap: var(--btcpay-space-m);
-  width: 18rem;
+  width: 100%;
 }
 .passcode {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--btcpay-space-m);
+  max-width: 28rem;
+  width: 100%;
 }
 .dot {
   width: 1rem;

@@ -16,8 +16,6 @@ public static class Routes
     // authorized
     public const string Dashboard = "/dashboard";
     public const string Notifications = "/notifications";
-    public const string Settings = "/settings";
-    public const string ChangePasscode = "/settings/passcode";
     public const string EnterPasscode = "/passcode";
     public const string Pair = "/pair";
     public const string Wallet = "/wallet";
@@ -32,6 +30,8 @@ public static class Routes
     public const string Logout = "/logout";
     public const string Store = "/store/{StoreId}";
     public const string CreateStore = "/store/create";
+    public const string Settings = "/settings";
+    public const string ChangePasscode = "/settings/passcode";
     public const string SelectStore = "/settings/select-store";
     public const string User = "/settings/user";
 
