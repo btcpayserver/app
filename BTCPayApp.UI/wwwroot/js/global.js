@@ -2,6 +2,10 @@ Interop = {
   getWidth(el) {
     return el.clientWidth;
   },
+  openModal(selector) {
+    const modal = new bootstrap.Modal(selector);
+    modal.show();
+  },
   closeModal(selector) {
     const $el = document.querySelector(selector);
     bootstrap.Modal.getInstance($el).hide();

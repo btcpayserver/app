@@ -1,7 +1,10 @@
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Models
+@inject IJSRuntime JS
 @inject IAccountManager AccountManager
+@inject NavigationManager NavigationManager
 
 @if (_account != null)
 {
@@ -11,19 +14,18 @@
         <Icon Symbol="caret-down"/>
     </button>
     <ul class="dropdown-menu">
-        @foreach (var account in _accounts)
-        {
-            if (account.Id == _account.Id) continue;
-            <li>
-                <button class="d-inline-flex align-items-center dropdown-item gap-2" type="button">
-                    <div class="profile-picture"></div>
-                    <span class="fw-semibold">@account.Email</span>
-                </button>
-            </li>
-        }
-
         @if (_accounts.Count() > 1)
         {
+            @foreach (var account in _accounts)
+            {
+                if (account.Id == _account.Id) continue;
+                <li>
+                    <button class="d-inline-flex align-items-center dropdown-item gap-2" type="button" @onclick="() => SwitchToAccount(account)">
+                        <div class="profile-picture"></div>
+                        <span class="fw-semibold">@account.Email</span>
+                    </button>
+                </li>
+            }
             <li><hr class="dropdown-divider"></li>
         }
         <li>
@@ -32,19 +34,91 @@
             </a>
         </li>
     </ul>
+
+    <div class="modal fade" id="AccountSwitchModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            @if (Model != null)
+            {
+                <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="SwitchAccount">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h1 class="modal-title fs-5">Switch account</h1>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                                <Icon symbol="close"/>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            @if (!string.IsNullOrEmpty(_errorMessage))
+                            {
+                                <Alert Type="danger">@_errorMessage</Alert>
+                            }
+                            <div class="form-group" hidden="@Model.RequireTwoFactor">
+                                <label for="Password" class="form-label">Password</label>
+                                <InputText @bind-Value="Model.Password" type="password" id="Password" autocomplete="current-password" class="form-control"/>
+                                <ValidationMessage For="@(() => Model.Password)"/>
+                            </div>
+                            @if (Model.RequireTwoFactor)
+                            {
+                                <div class="form-group">
+                                    <label for="TwoFactorCode" class="form-label">Two Factor Code</label>
+                                    <InputText @bind-Value="Model.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin"/>
+                                    <ValidationMessage For="@(() => Model.TwoFactorCode)"/>
+                                </div>
+                            }
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">Sign in as @Model.Email</button>
+                        </div>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
 }
-
-
 
 @code {
     private AppUserInfo? _userInfo;
     private BTCPayAccount? _account;
     private IEnumerable<BTCPayAccount> _accounts;
+    private string? _errorMessage;
+    private LoginModel? Model { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();
         _accounts = await AccountManager.GetAccounts();
+    }
+
+    private async Task SwitchToAccount(BTCPayAccount account)
+    {
+        Model = new LoginModel { Uri = account.BaseUri, Email = account.Email };
+        await JS.InvokeVoidAsync("Interop.openModal", "#AccountSwitchModal");
+        AccountManager.OnBeforeAccountChange += OnBeforeAccountChange;
+    }
+
+    private async Task OnBeforeAccountChange(object? sender, BTCPayAccount? previousAccount)
+    {
+        await JS.InvokeVoidAsync("Interop.closeModal", "#AccountSwitchModal");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _errorMessage = null;
+
+        var result = await AccountManager.Login(Model.Uri!, Model.Email!, Model.Password!, Model.TwoFactorCode);
+        if (result.Succeeded)
+        {
+            NavigationManager.NavigateTo(Routes.Index);
+        }
+        else
+        {
+            if (result.Messages?.Contains("RequiresTwoFactor") is true)
+                Model.RequireTwoFactor = true;
+            else
+                _errorMessage = result.Messages?.Contains("Failed") is false
+                    ? string.Join(",", result.Messages)
+                    : "Invalid login attempt.";
+        }
     }
 }

@@ -74,12 +74,6 @@
                 </li>
                 @if (_account.HasPasscode)
                 {
-                    @if (_biometricAuthAvailable is true)
-                    {
-                        <li class="list-group-item">
-                            <button class="btn btn-link text-danger" type="button" @onclick="ToggleBiometricAuth">@(_account.UseBiometricAuth is true ? "Disable" : "Enable") biometric authentication</button>
-                        </li>
-                    }
                     <li class="list-group-item">
                         <button class="btn btn-link text-danger" type="button" @onclick="RemovePasscode">Remove passcode</button>
                     </li>
@@ -101,16 +95,6 @@
         _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();
         _biometricAuthAvailable = await Fingerprint.IsAvailableAsync();
-    }
-
-    // TODO: Guard with biometric auth
-    private async Task ToggleBiometricAuth()
-    {
-        if (_account != null)
-        {
-            _account.UseBiometricAuth = !_account.UseBiometricAuth;
-            await AccountManager.UpdateAccount(_account);
-        }
     }
 
     // TODO: Guard with passcode entering

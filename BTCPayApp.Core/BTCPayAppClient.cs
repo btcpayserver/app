@@ -4,6 +4,7 @@ using System.Web;
 using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.AspNetRip;
 using BTCPayServer.Client;
+using BTCPayServer.Client.Models;
 using Newtonsoft.Json;
 using AccessTokenResponse = BTCPayApp.Core.AspNetRip.AccessTokenResponse;
 using RefreshRequest = BTCPayApp.Core.AspNetRip.RefreshRequest;
@@ -43,30 +44,51 @@ public class BTCPayAppClient(string baseUri) : BTCPayServerClient(new Uri(baseUr
 
     protected override async Task<T> HandleResponse<T>(HttpResponseMessage res)
     {
-        if (res is { IsSuccessStatusCode: false, StatusCode: HttpStatusCode.Unauthorized } && !string.IsNullOrEmpty(RefreshToken))
+        if (res is { IsSuccessStatusCode: false })
         {
-            // try refresh and recurse if the token could be renewed
             var req = res.RequestMessage;
-            var uri = req!.RequestUri;
-            var path = uri!.AbsolutePath;
-            if (path != RefreshPath)
+            if (res.StatusCode == HttpStatusCode.Unauthorized && !string.IsNullOrEmpty(RefreshToken))
             {
-                var (refresh, _) = await Refresh(RefreshToken);
-                if (refresh != null)
+                // try refresh and recurse if the token could be renewed
+                var uri = req!.RequestUri;
+                var path = uri!.AbsolutePath;
+                if (path != RefreshPath)
                 {
-                    if (req.Content is not null)
+                    var (refresh, _) = await Refresh(RefreshToken);
+                    if (refresh != null)
                     {
-                        var content = await req.Content.ReadAsStringAsync();
-                        var payload = JsonConvert.DeserializeObject<T>(content);
-                        return await SendHttpRequest<T>(path, bodyPayload: payload, method: req.Method);
-                    }
+                        if (req.Content is not null)
+                        {
+                            var content = await req.Content.ReadAsStringAsync();
+                            var payload = JsonConvert.DeserializeObject<T>(content);
+                            return await SendHttpRequest<T>(path, bodyPayload: payload, method: req.Method);
+                        }
 
-                    var query = HttpUtility.ParseQueryString(uri.Query);
-                    var queryPayload = query.HasKeys() ? query.AllKeys.ToDictionary(k => k, k => query[k]) : null;
-                    return await SendHttpRequest<T>(path, queryPayload, method: req.Method);
+                        var query = HttpUtility.ParseQueryString(uri.Query);
+                        var queryPayload = query.HasKeys() ? query.AllKeys.ToDictionary(k => k, k => query[k]) : null;
+                        return await SendHttpRequest<T>(path, queryPayload, method: req.Method);
+                    }
+                }
+                ClearAccess();
+            }
+            else
+            {
+                // try parsing as ProblemDetails
+                try
+                {
+                    var content = await res.Content.ReadAsStringAsync();
+                    var err = JsonConvert.DeserializeObject<ProblemDetails>(content);
+                    if (err?.Status != null && !string.IsNullOrEmpty(err.Detail))
+                    {
+                        var error = new GreenfieldAPIError("unauthorized", err.Detail);
+                        throw new GreenfieldAPIException(err.Status.Value, error);
+                    }
+                }
+                catch (JsonSerializationException e)
+                {
+                    // ignored
                 }
             }
-            ClearAccess();
         }
         return await base.HandleResponse<T>(res);
     }

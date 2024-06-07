@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.AspNetRip;
 using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Helpers;
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client.Models;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -25,6 +26,9 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
 
     public BTCPayAccount? GetAccount() => _account;
     public AppUserInfo? GetUserInfo() => _userInfo;
+
+    public AsyncEventHandler<BTCPayAccount?>? OnBeforeAccountChange { get; set; }
+    public AsyncEventHandler<BTCPayAccount?>? OnAfterAccountChange { get; set; }
 
     public AuthStateProvider(
         IConfigProvider config,
@@ -58,7 +62,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         if (string.IsNullOrEmpty(baseUri) && string.IsNullOrEmpty(_account?.BaseUri))
             throw new ArgumentException("No base URI present or provided.", nameof(baseUri));
         var client = new BTCPayAppClient(baseUri ?? _account!.BaseUri);
-        if (!string.IsNullOrEmpty(_account?.AccessToken) && !string.IsNullOrEmpty(_account.RefreshToken))
+        if (string.IsNullOrEmpty(baseUri) && !string.IsNullOrEmpty(_account?.AccessToken) && !string.IsNullOrEmpty(_account.RefreshToken))
             client.SetAccess(_account.AccessToken, _account.RefreshToken, _account.AccessExpiry.GetValueOrDefault());
         client.AccessRefreshed += OnAccessRefresh;
         return client;
@@ -183,7 +187,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         {
             var expiryOffset = DateTimeOffset.Now;
             var response = await GetClient(serverUrl).Login(payload, cancellation.GetValueOrDefault());
-            var account = new BTCPayAccount(serverUrl, email);
+            var account = await GetAccount(serverUrl, email);
             account.SetAccess(response.AccessToken, response.RefreshToken, response.ExpiresIn, expiryOffset);
             await SetCurrentAccount(account);
             return new FormResult(true);
@@ -265,12 +269,19 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
 
     public async Task UpdateAccount(BTCPayAccount account)
     {
-        await _config.Set(GetKey(account.Id), _account);
+        await _config.Set(GetKey(account.Id), account);
     }
 
     public async Task RemoveAccount(BTCPayAccount account)
     {
         await _config.Set<BTCPayAccount>(GetKey(account.Id), null);
+    }
+
+    private async Task<BTCPayAccount> GetAccount(string serverUrl, string email)
+    {
+        var accountId = BTCPayAccount.GetId(serverUrl, email);
+        var account = await _config.Get<BTCPayAccount>(GetKey(accountId));
+        return account ?? new BTCPayAccount(serverUrl, email);
     }
 
     private async Task<BTCPayAccount?> GetCurrentAccount()
@@ -282,11 +293,14 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
 
     private async Task SetCurrentAccount(BTCPayAccount? account)
     {
+        OnBeforeAccountChange?.Invoke(this, _account);
         if (account != null) await UpdateAccount(account);
         await _config.Set(CurrentAccountKey, account?.Id);
         _account = account;
+        _userInfo = null;
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+        OnAfterAccountChange?.Invoke(this, _account);
     }
 
     private async Task FetchUserInfo()

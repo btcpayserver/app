@@ -1,4 +1,5 @@
 using BTCPayApp.CommonServer.Models;
+using BTCPayApp.Core.Helpers;
 
 namespace BTCPayApp.Core.Auth;
 
@@ -18,4 +19,6 @@ public interface IAccountManager
     public Task Logout();
     public Task UpdateAccount(BTCPayAccount account);
     public Task RemoveAccount(BTCPayAccount account);
+    public AsyncEventHandler<BTCPayAccount?>? OnBeforeAccountChange { get; set; }
+    public AsyncEventHandler<BTCPayAccount?>? OnAfterAccountChange { get; set; }
 }
