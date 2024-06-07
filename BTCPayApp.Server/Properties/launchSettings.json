@@ -24,7 +24,7 @@
       "applicationUrl": "https://localhost:7016;http://localhost:5259",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "RUST_BACKTRACE":1
+        "RUST_BACKTRACE":"1"
       }
     },
     "IIS Express": {

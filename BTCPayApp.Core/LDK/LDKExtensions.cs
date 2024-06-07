@@ -221,8 +221,8 @@ public static class LDKExtensions
 
         services.AddScoped<OutputSweeper>(provider =>
         {
-            var connection = provider.GetRequiredService<BTCPayConnectionManager>();
-            var resp = connection.HubProxy.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
+            var onchainWalletManager = provider.GetRequiredService<OnChainWalletManager>();
+            var resp = onchainWalletManager.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
             var hash = uint256.Parse(resp.BlockHash).ToBytes();
             var bestBlock = BestBlock.of(hash, (int) resp.BlockHeight);
             return OutputSweeper.of(bestBlock,
@@ -238,8 +238,8 @@ public static class LDKExtensions
         services.AddScoped<LDKLogger>();
         services.AddScoped<ChainParameters>(provider =>
         {
-            var connection = provider.GetRequiredService<BTCPayConnectionManager>();
-            var resp = connection.HubProxy.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
+            var onchainWalletManager = provider.GetRequiredService<OnChainWalletManager>();
+            var resp = onchainWalletManager.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
             var hash = uint256.Parse(resp.BlockHash).ToBytes();
 
             var bestBlock = BestBlock.of(hash, (int) resp.BlockHeight);

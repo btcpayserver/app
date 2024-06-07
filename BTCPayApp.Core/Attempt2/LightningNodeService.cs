@@ -150,8 +150,10 @@ public class LightningNodeManager : BaseHostedService
         }
     }
 
-    private async Task OnConnectionChanged(object? sender, (HubConnectionState Old, HubConnectionState New) _)
+    private async Task OnConnectionChanged(object? sender, (HubConnectionState Old, HubConnectionState New) state)
     {
+        _logger.LogInformation("Connection state changed: {New}, Old: {Old}, Actual:{Actual}", state.New, state.Old,
+            _btcPayConnectionManager.ConnectionState);
         if (_btcPayConnectionManager.ConnectionState == HubConnectionState.Connected &&
             State == LightningNodeState.WaitingForConnection)
         {
@@ -160,7 +162,11 @@ public class LightningNodeManager : BaseHostedService
         else if (_btcPayConnectionManager.ConnectionState == HubConnectionState.Disconnected &&
                  State is LightningNodeState.Loading or LightningNodeState.Loaded)
         {
-            // State = LightningNodeState.Unloading;
+             _ = StopNode();
+        }
+        else
+        {
+            _logger.LogInformation("Connection state changed: {State} but ln node state stayed {State}", state.New, State);
         }
     }
 
@@ -206,7 +212,7 @@ public class LightningNodeManager : BaseHostedService
                         break;
                     }
                     var result = await _btcPayConnectionManager.HubProxy.IdentifierActive(_onChainWalletManager.WalletConfig
-                        .Derivations[WalletDerivation.LightningScripts].Identifier, true);
+                        .Derivations[WalletDerivation.LightningScripts].Identifier, true).RunSync();
                     if (result)
                     {
                         

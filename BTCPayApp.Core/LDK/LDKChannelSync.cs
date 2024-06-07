@@ -11,6 +11,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
 {
     private readonly Confirm[] _confirms;
     private readonly BTCPayConnectionManager _connectionManager;
+    private readonly OnChainWalletManager _onchainWalletManager;
     private readonly LDKNode _node;
     private readonly Network _network;
     private readonly Watch _watch;
@@ -22,6 +23,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     public LDKChannelSync(
         IEnumerable<Confirm> confirms,
         BTCPayConnectionManager connectionManager,
+        OnChainWalletManager onchainWalletManager,
         LDKNode node,
         Network network,
         Watch watch,
@@ -30,6 +32,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     {
         _confirms = confirms.ToArray();
         _connectionManager = connectionManager;
+        _onchainWalletManager = onchainWalletManager;
         _node = node;
         _network = network;
         _watch = watch;
@@ -66,7 +69,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         }
        
         _logger.LogInformation($"Fetching {txs1.Count} transactions");
-        var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(txs1.Select(zz => zz.Key.ToString()).ToArray());
+        var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(txs1.Select(zz => zz.Key.ToString()).ToArray()).RunSync();
         _logger.LogInformation($"Fetched {result.Txs.Count} transactions");
         
         Dictionary<uint256, List<TwoTuple_usizeTransactionZ>> confirmedTxList = new();
@@ -122,8 +125,8 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         }
 
         await PollForTransactionUpdates();
-        
-        var bb = await  _connectionManager.HubProxy.GetBestBlock();
+
+        var bb = await _onchainWalletManager.GetBestBlock();
        var bbHeader = BlockHeader.Parse( bb.BlockHeader, _network).ToBytes();
         foreach (var confirm in _confirms)
         {
@@ -156,7 +159,8 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     private async Task OnNewBlock(string e, CancellationToken arg2)
     {
         _logger.LogInformation($"New block {e}");
-        var blockHeaderResponse = await _connectionManager.HubProxy.GetBestBlock();
+       
+        var blockHeaderResponse = await  _onchainWalletManager.GetBestBlock();
         var header = BlockHeader.Parse(blockHeaderResponse.BlockHeader, _network);
         var headerBytes = header.ToBytes();
         foreach (var confirm in _confirms)

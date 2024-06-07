@@ -14,10 +14,10 @@
   <ItemGroup>
     <PackageReference Include="Fluxor.Blazor.Web" Version="5.9.1" />
     <PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="5.9.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components" Version="8.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Forms" Version="8.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Components" Version="8.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.6" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Forms" Version="8.0.6" />
     <PackageReference Include="ReactorBlazorQRCodeScanner" Version="1.0.7" />
     <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
   </ItemGroup>

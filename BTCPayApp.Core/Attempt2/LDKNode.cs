@@ -159,6 +159,11 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         var services = ServiceProvider.GetServices<IScopedHostedService>();
 
         _logger.LogInformation("Starting LDKNode services");
+        var bb = await _onChainWalletManager.GetBestBlock();
+        if (bb is null)
+        {
+            throw new InvalidOperationException("Best block could not be retrieved. Killing the startup");
+        }
         foreach (var service in services)
         {
             _logger.LogInformation($"Starting {service.GetType().Name}");
@@ -229,7 +234,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             _logger.LogInformation($"Stopped {service.GetType().Name}");
         }).ToArray();
         await Task.WhenAll(tasks);
-        _ = _connectionManager.HubProxy.IdentifierActive(identifier, false);
+        _ = _connectionManager.HubProxy.IdentifierActive(identifier, false).RunSync();
         
     }
 
@@ -319,7 +324,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             var identifier = _onChainWalletManager.WalletConfig.Derivations[derivation].Identifier;
 
             await _connectionManager.HubProxy.TrackScripts(identifier,
-                scripts.Select(script => script.ToHex()).ToArray());
+                scripts.Select(script => script.ToHex()).ToArray()).RunSync();
             _logger.LogDebug("Tracked scripts {scripts}", string.Join(",", scripts.Select(script => script.ToHex())));
         }
         catch (Exception e)
