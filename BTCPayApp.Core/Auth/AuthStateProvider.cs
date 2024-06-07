@@ -4,7 +4,9 @@ using BTCPayApp.Core.AspNetRip;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
 using BTCPayServer.Abstractions.Constants;
+using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Hosting;
@@ -12,7 +14,7 @@ using Microsoft.Extensions.Options;
 
 namespace BTCPayApp.Core.Auth;
 
-public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IHostedService
+public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, IHostedService
 {
     private const string AccountKeyPrefix = "Account";
     private const string CurrentAccountKey = "CurrentAccount";
@@ -22,6 +24,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly ClaimsPrincipal _unauthenticated = new(new ClaimsIdentity());
     private readonly IOptionsMonitor<IdentityOptions> _identityOptions;
+    private readonly IAuthorizationService _authService;
     private readonly IConfigProvider _config;
 
     public BTCPayAccount? GetAccount() => _account;
@@ -32,9 +35,11 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
 
     public AuthStateProvider(
         IConfigProvider config,
+        IAuthorizationService authService,
         IOptionsMonitor<IdentityOptions> identityOptions)
     {
         _config = config;
+        _authService = authService;
         _identityOptions = identityOptions;
     }
 
@@ -124,6 +129,13 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager,IH
         if (refreshUser) await FetchUserInfo();
         await GetAuthenticationStateAsync();
         return _userInfo != null;
+    }
+
+    public async Task<bool> IsAuthorized(string policy, object? resource = null)
+    {
+        var authState = await GetAuthenticationStateAsync();
+        var result = await _authService.AuthorizeAsync(authState.User, resource,Policies.CanViewStoreSettings);
+        return result.Succeeded;
     }
 
     public async Task Logout()

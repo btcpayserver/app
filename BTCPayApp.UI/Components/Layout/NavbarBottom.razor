@@ -57,4 +57,5 @@
     }
 
     private bool HasStore => AccountManager.GetCurrentStore() != null;
+    private string? StoreId => AccountManager.GetCurrentStore()?.Id;
 }

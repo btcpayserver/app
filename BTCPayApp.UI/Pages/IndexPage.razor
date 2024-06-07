@@ -19,9 +19,13 @@
         var authState = await AuthState;
         if (authState.User.Identity?.IsAuthenticated is true)
         {
-            NavigationManager.NavigateTo(AccountManager.GetCurrentStore() == null
+            var storeId = AccountManager.GetCurrentStore()?.Id;
+            NavigationManager.NavigateTo(storeId == null
                 ? Routes.SelectStore
                 : Routes.Dashboard);
+                    /*await AccountManager.IsAuthorized(Policies.CanViewStoreSettings, storeId)
+                    ? Routes.Dashboard
+                    : Routes.PointOfSale);*/
         }
         else
         {
