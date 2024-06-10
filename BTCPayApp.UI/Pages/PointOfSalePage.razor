@@ -9,8 +9,22 @@
 
 <PageTitle>Point Of Sale</PageTitle>
 
+@if (Loading || !string.IsNullOrEmpty(AppId) && !_iframeLoaded)
+{
+    <section class="loading-container">
+        <LoadingIndicator Size="lg"/>
+        <div class="fs-4">Loading</div>
+    </section>
+}
+else if (!string.IsNullOrEmpty(Error))
+{
+    <section class="container">
+        <Alert Type="danger">@Error</Alert>
+    </section>
+}
 @if (!string.IsNullOrEmpty(AppId))
 {
+
     @*<section class="container">
         @
         else if (!string.IsNullOrEmpty(Error))
@@ -28,26 +42,7 @@
             </form>
         }
     </section>*@
-    <iframe name="pos" src="@PosUrl" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>
-}
-else
-{
-    <section class="container">
-        @if (Loading)
-        {
-            <div class="p-3 text-center">
-                <LoadingIndicator/>
-            </div>
-        }
-        else if (!string.IsNullOrEmpty(Error))
-        {
-            <Alert Type="danger">@Error</Alert>
-        }
-        else
-        {
-            <Alert Type="info">Please configure a store with keypad point of sale first.</Alert>
-        }
-    </section>
+    <iframe name="pos" src="@PosUrl" allow="clipboard-read;clipboard-write" allowfullscreen @onload="() => { _iframeLoaded = true; }"></iframe>
 }
 
 @code {
@@ -64,4 +59,5 @@ else
     private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;
     private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
     private string? Error => StoreState.Value.PointOfSale?.Error;
+    private bool _iframeLoaded = false;
 }
