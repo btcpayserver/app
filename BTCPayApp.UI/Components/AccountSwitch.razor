@@ -42,7 +42,7 @@
                 <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="SwitchAccount">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h1 class="modal-title fs-5">Switch account</h1>
+                            <h1 class="modal-title fs-5">Switch account to @Model.Email</h1>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                                 <Icon Symbol="close"/>
                             </button>
@@ -67,7 +67,16 @@
                             }
                         </div>
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-primary">Sign in as @Model.Email</button>
+                            <button type="submit" class="btn btn-primary w-100">
+                                @if (_sending)
+                                {
+                                    <LoadingIndicator />
+                                }
+                                else
+                                {
+                                    <span>Sign in as @Model.Email</span>
+                                }
+                            </button>
                         </div>
                     </div>
                 </EditForm>
@@ -80,6 +89,7 @@
     private AppUserInfo? _userInfo;
     private BTCPayAccount? _account;
     private IEnumerable<BTCPayAccount> _accounts;
+    private bool _sending;
     private string? _errorMessage;
     private LoginModel? Model { get; set; }
 
@@ -105,8 +115,10 @@
     private async Task HandleValidSubmit()
     {
         _errorMessage = null;
+        _sending = true;
 
         var result = await AccountManager.Login(Model.Uri!, Model.Email!, Model.Password!, Model.TwoFactorCode);
+        _sending = false;
         if (result.Succeeded)
         {
             NavigationManager.NavigateTo(Routes.Index);
