@@ -210,6 +210,24 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         }
     }
 
+    public async Task<FormResult> LoginWithCode(string serverUrl, string email, string code, CancellationToken? cancellation = default)
+    {
+        try
+        {
+            var expiryOffset = DateTimeOffset.Now;
+            var client = GetClient(serverUrl);
+            var response = await client.Login(code, cancellation.GetValueOrDefault());
+            var account = await GetAccount(serverUrl, email);
+            account.SetAccess(response.AccessToken, response.RefreshToken, response.ExpiresIn, expiryOffset);
+            await SetCurrentAccount(account);
+            return new FormResult(true);
+        }
+        catch (Exception e)
+        {
+            return new FormResult(false, e.Message);
+        }
+    }
+
     public async Task<FormResult> Register(string serverUrl, string email, string password, CancellationToken? cancellation = default)
     {
         var payload = new SignupRequest

@@ -142,6 +142,11 @@ public class BTCPayAppClient(string baseUri) : BTCPayServerClient(new Uri(baseUr
         return await SendHttpRequest<AccessTokenResponse>("/btcpayapp/login", payload, HttpMethod.Post, cancellation);
     }
 
+    public async Task<AccessTokenResponse> Login(string loginCode, CancellationToken cancellation)
+    {
+        return await SendHttpRequest<AccessTokenResponse>("/btcpayapp/login/code", loginCode, HttpMethod.Post, cancellation);
+    }
+
     public async Task ResetPassword(ResetPasswordRequest payload, CancellationToken cancellation)
     {
         var isForgotStep = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword);

@@ -12,6 +12,7 @@ public interface IAccountManager
     public Task<bool> CheckAuthenticated(bool refreshUser = false);
     public Task<bool> IsAuthorized(string policy, object? resource = null);
     public Task<FormResult> Login(string serverUrl, string email, string password, string? otp, CancellationToken? cancellation = default);
+    public Task<FormResult> LoginWithCode(string serverUrl, string email, string code, CancellationToken? cancellation = default);
     public Task<FormResult> Register(string serverUrl, string email, string password, CancellationToken? cancellation = default);
     public Task<FormResult> ResetPassword(string serverUrl, string email, string? resetCode, string? newPassword, CancellationToken? cancellation = default);
     public Task<FormResult> SetCurrentStoreId(string storeId);

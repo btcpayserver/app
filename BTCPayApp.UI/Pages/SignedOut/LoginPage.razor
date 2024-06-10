@@ -6,7 +6,10 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Models
-@using BTCPayApp.UI.Util
+@using BTCPayServer
+@using Microsoft.Extensions.Logging
+@inject IJSRuntime JS
+@inject ILogger<LoginPage> Logger
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 @inject IDispatcher Dispatcher
@@ -56,7 +59,25 @@
             <ValidationMessage For="@(() => Model.TwoFactorCode)" />
         </div>
     }
-    <button type="submit" class="btn btn-primary w-100" data-testid="LoginButton" disabled="@(InstanceInfo == null)">Login</button>
+
+    <div class="d-flex align-items-center justify-content-between gap-3">
+        <button type="submit" class="btn btn-primary w-100" data-testid="LoginButton" disabled="@(InstanceInfo == null || _sending)">
+            @if (_sending)
+            {
+                <LoadingIndicator />
+            }
+            else
+            {
+                <span>Sign in</span>
+            }
+        </button>
+        @if (!Model.RequireTwoFactor)
+        {
+            <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
+                <Icon Symbol="scan-qr"/>
+            </button>
+        }
+    </div>
     @if (!Model.RequireTwoFactor && InstanceInfo != null)
     {
         @if (InstanceInfo.RegistrationEnabled)
@@ -68,6 +89,8 @@
     }
 </EditForm>
 
+<QrScanModal OnScan="@OnQrCodeScan"/>
+
 @code {
     [SupplyParameterFromQuery]
     public string? ServerUrl { get; set; }
@@ -75,6 +98,8 @@
     [SupplyParameterFromQuery]
     public string? Success { get; set; }
 
+    private bool _sending;
+    private string? _loginCode;
     private string? _errorMessage;
     private string? _successMessage;
 
@@ -107,8 +132,10 @@
     private async Task HandleValidSubmit()
     {
         _errorMessage = null;
+        _sending = true;
 
         var result = await AccountManager.Login(Model.Uri!, Model.Email!, Model.Password!, Model.TwoFactorCode);
+        _sending = false;
         if (result.Succeeded)
         {
             NavigationManager.NavigateTo(Routes.Index);
@@ -143,6 +170,49 @@
         }
 
         Dispatcher.Dispatch(new UIState.SetInstance(InstanceInfo));
+    }
+
+    private async void OnQrCodeScan(string code)
+    {
+        // prevent duplicate submission due to quirk in QR reader lib
+        if (code == _loginCode) return;
+        _loginCode = code;
+
+        Logger.LogInformation("QrCode = {QrCode}", code);
+        var parts = code.Split(';');
+        if (parts.Length == 3 && Uri.TryCreate(parts[1], UriKind.Absolute, out _) && parts[2].IsValidEmail())
+        {
+            Model.Uri = parts[1];
+            Model.Email = parts[2];
+
+            _errorMessage = null;
+        }
+        else
+        {
+            _errorMessage = "Invalid login code";
+        }
+
+        StateHasChanged();
+        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
+
+        if (string.IsNullOrEmpty(parts[1])) return;
+
+        _sending = true;
+        StateHasChanged();
+        var result = await AccountManager.LoginWithCode(Model.Uri!, Model.Email!, parts.First());
+        _sending = false;
+
+        if (result.Succeeded)
+        {
+            NavigationManager.NavigateTo(Routes.Index);
+        }
+        else
+        {
+            _errorMessage = result.Messages?.Contains("Failed") is false
+                ? string.Join(",", result.Messages)
+                : "Invalid login attempt.";
+            StateHasChanged();
+        }
     }
 
     private string GetTitle() => $"Login to {InstanceInfo?.ServerName ?? "a BTCPay Server"}";
