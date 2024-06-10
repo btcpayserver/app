@@ -31,7 +31,7 @@
         <div class="d-flex align-items-center justify-content-between gap-3">
             <InputText @bind-Value="Model.Uri" @bind-Value:after="ResolveInstanceInfo" id="Uri" class="form-control flex-grow-1" placeholder="Enter server URL or invite link"/>
             <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
-                <Icon symbol="scan-qr"/>
+                <Icon Symbol="scan-qr"/>
             </button>
         </div>
         <ValidationMessage For="@(() => Model.Uri)" />

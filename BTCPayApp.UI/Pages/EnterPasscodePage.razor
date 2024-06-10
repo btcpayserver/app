@@ -14,11 +14,14 @@
 </SectionContent>
 
 <section class="container">
-    <Passcode id="Passcode" />
+    <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
+        <Passcode OnPasscodeEntered="HandlePasscodeEntered" />
+    </ValidationEditContext>
 </section>
 
 @code {
     private PasscodeModel Model { get; set; } = new();
+    private ValidationEditContext? _validationEditContext;
 
     protected override async Task OnInitializedAsync()
     {
@@ -33,17 +36,21 @@
         }
     }
 
+    public async Task HandleValidSubmit()
+    {
+
+    }
+
+    public async Task HandlePasscodeEntered(Passcode.PasscodeEntered form)
+    {
+        Model.Passcode = form.Passcode;
+        await _validationEditContext!.Submit();
+    }
+
     private class PasscodeModel
     {
         [Required]
         [DataType(DataType.Password)]
         public string Passcode { get; set; } = "";
-    }
-
-    private string GetValue() => Model.Passcode;
-
-    private void SetValue(string val)
-    {
-        Model.Passcode = val;
     }
 }

@@ -16,7 +16,7 @@
         <h1>@GetTitle()</h1>
         <SectionContent SectionId="Titlebar.End">
             <NavLink class="btn-icon" href="@Routes.Settings">
-                <Icon symbol="close"/>
+                <Icon Symbol="close"/>
             </NavLink>
         </SectionContent>
     </Titlebar>
@@ -44,13 +44,11 @@
 
 @code {
     private PasscodeModel Model { get; set; } = new();
-    private AppUserInfo? _userInfo;
     private BTCPayAccount? _account;
     private ValidationEditContext? _validationEditContext;
 
     protected override Task OnInitializedAsync()
     {
-        _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();
         return Task.CompletedTask;
     }
@@ -94,28 +92,6 @@
         {
             Model.ConfirmPasscode = form.Passcode;
             await _validationEditContext!.Submit();
-        }
-    }
-
-    private string GetValue() => Model.Mode switch
-    {
-        PasscodeMode.Set => Model.NewPasscode,
-        PasscodeMode.Confirm => Model.ConfirmPasscode,
-        _ => throw new ArgumentOutOfRangeException()
-    };
-
-    private void SetValue(string val)
-    {
-        switch (Model.Mode)
-        {
-            case PasscodeMode.Set:
-                Model.NewPasscode = val;
-                break;
-            case PasscodeMode.Confirm:
-                Model.ConfirmPasscode = val;
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
         }
     }
 

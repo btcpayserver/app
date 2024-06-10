@@ -35,7 +35,7 @@
                 <h5>@(_userInfo.Name ?? _userInfo.Email)</h5>
                 <span>@_userInfo.Email</span>
             </div>
-            <Icon symbol="caret-right"/>
+            <Icon Symbol="caret-right"/>
         </a>
 
         <h2>Store</h2>
@@ -47,7 +47,7 @@
                     <li class="list-group-item">
                         <a href="@Routes.StorePath(store.Id!, Routes.Settings)">
                             <span>@store.Name</span>
-                            <Icon symbol="caret-right"/>
+                            <Icon Symbol="caret-right"/>
                         </a>
                     </li>
                 }
@@ -56,7 +56,7 @@
                     <li class="list-group-item">
                         <a href="@Routes.SelectStore">
                             <span>Select Store</span>
-                            <Icon symbol="caret-right"/>
+                            <Icon Symbol="caret-right"/>
                         </a>
                     </li>
                 }
@@ -69,7 +69,7 @@
                 <li class="list-group-item">
                     <a href="@Routes.ChangePasscode">
                         <span>@(_account.HasPasscode ? "Change" : "Set") Passcode</span>
-                        <Icon symbol="caret-right"/>
+                        <Icon Symbol="caret-right"/>
                     </a>
                 </li>
                 @if (_account.HasPasscode)

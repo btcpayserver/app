@@ -3,7 +3,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <a class="btn btn-light rounded-circle" href="@Routes.Notifications">
-    <Icon symbol="nav-notifications"/>
+    <Icon Symbol="nav-notifications"/>
     @if (UnreadNotificationsCount.GetValueOrDefault() > 0)
     {
         <span class="badge rounded-pill bg-danger p-1" id="notifications-badge">@UnreadNotificationsCount</span>

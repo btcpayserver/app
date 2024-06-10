@@ -9,25 +9,25 @@
         <ul class="navbar-nav">
             <li class="nav-item">
                 <NavLink href="@Routes.Dashboard" Match="NavLinkMatch.All" class="@HomeCssClass()">
-                    <Icon symbol="nav-store"/>
+                    <Icon Symbol="nav-store"/>
                     <span>Home</span>
                 </NavLink>
             </li>
             <li class="nav-item">
                 <NavLink href="@(HasStore ? Routes.PointOfSale : null)" Match="NavLinkMatch.All" class=" @(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
-                    <Icon symbol="nav-keypad"/>
+                    <Icon Symbol="nav-keypad"/>
                     <span>Keypad</span>
                 </NavLink>
             </li>
             <li class="nav-item">
                 <NavLink href="@(HasStore ? Routes.Invoices : null)" Match="NavLinkMatch.All" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
-                    <Icon symbol="nav-invoices"/>
+                    <Icon Symbol="nav-invoices"/>
                     <span>Invoices</span>
                 </NavLink>
             </li>
             <li class="nav-item">
                 <NavLink href="@Routes.Settings" Match="NavLinkMatch.Prefix" class="nav-link">
-                    <Icon symbol="settings"/>
+                    <Icon Symbol="settings"/>
                     <span>Settings</span>
                 </NavLink>
             </li>

@@ -51,11 +51,11 @@
                 </div>
                 <nav class="d-flex flex-wrap align-items-center gap-3 mx-auto">
                     <a class="btn btn-light rounded-pill" href="@Routes.WalletSend">
-                        <Icon symbol="payment-send"/>
+                        <Icon Symbol="payment-send"/>
                         <span>Send</span>
                     </a>
                     <a class="btn btn-light rounded-pill" href="@Routes.WalletReceive">
-                        <Icon symbol="payment-receive"/>
+                        <Icon Symbol="payment-receive"/>
                         <span>Receive</span>
                     </a>
                 </nav>
@@ -73,14 +73,14 @@
                     @switch (SetupStateConnection)
                     {
                         case SetupState.Failed:
-                            <Icon symbol="warning" class="text-warning"/>
+                            <Icon Symbol="warning" class="text-warning"/>
                             break;
                         case SetupState.Pending:
                         case SetupState.Undetermined:
                             <LoadingIndicator />
                             break;
                         default:
-                            <Icon symbol="@(SetupStateAccount == SetupState.Completed ? "done" : "caret-right")"/>
+                            <Icon Symbol="@(SetupStateAccount == SetupState.Completed ? "done" : "caret-right")"/>
                             break;
                     }
                 </NavLink>
@@ -95,10 +95,10 @@
                                 <LoadingIndicator />
                                 break;
                             case SetupState.Completed:
-                                <Icon symbol="done"/>
+                                <Icon Symbol="done"/>
                                 break;
                             default:
-                                <Icon symbol="caret-right"/>
+                                <Icon Symbol="caret-right"/>
                                 break;
                         }
                     </NavLink>
@@ -112,13 +112,13 @@
                                 <LoadingIndicator />
                                 break;
                             case SetupState.Completed:
-                                <Icon symbol="done"/>
+                                <Icon Symbol="done"/>
                                 break;
                             case SetupState.Failed:
-                                <Icon symbol="warning" class="text-warning"/>
+                                <Icon Symbol="warning" class="text-warning"/>
                                 break;
                             default:
-                                <Icon symbol="caret-right"/>
+                                <Icon Symbol="caret-right"/>
                                 break;
                         }
                     </NavLink>
@@ -127,13 +127,13 @@
                 <li class="list-group-item">
                     <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
                         <span>Set up recovery tools</span>
-                        <Icon symbol="caret-right"/>
+                        <Icon Symbol="caret-right"/>
                     </NavLink>
                 </li>
                 <li class="list-group-item">
                     <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
                         <span>Configure LSP</span>
-                        <Icon symbol="caret-right"/>
+                        <Icon Symbol="caret-right"/>
                     </NavLink>
                 </li>
                 *@
