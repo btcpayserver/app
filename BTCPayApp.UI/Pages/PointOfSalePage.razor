@@ -1,5 +1,4 @@
 @attribute [Route(Routes.PointOfSale)]
-@using System.Globalization
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
@@ -34,8 +33,7 @@ else if (!string.IsNullOrEmpty(Error))
         else if (AppData is not null)
         {
             <form method="post" target="checkout" action="@FormAction">
-                <Keypad CurrencyInfo="@CurrencyInfo"
-                        CurrencyCode="@AppData.Currency"
+                <Keypad CurrencyCode="@AppData.Currency"
                         IsDiscountEnabled="@AppData.ShowDiscount"
                         IsTipEnabled="@AppData.EnableTips"
                         CustomTipPercentages="new[] { 5, 10, 21 }"/>
@@ -46,15 +44,12 @@ else if (!string.IsNullOrEmpty(Error))
 }
 
 @code {
-    private NumberFormatInfo CurrencyInfo { get; set; } = new()
+    protected override async Task OnInitializedAsync()
     {
-        CurrencySymbol = "\u20ac",
-        CurrencyDecimalDigits = 2,
-        CurrencyDecimalSeparator = ",",
-        CurrencyGroupSeparator = "."
-    };
 
-    private string? AppId => AppData?.Id;
+    }
+
+    private string? AppId => AccountManager.GetCurrentStore()?.PosAppId; //AppData?.Id;
     private string? PosUrl => string.IsNullOrEmpty(AppId) ? null : $"{AccountManager.GetAccount()!.BaseUri}apps/{AppId}/pos";
     private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;
     private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
