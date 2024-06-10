@@ -4,9 +4,9 @@ using BTCPayServer.Security.GreenField;
 using BTCPayServer.Services;
 using BTCPayServer.Services.Rates;
 using Fluxor;
+using Fluxor.Blazor.Web.ReduxDevTools;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace BTCPayApp.UI;
 
