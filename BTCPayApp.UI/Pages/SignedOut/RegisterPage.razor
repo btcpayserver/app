@@ -39,7 +39,16 @@
         <InputText @bind-Value="Model.ConfirmPassword" type="password" id="ConfirmPassword" class="form-control" disabled="@GetRegistrationEnabled()"/>
         <ValidationMessage For="@(() => Model.ConfirmPassword)" />
     </div>
-    <button type="submit" class="btn btn-primary w-100" data-testid="RegisterButton" disabled="@GetRegistrationEnabled()">Create account</button>
+    <button type="submit" class="btn btn-primary w-100" data-testid="RegisterButton" disabled="@(GetRegistrationEnabled() || _sending)">
+        @if (_sending)
+        {
+            <LoadingIndicator />
+        }
+        else
+        {
+            <span>Create account</span>
+        }
+    </button>
 
     <p class="mt-4 text-center">
         <NavLink href="@GetLoginUrl()">Back to login</NavLink>
@@ -52,8 +61,8 @@
 
     private RegisterModel Model { get; set; } = new();
     private AppInstanceInfo? InstanceInfo { get; set; }
-
     private string? _errorMessage;
+    private bool _sending;
 
     protected override async Task OnInitializedAsync()
     {
@@ -68,8 +77,10 @@
     public async Task HandleValidSubmit()
     {
         _errorMessage = null;
+        _sending = true;
 
         var result = await AccountManager.Register(Model.Uri!, Model.Email!, Model.Password!);
+        _sending = false;
         if (result.Succeeded)
         {
             var successMessage = string.Join(",", result.Messages ?? ["Account created."]);
