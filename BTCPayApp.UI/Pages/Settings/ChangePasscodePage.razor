@@ -1,11 +1,10 @@
 ﻿@attribute [Route(Routes.ChangePasscode)]
 @layout BaseLayout
-@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
-@using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Util
-@inject IAccountManager AccountManager
+@inject IConfigProvider ConfigProvider
 @inject NavigationManager NavigationManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -29,7 +28,7 @@
             <InputText @bind-Value="Model.ConfirmPasscode" class="d-none"/>
             @if (Model.Mode == PasscodeMode.Set)
             {
-                <p>Set a 6-digit passcode to unlock your wallet.<br />This passcode can't be used to recover your wallet.</p>
+                <p>Set a 6-digit passcode to unlock the app.<br />This passcode can't be used to recover your wallet.</p>
             }
             else if (Model.Mode == PasscodeMode.Confirm)
             {
@@ -44,13 +43,12 @@
 
 @code {
     private PasscodeModel Model { get; set; } = new();
-    private BTCPayAccount? _account;
+    private BTCPayAppConfig? _config;
     private ValidationEditContext? _validationEditContext;
 
-    protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
-        _account = AccountManager.GetAccount();
-        return Task.CompletedTask;
+        _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key) ?? new BTCPayAppConfig();
     }
 
     private class PasscodeModel
@@ -76,8 +74,8 @@
 
     public async Task HandleValidSubmit()
     {
-        _account.Passcode = Model.NewPasscode;
-        await AccountManager.UpdateAccount(_account);
+        _config!.Passcode = Model.NewPasscode;
+        await ConfigProvider.Set(BTCPayAppConfig.Key, _config);
         NavigationManager.NavigateTo(Routes.Settings);
     }
 
@@ -97,7 +95,7 @@
 
     private string GetTitle() => Model.Mode switch
     {
-        PasscodeMode.Set => $"{(_account.HasPasscode ? "Change" : "Set")} Passcode",
+        PasscodeMode.Set => $"{(string.IsNullOrEmpty(_config!.Passcode)  ? "SetChange" : "")} Passcode",
         PasscodeMode.Confirm => "Confirm Passcode",
         _ => throw new ArgumentOutOfRangeException()
     };

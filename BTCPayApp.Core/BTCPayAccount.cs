@@ -12,7 +12,6 @@ public class BTCPayAccount(string baseUri, string email)
     public string? RefreshToken { get; set; }
     public DateTimeOffset? AccessExpiry { get; set; }
     public string? CurrentStoreId { get; set; }
-    public string? Passcode { get; set; }
 
     public void SetAccess(string accessToken, string refreshToken, long expiresInSeconds, DateTimeOffset? expiryOffset = null)
     {
@@ -35,8 +34,5 @@ public class BTCPayAccount(string baseUri, string email)
 
     [JsonIgnore]
     public bool HasTokens => !string.IsNullOrEmpty(AccessToken) && !string.IsNullOrEmpty(RefreshToken);
-
-    [JsonIgnore]
-    public bool HasPasscode => !string.IsNullOrEmpty(Passcode);
 }
 

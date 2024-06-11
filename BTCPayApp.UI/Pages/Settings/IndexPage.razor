@@ -2,10 +2,12 @@
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Features
 @using Plugin.Fingerprint.Abstractions
 @inject IState<UIState> UiState
 @inject IDispatcher Dispatcher
+@inject IConfigProvider ConfigProvider
 @inject IAccountManager AccountManager
 @inject IFingerprint Fingerprint
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -68,11 +70,11 @@
             <ul class="list-group list-group-flush list-group-links">
                 <li class="list-group-item">
                     <a href="@Routes.ChangePasscode">
-                        <span>@(_account.HasPasscode ? "Change" : "Set") Passcode</span>
+                        <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
                         <Icon Symbol="caret-right"/>
                     </a>
                 </li>
-                @if (_account.HasPasscode)
+                @if (HasPasscode)
                 {
                     <li class="list-group-item">
                         <button class="btn btn-link text-danger" type="button" @onclick="RemovePasscode">Remove passcode</button>
@@ -86,6 +88,7 @@
 @code {
     private AppUserInfo? _userInfo;
     private BTCPayAccount? _account;
+    private BTCPayAppConfig? _config;
     private bool? _biometricAuthAvailable;
     private SettingsModel Model { get; set; } = new();
 
@@ -94,16 +97,17 @@
         Model.Theme = UiState.Value.SelectedTheme;
         _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();
+        _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
         _biometricAuthAvailable = await Fingerprint.IsAvailableAsync();
     }
 
     // TODO: Guard with passcode entering
     private async Task RemovePasscode()
     {
-        if (_account?.HasPasscode is true)
+        if (HasPasscode)
         {
-            _account.Passcode = null;
-            await AccountManager.UpdateAccount(_account);
+            _config!.Passcode = null;
+            await ConfigProvider.Set(BTCPayAppConfig.Key, _config);
         }
     }
 
@@ -119,4 +123,5 @@
     }
 
     private static string[] ThemeList => [Themes.System, Themes.Light, Themes.Dark];
+    private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
 }
