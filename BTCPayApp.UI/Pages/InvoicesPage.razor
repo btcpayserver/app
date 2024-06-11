@@ -12,7 +12,7 @@
 <PageTitle>Invoices</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
-    <Titlebar Back="@Routes.Dashboard">
+    <Titlebar Back>
         @if (Store is not null)
         {
             <SectionContent SectionId="Titlebar.End">
@@ -58,7 +58,7 @@
     else
     {
         <section class="container">
-            <p class="text-muted">There are no invoices, yet.</p>
+            <p class="text-muted text-center py-4">There are no invoices, yet.</p>
         </section>
     }
 }

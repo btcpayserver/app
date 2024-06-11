@@ -6,7 +6,7 @@
 <PageTitle>@GetTitle()</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
-    <Titlebar Back="@Routes.Invoices">
+    <Titlebar Back>
         <h1>@GetTitle()</h1>
     </Titlebar>
 </SectionContent>
@@ -18,6 +18,9 @@
 </section>
 
 @code {
+    [SupplyParameterFromQuery]
+    public string? BackUrl { get; set; }
+
     [Parameter, EditorRequired]
     public string? InvoiceId { get; set; }
 

@@ -35,6 +35,6 @@ public static class Routes
     public const string SelectStore = "/settings/select-store";
     public const string User = "/settings/user";
 
-    public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);
+    public static string InvoicePath(string invoiceId, string? backUrl = null) => Invoice.Replace("{InvoiceId}", invoiceId) + (string.IsNullOrEmpty(backUrl) ? "" : $"?backUrl={backUrl}");
     public static string StorePath(string storeId, string? backUrl = null) => Store.Replace("{StoreId}", storeId) + (string.IsNullOrEmpty(backUrl) ? "" : $"?backUrl={backUrl}");
 }

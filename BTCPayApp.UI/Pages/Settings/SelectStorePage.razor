@@ -10,7 +10,7 @@
 <PageTitle>Select your store</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
-    <Titlebar Back="@(string.IsNullOrEmpty(_initialStoreId) ? null : Routes.Settings)">
+    <Titlebar BackLink="@(string.IsNullOrEmpty(_initialStoreId) ? null : Routes.Settings)">
         @if (string.IsNullOrEmpty(_initialStoreId))
         {
             <SectionContent SectionId="Titlebar.End">

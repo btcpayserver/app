@@ -4,6 +4,7 @@ header {
 }
 
 .wallet {
+  min-height: 9rem;
   margin-top: var(--btcpay-space-m);
   margin-bottom: var(--btcpay-space-xl);
 }

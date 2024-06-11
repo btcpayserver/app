@@ -1,10 +1,10 @@
 <section id="Titlebar" class="container d-flex align-items-center justify-content-between py-3 @(Fixed ? "fixed" : null)">
     <div class="titlebar-start">
-        @if (!string.IsNullOrEmpty(Back))
+        @if (!string.IsNullOrEmpty(BackLink) || Back)
         {
-            <NavLink class="btn-icon" href="@Back">
+            <a class="btn-icon" href="@(BackLink ?? "#")" onclick="@(string.IsNullOrEmpty(BackLink) ? "history.back();return false;" : null)">
                 <Icon Symbol="back"/>
-            </NavLink>
+            </a>
         }
     </div>
     <div class="titlebar-center">
@@ -22,7 +22,10 @@
     public RenderFragment? ChildContent { get; set; }
 
     [Parameter]
-    public string? Back { get; set; }
+    public string? BackLink { get; set; }
+
+    [Parameter]
+    public bool Back { get; set; }
 
     [Parameter]
     public bool Fixed { get; set; } = true;
