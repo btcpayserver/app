@@ -79,11 +79,12 @@
     private AppUserInfo? _userInfo;
     private BTCPayAccount? _account;
 
-    protected override Task OnInitializedAsync()
+    protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();
-        return Task.CompletedTask;
     }
 
     private async Task Logout()

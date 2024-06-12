@@ -51,6 +51,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         if (CanConfigureLNWallet)
         {
             NavigationManager.NavigateTo(Routes.LightningSetup);

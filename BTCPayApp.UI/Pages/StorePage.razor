@@ -54,6 +54,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         Store = AccountManager.GetUserStore(StoreId);
         if (Store == null)
         {

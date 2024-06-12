@@ -46,7 +46,7 @@ else if (!string.IsNullOrEmpty(Error))
 @code {
     protected override async Task OnInitializedAsync()
     {
-
+        await base.OnInitializedAsync();
     }
 
     private string? AppId => AccountManager.GetCurrentStore()?.PosAppId; //AppData?.Id;

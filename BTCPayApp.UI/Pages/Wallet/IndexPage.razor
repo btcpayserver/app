@@ -111,6 +111,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         if (CanConfigureWallet)
         {
             NavigationManager.NavigateTo(Routes.WalletSetup);

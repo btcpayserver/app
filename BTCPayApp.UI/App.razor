@@ -29,6 +29,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
         if (!string.IsNullOrEmpty(state?.SelectedTheme))
         {

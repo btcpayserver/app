@@ -77,6 +77,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         _userInfo = AccountManager.GetUserInfo();
         _initialStoreId = AccountManager.GetCurrentStore()?.Id;
         Model.StoreId = _initialStoreId;

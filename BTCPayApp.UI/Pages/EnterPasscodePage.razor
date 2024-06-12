@@ -25,6 +25,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         if (await Fingerprint.IsAvailableAsync())
         {
             var request = new AuthenticationRequestConfiguration("Unlock BTCPay", "Alternatively you can provide your passcode.");

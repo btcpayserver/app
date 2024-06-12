@@ -6,7 +6,6 @@
 @using BTCPayApp.Core.Auth
 @using Microsoft.Extensions.Logging
 @using BTCPayApp.UI.Components.Layout
-@using BTCPayApp.Core
 @using BTCPayApp.Core.Helpers
 @using BTCPayServer.Client.Models
 @using Newtonsoft.Json.Linq
@@ -114,6 +113,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         await GetStorePaymentMethod();
     }
 

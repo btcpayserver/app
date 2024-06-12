@@ -95,6 +95,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         Model.Theme = UiState.Value.SelectedTheme;
         _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();

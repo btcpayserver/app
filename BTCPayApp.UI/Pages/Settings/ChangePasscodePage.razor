@@ -48,6 +48,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key) ?? new BTCPayAppConfig();
     }
 
