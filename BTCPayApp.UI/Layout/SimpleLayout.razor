@@ -1,15 +1,16 @@
-﻿@using BTCPayApp.UI.Features
+﻿@using BTCPayApp.CommonServer.Models
+@using BTCPayApp.UI.Features
 @inherits _Layout
-@inject IState<UIState> UiState
+@inject IState<UIState> UIState
 
 <div id="SimpleLayout" class="layout">
     <SectionOutlet SectionId="Top" />
     <main id="MainContent">
         <div class="container">
-            @if (!string.IsNullOrEmpty(UiState.Value.LogoUrl))
+            @if (!string.IsNullOrEmpty(InstanceInfo?.LogoUrl))
             {
                 <div>
-                    <img src="@UiState.Value.LogoUrl" alt="@(UiState.Value.ServerName ?? "BTCPay Server")" class="logo" />
+                    <img src="@InstanceInfo?.LogoUrl" alt="@(InstanceInfo?.ServerName ?? "BTCPay Server")" class="logo" />
                 </div>
             }
             else
@@ -23,3 +24,7 @@
     </main>
     <SectionOutlet SectionId="Bottom" />
 </div>
+
+@code {
+    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
+}

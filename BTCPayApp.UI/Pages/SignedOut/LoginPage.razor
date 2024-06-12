@@ -1,8 +1,8 @@
 ﻿@attribute [Route(Routes.Login)]
 @attribute [AllowAnonymous]
 @layout SimpleLayout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @using BTCPayApp.CommonServer.Models
-@using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Models
@@ -13,6 +13,7 @@
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 @inject IDispatcher Dispatcher
+@inject IState<UIState> UIState
 
 <PageTitle>@GetTitle()</PageTitle>
 
@@ -104,10 +105,11 @@
     private string? _successMessage;
 
     private LoginModel Model { get; set; } = new();
-    private AppInstanceInfo? InstanceInfo { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
+        base.OnInitialized();
+
         if (!string.IsNullOrEmpty(Success))
         {
             _successMessage = Uri.UnescapeDataString(Success);
@@ -126,7 +128,7 @@
             Model.Email = account?.Email;
         }
 
-        await ResolveInstanceInfo();
+        ResolveInstanceInfo();
     }
 
     private async Task HandleValidSubmit()
@@ -151,25 +153,10 @@
         }
     }
 
-    private async Task ResolveInstanceInfo()
+    private void ResolveInstanceInfo()
     {
-        try
-        {
-            InstanceInfo = !string.IsNullOrEmpty(Model.Uri)
-                ? await new BTCPayAppClient(Model.Uri).GetInstanceInfo()
-                : null;
-
-            _errorMessage = !string.IsNullOrEmpty(Model.Uri) && InstanceInfo == null
-                ? "This server does not seem to support the BTCPay app."
-                : null;
-        }
-        catch (Exception e)
-        {
-            InstanceInfo = null;
-            _errorMessage = e.InnerException?.Message ?? e.Message;
-        }
-
-        Dispatcher.Dispatch(new UIState.SetInstance(InstanceInfo));
+        if (!string.IsNullOrEmpty(Model.Uri) && Model.Uri != InstanceInfo?.BaseUrl)
+            Dispatcher.Dispatch(new UIState.FetchInstanceInfo(Model.Uri));
     }
 
     private async void OnQrCodeScan(string code)
@@ -218,4 +205,6 @@
     private string GetTitle() => $"Login to {InstanceInfo?.ServerName ?? "a BTCPay Server"}";
     private string GetRegisterUrl() => NavigationManager.GetUriWithQueryParameters(Routes.Register, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
     private string GetForgotPasswordUrl() => NavigationManager.GetUriWithQueryParameters(Routes.ForgotPassword, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
+
+    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
 }

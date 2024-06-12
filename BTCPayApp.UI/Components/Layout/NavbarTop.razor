@@ -1,5 +1,6 @@
+@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.UI.Features
-@inject IState<UIState> UiState
+@inject IState<UIState> UIState
 
 <header id="NavbarTop" class="btcpay-header d-flex flex-column">
     <div id="NavbarTopHead">
@@ -7,9 +8,9 @@
             <span>Menu</span>
         </button>
         <NavLink class="navbar-brand py-2" href="@Routes.Dashboard" Match="NavLinkMatch.All">
-            @if (!string.IsNullOrEmpty(UiState.Value.LogoUrl))
+            @if (!string.IsNullOrEmpty(InstanceInfo?.LogoUrl))
             {
-                <img src="@UiState.Value.LogoUrl" alt="@(UiState.Value.ServerName ?? "BTCPay Server")" class="main-logo main-logo-custom " />
+                <img src="@InstanceInfo.LogoUrl" alt="@(InstanceInfo?.ServerName ?? "BTCPay Server")" class="main-logo main-logo-custom " />
             }
             else
             {
@@ -61,3 +62,7 @@
         </div>
     </nav>
 </header>
+
+@code {
+    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
+}

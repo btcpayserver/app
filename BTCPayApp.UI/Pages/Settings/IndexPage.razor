@@ -10,6 +10,7 @@
 @inject IConfigProvider ConfigProvider
 @inject IAccountManager AccountManager
 @inject IFingerprint Fingerprint
+@inject IState<UIState> UIState
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Settings</PageTitle>
@@ -18,7 +19,7 @@
 {
     <section class="container py-4">
         <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
-            @if (UiState.Value.CustomThemeExtension is null)
+            @if (InstanceInfo?.CustomThemeExtension is null)
             {
                 <h1>Settings</h1>
                 <div class="d-flex align-items-center gap-1">
@@ -124,4 +125,5 @@
 
     private static string[] ThemeList => [Themes.System, Themes.Light, Themes.Dark];
     private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
+    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
 }

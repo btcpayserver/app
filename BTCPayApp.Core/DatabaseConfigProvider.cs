@@ -30,18 +30,17 @@ public class DatabaseConfigProvider: IConfigProvider
         {
             try
             {
-
-                dbContext.Settings.Remove(new Setting() {Key = key});
+                dbContext.Settings.Remove(new Setting {Key = key});
                 await dbContext.SaveChangesAsync();
             }
-            catch (DbUpdateException e)
+            catch (DbUpdateException)
             {
             }
             return;
         }
 
-        var newValue =  typeof(T) == typeof(byte[])? value as byte[]:JsonSerializer.SerializeToUtf8Bytes(value);
-        await dbContext.Upsert(new Setting() {Key = key, Value = newValue}).RunAsync();
+        var newValue = typeof(T) == typeof(byte[])? value as byte[]:JsonSerializer.SerializeToUtf8Bytes(value);
+        await dbContext.Upsert(new Setting {Key = key, Value = newValue}).RunAsync();
 
     }
 

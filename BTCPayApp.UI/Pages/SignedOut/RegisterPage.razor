@@ -1,11 +1,14 @@
 ﻿@attribute [Route(Routes.Register)]
 @attribute [AllowAnonymous]
 @layout SimpleLayout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @using BTCPayApp.CommonServer.Models
-@using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Features
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
+@inject IDispatcher Dispatcher
+@inject IState<UIState> UIState
 
 <PageTitle>@GetTitle()</PageTitle>
 
@@ -60,18 +63,19 @@
     public string? ServerUrl { get; set; }
 
     private RegisterModel Model { get; set; } = new();
-    private AppInstanceInfo? InstanceInfo { get; set; }
     private string? _errorMessage;
     private bool _sending;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
+        base.OnInitialized();
+
         if (!string.IsNullOrEmpty(ServerUrl))
         {
             Model.Uri = Uri.UnescapeDataString(ServerUrl);
         }
 
-        await ResolveInstanceInfo();
+        ResolveInstanceInfo();
     }
 
     public async Task HandleValidSubmit()
@@ -96,22 +100,10 @@
         }
     }
 
-    private async Task ResolveInstanceInfo()
+    private void ResolveInstanceInfo()
     {
-        try
-        {
-            InstanceInfo = !string.IsNullOrEmpty(Model.Uri)
-                ? await new BTCPayAppClient(Model.Uri).GetInstanceInfo()
-                : null;
-
-            _errorMessage = InstanceInfo is { RegistrationEnabled: false }
-                ? "This server does not allow public registration."
-                : null;
-        }
-        catch (Exception e)
-        {
-            _errorMessage = e.InnerException?.Message ?? e.Message;
-        }
+        if (!string.IsNullOrEmpty(Model.Uri) && Model.Uri != InstanceInfo?.BaseUrl)
+            Dispatcher.Dispatch(new UIState.FetchInstanceInfo(Model.Uri));
     }
 
     private class RegisterModel
@@ -136,4 +128,6 @@
     private string GetTitle() => $"Create account{(string.IsNullOrEmpty(InstanceInfo?.ServerName) ? null : $" at {InstanceInfo.ServerName}")}";
     private string GetLoginUrl() => NavigationManager.GetUriWithQueryParameters(Routes.Login, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
     private bool GetRegistrationEnabled() => InstanceInfo is not { RegistrationEnabled: true };
+
+    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
 }

@@ -1,6 +1,8 @@
 ﻿using BTCPayApp.CommonServer.Models;
+using BTCPayApp.Core;
 using Fluxor;
 using Microsoft.JSInterop;
+using Newtonsoft.Json;
 
 namespace BTCPayApp.UI.Features;
 
@@ -16,18 +18,14 @@ public record UIState(
     string SelectedTheme,
     string SystemTheme,
     bool IsDarkMode,
-    string? CustomThemeExtension,
-    string? CustomThemeCssUrl,
-    string? LogoUrl,
-    string? ServerName)
+    [property: JsonIgnore] RemoteData<AppInstanceInfo>? Instance)
 {
-    public UIState() : this(Themes.System, Themes.Light, false, null, null, null, null)
+    public UIState() : this(Themes.System, Themes.Light, false, null)
     {
     }
 
     public record ApplyUserTheme(string Theme);
     public record SetUserTheme(string Theme);
-    public record SetInstance(AppInstanceInfo? InstanceInfo);
 
     protected class SetUserThemeReducer : Reducer<UIState, SetUserTheme>
     {
@@ -43,17 +41,28 @@ public record UIState(
         }
     }
 
-    protected class SetInstanceReducer : Reducer<UIState, SetInstance>
+    public record FetchInstanceInfo(string? Url);
+
+    protected class FetchInstanceInfoReducer : Reducer<UIState, FetchInstanceInfo>
     {
-        public override UIState Reduce(UIState state, SetInstance action)
+        public override UIState Reduce(UIState state, FetchInstanceInfo action)
         {
-            var info = action.InstanceInfo;
             return state with
             {
-                LogoUrl = info?.LogoUrl,
-                ServerName = info?.ServerName,
-                CustomThemeCssUrl = info?.CustomThemeCssUrl,
-                CustomThemeExtension = info?.CustomThemeExtension
+                Instance = new RemoteData<AppInstanceInfo>(state.Instance?.Data, true)
+            };
+        }
+    }
+
+    public record FetchedInstanceInfo(AppInstanceInfo? Instance, string? Error);
+
+    protected class FetchedInstanceInfoReducer : Reducer<UIState, FetchedInstanceInfo>
+    {
+        public override UIState Reduce(UIState state, FetchedInstanceInfo action)
+        {
+            return state with
+            {
+                Instance = new RemoteData<AppInstanceInfo>(action.Instance, false, action.Error)
             };
         }
     }
@@ -77,9 +86,31 @@ public record UIState(
         }
 
         [EffectMethod]
-        public async Task SetInstanceEffect(SetInstance action, IDispatcher dispatcher)
+        public async Task FetchInstanceInfoEffect(FetchInstanceInfo action, IDispatcher dispatcher)
         {
-            var info = action.InstanceInfo;
+            try
+            {
+                var instance = !string.IsNullOrEmpty(action.Url)
+                    ? await new BTCPayAppClient(action.Url).GetInstanceInfo()
+                    : null;
+
+                var error = !string.IsNullOrEmpty(action.Url) && instance == null
+                    ? "This server does not seem to support the BTCPay app."
+                    : null;
+
+                dispatcher.Dispatch(new FetchedInstanceInfo(instance, error));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new FetchedInstanceInfo(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchedInstanceInfoEffect(FetchedInstanceInfo action, IDispatcher dispatcher)
+        {
+            var info = action.Instance;
             await _jsRuntime.InvokeVoidAsync("Interop.setInstanceInfo", info?.CustomThemeExtension, info?.CustomThemeCssUrl);
         }
     }

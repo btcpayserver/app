@@ -1,14 +1,11 @@
-﻿@using BTCPayApp.Core
-@using BTCPayApp.Core.Auth
+﻿@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Pages
 @using BTCPayApp.Core.Contracts
-@using Microsoft.Extensions.Logging
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IDispatcher Dispatcher
 @inject IAccountManager AccountManager
 @inject IConfigProvider ConfigProvider
-@inject ILogger<App> Logger
 
 <PageTitle>BTCPay Server</PageTitle>
 <Fluxor.Blazor.Web.StoreInitializer @rendermode="new InteractiveAutoRenderMode()" />
@@ -33,12 +30,9 @@
     protected override async Task OnInitializedAsync()
     {
         var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
-        if (state != null)
+        if (!string.IsNullOrEmpty(state?.SelectedTheme))
         {
-            if (!string.IsNullOrEmpty(state.SelectedTheme))
-            {
-                Dispatcher.Dispatch(new UIState.ApplyUserTheme(state.SelectedTheme));
-            }
+            Dispatcher.Dispatch(new UIState.ApplyUserTheme(state.SelectedTheme));
         }
 
         // signed in
@@ -47,15 +41,7 @@
         var account = AccountManager.GetAccount();
         if (authState.User.Identity?.IsAuthenticated is true && !string.IsNullOrEmpty(account?.BaseUri))
         {
-            try
-            {
-                var instanceInfo = await new BTCPayAppClient(account.BaseUri).GetInstanceInfo();
-                Dispatcher.Dispatch(new UIState.SetInstance(instanceInfo));
-            }
-            catch (Exception e)
-            {
-                Logger.LogError(e, "Could not resolve instance info for {BaseUri}", account.BaseUri);
-            }
+            Dispatcher.Dispatch(new UIState.FetchInstanceInfo(account.BaseUri));
 
             // notifications
             Dispatcher.Dispatch(new NotificationState.FetchNotifications());
