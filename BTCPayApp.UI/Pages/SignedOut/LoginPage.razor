@@ -195,7 +195,7 @@
         StateHasChanged();
         await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
 
-        if (string.IsNullOrEmpty(parts[1])) return;
+        if (!string.IsNullOrEmpty(_errorMessage)) return;
 
         _sending = true;
         StateHasChanged();

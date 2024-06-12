@@ -1,11 +1,13 @@
 ﻿@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using Microsoft.Extensions.Logging
 @attribute [Route(Routes.Connect)]
 @attribute [AllowAnonymous]
 @layout SimpleLayout
 @inject IJSRuntime JS
+@inject IAccountManager AccountManager
 @inject ILogger<ConnectPage> Logger
 @inject NavigationManager NavigationManager
 @inject IDispatcher Dispatcher
@@ -14,17 +16,14 @@
 
 <SectionContent SectionId="_Layout.MainTop">
     <h1>@GetTitle()</h1>
-    <p>
-        A server is your .. accessed using a unique URL.
-        Enter or scan your server URL or invite link.
-    </p>
+    <p>Enter or scan your server URL or invite link.</p>
     @if (!string.IsNullOrEmpty(_errorMessage))
     {
         <Alert Type="danger">@_errorMessage</Alert>
     }
 </SectionContent>
 
-<EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="ConnectServer" method="post">
+<ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
     <DataAnnotationsValidator />
     <div class="form-group">
         <label for="Uri" class="form-label visually-hidden">Server URL or invite link</label>
@@ -36,29 +35,77 @@
         </div>
         <ValidationMessage For="@(() => Model.Uri)" />
     </div>
-    <button type="submit" class="btn btn-primary w-100" data-testid="ConnectButton" disabled="@(InstanceInfo == null)">Connect</button>
-</EditForm>
+    <button type="submit" class="btn btn-primary w-100" data-testid="ConnectButton" disabled="@(InstanceInfo == null || _sending)">
+        @if (_sending)
+        {
+            <LoadingIndicator />
+        }
+        else
+        {
+            <span>Connect</span>
+        }
+    </button>
+</ValidationEditContext>
 
 <QrScanModal OnScan="@OnQrCodeScan"/>
 
 @code {
     ConnectModel Model { get; set; } = new();
     private AppInstanceInfo? InstanceInfo { get; set; }
+    private ValidationEditContext? _validationEditContext;
 
+    private bool _sending;
     private string? _errorMessage;
 
-    private void HandleValidSubmit()
+    private async Task HandleValidSubmit()
     {
-        var loginUri = NavigationManager.GetUriWithQueryParameters(Routes.Login, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
-        NavigationManager.NavigateTo(loginUri);
+        const string inviteSeparator = "/invite/";
+        if (Model.Uri!.Contains(inviteSeparator))
+        {
+            _errorMessage = null;
+            _sending = true;
+
+            var result = await AccountManager.AcceptInvite(Model.Uri!);
+            var message = result.Messages?.Any() is true ? string.Join(",", result.Messages) : null;
+            _sending = false;
+            if (result.Succeeded)
+            {
+                var response = result.Response;
+                var serverUrl = Model.Uri.Split(inviteSeparator).First();
+                var param = new Dictionary<string, object?> { { "serverUrl", serverUrl }, { "success", message } };
+                if (string.IsNullOrEmpty(response?.PasswordSetCode))
+                {
+                    var uri = NavigationManager.GetUriWithQueryParameters(Routes.Login, param);
+                    NavigationManager.NavigateTo(uri);
+                }
+                else
+                {
+                    param["Email"] = response.Email;
+                    param["ResetCode"] = response.PasswordSetCode;
+                    param["Mode"] = ForgotPasswordPage.PasswordMode.Set.ToString();
+                    var uri = NavigationManager.GetUriWithQueryParameters(Routes.ForgotPassword, param);
+                    NavigationManager.NavigateTo(uri);
+                }
+            }
+            else
+            {
+                _errorMessage = message ?? "Accepting invitation failed.";
+            }
+        }
+        else
+        {
+            var loginUri = NavigationManager.GetUriWithQueryParameters(Routes.Login, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
+            NavigationManager.NavigateTo(loginUri);
+        }
     }
 
-    private void OnQrCodeScan(string code)
+    private async void OnQrCodeScan(string code)
     {
         Logger.LogInformation("QrCode = {QrCode}", code);
         Model.Uri = code;
         StateHasChanged();
-        JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
+        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
+        await _validationEditContext!.Submit();
     }
 
     private async Task ResolveInstanceInfo()

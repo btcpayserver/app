@@ -187,6 +187,37 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         return string.IsNullOrEmpty(storeId) ? null : GetUserStore(storeId);
     }
 
+    public async Task<FormResult<AcceptInviteResult>> AcceptInvite(string inviteUrl, CancellationToken? cancellation = default)
+    {
+        var urlParts = inviteUrl.Split("/invite/");
+        var serverUrl = urlParts.First();
+        var pathParts = urlParts.Last().Split("/");
+        var payload = new AcceptInviteRequest
+        {
+            UserId = pathParts[0],
+            Code = pathParts[1]
+        };
+        try
+        {
+            var response = await GetClient(serverUrl).AcceptInvite(payload, cancellation.GetValueOrDefault());
+            var account = await GetAccount(serverUrl, response.Email);
+            await SetCurrentAccount(account);
+            var message = "Invitation accepted.";
+            if (response.EmailHasBeenConfirmed is true)
+                message += " Your email has been confirmed.";
+            if (response.RequiresUserApproval is true)
+                message += " The new account requires approval by an admin before you can log in.";
+            message += string.IsNullOrEmpty(response.PasswordSetCode)
+                ? " Your password has been set by the user who invited you."
+                : " Please set your password.";
+            return new FormResult<AcceptInviteResult>(true, message, response);
+        }
+        catch (Exception e)
+        {
+            return new FormResult<AcceptInviteResult>(false, e.Message, null);
+        }
+    }
+
     public async Task<FormResult> Login(string serverUrl, string email, string password, string? otp = null, CancellationToken? cancellation = default)
     {
         var payload = new LoginRequest

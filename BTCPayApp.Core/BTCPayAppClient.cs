@@ -5,15 +5,17 @@ using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.AspNetRip;
 using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
+using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using AccessTokenResponse = BTCPayApp.Core.AspNetRip.AccessTokenResponse;
+using ProblemDetails = BTCPayApp.Core.AspNetRip.ProblemDetails;
 using RefreshRequest = BTCPayApp.Core.AspNetRip.RefreshRequest;
 
 namespace BTCPayApp.Core;
 
 public class BTCPayAppClient(string baseUri) : BTCPayServerClient(new Uri(baseUri))
 {
-    private const string RefreshPath = "/btcpayapp/refresh";
+    private const string RefreshPath = "btcpayapp/refresh";
     private DateTimeOffset? AccessExpiry { get; set; } // TODO: Incorporate in refresh check
     private string? AccessToken { get; set; }
     private string? RefreshToken { get; set; }
@@ -119,38 +121,43 @@ public class BTCPayAppClient(string baseUri) : BTCPayServerClient(new Uri(baseUr
 
     public async Task<AppInstanceInfo?> GetInstanceInfo(CancellationToken cancellation = default)
     {
-        return await SendHttpRequest<AppInstanceInfo>("/btcpayapp/instance", null, HttpMethod.Get, cancellation);
+        return await SendHttpRequest<AppInstanceInfo>("btcpayapp/instance", null, HttpMethod.Get, cancellation);
     }
 
     public async Task<AppUserInfo?> GetUserInfo(CancellationToken cancellation = default)
     {
-        return await SendHttpRequest<AppUserInfo>("/btcpayapp/user", null, HttpMethod.Get, cancellation);
+        return await SendHttpRequest<AppUserInfo>("btcpayapp/user", null, HttpMethod.Get, cancellation);
     }
 
     public async Task<CreateStoreData?> GetCreateStore(CancellationToken cancellation = default)
     {
-        return await SendHttpRequest<CreateStoreData>("/btcpayapp/create-store", null, HttpMethod.Get, cancellation);
+        return await SendHttpRequest<CreateStoreData>("btcpayapp/create-store", null, HttpMethod.Get, cancellation);
     }
 
     public async Task<SignupResult> RegisterUser(SignupRequest payload, CancellationToken cancellation)
     {
-        return await SendHttpRequest<SignupResult>("/btcpayapp/register", payload, HttpMethod.Post, cancellation);
+        return await SendHttpRequest<SignupResult>("btcpayapp/register", payload, HttpMethod.Post, cancellation);
     }
 
     public async Task<AccessTokenResponse> Login(LoginRequest payload, CancellationToken cancellation)
     {
-        return await SendHttpRequest<AccessTokenResponse>("/btcpayapp/login", payload, HttpMethod.Post, cancellation);
+        return await SendHttpRequest<AccessTokenResponse>("btcpayapp/login", payload, HttpMethod.Post, cancellation);
     }
 
     public async Task<AccessTokenResponse> Login(string loginCode, CancellationToken cancellation)
     {
-        return await SendHttpRequest<AccessTokenResponse>("/btcpayapp/login/code", loginCode, HttpMethod.Post, cancellation);
+        return await SendHttpRequest<AccessTokenResponse>("btcpayapp/login/code", loginCode, HttpMethod.Post, cancellation);
+    }
+
+    public async Task<AcceptInviteResult> AcceptInvite(AcceptInviteRequest payload, CancellationToken cancellation)
+    {
+        return await SendHttpRequest<AcceptInviteResult>("btcpayapp/accept-invite", payload, HttpMethod.Post, cancellation);
     }
 
     public async Task ResetPassword(ResetPasswordRequest payload, CancellationToken cancellation)
     {
         var isForgotStep = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword);
-        var path = isForgotStep ? "/btcpayapp/forgot-password" : "/btcpayapp/reset-password";
-        await SendHttpRequest<AccessTokenResponse>(path, payload, HttpMethod.Post, cancellation);
+        var path = isForgotStep ? "btcpayapp/forgot-password" : "btcpayapp/reset-password";
+        await SendHttpRequest<EmptyResult>(path, payload, HttpMethod.Post, cancellation);
     }
 }

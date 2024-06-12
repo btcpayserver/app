@@ -11,6 +11,7 @@ public interface IAccountManager
     public BTCPayAppClient GetClient(string? baseUri = null);
     public Task<bool> CheckAuthenticated(bool refreshUser = false);
     public Task<bool> IsAuthorized(string policy, object? resource = null);
+    public Task<FormResult<AcceptInviteResult>> AcceptInvite(string inviteUrl, CancellationToken? cancellation = default);
     public Task<FormResult> Login(string serverUrl, string email, string password, string? otp, CancellationToken? cancellation = default);
     public Task<FormResult> LoginWithCode(string serverUrl, string email, string code, CancellationToken? cancellation = default);
     public Task<FormResult> Register(string serverUrl, string email, string password, CancellationToken? cancellation = default);

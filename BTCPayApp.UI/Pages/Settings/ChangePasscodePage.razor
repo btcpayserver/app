@@ -95,7 +95,7 @@
 
     private string GetTitle() => Model.Mode switch
     {
-        PasscodeMode.Set => $"{(string.IsNullOrEmpty(_config!.Passcode)  ? "SetChange" : "")} Passcode",
+        PasscodeMode.Set => $"{(string.IsNullOrEmpty(_config!.Passcode)  ? "Set" : "Change")} Passcode",
         PasscodeMode.Confirm => "Confirm Passcode",
         _ => throw new ArgumentOutOfRangeException()
     };

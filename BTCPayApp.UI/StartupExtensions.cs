@@ -20,10 +20,7 @@ public static class StartupExtensions
         serviceCollection.AddSingleton(CurrencyNameTable.Instance);
         serviceCollection.AddAuthorizationCore(options =>
         {
-            foreach (var policy in Policies.AllPolicies)
-                options.AddPolicy(policy);
-            options.AddPolicy(Policies.CanModifyStoreSettingsUnscoped);
-            options.AddPolicy(ServerPolicies.CanGetRates.Key);
+            options.AddBTCPayPolicies();
         });
         serviceCollection.AddCascadingAuthenticationState();
         serviceCollection.AddFluxor(options =>
