@@ -1,47 +1,133 @@
 ﻿@attribute [Route(Routes.Invoice)]
+@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Features
+@using BTCPayServer.Abstractions.Extensions
+@using BTCPayServer.Client.Models
+@using BTCPayServer.Services
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
+@inject IDispatcher Dispatcher
+@inject IState<StoreState> StoreState
+@inject DisplayFormatter DisplayFormatter
 
 <PageTitle>@GetTitle()</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>@GetTitle()</h1>
+        <h1>Invoice Details</h1>
     </Titlebar>
 </SectionContent>
 
 <section class="container">
-    <div class="invoice">
-        ID: @Model.Invoice.Id
-    </div>
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <Alert Type="danger">@Error</Alert>
+    }
+    @if (Invoice is not null)
+    {
+        <div class="invoice">
+            <span>Invoice</span>
+            <div class="h3">@Invoice.Id</div>
+            <div class="status d-flex flex-wrap align-items-center gap-2">
+                <span class="badge badge-@Invoice.Status.ToString().ToLower()">@Invoice.Status.ToString().ToLower()</span>
+                @if (Invoice.Archived)
+                {
+                    <span class="badge bg-warning">archived</span>
+                }
+            </div>
+
+            <h4 class="mt-3">General Information</h4>
+            <table class="table my-0">
+                <tbody>
+                <tr>
+                    <th>Invoice Id</th>
+                    <td>@Invoice.Id</td>
+                </tr>
+                @if (Invoice.Metadata.TryGetValue("orderId", out var orderId))
+                {
+                    <tr>
+                        <th>Order Id</th>
+                        <td>
+                            @if (Invoice.Metadata.TryGetValue("orderUrl", out var orderUrl))
+                            {
+                                <a href="@orderUrl" rel="noreferrer noopener" target="_blank">@orderId</a>
+                            }
+                            else
+                            {
+                                <span>@orderId</span>
+                            }
+                        </td>
+                    </tr>
+                }
+                @if (Invoice.Metadata.TryGetValue("paymentRequestId", out var paymentRequestId))
+                {
+                    <tr>
+                        <th>Payment Request Id</th>
+                        <td>@paymentRequestId</td>
+                    </tr>
+                }
+                <tr>
+                    <th>Created</th>
+                    <td><DateDisplay DateTimeOffset="@Invoice.CreatedTime"/></td>
+                </tr>
+                <tr>
+                    <th>Expiration</th>
+                    <td><DateDisplay DateTimeOffset="@Invoice.ExpirationTime"/></td>
+                </tr>
+                <tr>
+                    <th>Monitoring Date</th>
+                    <td><DateDisplay DateTimeOffset="@Invoice.MonitoringExpiration"/></td>
+                </tr>
+                @if (Invoice.Checkout.SpeedPolicy != null)
+                {
+                    <tr>
+                        <th>Transaction Speed</th>
+                        <td>@Invoice.Checkout.SpeedPolicy?.ToString().Replace("Speed", "")</td>
+                    </tr>
+                }
+                <tr>
+                    <th>Total Amount Due</th>
+                    <td><span data-sensitive>@DisplayFormatter.Currency(Invoice.Amount, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span></td>
+                </tr>
+                @if (!string.IsNullOrEmpty(Invoice.Checkout.RedirectURL))
+                {
+                    <tr>
+                        <th>Redirect Url</th>
+                        <td>
+                            <a href="@Invoice.Checkout.RedirectURL" rel="noreferrer noopener" target="_blank">@Invoice.Checkout.RedirectURL</a>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+    else if (Loading)
+    {
+        <div class="p-3 text-center">
+            <LoadingIndicator/>
+        </div>
+    }
 </section>
 
 @code {
     [Parameter, EditorRequired]
     public string? InvoiceId { get; set; }
 
-    private InvoiceModel Model { get; set; } = new();
-
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        Model.Invoice = new Invoice
-        {
-            Id = InvoiceId,
-            OrderId = "CDOy6cOibCWEdsRiZuaHf8dSG",
-            Date = DateTimeOffset.Now - TimeSpan.FromSeconds(21),
-            Status = "Settled",
-            Currency = "USD",
-            Amount = 61.5m
-        };
+        if (Store is not null && !string.IsNullOrEmpty(InvoiceId))
+            Dispatcher.Dispatch(new StoreState.FetchInvoice(Store.Id!, InvoiceId));
     }
 
-    private class InvoiceModel
-    {
-        public Invoice Invoice { get; set; }
-    }
+    private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
+    private InvoiceData? Invoice => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoice(InvoiceId!)?.Data : null;
+    private bool Loading => !string.IsNullOrEmpty(InvoiceId) && StoreState.Value.GetInvoice(InvoiceId!)?.Loading is true;
+    private string? Error => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoice(InvoiceId!)?.Error : null;
 
-    private string GetTitle() => $"Invoice {Model.Invoice.Id}";
+    private string GetTitle() => $"Invoice {Invoice?.Id}".Trim();
 }

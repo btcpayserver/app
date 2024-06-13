@@ -6,24 +6,25 @@ using Fluxor;
 namespace BTCPayApp.UI.Features;
 
 [FeatureState]
-public record StoreState(
-    AppUserStoreInfo? StoreInfo,
-    RemoteData<PointOfSaleAppData>? PointOfSale,
-    RemoteData<IEnumerable<StoreRateResult>>? Rates,
-    RemoteData<IEnumerable<InvoiceData>>? Invoices)
+public record StoreState
 {
-    public AppUserStoreInfo? StoreInfo = StoreInfo;
-    public RemoteData<PointOfSaleAppData>? PointOfSale = PointOfSale;
-    public RemoteData<IEnumerable<StoreRateResult>>? Rates = Rates;
-    public RemoteData<IEnumerable<InvoiceData>>? Invoices = Invoices;
+    public AppUserStoreInfo? StoreInfo;
+    public RemoteData<PointOfSaleAppData>? PointOfSale;
+    public RemoteData<IEnumerable<StoreRateResult>>? Rates;
+    public RemoteData<IEnumerable<InvoiceData>>? Invoices;
+    private IDictionary<string,RemoteData<InvoiceData>?> _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>();
 
     private static string[] RateFetchExcludes = ["BTC", "SATS"];
 
-    public StoreState() : this(null, null, null, null)
-    {
-    }
-
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
+    public record FetchInvoices(string StoreId);
+    protected record FetchedInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
+    public record FetchInvoice(string StoreId, string InvoiceId);
+    protected record FetchedInvoice(InvoiceData? Invoice, string? Error, string InvoiceId);
+    public record FetchRates(string StoreId, string? Currency);
+    protected record FetchedRates(IEnumerable<StoreRateResult>? Rates, string? Error);
+    public record FetchPointOfSale(string AppId);
+    protected record FetchedPointOfSale(PointOfSaleAppData? AppData, string? Error);
 
     protected class SetStoreInfoReducer : Reducer<StoreState, SetStoreInfo>
     {
@@ -39,7 +40,17 @@ public record StoreState(
         }
     }
 
-    public record FetchInvoices(string? StoreId);
+    public RemoteData<InvoiceData>? GetInvoice(string invoiceId)
+    {
+        if (_invoicesById.TryGetValue(invoiceId, out var invoice)) return invoice;
+        var invoiceData = Invoices?.Data?.FirstOrDefault(i => i.Id == invoiceId);
+        return invoiceData == null ? null : new RemoteData<InvoiceData>(invoiceData);
+    }
+
+    private static RemoteData<InvoiceData>? GetInvoice(StoreState state, string invoiceId)
+    {
+        return state.GetInvoice(invoiceId);
+    }
 
     protected class FetchInvoicesReducer : Reducer<StoreState, FetchInvoices>
     {
@@ -51,8 +62,6 @@ public record StoreState(
             };
         }
     }
-
-    protected record FetchedInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
 
     protected class FetchedInvoicesReducer : Reducer<StoreState, FetchedInvoices>
     {
@@ -66,7 +75,39 @@ public record StoreState(
         }
     }
 
-    public record FetchRates(string? StoreId, string? Currency);
+    protected class FetchInvoiceReducer : Reducer<StoreState, FetchInvoice>
+    {
+        public override StoreState Reduce(StoreState state, FetchInvoice action)
+        {
+            var invoice = GetInvoice(state, action.InvoiceId)?.Data;
+            if (state._invoicesById.ContainsKey(action.InvoiceId))
+                state._invoicesById.Remove(action.InvoiceId);
+            return state with
+            {
+                _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
+                {
+                    { action.InvoiceId, new RemoteData<InvoiceData>(invoice, true) }
+                }
+            };
+        }
+    }
+
+    protected class FetchedInvoiceReducer : Reducer<StoreState, FetchedInvoice>
+    {
+        public override StoreState Reduce(StoreState state, FetchedInvoice action)
+        {
+            var invoice = action.Invoice ?? GetInvoice(state, action.InvoiceId)?.Data;
+            if (state._invoicesById.ContainsKey(action.InvoiceId))
+                state._invoicesById.Remove(action.InvoiceId);
+            return state with
+            {
+                _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
+                {
+                    { action.InvoiceId, new RemoteData<InvoiceData>(invoice, false, action.Error) }
+                }
+            };
+        }
+    }
 
     protected class FetchRatesReducer : Reducer<StoreState, FetchRates>
     {
@@ -78,8 +119,6 @@ public record StoreState(
             };
         }
     }
-
-    protected record FetchedRates(IEnumerable<StoreRateResult>? Rates, string? Error);
 
     protected class FetchedRatesReducer : Reducer<StoreState, FetchedRates>
     {
@@ -93,8 +132,6 @@ public record StoreState(
         }
     }
 
-    public record FetchPointOfSale(string? AppId);
-
     protected class FetchPointOfSaleReducer : Reducer<StoreState, FetchPointOfSale>
     {
         public override StoreState Reduce(StoreState state, FetchPointOfSale action)
@@ -105,8 +142,6 @@ public record StoreState(
             };
         }
     }
-
-    protected record FetchedPointOfSale(PointOfSaleAppData? AppData, string? Error);
 
     protected class FetchedPointOfSaleReducer : Reducer<StoreState, FetchedPointOfSale>
     {
@@ -128,10 +163,10 @@ public record StoreState(
             var store = action.StoreInfo;
             if (store != null)
             {
-                dispatcher.Dispatch(new FetchInvoices(store.Id));
-                dispatcher.Dispatch(new FetchPointOfSale(store.PosAppId));
+                dispatcher.Dispatch(new FetchInvoices(store.Id!));
+                dispatcher.Dispatch(new FetchPointOfSale(store.PosAppId!));
                 if (!RateFetchExcludes.Contains(store.DefaultCurrency))
-                    dispatcher.Dispatch(new FetchRates(store.Id, store.DefaultCurrency));
+                    dispatcher.Dispatch(new FetchRates(store.Id!, store.DefaultCurrency));
             }
             return Task.CompletedTask;
         }
@@ -178,6 +213,21 @@ public record StoreState(
             {
                 var error = e.InnerException?.Message ?? e.Message;
                 dispatcher.Dispatch(new FetchedInvoices(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchInvoiceEffect(FetchInvoice action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var invoice = await accountManager.GetClient().GetInvoice(action.StoreId, action.InvoiceId);
+                dispatcher.Dispatch(new FetchedInvoice(invoice, null, action.InvoiceId));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new FetchedInvoice(null, error, action.InvoiceId));
             }
         }
     }
