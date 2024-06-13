@@ -1,5 +1,5 @@
 @using BTCPayServer.Client.Models
-<a href="#" class="border-bottom border-light @(Seen ? null : "bg-light")">
+<a href="@GetLink()" class="border-bottom border-light @(Seen ? null : "bg-light")">
     <div class="container d-flex align-items-center gap-3 py-3">
         <div>
             <Icon Symbol="@NotificationIcon(Identifier)"/>
@@ -32,6 +32,9 @@
     public string? Body { get; set; }
 
     [Parameter]
+    public string? Link { get; set; }
+
+    [Parameter]
     public bool Seen { get; set; }
 
     [Parameter]
@@ -44,6 +47,7 @@
             Created = value.CreatedTime;
             Body = value.Body;
             Seen = value.Seen;
+            Link = value.Link.ToString();
         }
     }
 
@@ -59,8 +63,23 @@
             "external-payout-transaction" => "notifications-payout",
             "payout_awaitingapproval" => "notifications-payout",
             "payout_awaitingpayment" => "notifications-payout-approved",
+            "inviteaccepted" => "notifications-account",
+            "newuserrequiresapproval" => "notifications-account",
             "newversion" => "notifications-new-version",
             _ => "note"
+        };
+    }
+
+    private string GetLink()
+    {
+        return Identifier switch
+        {
+            "invoice_expired" => Link!,
+            "invoice_expiredpaidpartial" => Link!,
+            "invoice_failedtoconfirm" => Link!,
+            "invoice_confirmed" => Link!,
+            "invoice_paidafterexpiration" => Link!,
+            _ => "#"
         };
     }
 }
