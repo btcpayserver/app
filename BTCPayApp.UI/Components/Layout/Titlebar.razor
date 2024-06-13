@@ -1,17 +1,19 @@
-<section id="Titlebar" class="container d-flex align-items-center justify-content-between py-3 @(Fixed ? "fixed" : null)">
-    <div class="titlebar-start">
-        @if (!string.IsNullOrEmpty(BackLink) || Back)
-        {
-            <a class="btn-icon" href="@(BackLink ?? "#")" onclick="@(string.IsNullOrEmpty(BackLink) ? "history.back();return false;" : null)">
-                <Icon Symbol="back"/>
-            </a>
-        }
-    </div>
-    <div class="titlebar-center">
-        @ChildContent
-    </div>
-    <div class="titlebar-end">
-        <SectionOutlet SectionId="End" />
+<section id="Titlebar" class="@(Fixed ? "fixed" : null)">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="titlebar-start">
+            @if (!string.IsNullOrEmpty(BackLink) || Back)
+            {
+                <a class="btn-icon" href="@(BackLink ?? "#")" onclick="@(string.IsNullOrEmpty(BackLink) ? "history.back();return false;" : null)">
+                    <Icon Symbol="back"/>
+                </a>
+            }
+        </div>
+        <div class="titlebar-center">
+            @ChildContent
+        </div>
+        <div class="titlebar-end">
+            <SectionOutlet SectionId="End"/>
+        </div>
     </div>
 </section>
 

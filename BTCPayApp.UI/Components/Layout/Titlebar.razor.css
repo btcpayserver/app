@@ -3,7 +3,6 @@
   display: flex;
   justify-content: space-between;
   background-color: var(--btcpay-body-bg);
-  padding: 0 var(--btcpay-space-s);
 }
 
 #Titlebar.fixed {
