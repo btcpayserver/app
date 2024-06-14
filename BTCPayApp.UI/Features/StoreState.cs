@@ -13,6 +13,7 @@ public record StoreState
     public RemoteData<IEnumerable<StoreRateResult>>? Rates;
     public RemoteData<IEnumerable<InvoiceData>>? Invoices;
     private IDictionary<string,RemoteData<InvoiceData>?> _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>();
+    private IDictionary<string,RemoteData<InvoicePaymentMethodDataModel[]>?> _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>();
 
     private static string[] RateFetchExcludes = ["BTC", "SATS"];
 
@@ -21,6 +22,8 @@ public record StoreState
     protected record FetchedInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
     public record FetchInvoice(string StoreId, string InvoiceId);
     protected record FetchedInvoice(InvoiceData? Invoice, string? Error, string InvoiceId);
+    public record FetchInvoicePaymentMethods(string StoreId, string InvoiceId);
+    protected record FetchedInvoicePaymentMethods(InvoicePaymentMethodDataModel[]? PaymentMethods, string? Error, string InvoiceId);
     public record FetchRates(string StoreId, string? Currency);
     protected record FetchedRates(IEnumerable<StoreRateResult>? Rates, string? Error);
     public record FetchPointOfSale(string AppId);
@@ -50,6 +53,16 @@ public record StoreState
     private static RemoteData<InvoiceData>? GetInvoice(StoreState state, string invoiceId)
     {
         return state.GetInvoice(invoiceId);
+    }
+
+    public RemoteData<InvoicePaymentMethodDataModel[]>? GetInvoicePaymentMethods(string invoiceId)
+    {
+        return _invoicePaymentMethodsById.TryGetValue(invoiceId, out var pms) ? pms :null;
+    }
+
+    private static RemoteData<InvoicePaymentMethodDataModel[]>? GetInvoicePaymentMethods(StoreState state, string invoiceId)
+    {
+        return state.GetInvoicePaymentMethods(invoiceId);
     }
 
     protected class FetchInvoicesReducer : Reducer<StoreState, FetchInvoices>
@@ -104,6 +117,40 @@ public record StoreState
                 _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
                 {
                     { action.InvoiceId, new RemoteData<InvoiceData>(invoice, false, action.Error) }
+                }
+            };
+        }
+    }
+
+    protected class FetchInvoicePaymentMethodsReducer : Reducer<StoreState, FetchInvoicePaymentMethods>
+    {
+        public override StoreState Reduce(StoreState state, FetchInvoicePaymentMethods action)
+        {
+            var pms = GetInvoicePaymentMethods(state, action.InvoiceId)?.Data;
+            if (state._invoicePaymentMethodsById.ContainsKey(action.InvoiceId))
+                state._invoicePaymentMethodsById.Remove(action.InvoiceId);
+            return state with
+            {
+                _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(state._invoicePaymentMethodsById)
+                {
+                    { action.InvoiceId, new RemoteData<InvoicePaymentMethodDataModel[]>(pms, true) }
+                }
+            };
+        }
+    }
+
+    protected class FetchedInvoicePaymentMethodsReducer : Reducer<StoreState, FetchedInvoicePaymentMethods>
+    {
+        public override StoreState Reduce(StoreState state, FetchedInvoicePaymentMethods action)
+        {
+            var pms = action.PaymentMethods ?? GetInvoicePaymentMethods(state, action.InvoiceId)?.Data;
+            if (state._invoicePaymentMethodsById.ContainsKey(action.InvoiceId))
+                state._invoicePaymentMethodsById.Remove(action.InvoiceId);
+            return state with
+            {
+                _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(state._invoicePaymentMethodsById)
+                {
+                    { action.InvoiceId, new RemoteData<InvoicePaymentMethodDataModel[]>(pms, false, action.Error) }
                 }
             };
         }
@@ -228,6 +275,21 @@ public record StoreState
             {
                 var error = e.InnerException?.Message ?? e.Message;
                 dispatcher.Dispatch(new FetchedInvoice(null, error, action.InvoiceId));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchInvoicePaymentMethodsEffect(FetchInvoicePaymentMethods action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var pms = await accountManager.GetClient().GetInvoicePaymentMethods(action.StoreId, action.InvoiceId);
+                dispatcher.Dispatch(new FetchedInvoicePaymentMethods(pms, null, action.InvoiceId));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new FetchedInvoicePaymentMethods(null, error, action.InvoiceId));
             }
         }
     }

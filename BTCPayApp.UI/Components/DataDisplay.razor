@@ -1,0 +1,141 @@
+@if (Data?.Any() is true)
+{
+    @* Use titlecase and lowercase versions for backwards-compatibility *@
+    string[] cartKeys = ["cart", "subtotal", "discount", "tip", "total"];
+    <table class="table my-0" v-pre>
+        @if (Data.Keys.Any(key => cartKeys.Contains(key.ToLowerInvariant())))
+        {
+            _ = Data.TryGetValue("cart", out var cart) || Data.TryGetValue("Cart", out cart);
+            var hasTotal = Data.TryGetValue("total", out var total) || Data.TryGetValue("Total", out total);
+            var hasSubtotal = Data.TryGetValue("subtotal", out var subtotal) || Data.TryGetValue("subTotal", out subtotal) || Data.TryGetValue("Subtotal", out subtotal);
+            var hasDiscount = Data.TryGetValue("discount", out var discount) || Data.TryGetValue("Discount", out discount);
+            var hasTip = Data.TryGetValue("tip", out var tip) || Data.TryGetValue("Tip", out tip);
+            if (cart is Dictionary<string, object> { Keys.Count: > 0 } cartDict)
+            {
+                <tbody>
+                @foreach (var (key, value) in cartDict)
+                {
+                    <tr>
+                        <th>@key</th>
+                        <td class="text-end">@value</td>
+                    </tr>
+                }
+                </tbody>
+            }
+            else if (cart is ICollection<object> { Count: > 0 } cartCollection)
+            {
+                <tbody>
+                @foreach (var value in cartCollection)
+                {
+                    if (value is Dictionary<string, object> { Keys.Count: > 0 } valDict)
+                    {
+                        @foreach (var (key, val) in valDict)
+                        {
+                            <tr>
+                                <th>@key</th>
+                                <td class="text-end">@val</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td>@value</td>
+                        </tr>
+                    }
+                }
+                </tbody>
+            }
+            <tfoot style="border-top-width:0">
+                @if (hasSubtotal && (hasDiscount || hasTip))
+                {
+                    <tr style="border-top-width:3px">
+                        <th>Subtotal</th>
+                        <td class="text-end">@subtotal</td>
+                    </tr>
+                }
+                @if (hasDiscount)
+                {
+                    <tr>
+                        <th>Discount</th>
+                        <td class="text-end">@discount</td>
+                    </tr>
+                }
+                @if (hasTip)
+                {
+                    <tr>
+                        <th>Tip</th>
+                        <td class="text-end">@tip</td>
+                    </tr>
+                }
+                @if (hasTotal)
+                {
+                    <tr style="border-top-width:3px">
+                        <th>Total</th>
+                        <td class="text-end">@total</td>
+                    </tr>
+                }
+            </tfoot>
+        }
+        else
+        {
+            foreach (var (key, value) in Data)
+            {
+                <tr>
+                    @if (value is string str)
+                    {
+                        if (!string.IsNullOrEmpty(key))
+                        {
+                            <th>@key</th>
+                        }
+                        <td style="white-space:pre-wrap">@* Explicitely remove whitespace at front here *@@if (IsValidURL(str)){<a href="@str" target="_blank" rel="noreferrer noopener">@str</a>}else {@str.Trim()}</td>
+                    }
+                    else if (value is Dictionary<string, object> { Count: > 0 } subItems)
+                    {
+                        <td colspan="2">
+                            @if (!string.IsNullOrEmpty(key))
+                            {
+                                <div class="@($"h{Level + 3}")">@key</div>
+                            }
+                            <DataDisplay Data="@subItems" Level="@(Level + 1)" />
+                        </td>
+                    }
+                    else if (value is IEnumerable<object> valueArray)
+                    {
+                        <td colspan="2">
+                            @if (!string.IsNullOrEmpty(key))
+                            {
+                                <div class="@($"h{Level + 3}")">@key</div>
+                            }
+                            @foreach (var item in valueArray)
+                            {
+                                @if (item is Dictionary<string, object> { Count: > 0 } subItems2)
+                                {
+                                    <DataDisplay Data="@subItems2" Level="@(Level + 1)" />
+                                }
+                                else
+                                {
+                                    <DataDisplay Data="@(new Dictionary<string, object> { { "", item } })" Level="@(Level + 1)" />
+                                }
+                            }
+                        </td>
+                    }
+                </tr>
+            }
+        }
+    </table>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public Dictionary<string, object>? Data { get; set; }
+
+    [Parameter]
+    public int Level { get; set; }
+
+    private bool IsValidURL(string source)
+    {
+        return Uri.TryCreate(source, UriKind.Absolute, out var uriResult) &&
+               (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);
+    }
+}
