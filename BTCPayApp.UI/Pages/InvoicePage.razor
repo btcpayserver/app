@@ -39,7 +39,7 @@
                 }
             </div>
 
-            <h4 class="mt-3">General Information</h4>
+            <h4 class="mt-4">General Information</h4>
             <table class="table my-0">
                 <tbody>
                 <tr>
@@ -112,7 +112,7 @@
             }
             @if (!string.IsNullOrEmpty(itemCode?.ToString()) || !string.IsNullOrEmpty(itemDesc?.ToString()) || taxIncluded is not null)
             {
-                <h4 class="mt-3">Product Information</h4>
+                <h4 class="mt-5">Product Information</h4>
                 <table class="table my-0">
                     <tbody>
                     @if (!string.IsNullOrEmpty(itemCode?.ToString()))
@@ -158,7 +158,7 @@
                  !string.IsNullOrEmpty(buyerState?.ToString()) || !string.IsNullOrEmpty(buyerCountry?.ToString()) ||
                  !string.IsNullOrEmpty(buyerZip?.ToString()))
             {
-                <h4 class="mt-3">Buyer Information</h4>
+                <h4 class="mt-5">Buyer Information</h4>
                 <table class="table my-0">
                     <tbody>
                     @if (!string.IsNullOrEmpty(buyerName?.ToString()) )
@@ -244,7 +244,7 @@
 
                 if (parsedReceiptData != null)
                 {
-                    <h4 class="mt-4">Receipt Information</h4>
+                    <h4 class="mt-5">Receipt Information</h4>
                     <DataDisplay Data="@parsedReceiptData"/>
                 }
             }
@@ -262,22 +262,61 @@
                 }
                 if (parsedPosData != null)
                 {
-                    <h4 class="mt-3">Additional Information</h4>
-                    <DataDisplay Data="@parsedPosData"/>
+                    <button class="btn btn-secondary mt-4" type="button" data-bs-toggle="collapse" data-bs-target="#AdditionalInformation" aria-expanded="false" aria-controls="AdditionalInformation">
+                        Show Additional Information
+                    </button>
+                    <div id="AdditionalInformation" class="collapse">
+                        <div class="py-4">
+                            <DataDisplay Data="@parsedPosData"/>
+                        </div>
+                    </div>
                 }
             }
         </div>
 
-        <h4 class="mt-3">Payment Information</h4>
+        <h4 class="mt-5">Payment Information</h4>
         @if (!string.IsNullOrEmpty(PaymentMethodsError))
         {
             <Alert Type="danger">@PaymentMethodsError</Alert>
         }
-        @if (PaymentMethods is not null)
+        @if (PaymentMethods is not null && PaymentMethods.Any())
         {
-            <div class="payment-methods">
-                @PaymentMethods
-            </div>
+            @foreach (var pm in PaymentMethods)
+            {
+                @if (pm.Payments.Any())
+                {
+                    <h5 class="mt-3">@pm.PaymentMethodId</h5>
+                    <div class="payment-methods table-responsive">
+                        <table class="table table-hover my-0">
+                            <thead>
+                            <tr>
+                                <th class="text-nowrap w-175px">Payment method</th>
+                                <th>Destination</th>
+                                <th class="w-150px text-end">Rate</th>
+                                <th class="w-150px text-end">Paid</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var payment in pm.Payments)
+                            {
+                                <tr>
+                                    <td class="text-nowrap">@pm.PaymentMethodId</td>
+                                    <td title="@payment.Destination">
+                                        <TruncateCenter Text="@payment.Destination"/>
+                                    </td>
+                                    <td class="text-nowrap text-end">
+                                        <span data-sensitive>@DisplayFormatter.Currency(@pm.Rate, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
+                                    </td>
+                                    <td class="text-nowrap text-end">
+                                        <span data-sensitive>@DisplayFormatter.Currency(payment.Value, pm.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
         }
         else if (PaymentMethodsLoading)
         {
