@@ -28,13 +28,13 @@ public static class Routes
     public const string Invoice = "/invoices/{InvoiceId}";
     public const string PointOfSale = "/pos";
     public const string Logout = "/logout";
-    public const string Store = "/store/{StoreId}";
     public const string CreateStore = "/store/create";
     public const string Settings = "/settings";
     public const string ChangePasscode = "/settings/passcode";
     public const string SelectStore = "/settings/select-store";
+    public const string Store = "/settings/store/{StoreId}";
     public const string User = "/settings/user";
 
-    public static string InvoicePath(string invoiceId, string? backUrl = null) => Invoice.Replace("{InvoiceId}", invoiceId) + (string.IsNullOrEmpty(backUrl) ? "" : $"?backUrl={backUrl}");
-    public static string StorePath(string storeId, string? backUrl = null) => Store.Replace("{StoreId}", storeId) + (string.IsNullOrEmpty(backUrl) ? "" : $"?backUrl={backUrl}");
+    public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);
+    public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);
 }

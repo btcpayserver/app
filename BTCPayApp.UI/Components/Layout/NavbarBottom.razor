@@ -20,7 +20,7 @@
                 </NavLink>
             </li>
             <li class="nav-item">
-                <NavLink href="@(HasStore ? Routes.Invoices : null)" Match="NavLinkMatch.All" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
+                <NavLink href="@(HasStore ? Routes.Invoices : null)" Match="NavLinkMatch.Prefix" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
                     <Icon Symbol="nav-invoices"/>
                     <span>Invoices</span>
                 </NavLink>
