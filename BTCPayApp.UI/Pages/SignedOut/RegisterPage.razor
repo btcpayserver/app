@@ -14,16 +14,22 @@
 
 <SectionContent SectionId="_Layout.MainTop">
     <h1>@GetTitle()</h1>
-    @if (!string.IsNullOrEmpty(_errorMessage))
+    @if (!string.IsNullOrEmpty(Error))
     {
-        <Alert Type="danger">@_errorMessage</Alert>
+        <Alert Type="danger">@Error</Alert>
     }
 </SectionContent>
 
 <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="Register" method="post">
     <DataAnnotationsValidator />
     <div class="form-group">
-        <label for="Uri" class="form-label">Server URL</label>
+        <div class="d-flex justify-content-between">
+            <label for="Uri" class="form-label">Server URL</label>
+            @if (InstanceLoading)
+            {
+                <LoadingIndicator />
+            }
+        </div>
         <InputText @bind-Value="Model.Uri" @bind-Value:after="ResolveInstanceInfo" type="url" id="Uri" class="form-control"/>
         <ValidationMessage For="@(() => Model.Uri)" />
     </div>
@@ -128,6 +134,9 @@
     private string GetTitle() => $"Create account{(string.IsNullOrEmpty(InstanceInfo?.ServerName) ? null : $" at {InstanceInfo.ServerName}")}";
     private string GetLoginUrl() => NavigationManager.GetUriWithQueryParameters(Routes.Login, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
     private bool GetRegistrationEnabled() => InstanceInfo is not { RegistrationEnabled: true };
+    private string? Error => _errorMessage ?? InstanceError;
 
     private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
+    private string? InstanceError => UIState.Value.Instance?.Error;
+    private bool InstanceLoading => UIState.Value.Instance?.Loading is true;
 }
