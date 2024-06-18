@@ -11,11 +11,12 @@
 
 <PageTitle>Invoices</PageTitle>
 
-<SectionContent SectionId="_Layout.Top">
-    <Titlebar>
+<section class="container py-4">
+    <header class="d-flex align-items-center justify-content-between gap-3 mb-4">
         @if (Store is not null)
         {
-            <SectionContent SectionId="Titlebar.End">
+            <h1>Invoices</h1>
+            <div class="d-flex align-items-center gap-1">
                 <button type="button" class="btn-icon" @onclick="LoadInvoices" disabled="@Loading">
                     @if (Loading)
                     {
@@ -26,48 +27,39 @@
                         <Icon Symbol="actions-refresh"/>
                     }
                 </button>
-            </SectionContent>
+            </div>
         }
-        <h1>Invoices</h1>
-    </Titlebar>
-</SectionContent>
+    </header>
 
 @if (Store is null)
 {
-    <section class="container">
-        <Alert Type="info">Please configure a store first.</Alert>
-    </section>
+    <Alert Type="info">Please configure a store first.</Alert>
 }
 @if (!string.IsNullOrEmpty(Error))
 {
-    <section class="container">
-        <Alert Type="danger">@Error</Alert>
-    </section>
+    <Alert Type="danger">@Error</Alert>
 }
 @if (Invoices is not null)
 {
     @if (Invoices.Any())
     {
-        <section class="container">
-            <div class="box">
-                <div class="list-group list-group-flush">
-                    @foreach (var i in Invoices)
-                    {
-                        <InvoiceItem Invoice="@i"/>
-                    }
-                </div>
+        <div class="box">
+            <div class="list-group list-group-flush">
+                @foreach (var i in Invoices)
+                {
+                    <InvoiceItem Invoice="@i"/>
+                }
             </div>
-        </section>
+        </div>
     }
     else
     {
-        <section class="container">
-            <div class="box">
-                <p class="text-muted text-center py-4">There are no invoices, yet.</p>
-            </div>
-        </section>
+        <div class="box">
+            <p class="text-muted text-center py-4">There are no invoices, yet.</p>
+        </div>
     }
 }
+</section>
 
 @code {
     private void LoadInvoices()
