@@ -75,12 +75,12 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
+        var cts = new CancellationTokenSource(5000);
+        // default to unauthenticated
+        var user = _unauthenticated;
         try
         {
-            await _semaphore.WaitAsync();
-
-            // default to unauthenticated
-            var user = _unauthenticated;
+            await _semaphore.WaitAsync(cts.Token);
 
             // initialize with persisted account
             if (!_isInitialized && _account == null)
@@ -92,7 +92,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
             var oldUserInfo = _userInfo;
             if (_userInfo == null && _account?.HasTokens is true)
             {
-                await FetchUserInfo();
+                await FetchUserInfo(cts.Token);
             }
 
             if (_userInfo != null)
@@ -117,6 +117,10 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
                 return res;
             NotifyAuthenticationStateChanged(Task.FromResult(res));
             return res;
+        }
+        catch
+        {
+            return new AuthenticationState(user);
         }
         finally
         {
@@ -364,16 +368,8 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         OnAfterAccountChange?.Invoke(this, _account);
     }
 
-    private async Task FetchUserInfo()
+    private async Task FetchUserInfo(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            _userInfo = await GetClient().GetUserInfo();
-        }
-        catch
-        {
-            /* ignored */
-        }
+        _userInfo = await GetClient().GetUserInfo(cancellationToken);
     }
-
 }
