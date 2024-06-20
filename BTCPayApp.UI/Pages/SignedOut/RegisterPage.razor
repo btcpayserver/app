@@ -3,6 +3,7 @@
 @layout SimpleLayout
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @using BTCPayApp.CommonServer.Models
+@using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @inject IAccountManager AccountManager
@@ -65,6 +66,9 @@
 </EditForm>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthState { get; set; }
+
     [SupplyParameterFromQuery, EditorRequired]
     public string? ServerUrl { get; set; }
 
@@ -81,6 +85,8 @@
             Model.Uri = Uri.UnescapeDataString(ServerUrl);
         }
 
+        AccountManager.OnBeforeAccountChange += OnBeforeAccountChange;
+
         ResolveInstanceInfo();
     }
 
@@ -91,6 +97,9 @@
 
         var result = await AccountManager.Register(Model.Uri!, Model.Email!, Model.Password!);
         _sending = false;
+        var authState = AuthState != null ? await AuthState : null;
+        if (authState?.User.Identity?.IsAuthenticated is true) return;
+
         if (result.Succeeded)
         {
             var successMessage = string.Join(",", result.Messages ?? ["Account created."]);
@@ -110,6 +119,14 @@
     {
         if (!string.IsNullOrEmpty(Model.Uri) && Model.Uri != InstanceInfo?.BaseUrl)
             Dispatcher.Dispatch(new UIState.FetchInstanceInfo(Model.Uri));
+    }
+
+    private async Task OnBeforeAccountChange(object? sender, BTCPayAccount? account)
+    {
+        if (account?.HasTokens is true)
+        {
+            NavigationManager.NavigateTo(Routes.Index);
+        }
     }
 
     private class RegisterModel

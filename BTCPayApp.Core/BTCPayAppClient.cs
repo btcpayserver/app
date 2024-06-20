@@ -7,6 +7,7 @@ using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using AccessTokenResponse = BTCPayApp.Core.AspNetRip.AccessTokenResponse;
 using ProblemDetails = BTCPayApp.Core.AspNetRip.ProblemDetails;
 using RefreshRequest = BTCPayApp.Core.AspNetRip.RefreshRequest;
@@ -134,9 +135,9 @@ public class BTCPayAppClient(string baseUri) : BTCPayServerClient(new Uri(baseUr
         return await SendHttpRequest<CreateStoreData>("btcpayapp/create-store", null, HttpMethod.Get, cancellation);
     }
 
-    public async Task<SignupResult> RegisterUser(SignupRequest payload, CancellationToken cancellation)
+    public async Task<JObject> RegisterUser(SignupRequest payload, CancellationToken cancellation)
     {
-        return await SendHttpRequest<SignupResult>("btcpayapp/register", payload, HttpMethod.Post, cancellation);
+        return await SendHttpRequest<JObject>("btcpayapp/register", payload, HttpMethod.Post, cancellation);
     }
 
     public async Task<AccessTokenResponse> Login(LoginRequest payload, CancellationToken cancellation)

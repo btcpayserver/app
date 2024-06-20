@@ -12,29 +12,29 @@
     [CascadingParameter]
     private Task<AuthenticationState>? AuthState { get; set; }
 
+    [SupplyParameterFromQuery]
+    public string? Success { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
         if (AuthState == null) return;
 
+        string route;
         var authState = await AuthState;
         if (authState.User.Identity?.IsAuthenticated is true)
         {
             var storeId = AccountManager.GetCurrentStore()?.Id;
-            NavigationManager.NavigateTo(storeId == null
-                ? Routes.SelectStore
-                : Routes.Dashboard);
-                    /*await AccountManager.IsAuthorized(Policies.CanViewStoreSettings, storeId)
-                    ? Routes.Dashboard
-                    : Routes.PointOfSale);*/
+            route = storeId == null ? Routes.SelectStore : Routes.Dashboard;
         }
         else
         {
             var accounts = await AccountManager.GetAccounts();
-            NavigationManager.NavigateTo(accounts.Any()
-                ? Routes.Login
-                : Routes.Welcome);
+            route = accounts.Any() ? Routes.Login : Routes.Welcome;
         }
+        var uri = string.IsNullOrEmpty(Success) ? route : NavigationManager.GetUriWithQueryParameters(route,
+            new Dictionary<string, object?> { {"success", Success } } );
+        NavigationManager.NavigateTo(uri);
     }
 }

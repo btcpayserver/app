@@ -272,14 +272,24 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         };
         try
         {
+            var expiryOffset = DateTimeOffset.Now;
             var response = await new BTCPayAppClient(serverUrl).RegisterUser(payload, cancellation.GetValueOrDefault());
             var account = new BTCPayAccount(serverUrl, email);
-            await SetCurrentAccount(account);
             var message = "Account created.";
-            if (response.RequiresConfirmedEmail)
-                message += " Please confirm your email.";
-            if (response.RequiresUserApproval)
-                message += " The new account requires approval by an admin before you can log in.";
+            if (response.ContainsKey("accessToken"))
+            {
+                var access = response.ToObject<AccessTokenResponse>();
+                account.SetAccess(access.AccessToken, access.RefreshToken, access.ExpiresIn, expiryOffset);
+            }
+            else
+            {
+                var signup = response.ToObject<SignupResult>();
+                if (signup.RequiresConfirmedEmail)
+                    message += " Please confirm your email.";
+                if (signup.RequiresUserApproval)
+                    message += " The new account requires approval by an admin before you can log in.";
+            }
+            await SetCurrentAccount(account);
             return new FormResult(true, message);
         }
         catch (Exception e)
