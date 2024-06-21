@@ -1,80 +1,68 @@
 ﻿@attribute [Route(Routes.Register)]
-@attribute [AllowAnonymous]
-@layout SimpleLayout
-@inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@using BTCPayApp.CommonServer.Models
-@using BTCPayApp.Core
+@inherits SignedOutBasePage
 @using BTCPayApp.Core.Auth
-@using BTCPayApp.UI.Features
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
-@inject IDispatcher Dispatcher
-@inject IState<UIState> UIState
 
 <PageTitle>@GetTitle()</PageTitle>
-
-<SectionContent SectionId="_Layout.MainTop">
-    <h1>@GetTitle()</h1>
-    @if (!string.IsNullOrEmpty(Error))
-    {
-        <Alert Type="danger">@Error</Alert>
-    }
-</SectionContent>
-
-<EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="Register" method="post">
-    <DataAnnotationsValidator />
-    <div class="form-group">
-        <div class="d-flex justify-content-between">
-            <label for="Uri" class="form-label">Server URL</label>
-            @if (InstanceLoading)
+<AuthorizeView>
+    <NotAuthorized>
+        <SectionContent SectionId="_Layout.MainTop">
+            <h1>@GetTitle()</h1>
+            @if (!string.IsNullOrEmpty(Error))
             {
-                <LoadingIndicator />
+                <Alert Type="danger">@Error</Alert>
             }
-        </div>
-        <InputText @bind-Value="Model.Uri" @bind-Value:after="ResolveInstanceInfo" type="url" id="Uri" class="form-control"/>
-        <ValidationMessage For="@(() => Model.Uri)" />
-    </div>
-    <div class="form-group">
-        <label for="Email" class="form-label">Email</label>
-        <InputText @bind-Value="Model.Email" type="email" id="Email" class="form-control" disabled="@GetRegistrationEnabled()"/>
-        <ValidationMessage For="@(() => Model.Email)" />
-    </div>
-    <div class="form-group">
-        <label for="Password" class="form-label">Password</label>
-        <InputText @bind-Value="Model.Password" type="password" id="Password" class="form-control" disabled="@GetRegistrationEnabled()"/>
-        <ValidationMessage For="@(() => Model.Password)" />
-    </div>
-    <div class="form-group">
-        <label for="ConfirmPassword" class="form-label">Confirm Password</label>
-        <InputText @bind-Value="Model.ConfirmPassword" type="password" id="ConfirmPassword" class="form-control" disabled="@GetRegistrationEnabled()"/>
-        <ValidationMessage For="@(() => Model.ConfirmPassword)" />
-    </div>
-    <button type="submit" class="btn btn-primary w-100" data-testid="RegisterButton" disabled="@(GetRegistrationEnabled() || _sending)">
-        @if (_sending)
-        {
-            <LoadingIndicator />
-        }
-        else
-        {
-            <span>Create account</span>
-        }
-    </button>
+        </SectionContent>
 
-    <p class="mt-4 text-center">
-        <NavLink href="@GetLoginUrl()">Back to login</NavLink>
-    </p>
-</EditForm>
+        <ValidationEditContext @ref="ValidationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <div class="form-group">
+                <div class="d-flex justify-content-between">
+                    <label for="Uri" class="form-label">Server URL</label>
+                    @if (InstanceLoading)
+                    {
+                        <LoadingIndicator />
+                    }
+                </div>
+                <InputText @bind-Value="Model.Uri" @bind-Value:after="() => ResolveInstanceInfo(Model.Uri)" type="url" id="Uri" class="form-control"/>
+                <ValidationMessage For="@(() => Model.Uri)" />
+            </div>
+            <div class="form-group">
+                <label for="Email" class="form-label">Email</label>
+                <InputText @bind-Value="Model.Email" type="email" id="Email" class="form-control" disabled="@GetRegistrationEnabled()"/>
+                <ValidationMessage For="@(() => Model.Email)" />
+            </div>
+            <div class="form-group">
+                <label for="Password" class="form-label">Password</label>
+                <InputText @bind-Value="Model.Password" type="password" id="Password" class="form-control" disabled="@GetRegistrationEnabled()"/>
+                <ValidationMessage For="@(() => Model.Password)" />
+            </div>
+            <div class="form-group">
+                <label for="ConfirmPassword" class="form-label">Confirm Password</label>
+                <InputText @bind-Value="Model.ConfirmPassword" type="password" id="ConfirmPassword" class="form-control" disabled="@GetRegistrationEnabled()"/>
+                <ValidationMessage For="@(() => Model.ConfirmPassword)" />
+            </div>
+            <button type="submit" class="btn btn-primary w-100" data-testid="RegisterButton" disabled="@(GetRegistrationEnabled() || Sending)">
+                @if (Sending)
+                {
+                    <LoadingIndicator />
+                }
+                else
+                {
+                    <span>Create account</span>
+                }
+            </button>
+
+            <p class="mt-4 text-center">
+                <NavLink href="@GetLoginUrl()">Back to login</NavLink>
+            </p>
+        </ValidationEditContext>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
-    [CascadingParameter]
-    private Task<AuthenticationState>? AuthState { get; set; }
-
-    [SupplyParameterFromQuery, EditorRequired]
-    public string? ServerUrl { get; set; }
-
     private RegisterModel Model { get; set; } = new();
-    private string? _errorMessage;
-    private bool _sending;
 
     protected override void OnInitialized()
     {
@@ -85,18 +73,16 @@
             Model.Uri = Uri.UnescapeDataString(ServerUrl);
         }
 
-        AccountManager.OnBeforeAccountChange += OnBeforeAccountChange;
-
-        ResolveInstanceInfo();
+        ResolveInstanceInfo(Model.Uri);
     }
 
     public async Task HandleValidSubmit()
     {
-        _errorMessage = null;
-        _sending = true;
+        ErrorMessage = null;
+        Sending = true;
 
         var result = await AccountManager.Register(Model.Uri!, Model.Email!, Model.Password!);
-        _sending = false;
+        Sending = false;
         var authState = AuthState != null ? await AuthState : null;
         if (authState?.User.Identity?.IsAuthenticated is true) return;
 
@@ -109,23 +95,9 @@
         }
         else
         {
-            _errorMessage = result.Messages != null
+            ErrorMessage = result.Messages != null
                 ? string.Join(",", result.Messages)
                 : "Invalid signup attempt.";
-        }
-    }
-
-    private void ResolveInstanceInfo()
-    {
-        if (!string.IsNullOrEmpty(Model.Uri) && Model.Uri != InstanceInfo?.BaseUrl)
-            Dispatcher.Dispatch(new UIState.FetchInstanceInfo(Model.Uri));
-    }
-
-    private async Task OnBeforeAccountChange(object? sender, BTCPayAccount? account)
-    {
-        if (account?.HasTokens is true)
-        {
-            NavigationManager.NavigateTo(Routes.Index);
         }
     }
 
@@ -151,9 +123,4 @@
     private string GetTitle() => $"Create account{(string.IsNullOrEmpty(InstanceInfo?.ServerName) ? null : $" at {InstanceInfo.ServerName}")}";
     private string GetLoginUrl() => NavigationManager.GetUriWithQueryParameters(Routes.Login, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
     private bool GetRegistrationEnabled() => InstanceInfo is not { RegistrationEnabled: true };
-    private string? Error => _errorMessage ?? InstanceError;
-
-    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
-    private string? InstanceError => UIState.Value.Instance?.Error;
-    private bool InstanceLoading => UIState.Value.Instance?.Loading is true;
 }

@@ -1,117 +1,54 @@
 ﻿@attribute [Route(Routes.Connect)]
-@attribute [AllowAnonymous]
-@layout SimpleLayout
-@inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@using BTCPayApp.CommonServer.Models
-@using BTCPayApp.Core.Auth
-@using BTCPayApp.UI.Features
-@using Microsoft.Extensions.Logging
-@inject IJSRuntime JS
-@inject IAccountManager AccountManager
-@inject ILogger<ConnectPage> Logger
+@inherits SignedOutBasePage
 @inject NavigationManager NavigationManager
-@inject IDispatcher Dispatcher
-@inject IState<UIState> UIState
 
 <PageTitle>@GetTitle()</PageTitle>
-
-<SectionContent SectionId="_Layout.MainTop">
-    <h1>@GetTitle()</h1>
-    <p>Enter or scan your server URL or invite link.</p>
-    @if (!string.IsNullOrEmpty(Error))
-    {
-        <Alert Type="danger">@Error</Alert>
-    }
-</SectionContent>
-
-<ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
-    <DataAnnotationsValidator />
-    <div class="form-group">
-        <label for="Uri" class="form-label visually-hidden">Server URL or invite link</label>
-        <div class="d-flex align-items-center justify-content-between gap-3">
-            <InputText @bind-Value="Model.Uri" @bind-Value:after="ResolveInstanceInfo" id="Uri" class="form-control flex-grow-1" placeholder="Enter server URL or invite link"/>
-            <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
-                <Icon Symbol="scan-qr"/>
-            </button>
-        </div>
-        <ValidationMessage For="@(() => Model.Uri)" />
-    </div>
-    <button type="submit" class="btn btn-primary w-100" data-testid="ConnectButton" disabled="@(InstanceInfo == null || _sending)">
-        @if (_sending)
-        {
-            <LoadingIndicator />
-        }
-        else
-        {
-            <span>Connect</span>
-        }
-    </button>
-</ValidationEditContext>
-
-<QrScanModal OnScan="@OnQrCodeScan"/>
-
-@code {
-    ConnectModel Model { get; set; } = new();
-    private ValidationEditContext? _validationEditContext;
-
-    private bool _sending;
-    private string? _errorMessage;
-
-    private async Task HandleValidSubmit()
-    {
-        const string inviteSeparator = "/invite/";
-        if (Model.Uri!.Contains(inviteSeparator))
-        {
-            _errorMessage = null;
-            _sending = true;
-
-            var result = await AccountManager.AcceptInvite(Model.Uri!);
-            var message = result.Messages?.Any() is true ? string.Join(",", result.Messages) : null;
-            _sending = false;
-            if (result.Succeeded)
+<AuthorizeView>
+    <NotAuthorized>
+        <SectionContent SectionId="_Layout.MainTop">
+            <h1>@GetTitle()</h1>
+            <p>Enter or scan your server URL or invite link.</p>
+            @if (!string.IsNullOrEmpty(Error))
             {
-                var response = result.Response;
-                var serverUrl = Model.Uri.Split(inviteSeparator).First();
-                var param = new Dictionary<string, object?> { { "serverUrl", serverUrl }, { "success", message } };
-                if (string.IsNullOrEmpty(response?.PasswordSetCode))
+                <Alert Type="danger">@Error</Alert>
+            }
+        </SectionContent>
+
+        <ValidationEditContext @ref="ValidationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <div class="form-group">
+                <label for="Uri" class="form-label visually-hidden">Server URL or invite link</label>
+                <div class="d-flex align-items-center justify-content-between gap-3">
+                    <InputText @bind-Value="Model.Uri" @bind-Value:after="() => ResolveInstanceInfo(Model.Uri)" id="Uri" class="form-control flex-grow-1" placeholder="Enter server URL or invite link"/>
+                    <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
+                        <Icon Symbol="scan-qr"/>
+                    </button>
+                </div>
+                <ValidationMessage For="@(() => Model.Uri)" />
+            </div>
+            <button type="submit" class="btn btn-primary w-100" data-testid="ConnectButton" disabled="@(InstanceInfo == null || Sending)">
+                @if (Sending)
                 {
-                    var uri = NavigationManager.GetUriWithQueryParameters(Routes.Login, param);
-                    NavigationManager.NavigateTo(uri);
+                    <LoadingIndicator />
                 }
                 else
                 {
-                    param["Email"] = response.Email;
-                    param["ResetCode"] = response.PasswordSetCode;
-                    param["Mode"] = ForgotPasswordPage.PasswordMode.Set.ToString();
-                    var uri = NavigationManager.GetUriWithQueryParameters(Routes.ForgotPassword, param);
-                    NavigationManager.NavigateTo(uri);
+                    <span>Connect</span>
                 }
-            }
-            else
-            {
-                _errorMessage = message ?? "Accepting invitation failed.";
-            }
-        }
-        else
-        {
-            var loginUri = NavigationManager.GetUriWithQueryParameters(Routes.Login, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
-            NavigationManager.NavigateTo(loginUri);
-        }
-    }
+            </button>
+        </ValidationEditContext>
+        <QrScanModal OnScan="@OnQrCodeScan"/>
+    </NotAuthorized>
+</AuthorizeView>
 
-    private async void OnQrCodeScan(string code)
-    {
-        Logger.LogInformation("QrCode = {QrCode}", code);
-        Model.Uri = code;
-        StateHasChanged();
-        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
-        await _validationEditContext!.Submit();
-    }
+@code {
+    ConnectModel Model { get; set; } = new();
 
-    private void ResolveInstanceInfo()
+    private async Task HandleValidSubmit()
     {
-        if (!string.IsNullOrEmpty(Model.Uri) && Model.Uri != InstanceInfo?.BaseUrl)
-            Dispatcher.Dispatch(new UIState.FetchInstanceInfo(Model.Uri));
+        if (await HandleInput(Model.Uri!)) return;
+        var loginUri = NavigationManager.GetUriWithQueryParameters(Routes.Login, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
+        NavigationManager.NavigateTo(loginUri);
     }
 
     private class ConnectModel
@@ -122,9 +59,4 @@
     }
 
     private string GetTitle() => $"Connect to {InstanceInfo?.ServerName ?? "a BTCPay Server"}";
-    private string? Error => _errorMessage ?? InstanceError;
-
-    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
-    private string? InstanceError => UIState.Value.Instance?.Error;
-    private bool InstanceLoading => UIState.Value.Instance?.Loading is true;
 }

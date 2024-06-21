@@ -1,4 +1,5 @@
 @inject IJSRuntime JS
+@implements IAsyncDisposable
 @using ReactorBlazorQRCodeScanner
 
 <div class="modal fade" id="ScanQrCodeModal" tabindex="-1" aria-hidden="true">
@@ -26,8 +27,16 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        await JS.InvokeVoidAsync("Interop.addModalEvent", DotNetObjectReference.Create(this), "#ScanQrCodeModal", "show", "OnShow");
-        await JS.InvokeVoidAsync("Interop.addModalEvent", DotNetObjectReference.Create(this), "#ScanQrCodeModal", "hide", "OnHide");
+        var reference = DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("Interop.addModalEvent", reference, "#ScanQrCodeModal", "show", "OnShow");
+        await JS.InvokeVoidAsync("Interop.addModalEvent", reference, "#ScanQrCodeModal", "hide", "OnHide");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        var show = new[] {"#ScanQrCodeModal", "show", "OnShow"};
+        var hide = new[] {"#ScanQrCodeModal", "hide", "OnHide"};
+        await JS.InvokeVoidAsync("Interop.removeModalEvents", [show, hide]);
     }
 
     [JSInvokable]

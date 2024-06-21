@@ -1,4 +1,5 @@
 Interop = {
+  eventListeners: {},
   getWidth(el) {
     return el.clientWidth;
   },
@@ -8,13 +9,32 @@ Interop = {
   },
   closeModal(selector) {
     const $el = document.querySelector(selector);
+    if (!$el) return console.warn('Selector does not exist:', selector);
     bootstrap.Modal.getInstance($el).hide();
   },
   addModalEvent(dotnetHelper, selector, eventName, methodName) {
-    const $el= document.querySelector(selector);
-    $el.addEventListener(`${eventName}.bs.modal`, async event => {
+    const $el = document.querySelector(selector);
+    if (!$el) return console.warn('Selector does not exist:', selector);
+    const event = `${eventName}.bs.modal`;
+    const id = `${selector}_${event}_${methodName}`;
+    Interop.eventListeners[id] = async event => {
       await dotnetHelper.invokeMethodAsync(methodName);
-    });
+    }
+    $el.addEventListener(event, Interop.eventListeners[id]);
+    console.debug('Event listener added:', id);
+  },
+  removeModalEvent(selector, eventName, methodName) {
+    const $el = document.querySelector(selector);
+    if (!$el) return console.warn('Selector does not exist:', selector);
+    const event = `${eventName}.bs.modal`;
+    const id = `${selector}_${event}_${methodName}`;
+    if (!Interop.eventListeners[id]) return console.warn('Event listener does not exist:', id);
+    $el.removeEventListener(event, Interop.eventListeners[id]);
+    delete Interop.eventListeners[id];
+    console.debug('Event listener removed:', id);
+  },
+  removeModalEvents(...args) {
+    for (arg of args) Interop.removeModalEvent(...arg)
   },
 
   // theme

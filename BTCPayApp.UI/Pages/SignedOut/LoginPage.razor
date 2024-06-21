@@ -1,115 +1,91 @@
 ﻿@attribute [Route(Routes.Login)]
-@attribute [AllowAnonymous]
-@layout SimpleLayout
-@inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@using BTCPayApp.CommonServer.Models
+@inherits SignedOutBasePage
 @using BTCPayApp.Core.Auth
-@using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Models
-@using BTCPayServer
-@using Microsoft.Extensions.Logging
-@inject IJSRuntime JS
-@inject ILogger<LoginPage> Logger
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
-@inject IDispatcher Dispatcher
-@inject IState<UIState> UIState
 
 <PageTitle>@GetTitle()</PageTitle>
-
-<SectionContent SectionId="_Layout.MainTop">
-    <h1>@GetTitle()</h1>
-    @if (!string.IsNullOrEmpty(Error))
-    {
-        <Alert Type="danger">@Error</Alert>
-    }
-    else if (!string.IsNullOrEmpty(_successMessage))
-    {
-        <Alert Type="success">@_successMessage</Alert>
-    }
-</SectionContent>
-
-<EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="Login" method="post">
-    <DataAnnotationsValidator />
-    <div class="form-group" hidden="@Model.RequireTwoFactor">
-        <div class="d-flex justify-content-between">
-            <label for="Uri" class="form-label">Server URL</label>
-            @if (InstanceLoading)
+<AuthorizeView>
+    <NotAuthorized>
+        <SectionContent SectionId="_Layout.MainTop">
+            <h1>@GetTitle()</h1>
+            @if (!string.IsNullOrEmpty(Error))
             {
-                <LoadingIndicator />
+                <Alert Type="danger">@Error</Alert>
             }
-        </div>
-        <InputText @bind-Value="Model.Uri" @bind-Value:after="ResolveInstanceInfo" type="url" id="Uri" class="form-control"/>
-        <ValidationMessage For="@(() => Model.Uri)" />
-    </div>
-    <div class="form-group" hidden="@Model.RequireTwoFactor">
-        <label for="Email" class="form-label">Email</label>
-        <InputText @bind-Value="Model.Email" type="email" id="Email" class="form-control"/>
-        <ValidationMessage For="@(() => Model.Email)" />
-    </div>
-    <div class="form-group" hidden="@Model.RequireTwoFactor">
-        <div class="d-flex justify-content-between">
-            <label for="Password" class="form-label">Password</label>
-            @if (InstanceInfo != null)
+            else if (!string.IsNullOrEmpty(SuccessMessage))
             {
-                <NavLink href="@GetForgotPasswordUrl()">Forgot password?</NavLink>
+                <Alert Type="success">@SuccessMessage</Alert>
             }
-        </div>
-        <InputText @bind-Value="Model.Password" type="password" id="Password" autocomplete="current-password" class="form-control"/>
-        <ValidationMessage For="@(() => Model.Password)"/>
-    </div>
-    @if (Model.RequireTwoFactor)
-    {
-        <div class="form-group">
-            <label for="TwoFactorCode" class="form-label">Two Factor Code</label>
-            <InputText @bind-Value="Model.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin"/>
-            <ValidationMessage For="@(() => Model.TwoFactorCode)" />
-        </div>
-    }
-
-    <div class="d-flex align-items-center justify-content-between gap-3">
-        <button type="submit" class="btn btn-primary w-100" data-testid="LoginButton" disabled="@(InstanceInfo == null || _sending)">
-            @if (_sending)
+        </SectionContent>
+        <ValidationEditContext @ref="ValidationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <div class="form-group" hidden="@Model.RequireTwoFactor">
+                <div class="d-flex justify-content-between">
+                    <label for="Uri" class="form-label">Server URL</label>
+                    @if (InstanceLoading)
+                    {
+                        <LoadingIndicator />
+                    }
+                </div>
+                <InputText @bind-Value="Model.Uri" @bind-Value:after="() => ResolveInstanceInfo(Model.Uri)" type="url" id="Uri" class="form-control"/>
+                <ValidationMessage For="@(() => Model.Uri)" />
+            </div>
+            <div class="form-group" hidden="@Model.RequireTwoFactor">
+                <label for="Email" class="form-label">Email</label>
+                <InputText @bind-Value="Model.Email" type="email" id="Email" class="form-control"/>
+                <ValidationMessage For="@(() => Model.Email)" />
+            </div>
+            <div class="form-group" hidden="@Model.RequireTwoFactor">
+                <div class="d-flex justify-content-between">
+                    <label for="Password" class="form-label">Password</label>
+                    @if (InstanceInfo != null)
+                    {
+                        <NavLink href="@GetForgotPasswordUrl()">Forgot password?</NavLink>
+                    }
+                </div>
+                <InputText @bind-Value="Model.Password" type="password" id="Password" autocomplete="current-password" class="form-control"/>
+                <ValidationMessage For="@(() => Model.Password)"/>
+            </div>
+            @if (Model.RequireTwoFactor)
             {
-                <LoadingIndicator />
+                <div class="form-group">
+                    <label for="TwoFactorCode" class="form-label">Two Factor Code</label>
+                    <InputText @bind-Value="Model.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin"/>
+                    <ValidationMessage For="@(() => Model.TwoFactorCode)" />
+                </div>
             }
-            else
+            <div class="d-flex align-items-center justify-content-between gap-3">
+                <button type="submit" class="btn btn-primary w-100" data-testid="LoginButton" disabled="@(InstanceInfo == null || Sending)">
+                    @if (Sending)
+                    {
+                        <LoadingIndicator />
+                    }
+                    else
+                    {
+                        <span>Sign in</span>
+                    }
+                </button>
+                @if (!Model.RequireTwoFactor)
+                {
+                    <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
+                        <Icon Symbol="scan-qr"/>
+                    </button>
+                }
+            </div>
+            @if (!Model.RequireTwoFactor && InstanceInfo is { RegistrationEnabled: true })
             {
-                <span>Sign in</span>
+                <p class="mt-4 text-center">
+                    <NavLink href="@GetRegisterUrl()">Create an account</NavLink>
+                </p>
             }
-        </button>
-        @if (!Model.RequireTwoFactor)
-        {
-            <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
-                <Icon Symbol="scan-qr"/>
-            </button>
-        }
-    </div>
-    @if (!Model.RequireTwoFactor && InstanceInfo != null)
-    {
-        @if (InstanceInfo.RegistrationEnabled)
-        {
-            <p class="mt-4 text-center">
-                <NavLink href="@GetRegisterUrl()">Create an account</NavLink>
-            </p>
-        }
-    }
-</EditForm>
-
-<QrScanModal OnScan="@OnQrCodeScan"/>
+        </ValidationEditContext>
+        <QrScanModal OnScan="@OnQrCodeScan"/>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
-    [SupplyParameterFromQuery]
-    public string? ServerUrl { get; set; }
-
-    [SupplyParameterFromQuery]
-    public string? Success { get; set; }
-
-    private bool _sending;
-    private string? _loginCode;
-    private string? _errorMessage;
-    private string? _successMessage;
-
     private LoginModel Model { get; set; } = new();
 
     protected override void OnInitialized()
@@ -118,7 +94,7 @@
 
         if (!string.IsNullOrEmpty(Success))
         {
-            _successMessage = Uri.UnescapeDataString(Success);
+            SuccessMessage = Uri.UnescapeDataString(Success);
         }
 
         if (!string.IsNullOrEmpty(ServerUrl))
@@ -134,86 +110,30 @@
             Model.Email = account?.Email;
         }
 
-        ResolveInstanceInfo();
+        ResolveInstanceInfo(Model.Uri);
     }
 
     private async Task HandleValidSubmit()
     {
-        _errorMessage = null;
-        _sending = true;
+        if (await HandleInput(Model.Uri!)) return;
+
+        ErrorMessage = null;
+        Sending = true;
 
         var result = await AccountManager.Login(Model.Uri!, Model.Email!, Model.Password!, Model.TwoFactorCode);
-        _sending = false;
-        if (result.Succeeded)
-        {
-            NavigationManager.NavigateTo(Routes.Index);
-        }
-        else
+        Sending = false;
+        if (!result.Succeeded)
         {
             if (result.Messages?.Contains("RequiresTwoFactor") is true)
                 Model.RequireTwoFactor = true;
             else
-                _errorMessage = result.Messages?.Contains("Failed") is false
+                ErrorMessage = result.Messages?.Contains("Failed") is false
                     ? string.Join(",", result.Messages)
                     : "Invalid login attempt.";
-        }
-    }
-
-    private void ResolveInstanceInfo()
-    {
-        if (!string.IsNullOrEmpty(Model.Uri) && Model.Uri != InstanceInfo?.BaseUrl)
-            Dispatcher.Dispatch(new UIState.FetchInstanceInfo(Model.Uri));
-    }
-
-    private async void OnQrCodeScan(string code)
-    {
-        // prevent duplicate submission due to quirk in QR reader lib
-        if (code == _loginCode) return;
-        _loginCode = code;
-
-        Logger.LogInformation("QrCode = {QrCode}", code);
-        var parts = code.Split(';');
-        if (parts.Length == 3 && Uri.TryCreate(parts[1], UriKind.Absolute, out _) && parts[2].IsValidEmail())
-        {
-            Model.Uri = parts[1];
-            Model.Email = parts[2];
-
-            _errorMessage = null;
-        }
-        else
-        {
-            _errorMessage = "Invalid login code";
-        }
-
-        StateHasChanged();
-        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
-
-        if (!string.IsNullOrEmpty(_errorMessage)) return;
-
-        _sending = true;
-        StateHasChanged();
-        var result = await AccountManager.LoginWithCode(Model.Uri!, Model.Email!, parts.First());
-        _sending = false;
-
-        if (result.Succeeded)
-        {
-            NavigationManager.NavigateTo(Routes.Index);
-        }
-        else
-        {
-            _errorMessage = result.Messages?.Contains("Failed") is false
-                ? string.Join(",", result.Messages)
-                : "Invalid login attempt.";
-            StateHasChanged();
         }
     }
 
     private string GetTitle() => $"Login to {InstanceInfo?.ServerName ?? "a BTCPay Server"}";
     private string GetRegisterUrl() => NavigationManager.GetUriWithQueryParameters(Routes.Register, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
     private string GetForgotPasswordUrl() => NavigationManager.GetUriWithQueryParameters(Routes.ForgotPassword, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
-    private string? Error => _errorMessage ?? InstanceError;
-
-    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
-    private string? InstanceError => UIState.Value.Instance?.Error;
-    private bool InstanceLoading => UIState.Value.Instance?.Loading is true;
 }
