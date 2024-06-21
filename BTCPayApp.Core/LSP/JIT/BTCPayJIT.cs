@@ -3,23 +3,19 @@ using BTCPayServer.Lightning;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
-public class BTCPayJIT: IJITService
+using System.Diagnostics;
+using BTCPayServer.Lightning;
+
+public class BTCPayJIT : IJITService
 {
     public BTCPayJIT(BTCPayConnectionManager btcPayConnectionManager)
     {
-        
     }
 
     public string ProviderName => "BTCPayServer";
 
-    public async Task<BOLT11PaymentRequest> WrapInvoice(BOLT11PaymentRequest invoice)
+    public async Task WrapInvoice(LightningPayment lightningPayment)
     {
         throw new NotImplementedException();
     }
-}
-
-public interface IJITService
-{
-    public string ProviderName { get; }
-    public Task<BOLT11PaymentRequest> WrapInvoice(BOLT11PaymentRequest invoice);
 }
