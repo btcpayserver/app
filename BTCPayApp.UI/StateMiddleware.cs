@@ -11,6 +11,7 @@ public class StateMiddleware : Middleware
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly LightningNodeManager _lightningNodeService;
     private readonly OnChainWalletManager _onChainWalletManager;
+    private readonly BTCPayAppServerClient _btcpayAppServerClient;
 
     public const string UiStateConfigKey = "uistate";
 
@@ -18,12 +19,14 @@ public class StateMiddleware : Middleware
         IConfigProvider configProvider,
         BTCPayConnectionManager btcPayConnectionManager,
         LightningNodeManager lightningNodeService,
-        OnChainWalletManager onChainWalletManager)
+        OnChainWalletManager onChainWalletManager,
+        BTCPayAppServerClient btcpayAppServerClient)
     {
         _configProvider = configProvider;
         _btcPayConnectionManager = btcPayConnectionManager;
         _lightningNodeService = lightningNodeService;
         _onChainWalletManager = onChainWalletManager;
+        _btcpayAppServerClient = btcpayAppServerClient;
     }
 
     public override async Task InitializeAsync(IDispatcher dispatcher, IStore store)
@@ -69,6 +72,12 @@ public class StateMiddleware : Middleware
         _onChainWalletManager.StateChanged += (sender, args) =>
         {
             dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(_onChainWalletManager.State));
+            return Task.CompletedTask;
+        };
+        _btcpayAppServerClient.OnNotifyServerEvent += (sender, eventName) =>
+        {
+            if(eventName == "notifications-updated")
+                dispatcher.Dispatch(new NotificationState.FetchNotifications());
             return Task.CompletedTask;
         };
     }
