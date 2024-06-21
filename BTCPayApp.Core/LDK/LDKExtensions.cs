@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.LSP.JIT;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NBitcoin;
@@ -300,6 +301,9 @@ public static class LDKExtensions
             ProbabilisticScoringFeeParameters.with_default()));
         services.AddScoped<Router>(provider => provider.GetRequiredService<DefaultRouter>().as_Router());
 
+        
+        services.AddScoped<IJITService, VoltageFlow2Jit>();
+        
         return services;
     }
 

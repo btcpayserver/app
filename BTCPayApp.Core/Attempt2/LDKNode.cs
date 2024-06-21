@@ -3,6 +3,7 @@ using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
+using BTCPayApp.Core.LSP.JIT;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -98,6 +99,18 @@ public partial class LDKNode:
         }
        
     }
+
+    public async Task<IJITService?> GetJITLSPService()
+    {
+        var config = await GetConfig();
+        var lsp = config.JITLSP;
+        if(lsp is null)
+        {
+            return null;
+        }
+        var jits = ServiceProvider.GetServices<IJITService>();
+        return jits.FirstOrDefault(jit => jit.ProviderName == lsp);
+    }
 }
 
 public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
@@ -187,6 +200,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         await _started.Task;
         await _configProvider.Set(LightningConfig.Key, config);
         _config = config;
+        
         ConfigUpdated?.Invoke(this, config);
     }
     
@@ -366,9 +380,9 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     }
 
 
-    public async Task Peer(string toString, PeerInfo? value)
+    public async Task Peer(PubKey key, PeerInfo? value)
     {
-        toString = toString.ToLowerInvariant();
+        var toString = key.ToString().ToLowerInvariant();
         var config = await GetConfig();
         if (value is null)
         {

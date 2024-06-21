@@ -1,10 +1,14 @@
 ﻿using System.Security.Cryptography;
+using System.Text.Json;
+using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.LSP.JIT;
 using BTCPayServer.Lightning;
 using Microsoft.EntityFrameworkCore;
 using NBitcoin;
 using org.ldk.structs;
+using org.ldk.util;
 // using BTCPayServer.Lightning;
 using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment;
 
@@ -16,26 +20,31 @@ public class PaymentsManager :
     ILDKEventHandler<Event.Event_PaymentFailed>,
     ILDKEventHandler<Event.Event_PaymentSent>
 {
+    public const string LightningPaymentDescriptionKey = "DescriptionHash";
+    public const string LightningPaymentExpiryKey = "Expiry";
+    
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
     private readonly ChannelManager _channelManager;
     private readonly Logger _logger;
     private readonly NodeSigner _nodeSigner;
     private readonly Network _network;
+    private readonly LDKNode _ldkNode;
 
     public PaymentsManager(
         IDbContextFactory<AppDbContext> dbContextFactory,
         ChannelManager channelManager,
         Logger logger,
         NodeSigner nodeSigner,
-        Network network
-    )
+        Network network,
+        LDKNode ldkNode)
     {
         _dbContextFactory = dbContextFactory;
         _channelManager = channelManager;
         _logger = logger;
         _nodeSigner = nodeSigner;
         _network = network;
+        _ldkNode = ldkNode;
     }
 
     public async Task<List<LightningPayment>> List(
@@ -45,6 +54,24 @@ public class PaymentsManager :
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         return (await filter.Invoke(context.LightningPayments.AsNoTracking().AsQueryable())
             .ToListAsync(cancellationToken: cancellationToken))!;
+    }
+
+    private Bolt11Invoice CreateInvoice(long? amt, int expirySeconds, byte[] descHash)
+    {
+        var keyMaterial = _nodeSigner.get_inbound_payment_key_material();
+        var preimage = RandomUtils.GetBytes(32);
+        var paymentHash = SHA256.HashData(preimage);
+        var expandedKey = ExpandedKey.of(keyMaterial);
+        var inboundPayment = _channelManager.create_inbound_payment_for_hash(paymentHash,
+            amt is null ? Option_u64Z.none() : Option_u64Z.some(amt.Value), expirySeconds, Option_u16Z.none()));
+        var paymentSecret = inboundPayment is Result_ThirtyTwoBytesNoneZ.Result_ThirtyTwoBytesNoneZ_OK ok
+            ? ok.res
+            : throw new Exception("Error creating inbound payment");
+
+        _nodeSigner.
+        var invoice = Bolt11Invoice.from_signed(_channelManager, _nodeSigner, _logger, _network.GetLdkCurrency(),
+
+
     }
 
     public async Task<LightningPayment> RequestPayment(LightMoney amount, TimeSpan expiry, uint256 descriptionHash)
@@ -58,9 +85,8 @@ public class PaymentsManager :
         //         _network.GetLdkCurrency(), amt, description, epoch, (int) Math.Ceiling(expiry.TotalSeconds),
         //         paymentHash, Option_u16Z.none());
 
-
         var descHashBytes = Sha256.from_bytes(descriptionHash.ToBytes());
-
+         var lsp = await _ldkNode.GetJITLSPService();
         var result = await  Task.Run(() =>
             org.ldk.util.UtilMethods.create_invoice_from_channelmanager_with_description_hash_and_duration_since_epoch(
                 _channelManager, _nodeSigner, _logger,
@@ -71,6 +97,11 @@ public class PaymentsManager :
             throw new Exception(err.err.to_str());
         }
 
+        var keyMaterial = _nodeSigner.get_inbound_payment_key_material();
+        var expandedKey = ExpandedKey.of(keyMaterial);
+        _channelManager.create_inbound_payment_for_hash()
+        UtilMethods.create_invoice_from_channelmanager()
+        
         var invoice = ((Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_OK) result)
             .res;
         var preimageResult = _channelManager.get_payment_preimage(invoice.payment_hash(), invoice.payment_secret());
@@ -95,13 +126,24 @@ public class PaymentsManager :
             Preimage = Convert.ToHexString(preimage!).ToLower(),
             Status = LightningPaymentStatus.Pending,
             Timestamp = DateTimeOffset.FromUnixTimeSeconds(epoch),
-            PaymentRequests = [bolt11]
+            PaymentRequests = [bolt11],
+            AdditionalData = new Dictionary<string, JsonDocument>()
+            {
+                [LightningPaymentDescriptionKey] = JsonSerializer.SerializeToDocument(descriptionHash.ToString()),
+                [LightningPaymentExpiryKey] = JsonSerializer.SerializeToDocument(invoice.expires_at())
+            }
         };
+        if (lsp is null)
+        {
+            
+        }
+
+        lsp?.WrapInvoice(lp);
         await Payment(lp);
 
         return lp;
     }
-
+    
     public async Task<LightningPayment> PayInvoice(BOLT11PaymentRequest paymentRequest,
         LightMoney? explicitAmount = null)
     {
@@ -269,10 +311,12 @@ var paySecret = Convert.ToHexString(invoice.payment_secret()).ToLower();
             payment.PaymentHash == Convert.ToHexString(eventPaymentClaimable.payment_hash).ToLower() &&
             payment.Inbound && payment.Status == LightningPaymentStatus.Pending);
 
+        
+        
 
         var preimage = eventPaymentClaimable.purpose.GetPreimage(out _) ??
                        (accept?.Preimage is not null ? Convert.FromHexString(accept.Preimage) : null);
-        if (accept is not null && preimage is not null)
+        if (accept is not null && preimage is not null && accept.Value == eventPaymentClaimable.amount_msat)
             _channelManager.claim_funds(preimage);
         else
 
