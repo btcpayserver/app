@@ -2,9 +2,9 @@
 @inherits SignedOutBasePage
 @inject NavigationManager NavigationManager
 
-<PageTitle>@GetTitle()</PageTitle>
 <AuthorizeView>
     <NotAuthorized>
+        <PageTitle>@GetTitle()</PageTitle>
         <SectionContent SectionId="_Layout.MainTop">
             <h1>@GetTitle()</h1>
             <p>Enter or scan your server URL or invite link.</p>
@@ -39,6 +39,9 @@
         </ValidationEditContext>
         <QrScanModal OnScan="@OnQrCodeScan"/>
     </NotAuthorized>
+    <Authorized>
+        <RedirectToIndex/>
+    </Authorized>
 </AuthorizeView>
 
 @code {

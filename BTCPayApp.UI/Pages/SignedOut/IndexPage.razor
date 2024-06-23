@@ -1,7 +1,6 @@
 ﻿@attribute [Route(Routes.Index)]
-@inherits BTCPayApp.UI.Pages.SignedOut.SignedOutBasePage
-
-<PageTitle>BTCPay Server</PageTitle>
+@inherits SignedOutBasePage
+@layout BaseLayout
 
 @code {
     protected override async Task OnInitializedAsync()
