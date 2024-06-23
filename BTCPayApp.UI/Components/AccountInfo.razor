@@ -1,0 +1,17 @@
+@using BTCPayApp.Core
+@if (!string.IsNullOrEmpty(Account!.ImageUrl))
+{
+    <img src="@Account.ImageUrl" alt="@DisplayName" class="profile-picture" />
+}
+else
+{
+    <Icon Symbol="nav-account" class="profile-picture" />
+}
+<span class="fw-semibold">@DisplayName</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public BTCPayAccount? Account { get; set; }
+
+    private string DisplayName => Account!.Name ?? Account.Email;
+}

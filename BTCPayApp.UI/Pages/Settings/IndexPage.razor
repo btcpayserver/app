@@ -4,6 +4,7 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Features
+@using BTCPayServer.Client
 @using Plugin.Fingerprint.Abstractions
 @inject IState<UIState> UiState
 @inject IDispatcher Dispatcher
@@ -33,7 +34,14 @@
             }
         </header>
         <a href="@Routes.User" class="box user">
-            <div class="profile-picture"></div>
+            @if (!string.IsNullOrEmpty(_userInfo.ImageUrl))
+            {
+                <img src="@_userInfo.ImageUrl" alt="@(_userInfo.Name ?? _userInfo.Email)" class="profile-picture" />
+            }
+            else
+            {
+                <Icon Symbol="nav-account" class="profile-picture" />
+            }
             <div class="me-auto">
                 <h5>@(_userInfo.Name ?? _userInfo.Email)</h5>
                 <span>@_userInfo.Email</span>
@@ -45,15 +53,6 @@
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
                 @{ var store = AccountManager.GetCurrentStore(); }
-                @if (store != null)
-                {
-                    <li class="list-group-item">
-                        <a href="@Routes.StorePath(store.Id!)">
-                            <span>@store.Name</span>
-                            <Icon Symbol="caret-right"/>
-                        </a>
-                    </li>
-                }
                 @if (_userInfo.Stores?.Count() > 1 || AccountManager.GetCurrentStore() == null)
                 {
                     <li class="list-group-item">
@@ -62,6 +61,17 @@
                             <Icon Symbol="caret-right"/>
                         </a>
                     </li>
+                }
+                @if (store != null)
+                {
+                    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@store.Id">
+                        <li class="list-group-item">
+                            <a href="@Routes.StorePath(store.Id!)">
+                                <span>@store.Name</span>
+                                <Icon Symbol="caret-right"/>
+                            </a>
+                        </li>
+                    </AuthorizeView>
                 }
             </ul>
         </div>

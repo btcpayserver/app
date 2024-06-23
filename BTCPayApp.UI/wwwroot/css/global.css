@@ -149,7 +149,6 @@
   width: var(--profile-picture-size, 2.1rem);
   border-radius: 50%;
   object-fit: cover;
-  background: var(--btcpay-neutral-500);
 }
 
 /* List Group */

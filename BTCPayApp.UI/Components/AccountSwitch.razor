@@ -9,8 +9,7 @@
 @if (_account != null)
 {
     <button class="d-inline-flex align-items-center btn btn-link text-body dropdown-toggle dropdown-toggle-no-caret p-0 gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <div class="profile-picture"></div>
-        <span class="fw-semibold">@_account.Email</span>
+        <AccountInfo Account="@_account" />
         <Icon Symbol="caret-down"/>
     </button>
     <ul class="dropdown-menu">
@@ -21,8 +20,7 @@
                 if (account.Id == _account.Id) continue;
                 <li>
                     <button class="d-inline-flex align-items-center dropdown-item gap-2" type="button" @onclick="() => SwitchToAccount(account)">
-                        <div class="profile-picture"></div>
-                        <span class="fw-semibold">@account.Email</span>
+                        <AccountInfo Account="@account" />
                     </button>
                 </li>
             }
@@ -30,7 +28,7 @@
         }
         <li>
             <a class="dropdown-item fw-semibold text-danger" href="@Routes.Logout">
-                <span>Logout @_account.Email</span>
+                <span>Logout @(_account.Name ?? _account.Email)</span>
             </a>
         </li>
     </ul>

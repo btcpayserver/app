@@ -8,6 +8,8 @@ public class BTCPayAccount(string baseUri, string email)
     public readonly string Id = GetId(baseUri, email);
     public string BaseUri { get; private set; } = WithTrailingSlash(baseUri);
     public string Email { get; private set; } = email;
+    public string? Name { get; set; }
+    public string? ImageUrl { get; set; }
     public string? AccessToken { get; set; }
     public string? RefreshToken { get; set; }
     public DateTimeOffset? AccessExpiry { get; set; }

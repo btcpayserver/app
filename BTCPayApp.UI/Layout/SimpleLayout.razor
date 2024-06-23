@@ -7,16 +7,7 @@
     <SectionOutlet SectionId="Top" />
     <main id="MainContent">
         <div class="container">
-            @if (!string.IsNullOrEmpty(InstanceInfo?.LogoUrl))
-            {
-                <div>
-                    <img src="@InstanceInfo?.LogoUrl" alt="@(InstanceInfo?.ServerName ?? "BTCPay Server")" class="logo" />
-                </div>
-            }
-            else
-            {
-                <img src="_content/BTCPayApp.UI/img/logo-symbol.svg" alt="BTCPay Server" class="logo"/>
-            }
+            <img src="@LogoUrl" alt="@LogoText" class="logo"/>
             <SectionOutlet SectionId="MainTop"/>
             @Body
             <SectionOutlet SectionId="MainBottom"/>
@@ -27,4 +18,9 @@
 
 @code {
     private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
+
+    private string LogoText => InstanceInfo?.ServerName ?? "BTCPay Server";
+    private string LogoUrl => !string.IsNullOrEmpty(InstanceInfo?.LogoUrl)
+        ? InstanceInfo.LogoUrl
+        : "_content/BTCPayApp.UI/img/logo-symbol.svg";
 }

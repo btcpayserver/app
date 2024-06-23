@@ -75,12 +75,11 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
     {
-        var cts = new CancellationTokenSource(5000);
         // default to unauthenticated
         var user = _unauthenticated;
         try
         {
-            await _semaphore.WaitAsync(cts.Token);
+            await _semaphore.WaitAsync();
 
             // initialize with persisted account
             if (!_isInitialized && _account == null)
@@ -92,6 +91,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
             var oldUserInfo = _userInfo;
             if (_userInfo == null && _account?.HasTokens is true)
             {
+                var cts = new CancellationTokenSource(5000);
                 await FetchUserInfo(cts.Token);
             }
 
@@ -100,7 +100,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
                 var claims = new List<Claim>
                 {
                     new(_identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType, _userInfo.UserId!),
-                    new(_identityOptions.CurrentValue.ClaimsIdentity.UserNameClaimType, _userInfo.Email!),
+                    new(_identityOptions.CurrentValue.ClaimsIdentity.UserNameClaimType, _userInfo.Name ?? _userInfo.Email!),
                     new(_identityOptions.CurrentValue.ClaimsIdentity.EmailClaimType, _userInfo.Email!)
                 };
                 if (_userInfo.Roles?.Any() is true)
@@ -110,11 +110,17 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
                     claims.AddRange(_userInfo.Stores.Select(store =>
                         new Claim(store.Id, string.Join(',', store.Permissions))));
                 user = new ClaimsPrincipal(new ClaimsIdentity(claims, AuthenticationSchemes.GreenfieldBearer));
+
+                // update account user info
+                _account!.Name = _userInfo.Name;
+                _account!.ImageUrl = _userInfo.ImageUrl;
+                await UpdateAccount(_account);
             }
 
             var res = new AuthenticationState(user);
             if (AppUserInfo.Equals(oldUserInfo, _userInfo))
                 return res;
+
             NotifyAuthenticationStateChanged(Task.FromResult(res));
             return res;
         }
