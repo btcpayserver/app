@@ -18,6 +18,10 @@ public class LightningNodeManager : BaseHostedService
     private IServiceScope? _nodeScope;
     public LDKNode? Node => _nodeScope?.ServiceProvider.GetService<LDKNode>();
     private LightningNodeState _state = LightningNodeState.Init;
+    private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is HubConnectionState.Connected;
+    private bool IsOnchainConfigured => _onChainWalletManager.WalletConfig is not null;
+    private bool IsOnchainLightningDerivationConfigured => _onChainWalletManager.WalletConfig?.Derivations.ContainsKey(WalletDerivation.LightningScripts) is true;
+    public bool CanConfigureLightningNode => IsHubConnected && IsOnchainConfigured && !IsOnchainLightningDerivationConfigured && State == LightningNodeState.NotConfigured;
 
     public LightningNodeState State
     {
@@ -89,7 +93,7 @@ public class LightningNodeManager : BaseHostedService
             var cts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token);
             cts.CancelAfter(5000);
             await Node.StopAsync(cts.Token);
-           
+
         }
         catch (Exception e)
         {
@@ -134,11 +138,13 @@ public class LightningNodeManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-            if (State == LightningNodeState.NotConfigured &&
-                _onChainWalletManager.State != OnChainWalletState.Loaded &&
-                _btcPayConnectionManager.ConnectionState != HubConnectionState.Connected)
-                throw new InvalidOperationException(
-                    "Cannot configure lightning node without on-chain wallet and BTCPay connection");
+            if (State != LightningNodeState.NotConfigured) return;
+            if (!IsHubConnected)
+                throw new InvalidOperationException("Cannot configure lightning node without BTCPay connection");
+            if (!IsOnchainConfigured)
+                throw new InvalidOperationException("Cannot configure lightning node without on-chain wallet configuration");
+            if (IsOnchainLightningDerivationConfigured)
+                throw new InvalidOperationException("On-chain wallet is already configured with a lightning derivation");
 
             await _onChainWalletManager.AddDerivation(WalletDerivation.LightningScripts, "Lightning", null);
             // await _onChainWalletManager.AddDerivation(WalletDerivation.SpendableOutputs, "Lightning Spendables", null);
@@ -152,21 +158,13 @@ public class LightningNodeManager : BaseHostedService
 
     private async Task OnConnectionChanged(object? sender, (HubConnectionState Old, HubConnectionState New) state)
     {
-        _logger.LogInformation("Connection state changed: {New}, Old: {Old}, Actual:{Actual}", state.New, state.Old,
-            _btcPayConnectionManager.ConnectionState);
-        if (_btcPayConnectionManager.ConnectionState == HubConnectionState.Connected &&
-            State == LightningNodeState.WaitingForConnection)
+        if (IsHubConnected && State == LightningNodeState.WaitingForConnection)
         {
             State = LightningNodeState.Loading;
         }
-        else if (_btcPayConnectionManager.ConnectionState == HubConnectionState.Disconnected &&
-                 State is LightningNodeState.Loading or LightningNodeState.Loaded)
+        else if (_btcPayConnectionManager.ConnectionState == HubConnectionState.Disconnected && State is LightningNodeState.Loading or LightningNodeState.Loaded)
         {
              _ = StopNode();
-        }
-        else
-        {
-            _logger.LogInformation("Connection state changed: {State} but ln node state stayed {State}", state.New, State);
         }
     }
 
@@ -178,8 +176,7 @@ public class LightningNodeManager : BaseHostedService
         }
     }
 
-
-    private async Task OnOnStateChanged(object? sender, (LightningNodeState Old, LightningNodeState New) state)
+    private async Task OnStateChanged(object? sender, (LightningNodeState Old, LightningNodeState New) state)
     {
         LightningNodeState? newState = null;
         try
@@ -188,34 +185,28 @@ public class LightningNodeManager : BaseHostedService
             {
                 case LightningNodeState.WaitingForConnection:
                 {
-                    if (_btcPayConnectionManager.ConnectionState == HubConnectionState.Connected)
+                    if (IsHubConnected)
                         newState = LightningNodeState.Loading;
                     break;
                 }
                 case LightningNodeState.Loading:
-                    if (_btcPayConnectionManager.ConnectionState != HubConnectionState.Connected)
+                    if (!IsHubConnected)
                     {
                         newState = LightningNodeState.WaitingForConnection;
                         break;
                     }
 
-                    if (_onChainWalletManager.State != OnChainWalletState.Loaded)
+                    if (!IsOnchainConfigured || !IsOnchainLightningDerivationConfigured)
                     {
                         newState = LightningNodeState.NotConfigured;
                         break;
                     }
 
-                    if (_onChainWalletManager.WalletConfig is null ||
-                        !_onChainWalletManager.WalletConfig.Derivations.ContainsKey(WalletDerivation.LightningScripts))
-                    {
-                        newState = LightningNodeState.NotConfigured;
-                        break;
-                    }
-                    var result = await _btcPayConnectionManager.HubProxy.IdentifierActive(_onChainWalletManager.WalletConfig
-                        .Derivations[WalletDerivation.LightningScripts].Identifier, true).RunSync();
+                    var result = await _btcPayConnectionManager.HubProxy!
+                        .IdentifierActive(_onChainWalletManager.WalletConfig!.Derivations[WalletDerivation.LightningScripts].Identifier, true)
+                        .RunSync();
                     if (result)
                     {
-                        
                         await StartNode();
                     }
                     else
@@ -223,13 +214,18 @@ public class LightningNodeManager : BaseHostedService
                         //TODO: Introduce a new state so that this node knows that another instance is active
                         newState = LightningNodeState.Error;
                     }
+                    break;
 
+                case LightningNodeState.NotConfigured:
+                    if (CanConfigureLightningNode)
+                    {
+                        await Generate();
+                    }
                     break;
 
                 case LightningNodeState.Loaded:
                     await _controlSemaphore.WaitAsync();
 
-                    
                     _controlSemaphore.Release();
                     break;
                 // case LightningNodeState.Unloading:
@@ -247,21 +243,19 @@ public class LightningNodeManager : BaseHostedService
         }
     }
 
-
     protected override async Task ExecuteStartAsync(CancellationToken cancellationToken)
     {
         State = LightningNodeState.Init;
-        StateChanged += OnOnStateChanged;
+        StateChanged += OnStateChanged;
         _btcPayConnectionManager.ConnectionChanged += OnConnectionChanged;
         _onChainWalletManager.StateChanged += OnChainWalletManagerOnStateChanged;
     }
-
 
     protected override async Task ExecuteStopAsync(CancellationToken cancellationToken)
     {
         _btcPayConnectionManager.ConnectionChanged -= OnConnectionChanged;
         _onChainWalletManager.StateChanged += OnChainWalletManagerOnStateChanged;
-        StateChanged -= OnOnStateChanged;
+        StateChanged -= OnStateChanged;
         _nodeScope?.Dispose();
     }
 }

@@ -31,7 +31,7 @@
             <p>There was an error with the lightning node. Please try again later.</p>
         </div>
     }
-    @if (CanConfigureLNWallet)
+    @if (LightningNodeManager.CanConfigureLightningNode)
     {
         <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
     }
@@ -81,11 +81,6 @@
 </section>
 
 @code {
-    private bool CanConfigureLNWallet =>
-        State.Value.ConnectionState == HubConnectionState.Connected &&
-        State.Value.OnchainWalletState == OnChainWalletState.Loaded &&
-        State.Value.LightningNodeState == LightningNodeState.NotConfigured;
-
     private LightningConfig? _config;
 
     private string? ConfiguredConnectionString;
