@@ -27,6 +27,10 @@
   transform: rotate(-180deg);
 }
 
+.validation-message + .validation-message {
+  display: none;
+}
+
 /* Layout */
 #MainContent {
   flex: 1;

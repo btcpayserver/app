@@ -67,7 +67,11 @@
 
     protected void ResolveInstanceInfo(string? uri)
     {
-        if (string.IsNullOrEmpty(uri)) return;
+        if (string.IsNullOrEmpty(uri))
+        {
+            Dispatcher.Dispatch(new UIState.SetInstanceInfo(null, null));
+            return;
+        }
         var url = uri.Contains(InviteSeparator) ? uri.Split(InviteSeparator).First() : uri;
         if (url != InstanceInfo?.BaseUrl) Dispatcher.Dispatch(new UIState.FetchInstanceInfo(uri));
     }

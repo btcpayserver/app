@@ -7,7 +7,6 @@
         <PageTitle>@GetTitle()</PageTitle>
         <SectionContent SectionId="_Layout.MainTop">
             <h1>@GetTitle()</h1>
-            <p>Enter or scan your server URL or invite link.</p>
             @if (!string.IsNullOrEmpty(Error))
             {
                 <Alert Type="danger">@Error</Alert>
@@ -17,14 +16,20 @@
         <ValidationEditContext @ref="ValidationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
             <div class="form-group">
-                <label for="Uri" class="form-label visually-hidden">Server URL or invite link</label>
+                <div class="d-flex justify-content-between mb-3">
+                    <label for="Uri" class="form-label mb-0">Enter or scan your server URL or invite link.</label>
+                    @if (InstanceLoading)
+                    {
+                        <LoadingIndicator />
+                    }
+                </div>
                 <div class="d-flex align-items-center justify-content-between gap-3">
                     <InputText @bind-Value="Model.Uri" @bind-Value:after="() => ResolveInstanceInfo(Model.Uri)" id="Uri" class="form-control flex-grow-1" placeholder="Enter server URL or invite link"/>
                     <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
                         <Icon Symbol="scan-qr"/>
                     </button>
                 </div>
-                <ValidationMessage For="@(() => Model.Uri)" />
+                <ValidationMessage For="@(() => Model.Uri)"/>
             </div>
             <button type="submit" class="btn btn-primary w-100" data-testid="ConnectButton" disabled="@(InstanceInfo == null || Sending)">
                 @if (Sending)
@@ -56,8 +61,7 @@
 
     private class ConnectModel
     {
-        [Url]
-        [Required]
+        [Url, Required]
         public string? Uri { get; set; }
     }
 

@@ -57,17 +57,17 @@ public record UIState(
         }
     }
 
-    public record FetchedInstanceInfo(AppInstanceInfo? Instance, string? Error);
+    public record SetInstanceInfo(AppInstanceInfo? Instance, string? Error);
 
-    protected class FetchedInstanceInfoReducer : Reducer<UIState, FetchedInstanceInfo>
+    protected class SetInstanceInfoReducer : Reducer<UIState, SetInstanceInfo>
     {
-        public override UIState Reduce(UIState state, FetchedInstanceInfo action)
+        public override UIState Reduce(UIState state, SetInstanceInfo action)
         {
             return state with
             {
                 Instance = (state.Instance ?? new RemoteData<AppInstanceInfo>()) with
                 {
-                    Data = action.Instance ?? state.Instance?.Data,
+                    Data = action.Instance,
                     Error = action.Error,
                     Loading = false
                 }
@@ -106,17 +106,17 @@ public record UIState(
                     ? "This server does not seem to support the BTCPay app."
                     : null;
 
-                dispatcher.Dispatch(new FetchedInstanceInfo(instance, error));
+                dispatcher.Dispatch(new SetInstanceInfo(instance, error));
             }
             catch (Exception e)
             {
                 var error = e.InnerException?.Message ?? e.Message;
-                dispatcher.Dispatch(new FetchedInstanceInfo(null, error));
+                dispatcher.Dispatch(new SetInstanceInfo(null, error));
             }
         }
 
         [EffectMethod]
-        public async Task FetchedInstanceInfoEffect(FetchedInstanceInfo action, IDispatcher dispatcher)
+        public async Task SetInstanceInfoEffect(SetInstanceInfo action, IDispatcher dispatcher)
         {
             var info = action.Instance;
             await _jsRuntime.InvokeVoidAsync("Interop.setInstanceInfo", info?.CustomThemeExtension, info?.CustomThemeCssUrl);
