@@ -86,7 +86,7 @@
                 </NavLink>
             </li>
             <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreState.Value.StoreInfo?.Id">
-                <li class="list-group-item @(SetupStateOnchain == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateOnchain == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateOnchain.ToString().ToLowerInvariant()">
+                <li class="list-group-item @(SetupStateOnchain == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateOnchain == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateOnchain.ToString().ToLowerInvariant()" data-onchain-state="@State.Value.OnchainWalletState.GetValueOrDefault()">
                     <NavLink class="nav-link" href="@(SetupStateOnchain == SetupState.Completed ? Routes.Wallet : Routes.WalletSetup)" Match="NavLinkMatch.All">
                         <span>Set up wallet</span>
                         @switch (SetupStateOnchain)
@@ -103,7 +103,7 @@
                         }
                     </NavLink>
                 </li>
-                <li class="list-group-item @(SetupStateLightning == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateLightning == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateLightning.ToString().ToLowerInvariant()">
+                <li class="list-group-item @(SetupStateLightning == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateLightning == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateLightning.ToString().ToLowerInvariant()" data-lightning-state="@State.Value.LightningNodeState.GetValueOrDefault()">
                     <NavLink class="nav-link" href="@(SetupStateLightning == SetupState.Completed ? Routes.Lightning : Routes.LightningSetup)" Match="NavLinkMatch.All">
                         <span>Configure node</span>
                         @switch (SetupStateLightning)
@@ -225,10 +225,10 @@
         }
     }
 
-    private SetupState? SetupStateConnection => _setupStatus?.SetupStateConnection() ?? SetupState.Undetermined;
-    private SetupState? SetupStateAccount => _setupStatus?.SetupStateAccount() ?? SetupState.Undetermined;
-    private SetupState? SetupStateOnchain => _setupStatus?.SetupStateOnchain() ?? SetupState.Undetermined;
-    private SetupState? SetupStateLightning => _setupStatus?.SetupStateLightning() ?? SetupState.Undetermined;
+    private SetupState SetupStateConnection => _setupStatus?.SetupStateConnection() ?? SetupState.Undetermined;
+    private SetupState SetupStateAccount => _setupStatus?.SetupStateAccount() ?? SetupState.Undetermined;
+    private SetupState SetupStateOnchain => _setupStatus?.SetupStateOnchain() ?? SetupState.Undetermined;
+    private SetupState SetupStateLightning => _setupStatus?.SetupStateLightning() ?? SetupState.Undetermined;
 
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data?.Take(5);
     private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;
