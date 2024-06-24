@@ -49,7 +49,10 @@ public record UIState(
         {
             return state with
             {
-                Instance = new RemoteData<AppInstanceInfo>(state.Instance?.Data, true)
+                Instance = (state.Instance ?? new RemoteData<AppInstanceInfo>()) with
+                {
+                    Loading = true
+                }
             };
         }
     }
@@ -62,7 +65,12 @@ public record UIState(
         {
             return state with
             {
-                Instance = new RemoteData<AppInstanceInfo>(action.Instance, false, action.Error)
+                Instance = (state.Instance ?? new RemoteData<AppInstanceInfo>()) with
+                {
+                    Data = action.Instance ?? state.Instance?.Data,
+                    Error = action.Error,
+                    Loading = false
+                }
             };
         }
     }

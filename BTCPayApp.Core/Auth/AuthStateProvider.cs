@@ -168,9 +168,9 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         {
             try
             {
-                var posConfig = new CreatePointOfSaleAppRequest { AppName = "Keypad", DefaultView = PosViewType.Light };
+                var posConfig = new PointOfSaleAppRequest { AppName = "Keypad", DefaultView = PosViewType.Light };
                 var app = await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
-                message = $"The Point Of Sale called \"{app.Name}\" has been created for use with the app.";
+                message = $"The Point Of Sale called \"{app.AppName}\" has been created for use with the app.";
 
                 await FetchUserInfo();
             }

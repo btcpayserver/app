@@ -1,4 +1,4 @@
-@attribute [Route(Routes.Settings)]
+﻿@attribute [Route(Routes.Settings)]
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
@@ -33,7 +33,7 @@
                 </div>
             }
         </header>
-        <a href="@Routes.User" class="box user">
+        <a href="@Routes.User" class="box user mb-2">
             @if (!string.IsNullOrEmpty(_userInfo.ImageUrl))
             {
                 <img src="@_userInfo.ImageUrl" alt="@(_userInfo.Name ?? _userInfo.Email)" class="profile-picture" />
@@ -48,6 +48,16 @@
             </div>
             <Icon Symbol="caret-right"/>
         </a>
+        <div class="box">
+            <ul class="list-group list-group-flush list-group-links">
+                <li class="list-group-item">
+                    <a href="@Routes.NotificationSettings">
+                        <span>Notifications</span>
+                        <Icon Symbol="caret-right"/>
+                    </a>
+                </li>
+            </ul>
+        </div>
 
         <h2>Store</h2>
         <div class="box">
@@ -71,6 +81,15 @@
                                 <Icon Symbol="caret-right"/>
                             </a>
                         </li>
+                        @if (store.PosAppId != null)
+                        {
+                            <li class="list-group-item">
+                                <a href="@Routes.PosSettingsPath(store.PosAppId)">
+                                    <span>Point of Sale</span>
+                                    <Icon Symbol="caret-right"/>
+                                </a>
+                            </li>
+                        }
                     </AuthorizeView>
                 }
             </ul>

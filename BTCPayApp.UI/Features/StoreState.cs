@@ -19,15 +19,16 @@ public record StoreState
 
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
     public record FetchInvoices(string StoreId);
-    protected record FetchedInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
+    public record FetchedInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
     public record FetchInvoice(string StoreId, string InvoiceId);
-    protected record FetchedInvoice(InvoiceData? Invoice, string? Error, string InvoiceId);
+    public record FetchedInvoice(InvoiceData? Invoice, string? Error, string InvoiceId);
     public record FetchInvoicePaymentMethods(string StoreId, string InvoiceId);
-    protected record FetchedInvoicePaymentMethods(InvoicePaymentMethodDataModel[]? PaymentMethods, string? Error, string InvoiceId);
+    public record FetchedInvoicePaymentMethods(InvoicePaymentMethodDataModel[]? PaymentMethods, string? Error, string InvoiceId);
     public record FetchRates(string StoreId, string? Currency);
-    protected record FetchedRates(IEnumerable<StoreRateResult>? Rates, string? Error);
+    public record FetchedRates(IEnumerable<StoreRateResult>? Rates, string? Error);
     public record FetchPointOfSale(string AppId);
-    protected record FetchedPointOfSale(PointOfSaleAppData? AppData, string? Error);
+    public record UpdatePointOfSale(string AppId, PointOfSaleAppRequest Request);
+    public record SetPointOfSale(PointOfSaleAppData? AppData, string? Error);
 
     protected class SetStoreInfoReducer : Reducer<StoreState, SetStoreInfo>
     {
@@ -36,9 +37,9 @@ public record StoreState
             return state with
             {
                 StoreInfo = action.StoreInfo,
-                PointOfSale = new RemoteData<PointOfSaleAppData>(null),
-                Rates = new RemoteData<IEnumerable<StoreRateResult>>(null),
-                Invoices = new RemoteData<IEnumerable<InvoiceData>>(null)
+                PointOfSale = new RemoteData<PointOfSaleAppData>(),
+                Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
+                Invoices = new RemoteData<IEnumerable<InvoiceData>>()
             };
         }
     }
@@ -71,7 +72,10 @@ public record StoreState
         {
             return state with
             {
-                Invoices = new RemoteData<IEnumerable<InvoiceData>>(state.Invoices?.Data, true)
+                Invoices = (state.Invoices ?? new RemoteData<IEnumerable<InvoiceData>>()) with
+                {
+                    Loading = true
+                }
             };
         }
     }
@@ -80,10 +84,14 @@ public record StoreState
     {
         public override StoreState Reduce(StoreState state, FetchedInvoices action)
         {
-            var invoices = action.Invoices ?? state.Invoices?.Data;
             return state with
             {
-                Invoices = new RemoteData<IEnumerable<InvoiceData>>(invoices, false, action.Error)
+                Invoices = (state.Invoices ?? new RemoteData<IEnumerable<InvoiceData>>()) with
+                {
+                    Data = action.Invoices ?? state.Invoices?.Data,
+                    Error = action.Error,
+                    Loading = false
+                }
             };
         }
     }
@@ -99,7 +107,7 @@ public record StoreState
             {
                 _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
                 {
-                    { action.InvoiceId, new RemoteData<InvoiceData>(invoice, true) }
+                    { action.InvoiceId, new RemoteData<InvoiceData>(invoice, null, true) }
                 }
             };
         }
@@ -116,7 +124,7 @@ public record StoreState
             {
                 _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
                 {
-                    { action.InvoiceId, new RemoteData<InvoiceData>(invoice, false, action.Error) }
+                    { action.InvoiceId, new RemoteData<InvoiceData>(invoice, action.Error, false) }
                 }
             };
         }
@@ -133,7 +141,7 @@ public record StoreState
             {
                 _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(state._invoicePaymentMethodsById)
                 {
-                    { action.InvoiceId, new RemoteData<InvoicePaymentMethodDataModel[]>(pms, true) }
+                    { action.InvoiceId, new RemoteData<InvoicePaymentMethodDataModel[]>(pms, null, true) }
                 }
             };
         }
@@ -150,7 +158,7 @@ public record StoreState
             {
                 _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(state._invoicePaymentMethodsById)
                 {
-                    { action.InvoiceId, new RemoteData<InvoicePaymentMethodDataModel[]>(pms, false, action.Error) }
+                    { action.InvoiceId, new RemoteData<InvoicePaymentMethodDataModel[]>(pms, action.Error) }
                 }
             };
         }
@@ -162,7 +170,10 @@ public record StoreState
         {
             return state with
             {
-                Rates = new RemoteData<IEnumerable<StoreRateResult>>(state.Rates?.Data, true)
+                Rates = (state.Rates ?? new RemoteData<IEnumerable<StoreRateResult>>()) with
+                {
+                    Loading = true
+                }
             };
         }
     }
@@ -171,10 +182,13 @@ public record StoreState
     {
         public override StoreState Reduce(StoreState state, FetchedRates action)
         {
-            var rates = action.Rates ?? state.Rates?.Data;
             return state with
             {
-                Rates = new RemoteData<IEnumerable<StoreRateResult>>(rates, false, action.Error)
+                Rates = (state.Rates ?? new RemoteData<IEnumerable<StoreRateResult>>()) with {
+                    Data = action.Rates ?? state.Rates?.Data,
+                    Error = action.Error,
+                    Loading = false
+                }
             };
         }
     }
@@ -185,19 +199,41 @@ public record StoreState
         {
             return state with
             {
-                PointOfSale = new RemoteData<PointOfSaleAppData>(state.PointOfSale?.Data, true)
+                PointOfSale = (state.PointOfSale ?? new RemoteData<PointOfSaleAppData>()) with
+                {
+                    Loading = true
+                }
             };
         }
     }
 
-    protected class FetchedPointOfSaleReducer : Reducer<StoreState, FetchedPointOfSale>
+    protected class UpdatePointOfSaleReducer : Reducer<StoreState, UpdatePointOfSale>
     {
-        public override StoreState Reduce(StoreState state, FetchedPointOfSale action)
+        public override StoreState Reduce(StoreState state, UpdatePointOfSale action)
         {
-            var appData = action.AppData ?? state.PointOfSale?.Data;
             return state with
             {
-                PointOfSale = new RemoteData<PointOfSaleAppData>(appData, false, action.Error)
+                PointOfSale = (state.PointOfSale ?? new RemoteData<PointOfSaleAppData>()) with
+                {
+                    Sending = true
+                }
+            };
+        }
+    }
+
+    protected class SetPointOfSaleReducer : Reducer<StoreState, SetPointOfSale>
+    {
+        public override StoreState Reduce(StoreState state, SetPointOfSale action)
+        {
+            return state with
+            {
+                PointOfSale = (state.PointOfSale ?? new RemoteData<PointOfSaleAppData>()) with
+                {
+                    Data = action.AppData ?? state.PointOfSale?.Data,
+                    Error = action.Error,
+                    Loading = false,
+                    Sending = false
+                }
             };
         }
     }
@@ -219,17 +255,32 @@ public record StoreState
         }
 
         [EffectMethod]
+        public async Task UpdatePointOfSaleEffect(UpdatePointOfSale action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var appData = await accountManager.GetClient().UpdatePointOfSaleApp(action.AppId, action.Request);
+                dispatcher.Dispatch(new SetPointOfSale(appData, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetPointOfSale(null, error));
+            }
+        }
+
+        [EffectMethod]
         public async Task FetchPointOfSaleEffect(FetchPointOfSale action, IDispatcher dispatcher)
         {
             try
             {
                 var appData = await accountManager.GetClient().GetPosApp(action.AppId);
-                dispatcher.Dispatch(new FetchedPointOfSale(appData, null));
+                dispatcher.Dispatch(new SetPointOfSale(appData, null));
             }
             catch (Exception e)
             {
                 var error = e.InnerException?.Message ?? e.Message;
-                dispatcher.Dispatch(new FetchedPointOfSale(null, error));
+                dispatcher.Dispatch(new SetPointOfSale(null, error));
             }
         }
 

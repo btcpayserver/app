@@ -1,20 +1,22 @@
 ﻿using BTCPayApp.Core.Auth;
+using BTCPayApp.Core.Data;
 using BTCPayServer.Client.Models;
 using Fluxor;
 
 namespace BTCPayApp.UI.Features;
 
 [FeatureState]
-public record NotificationState(
-    RemoteData<IEnumerable<NotificationData>>? Notifications)
+public record NotificationState
 {
-    public RemoteData<IEnumerable<NotificationData>>? Notifications = Notifications;
+    public RemoteData<IEnumerable<NotificationData>>? Notifications;
+    public RemoteData<NotificationSettingsData>? Settings;
 
-    public NotificationState() : this(new RemoteData<IEnumerable<NotificationData>>(null))
-    {
-    }
-
-    public record FetchNotifications();
+    public record FetchNotifications;
+    public record FetchedNotifications(IEnumerable<NotificationData>? Notifications, string? Error);
+    public record FetchSettings;
+    public record FetchedSettings(NotificationSettingsData? Settings, string? Error);
+    public record UpdateSettings(UpdateNotificationSettingsRequest Request);
+    public record UpdatedSettings(NotificationSettingsData? Settings, string? Error);
 
     protected class FetchNotificationsReducer : Reducer<NotificationState, FetchNotifications>
     {
@@ -22,21 +24,86 @@ public record NotificationState(
         {
             return state with
             {
-                Notifications = new RemoteData<IEnumerable<NotificationData>>(state.Notifications?.Data, true)
+                Notifications = (state.Notifications ?? new RemoteData<IEnumerable<NotificationData>>()) with
+                {
+                    Loading = true
+                }
             };
         }
     }
-
-    protected record FetchedNotifications(IEnumerable<NotificationData>? Notifications, string? Error);
 
     protected class FetchedNotificationsReducer : Reducer<NotificationState, FetchedNotifications>
     {
         public override NotificationState Reduce(NotificationState state, FetchedNotifications action)
         {
-            var notifications = action.Notifications ?? state.Notifications?.Data;
             return state with
             {
-                Notifications = new RemoteData<IEnumerable<NotificationData>>(notifications, false, action.Error)
+                Notifications = (state.Notifications ?? new RemoteData<IEnumerable<NotificationData>>()) with
+                {
+                    Data = action.Notifications,
+                    Error = action.Error,
+                    Loading = false
+                }
+            };
+        }
+    }
+
+    protected class FetchSettingsReducer : Reducer<NotificationState, FetchSettings>
+    {
+        public override NotificationState Reduce(NotificationState state, FetchSettings action)
+        {
+            return state with
+            {
+                Settings = (state.Settings ?? new RemoteData<NotificationSettingsData>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class FetchedSettingsReducer : Reducer<NotificationState, FetchedSettings>
+    {
+        public override NotificationState Reduce(NotificationState state, FetchedSettings action)
+        {
+            return state with
+            {
+                Settings = (state.Settings ?? new RemoteData<NotificationSettingsData>()) with
+                {
+                    Data = action.Settings,
+                    Error = action.Error,
+                    Loading = false
+                }
+            };
+        }
+    }
+
+    protected class UpdateSettingsReducer : Reducer<NotificationState, UpdateSettings>
+    {
+        public override NotificationState Reduce(NotificationState state, UpdateSettings action)
+        {
+            return state with
+            {
+                Settings = (state.Settings ?? new RemoteData<NotificationSettingsData>()) with
+                {
+                    Sending = true
+                }
+            };
+        }
+    }
+
+    protected class UpdatedSettingsReducer : Reducer<NotificationState, UpdatedSettings>
+    {
+        public override NotificationState Reduce(NotificationState state, UpdatedSettings action)
+        {
+            return state with
+            {
+                Settings = (state.Settings ?? new RemoteData<NotificationSettingsData>()) with
+                {
+                    Data = action.Settings,
+                    Error = action.Error,
+                    Sending = false
+                }
             };
         }
     }
@@ -55,6 +122,36 @@ public record NotificationState(
             {
                 var error = e.InnerException?.Message ?? e.Message;
                 dispatcher.Dispatch(new FetchedNotifications(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchSettingsEffect(FetchSettings action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var settings = await accountManager.GetClient().GetNotificationSettings();
+                dispatcher.Dispatch(new FetchedSettings(settings, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new FetchedSettings(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task UpdateSettingsEffect(UpdateSettings action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var settings = await accountManager.GetClient().UpdateNotificationSettings(action.Request);
+                dispatcher.Dispatch(new UpdatedSettings(settings, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new UpdatedSettings(null, error));
             }
         }
     }

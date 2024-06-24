@@ -33,8 +33,11 @@ public static class Routes
     public const string ChangePasscode = "/settings/passcode";
     public const string SelectStore = "/settings/select-store";
     public const string Store = "/settings/store/{StoreId}";
+    public const string PosSettings = "/settings/pos/{AppId}";
+    public const string NotificationSettings = "/settings/notifications";
     public const string User = "/settings/user";
 
     public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);
     public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);
+    public static string PosSettingsPath(string appId) => PosSettings.Replace("{AppId}", appId);
 }

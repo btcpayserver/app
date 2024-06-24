@@ -1,0 +1,180 @@
+﻿@attribute [Route(Routes.PosSettings)]
+@using System.Text.RegularExpressions
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Util
+@using BTCPayServer.Client.Models
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
+@inject IState<StoreState> StoreState
+@inject IDispatcher Dispatcher
+@inject IActionSubscriber ActionSubscriber
+
+<PageTitle>Update Point of Sale</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back>
+        <h1>Update Point of Sale</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    @if (!string.IsNullOrEmpty(Error))
+    {
+        <Alert Type="danger">@Error</Alert>
+    }
+    else if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <Alert Type="success">@_successMessage</Alert>
+    }
+    @if (Loading && AppData is null)
+    {
+        <div class="p-3 text-center">
+            <LoadingIndicator/>
+        </div>
+    }
+    else if (Model is not null)
+    {
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <div class="form-group">
+                <label for="Title" class="form-label">Title</label>
+                <InputText @bind-Value="Model.Title" id="Title" class="form-control"/>
+                <ValidationMessage For="@(() => Model.Title)" />
+            </div>
+            <div class="form-group">
+                <label for="Currency" class="form-label">Currency</label>
+                <InputText @bind-Value="Model.Currency" id="Currency" class="form-control"/>
+                <ValidationMessage For="@(() => Model.Currency)" />
+                <div class="form-text">Uses the store's default currency (EUR) if empty.</div>
+            </div>
+            <fieldset id="tips" class="mt-2">
+                <legend class="h5 mb-3 fw-semibold">Tips</legend>
+                <div class="form-group d-flex align-items-center pt-2">
+                    <InputCheckbox @bind-Value="@Model.EnableTips" id="EnableTips" class="btcpay-toggle me-3" data-bs-toggle="collapse" data-bs-target="#CustomTipsSettings" aria-expanded="@Model.EnableTips" aria-controls="CustomTipsSettings"/>
+                    <label class="form-check-label" for="EnableTips">Enable tips</label>
+                </div>
+                <div class="collapse @(Model.EnableTips ? "show" : "")" id="CustomTipsSettings">
+                    <div class="form-group">
+                        <label for="TipText" class="form-label" data-required>Text to display in the tip input</label>
+                        <InputText @bind-Value="Model.TipText" id="TipText" class="form-control"/>
+                        <ValidationMessage For="@(() => Model.TipText)" />
+                    </div>
+                    <div class="form-group">
+                        <label for="CustomTipPercentages" class="form-label">Tip percentage amounts (comma separated)</label>
+                        <InputText @bind-Value="Model.CustomTipPercentages" id="CustomTipPercentages" class="form-control"/>
+                        <ValidationMessage For="@(() => Model.CustomTipPercentages)" />
+                    </div>
+                </div>
+            </fieldset>
+            <fieldset id="discounts" class="mt-2">
+                <legend class="h5 mb-3 fw-semibold">Discounts</legend>
+                <div class="form-group d-flex align-items-center">
+                    <InputCheckbox @bind-Value="@Model.ShowDiscount" id="ShowDiscount" class="btcpay-toggle me-3"/>
+                    <div>
+                        <label for="ShowDiscount" class="form-check-label">User can input discount in %</label>
+                        <div class="text-muted">Not recommended for customer self-checkout.</div>
+                    </div>
+                    <span asp-validation-for="ShowDiscount" class="text-danger"></span>
+                </div>
+            </fieldset>
+            <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext.Invalid || Sending)">
+                @if (Sending)
+                {
+                    <LoadingIndicator />
+                }
+                else
+                {
+                    <span>Update Point of Sale</span>
+                }
+            </button>
+        </ValidationEditContext>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string? AppId { get; set; }
+
+    private ValidationEditContext? _validationEditContext;
+    private PosAppModel? Model { get; set; }
+    private string? _successMessage;
+
+    private const char ListSeparator = ',';
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        ActionSubscriber.SubscribeToAction<StoreState.SetPointOfSale>(this, action =>
+        {
+            UpdateModel(action.AppData);
+        });
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        ActionSubscriber.UnsubscribeFromAllActions(this);
+
+        return ValueTask.CompletedTask;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        var request = new PointOfSaleAppRequest
+        {
+            Title = Model!.Title,
+            Currency = Model.Currency,
+            ShowDiscount = Model.ShowDiscount,
+            EnableTips = Model.EnableTips,
+            TipText = Model.TipText,
+            CustomTipPercentages = string.IsNullOrEmpty(Model.CustomTipPercentages) ? null : SplitStringList(ListSeparator, Model.CustomTipPercentages)
+        };
+        Dispatcher.Dispatch(new StoreState.UpdatePointOfSale(AppId!, request));
+    }
+
+    private void UpdateModel(PointOfSaleAppData? data)
+    {
+        Model = new PosAppModel
+        {
+            Title = data?.Title,
+            Currency = data?.Currency,
+            EnableTips = data?.EnableTips is true,
+            TipText = data?.TipText,
+            CustomTipPercentages = data?.CustomTipPercentages != null ? string.Join(ListSeparator, data.CustomTipPercentages) : null,
+            ShowDiscount = data?.ShowDiscount is true
+        };
+    }
+
+    private class PosAppModel
+    {
+        [Required]
+        public string? Title { get; set; }
+        [Required]
+        public string? Currency { get; set; }
+        public bool EnableTips { get; set; }
+        [RequiredIf(nameof(EnableTips), true)]
+        public string? TipText { get; set; }
+        public string? CustomTipPercentages { get; set; }
+        public bool ShowDiscount { get; set; }
+    }
+
+    private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;
+    private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
+    private bool Sending => StoreState.Value.PointOfSale?.Sending is true;
+    private string? Error => StoreState.Value.PointOfSale?.Error;
+
+    private static int[] SplitStringList(char separator, string list)
+    {
+        if (string.IsNullOrEmpty(list)) return [];
+        // Remove all characters except numeric and comma
+        var charsToDestroy = new Regex(@"[^\d|\" + separator + "]");
+        return charsToDestroy.Replace(list, "")
+            .Split(separator, StringSplitOptions.RemoveEmptyEntries)
+            .Select(int.Parse)
+            .ToArray();
+    }
+}
