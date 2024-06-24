@@ -326,6 +326,19 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         }
     }
 
+    public async Task<FormResult> RefreshAccess(CancellationToken? cancellation = default)
+    {
+        try
+        {
+            await GetClient().RefreshAccess(_account!.RefreshToken, cancellation);
+            return new FormResult(true);
+        }
+        catch (Exception e)
+        {
+            return new FormResult(false, e.Message);
+        }
+    }
+
     private async void OnAccessRefresh(object? sender, AccessTokenResult access)
     {
         if (_account == null) return;

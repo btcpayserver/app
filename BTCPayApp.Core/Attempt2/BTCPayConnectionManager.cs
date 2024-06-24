@@ -1,4 +1,5 @@
-﻿using BTCPayApp.CommonServer;
+﻿using System.Net;
+using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Helpers;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -64,7 +65,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         _ = TryStayConnected();
     }
 
-    private  async Task BtcPayAppServerClientOnOnServerNodeInfo(object? sender, string e)
+    private async Task BtcPayAppServerClientOnOnServerNodeInfo(object? sender, string e)
     {
         ReportedNodeInfo = e;
     }
@@ -85,9 +86,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
             if (!authenticated)
                 await Kill();
             else
-            {
                 await StartOrReplace();
-            }
         }
         catch (Exception e)
         {
@@ -110,6 +109,15 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                 {
                     await Task.Delay(5000);
                 }
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized)
+            {
+                var result = await _accountManager.RefreshAccess();
+                if (result.Succeeded)
+                    await StartOrReplace();
+                else
+                    await Kill();
+                await Task.Delay(1000);
             }
             catch (Exception e)
             {
@@ -156,21 +164,21 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
     public Task OnClosed(Exception? exception)
     {
-        _logger.LogError(exception, "OnClosed");
+        _logger.LogError(exception, "Hub connection closed");
         ConnectionState = HubConnectionState.Disconnected;
         return Task.CompletedTask;
     }
 
     public Task OnReconnected(string? connectionId)
     {
-        _logger.LogInformation("OnReconnected: {ConnectionId}", connectionId);
+        _logger.LogInformation("Hub reconnected: {ConnectionId}", connectionId);
         ConnectionState = HubConnectionState.Connected;
         return Task.CompletedTask;
     }
 
     public Task OnReconnecting(Exception? exception)
     {
-        _logger.LogError(exception, "OnReconnecting");
+        _logger.LogWarning(exception, "Hub reconnecting");
         ConnectionState = HubConnectionState.Connecting;
         return Task.CompletedTask;
     }

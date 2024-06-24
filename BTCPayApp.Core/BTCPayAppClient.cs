@@ -57,7 +57,7 @@ public class BTCPayAppClient(string baseUri) : BTCPayServerClient(new Uri(baseUr
                 var path = uri!.AbsolutePath;
                 if (path != RefreshPath)
                 {
-                    var (refresh, _) = await Refresh(RefreshToken);
+                    var (refresh, _) = await RefreshAccess(RefreshToken);
                     if (refresh != null)
                     {
                         if (req.Content is not null)
@@ -103,9 +103,13 @@ public class BTCPayAppClient(string baseUri) : BTCPayServerClient(new Uri(baseUr
         return new AccessTokenResult(response.AccessToken, response.RefreshToken, expiry);
     }
 
-    private async Task<(AccessTokenResult? success, string? errorCode)> Refresh(string refreshToken, CancellationToken? cancellation = default)
+    public async Task<(AccessTokenResult? success, string? errorCode)> RefreshAccess(string? refreshToken = null, CancellationToken? cancellation = default)
     {
-        var payload = new RefreshRequest { RefreshToken = refreshToken };
+        var token = refreshToken ?? RefreshToken;
+        if (string.IsNullOrEmpty(token))
+            throw new ArgumentException("No refresh token present or provided.", nameof(refreshToken));
+
+        var payload = new RefreshRequest { RefreshToken = token };
         var now = DateTimeOffset.Now;
         try
         {
