@@ -59,26 +59,18 @@ public class OnChainWalletManager : BaseHostedService
 
     protected override async Task ExecuteStartAsync(CancellationToken cancellationToken)
     {
-        State = OnChainWalletState.Init;
         StateChanged += OnStateChanged;
         _btcPayAppServerClient.OnNewBlock += OnNewBlock;
         _btcPayAppServerClient.OnTransactionDetected += OnTransactionDetected;
         _btcPayConnectionManager.ConnectionChanged += ConnectionChanged;
         WalletConfig = await _configProvider.Get<WalletConfig>(WalletConfig.Key);
-        if (!IsConfigured)
-        {
-            State = OnChainWalletState.NotConfigured;
-        }
-        else if (IsHubConnected)
+        DetermineState();
+        if (IsHubConnected)
         {
             await Track();
-            
+
             _ = GetBestBlock();
             State = OnChainWalletState.Loaded;
-        }
-        else
-        {
-            State = OnChainWalletState.WaitingForConnection;
         }
     }
 
@@ -87,6 +79,11 @@ public class OnChainWalletManager : BaseHostedService
 
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
     {
+        if (e is { Old: OnChainWalletState.NotConfigured or OnChainWalletState.WaitingForConnection } && IsHubConnected && !IsConfigured)
+        {
+            await Generate();
+        }
+
         if (e is {New: OnChainWalletState.Loaded} && IsConfigured)
         {
             await Track();
@@ -187,14 +184,12 @@ public class OnChainWalletManager : BaseHostedService
 
     private void DetermineState()
     {
-        var result = OnChainWalletState.Loading;
         if (IsHubConnected && IsConfigured)
-            result = OnChainWalletState.Loaded;
+            State = OnChainWalletState.Loaded;
         else if (!IsHubConnected)
-            result = OnChainWalletState.WaitingForConnection;
+            State = OnChainWalletState.WaitingForConnection;
         else if (!IsConfigured)
-            result = OnChainWalletState.NotConfigured;
-        State = result;
+            State = OnChainWalletState.NotConfigured;
     }
 
     private async Task Track()
@@ -456,7 +451,7 @@ public class OnChainWalletManager : BaseHostedService
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
             try
             {
-                
+
                 return await _btcPayConnectionManager.HubProxy.GetBestBlock().RunSync();
             }
             catch(Exception e)
@@ -472,7 +467,6 @@ public class OnChainWalletManager : BaseHostedService
         if (res is null)
         {
             _memoryCache.Remove("bestblock");
-            
         }
         return res;
     }
@@ -498,9 +492,7 @@ public class OnChainWalletManager : BaseHostedService
                 finally
                 {
                     _logger.LogInformation("Got fee rate for block target {BlockTarget}", blockTarget);
-
                 }
-
             });
         }
         catch (Exception e)
