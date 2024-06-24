@@ -14,7 +14,7 @@
   min-height: auto;
   padding-top: 0;
 }
-.logo {
+::deep .logo {
   display: block;
   height: var(--logo-height);
   margin-left: auto;

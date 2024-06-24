@@ -1,13 +1,9 @@
-﻿@using BTCPayApp.CommonServer.Models
-@using BTCPayApp.UI.Features
-@inherits _Layout
-@inject IState<UIState> UIState
+﻿@inherits _Layout
 
 <div id="SimpleLayout" class="layout">
     <SectionOutlet SectionId="Top" />
     <main id="MainContent">
         <div class="container">
-            <img src="@LogoUrl" alt="@LogoText" class="logo"/>
             <SectionOutlet SectionId="MainTop"/>
             @Body
             <SectionOutlet SectionId="MainBottom"/>
@@ -15,12 +11,3 @@
     </main>
     <SectionOutlet SectionId="Bottom" />
 </div>
-
-@code {
-    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
-
-    private string LogoText => InstanceInfo?.ServerName ?? "BTCPay Server";
-    private string LogoUrl => !string.IsNullOrEmpty(InstanceInfo?.LogoUrl)
-        ? InstanceInfo.LogoUrl
-        : "_content/BTCPayApp.UI/img/logo-symbol.svg";
-}

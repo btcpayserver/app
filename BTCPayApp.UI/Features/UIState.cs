@@ -119,7 +119,7 @@ public record UIState(
         public async Task SetInstanceInfoEffect(SetInstanceInfo action, IDispatcher dispatcher)
         {
             var info = action.Instance;
-            await _jsRuntime.InvokeVoidAsync("Interop.setInstanceInfo", info?.CustomThemeExtension, info?.CustomThemeCssUrl);
+            await _jsRuntime.InvokeVoidAsync("Interop.setInstanceInfo", info?.CustomThemeExtension, info?.CustomThemeCssUrl, info?.LogoUrl);
         }
     }
 }

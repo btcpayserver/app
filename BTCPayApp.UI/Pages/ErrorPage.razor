@@ -4,8 +4,12 @@
 
 <PageTitle>@Title</PageTitle>
 
-<div class="text-center">
+<SectionContent SectionId="_Layout.MainTop">
+    <InstanceLogo/>
     <h1>@Title</h1>
+</SectionContent>
+
+<div class="text-center">
     <Alert Type="danger" Margin="5">@Message</Alert>
     <NavLink class="btn btn-primary w-100" href="@Routes.Index" onclick="history.back();return false;" data-testid="GoBackButton">Go Back</NavLink>
 </div>

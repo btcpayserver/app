@@ -1,0 +1,14 @@
+@using BTCPayApp.CommonServer.Models
+@using BTCPayApp.UI.Features
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IState<UIState> UIState
+
+<img src="@LogoUrl" alt="@LogoText" class="logo"/>
+
+@code {
+    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
+    private string LogoText => InstanceInfo?.ServerName ?? "BTCPay Server";
+    private string LogoUrl => !string.IsNullOrEmpty(InstanceInfo?.LogoUrl)
+        ? InstanceInfo.LogoUrl
+        : "_content/BTCPayApp.UI/img/logo-symbol.svg";
+}

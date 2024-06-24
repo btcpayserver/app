@@ -39,9 +39,9 @@ Interop = {
 
   // theme
   setColorMode: window.setColorMode,
-  setInstanceInfo(customThemeExtension, customThemeCssUrl) {
+  setInstanceInfo(customThemeExtension, customThemeCssUrl, logoUrl) {
     const $tag = document.getElementById('CustomThemeLinkTag')
-    if (customThemeExtension && customThemeCssUrl) {
+    if (customThemeExtension && customThemeCssUrl) {rel="icon"
       $tag.setAttribute('rel', 'stylesheet');
       $tag.setAttribute('href', customThemeCssUrl);
       document.documentElement.setAttribute(window.THEME_ATTR, customThemeExtension.toLowerCase());
@@ -54,6 +54,13 @@ Interop = {
       } else {
         document.documentElement.removeAttribute(THEME_ATTR);
       }
+    }
+    const $icon = document.querySelector('link[rel="icon"]')
+    if (logoUrl) {
+      if (!$icon.dataset.original) $icon.dataset.original = $icon.getAttribute('href');
+      $icon.setAttribute('href', logoUrl);
+    } else {
+      $icon.setAttribute('href', $icon.dataset.original);
     }
   }
 }
