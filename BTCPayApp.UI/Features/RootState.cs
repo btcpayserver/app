@@ -5,11 +5,16 @@ using Microsoft.AspNetCore.SignalR.Client;
 namespace BTCPayApp.UI.Features;
 
 [FeatureState]
-public record RootState(
-    HubConnectionState? ConnectionState,
-    OnChainWalletState? OnchainWalletState,
-    LightningNodeState? LightningNodeState)
+public record RootState
 {
+    public HubConnectionState? ConnectionState;
+    public OnChainWalletState? OnchainWalletState;
+    public LightningNodeState? LightningNodeState;
+
+    public record ConnectionStateUpdatedAction(HubConnectionState? State);
+    public record OnChainWalletStateUpdatedAction(OnChainWalletState State);
+    public record LightningNodeStateUpdatedAction(LightningNodeState State);
+
     public enum LoadingHandles
     {
         UiState,
@@ -17,14 +22,6 @@ public record RootState(
         WalletState,
         LightningState
     }
-
-    public RootState() : this(null,null, null)
-    {
-    }
-
-    public record ConnectionStateUpdatedAction(HubConnectionState? State);
-    public record OnChainWalletStateUpdatedAction(OnChainWalletState State);
-    public record LightningNodeStateUpdatedAction(LightningNodeState State);
 
     protected class ConnectionUpdatedReducer : Reducer<RootState, ConnectionStateUpdatedAction>
     {

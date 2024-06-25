@@ -14,15 +14,13 @@ public static class Themes
 }
 
 [FeatureState]
-public record UIState(
-    string SelectedTheme,
-    string SystemTheme,
-    bool IsDarkMode,
-    [property: JsonIgnore] RemoteData<AppInstanceInfo>? Instance)
+public record UIState
 {
-    public UIState() : this(Themes.System, Themes.Light, false, null)
-    {
-    }
+    public string SelectedTheme = Themes.System;
+    public string SystemTheme = Themes.Light;
+    public bool IsDarkMode;
+    [JsonIgnore]
+    public RemoteData<AppInstanceInfo>? Instance;
 
     public record ApplyUserTheme(string Theme);
     public record SetUserTheme(string Theme);
