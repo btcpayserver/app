@@ -1,4 +1,5 @@
 ﻿@attribute [Route(Routes.User)]
+@using System.ComponentModel
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
@@ -13,55 +14,85 @@
         <h1>User</h1>
     </Titlebar>
 </SectionContent>
-@if (_userInfo != null)
-{
-    <section class="container">
-        <h1 class="mb-3">@_userInfo.Email</h1>
-        <div class="box">
-            ID: @_userInfo.UserId<br/>
-            Roles: @(_userInfo.Roles?.Any() is true ? string.Join(", ", _userInfo.Roles) : "none")
-        </div>
-
-        <h2>Stores</h2>
-        <div class="box">
-            @if (_userInfo.Stores?.Any() is true)
+<section class="container">
+    @if (_userInfo != null)
+    {
+        <header class="d-flex align-items-center justify-content-between gap-3 mb-4">
+            <h1>@_userInfo.Email</h1>
+            @if (_userInfo.Roles?.Any() is true)
             {
-                <ul class="list-group list-group-flush">
-                    @foreach (var store in _userInfo.Stores)
-                    {
-                        <li class="list-group-item">
-                            <h3>
-                                @store.Name
-                                <span class="badge bg-light">@store.RoleId</span>
-                                @if (store.Archived)
-                                {
-                                    <span class="badge bg-info">archived</span>
-                                }
-                            </h3>
-                            @if (store.Permissions?.Any() is true)
-                            {
-                                <ul>
-                                    @foreach (var permission in store.Permissions)
-                                    {
-                                    <li>@permission</li>
-                                    }
-                                </ul>
-                            }
-                            else
-                            {
-                                <p class="text-secondary">No permissions</p>
-                            }
-                        </li>
-                    }
-                </ul>
+                @foreach (var role in _userInfo.Roles)
+                {
+                    <span class="badge bg-light">@role</span>
+                }
             }
-            else
-            {
-                <p class="text-secondary">No stores</p>
-            }
-        </div>
+        </header>
 
         <h2>Account</h2>
+        <div class="box">
+            <ValidationEditContext Model="Account" OnValidSubmit="HandleValidAccountSubmit" SuccessMessage="@_accountSuccessMessage" ErrorMessage="@_accountErrorMessage">
+                <DataAnnotationsValidator />
+                <div class="form-group">
+                    <label for="Email" class="form-label" data-required>Email</label>
+                    <InputText @bind-Value="Account.Email" id="Email" type="email" class="form-control"/>
+                    <ValidationMessage For="@(() => Account.Email)" />
+                </div>
+                <div class="form-group">
+                    <label for="Name" class="form-label">Name</label>
+                    <InputText @bind-Value="Account.Name" id="Name" class="form-control"/>
+                    <ValidationMessage For="@(() => Account.Name)" />
+                </div>
+                <div class="form-group">
+                    <label for="ImageUrl" class="form-label">Image Url</label>
+                    <InputText @bind-Value="Account.ImageUrl" id="ImageUrl" type="url" class="form-control"/>
+                    <ValidationMessage For="@(() => Account.ImageUrl)" />
+                </div>
+                <button type="submit" class="btn btn-primary w-100" disabled="@(_accountSending)">
+                    @if (_accountSending)
+                    {
+                        <LoadingIndicator />
+                    }
+                    else
+                    {
+                        <span>Update Account</span>
+                    }
+                </button>
+            </ValidationEditContext>
+        </div>
+
+        <h2>Password</h2>
+        <div class="box">
+            <ValidationEditContext Model="Password" OnValidSubmit="HandleValidPasswordSubmit" SuccessMessage="@_passwordSuccessMessage" ErrorMessage="@_passwordErrorMessage">
+                <DataAnnotationsValidator />
+                <div class="form-group">
+                    <label for="CurrentPassword" class="form-label" data-required>Current Password</label>
+                    <InputText @bind-Value="Password.CurrentPassword" type="password" id="CurrentPassword" class="form-control"/>
+                    <ValidationMessage For="@(() => Password.CurrentPassword)" />
+                </div>
+                <div class="form-group">
+                    <label for="NewPassword" class="form-label" data-required>New Password</label>
+                    <InputText @bind-Value="Password.NewPassword" type="password" id="NewPassword" class="form-control"/>
+                    <ValidationMessage For="@(() => Password.NewPassword)" />
+                </div>
+                <div class="form-group">
+                    <label for="ConfirmPassword" class="form-label" data-required>Confirm Password</label>
+                    <InputText @bind-Value="Password.ConfirmPassword" type="password" id="ConfirmPassword" class="form-control"/>
+                    <ValidationMessage For="@(() => Password.ConfirmPassword)" />
+                </div>
+                <button type="submit" class="btn btn-primary w-100" disabled="@(_passwordSending)">
+                    @if (_passwordSending)
+                    {
+                        <LoadingIndicator />
+                    }
+                    else
+                    {
+                        <span>Update Password</span>
+                    }
+                </button>
+            </ValidationEditContext>
+        </div>
+
+        <h2>Want to leave?</h2>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
                 <li class="list-group-item">
@@ -72,19 +103,35 @@
                 </li>
             </ul>
         </div>
-    </section>
-}
+    }
+</section>
 
 @code {
     private AppUserInfo? _userInfo;
     private BTCPayAccount? _account;
+    private AccountModel? Account { get; set; }
+    private PasswordModel? Password { get; set; }
+    private bool _accountSending;
+    private string? _accountErrorMessage;
+    private string? _accountSuccessMessage;
+    private bool _passwordSending;
+    private string? _passwordErrorMessage;
+    private string? _passwordSuccessMessage;
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        _userInfo = AccountManager.GetUserInfo();
-        _account = AccountManager.GetAccount();
+        _userInfo = AccountManager.GetUserInfo()!;
+        _account = AccountManager.GetAccount()!;
+
+        Password = new PasswordModel();
+        Account = new AccountModel
+        {
+            Email = _userInfo.Email,
+            Name = _userInfo.Name,
+            ImageUrl = _userInfo.ImageUrl
+        };
     }
 
     private async Task Logout()
@@ -96,5 +143,71 @@
     {
         await Logout();
         await AccountManager.RemoveAccount(_account!);
+    }
+
+    public async Task HandleValidAccountSubmit()
+    {
+        _accountErrorMessage = _accountSuccessMessage = null;
+        _accountSending = true;
+
+        var result = await AccountManager.ChangeAccountInfo(Account.Email!, Account.Name, Account.ImageUrl);
+        _accountSending = false;
+
+        if (result.Succeeded)
+        {
+            var userData = result.Response!;
+            Account = new AccountModel
+            {
+                Email = userData.Email,
+                Name = userData.Name,
+                ImageUrl = userData.ImageUrl
+            };
+            _accountSuccessMessage = string.Join(",", result.Messages ?? ["Your account information has been changed."]);
+        }
+        else
+        {
+            _accountErrorMessage = string.Join(",", result.Messages ?? ["Changing your account information failed."]);
+        }
+    }
+
+    public async Task HandleValidPasswordSubmit()
+    {
+        _passwordErrorMessage = _passwordSuccessMessage = null;
+        _passwordSending = true;
+
+        var result = await AccountManager.ChangePassword(Password.CurrentPassword!, Password.NewPassword!);
+        _passwordSending = false;
+
+        if (result.Succeeded)
+        {
+            Password = new PasswordModel();
+            _passwordSuccessMessage = string.Join(",", result.Messages ?? ["Your password has been changed."]);
+        }
+        else
+        {
+            _passwordErrorMessage = string.Join(",", result.Messages ?? ["Changing your password failed."]);
+        }
+    }
+
+    private class AccountModel
+    {
+        [Required, EmailAddress]
+        public string? Email { get; set; }
+        public string? Name { get; set; }
+        [Url]
+        public string? ImageUrl { get; set; }
+    }
+
+    private class PasswordModel
+    {
+        [Required, DataType(DataType.Password), DisplayName("Current Password")]
+        public string? CurrentPassword { get; set; }
+
+        [Required, DataType(DataType.Password), DisplayName("New Password")]
+        public string? NewPassword { get; set; }
+
+        [Required, DataType(DataType.Password), DisplayName("New Password Confirmation")]
+        [Compare("NewPassword", ErrorMessage = "The password and its confirmation do not match.")]
+        public string? ConfirmPassword { get; set; }
     }
 }

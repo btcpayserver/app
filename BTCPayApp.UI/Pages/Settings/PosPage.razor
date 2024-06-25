@@ -1,12 +1,10 @@
 ﻿@attribute [Route(Routes.PosSettings)]
 @using System.Text.RegularExpressions
-@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@inject IAccountManager AccountManager
 @inject IState<StoreState> StoreState
 @inject IDispatcher Dispatcher
 @inject IActionSubscriber ActionSubscriber
@@ -106,6 +104,9 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+
+        if (AppData == null && !string.IsNullOrEmpty(AppId))
+            Dispatcher.Dispatch(new StoreState.FetchPointOfSale(AppId));
 
         ActionSubscriber.SubscribeToAction<StoreState.SetPointOfSale>(this, action =>
         {

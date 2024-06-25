@@ -1,5 +1,6 @@
 using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.Helpers;
+using BTCPayServer.Client.Models;
 
 namespace BTCPayApp.Core.Auth;
 
@@ -16,6 +17,8 @@ public interface IAccountManager
     public Task<FormResult> LoginWithCode(string serverUrl, string email, string code, CancellationToken? cancellation = default);
     public Task<FormResult> Register(string serverUrl, string email, string password, CancellationToken? cancellation = default);
     public Task<FormResult> ResetPassword(string serverUrl, string email, string? resetCode, string? newPassword, CancellationToken? cancellation = default);
+    public Task<FormResult<ApplicationUserData>> ChangePassword(string currentPassword, string newPassword, CancellationToken? cancellation = default);
+    public Task<FormResult<ApplicationUserData>> ChangeAccountInfo(string email, string? name, string? imageUrl, CancellationToken? cancellation = default);
     public Task<FormResult> RefreshAccess(CancellationToken? cancellation = default);
     public Task<FormResult> SetCurrentStoreId(string storeId);
     public AppUserStoreInfo? GetCurrentStore();

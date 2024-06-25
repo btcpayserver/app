@@ -2,7 +2,18 @@
 @implements IDisposable
 
 <EditForm EditContext="EditContext" OnSubmit="OnSubmit" @attributes="@InputAttributes">
-    <DataAnnotationsValidator/>
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <Alert Type="danger">@ErrorMessage</Alert>
+    }
+    else if (!string.IsNullOrEmpty(SuccessMessage))
+    {
+        <Alert Type="success">@SuccessMessage</Alert>
+    }
+    else
+    {
+        <DataAnnotationsValidator/>
+    }
     <CascadingValue Value="MessageStore">
         <CascadingValue Value="this">
             @ChildContent
@@ -25,6 +36,12 @@
 
     [Parameter]
     public EventCallback OnInvalidSubmit { get; set; }
+
+    [Parameter]
+    public string? SuccessMessage { get; set; }
+
+    [Parameter]
+    public string? ErrorMessage { get; set; }
 
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object> InputAttributes { get; set; }

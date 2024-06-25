@@ -112,8 +112,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
                 user = new ClaimsPrincipal(new ClaimsIdentity(claims, AuthenticationSchemes.GreenfieldBearer));
 
                 // update account user info
-                _account!.Name = _userInfo.Name;
-                _account!.ImageUrl = _userInfo.ImageUrl;
+                _account!.SetInfo(_userInfo.Email!, _userInfo.Name, _userInfo.ImageUrl);
                 await UpdateAccount(_account);
             }
 
@@ -279,7 +278,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         try
         {
             var expiryOffset = DateTimeOffset.Now;
-            var response = await new BTCPayAppClient(serverUrl).RegisterUser(payload, cancellation.GetValueOrDefault());
+            var response = await GetClient(serverUrl).RegisterUser(payload, cancellation.GetValueOrDefault());
             var account = new BTCPayAccount(serverUrl, email);
             var message = "Account created.";
             if (response.ContainsKey("accessToken"))
@@ -315,7 +314,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         try
         {
             var isForgotStep = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword);
-            await new BTCPayAppClient(serverUrl).ResetPassword(payload, cancellation.GetValueOrDefault());
+            await GetClient(serverUrl).ResetPassword(payload, cancellation.GetValueOrDefault());
             return new FormResult(true, isForgotStep
                 ? "You should have received an email with a password reset code."
                 : "Your password has been reset.");
@@ -323,6 +322,45 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         catch (Exception e)
         {
             return new FormResult(false, e.Message);
+        }
+    }
+
+    public async Task<FormResult<ApplicationUserData>> ChangePassword(string currentPassword, string newPassword, CancellationToken? cancellation = default)
+    {
+        var payload = new UpdateApplicationUserRequest
+        {
+            CurrentPassword = currentPassword,
+            NewPassword = newPassword
+        };
+        try
+        {
+            var response = await GetClient().UpdateCurrentUser(payload, cancellation.GetValueOrDefault());
+            return new FormResult<ApplicationUserData>(true, "Your password has been changed.", response);
+        }
+        catch (Exception e)
+        {
+            return new FormResult<ApplicationUserData>(false, e.Message, null);
+        }
+    }
+
+    public async Task<FormResult<ApplicationUserData>> ChangeAccountInfo(string email, string? name, string? imageUrl, CancellationToken? cancellation = default)
+    {
+        var payload = new UpdateApplicationUserRequest
+        {
+            Email = email,
+            Name = name,
+            ImageUrl = imageUrl
+        };
+        try
+        {
+            var userData = await GetClient().UpdateCurrentUser(payload, cancellation.GetValueOrDefault());
+            _account!.SetInfo(userData.Email!, userData.Name, userData.ImageUrl);
+            _userInfo!.SetInfo(userData.Email!, userData.Name, userData.ImageUrl);
+            return new FormResult<ApplicationUserData>(true, "Your account info has been changed.", userData);
+        }
+        catch (Exception e)
+        {
+            return new FormResult<ApplicationUserData>(false, e.Message, null);
         }
     }
 
