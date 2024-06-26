@@ -29,6 +29,7 @@ public record StoreState
     public record FetchPointOfSale(string AppId);
     public record UpdatePointOfSale(string AppId, PointOfSaleAppRequest Request);
     public record SetPointOfSale(PointOfSaleAppData? AppData, string? Error);
+    public record UpdatedPointOfSale(PointOfSaleAppData? AppData, string? Error) : SetPointOfSale(AppData, Error);
 
     protected class SetStoreInfoReducer : Reducer<StoreState, SetStoreInfo>
     {
@@ -260,12 +261,12 @@ public record StoreState
             try
             {
                 var appData = await accountManager.GetClient().UpdatePointOfSaleApp(action.AppId, action.Request);
-                dispatcher.Dispatch(new SetPointOfSale(appData, null));
+                dispatcher.Dispatch(new UpdatedPointOfSale(appData, null));
             }
             catch (Exception e)
             {
                 var error = e.InnerException?.Message ?? e.Message;
-                dispatcher.Dispatch(new SetPointOfSale(null, error));
+                dispatcher.Dispatch(new UpdatedPointOfSale(null, error));
             }
         }
 

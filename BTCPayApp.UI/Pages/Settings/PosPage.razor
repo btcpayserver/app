@@ -4,6 +4,7 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client.Models
+@using Newtonsoft.Json
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IState<StoreState> StoreState
 @inject IDispatcher Dispatcher
@@ -105,13 +106,22 @@
     {
         await base.OnInitializedAsync();
 
-        if (AppData == null && !string.IsNullOrEmpty(AppId))
-            Dispatcher.Dispatch(new StoreState.FetchPointOfSale(AppId));
-
         ActionSubscriber.SubscribeToAction<StoreState.SetPointOfSale>(this, action =>
         {
             UpdateModel(action.AppData);
         });
+
+        ActionSubscriber.SubscribeToAction<StoreState.UpdatedPointOfSale>(this, action =>
+        {
+            if (action.AppData == null || action.Error != null) return;
+            _successMessage = $"Point of Sale \"{action.AppData.Title}\" successfully updated";
+            StateHasChanged();
+        });
+
+        if (AppData != null)
+            UpdateModel(AppData);
+        else if (!string.IsNullOrEmpty(AppId))
+            Dispatcher.Dispatch(new StoreState.FetchPointOfSale(AppId));
     }
 
     protected override ValueTask DisposeAsyncCore(bool disposing)
@@ -125,6 +135,9 @@
 
     private async Task HandleValidSubmit()
     {
+        _successMessage = null;
+
+        var app = AppData!;
         var request = new PointOfSaleAppRequest
         {
             Title = Model!.Title,
@@ -132,7 +145,29 @@
             ShowDiscount = Model.ShowDiscount,
             EnableTips = Model.EnableTips,
             TipText = Model.TipText,
-            CustomTipPercentages = string.IsNullOrEmpty(Model.CustomTipPercentages) ? null : SplitStringList(ListSeparator, Model.CustomTipPercentages)
+            CustomTipPercentages = string.IsNullOrEmpty(Model.CustomTipPercentages) ? null : SplitStringList(ListSeparator, Model.CustomTipPercentages),
+            // pass these attributes to not reset them
+            AppName = app.AppName,
+            Archived = app.Archived,
+            DefaultView = app.DefaultView,
+            ShowItems = app.ShowItems,
+            ShowCustomAmount = app.ShowCustomAmount,
+            ShowSearch = app.ShowSearch,
+            ShowCategories = app.ShowCategories,
+            FixedAmountPayButtonText = app.FixedAmountPayButtonText,
+            CustomAmountPayButtonText = app.CustomAmountPayButtonText,
+            NotificationUrl = app.NotificationUrl,
+            RedirectUrl = app.RedirectUrl,
+            Description = app.Description,
+            RedirectAutomatically = app.RedirectAutomatically,
+            FormId = app.FormId,
+            Template = app.Items != null
+                ? JsonConvert.SerializeObject(app.Items, Formatting.None, new JsonSerializerSettings
+                    {
+                        ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
+                        Formatting = Formatting.None
+                    })
+                : null
         };
         Dispatcher.Dispatch(new StoreState.UpdatePointOfSale(AppId!, request));
     }
