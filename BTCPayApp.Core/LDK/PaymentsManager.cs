@@ -348,9 +348,23 @@ var paySecret = Convert.ToHexString(invoice.payment_secret()).ToLower();
             return;
         }
         //this discrepancy could have been used to pay for a JIT channel opening
-        else if(_acceptedChannels.TryGetValue(eventPaymentClaimable.via_channel_id.hash(), out var channelRequest))
+        else if(_acceptedChannels.TryGetValue(eventPaymentClaimable.via_channel_id.hash(), out var channelRequest) && 
+                accept.AdditionalData.TryGetValue(VoltageFlow2Jit.LightningPaymentLSPKey, out var lspDoc ) && 
+                lspDoc.Deserialize<string>() is { } lsp && 
+                await _ldkNode.GetJITLSPService() is { } lspService && 
+                lspService.ProviderName == lsp &&
+                accept.AdditionalData.TryGetValue(VoltageFlow2Jit.LightningPaymentJITFeeKey, out var lspFee ) &&  lspFee.Deserialize<JITFeeResponse>() is { } fee)
         {
-            
+            if (fee.AmountToGenerateOurInvoice == eventPaymentClaimable.amount_msat)
+            {
+                _acceptedChannels.Remove(eventPaymentClaimable.via_channel_id.hash(), out _);
+                _channelManager.claim_funds(preimage);
+                return;
+            }
+        }
+        else
+        {
+            _channelManager.fail_htlc_backwards(eventPaymentClaimable.payment_hash);
         }
 
 

@@ -65,7 +65,7 @@ public class LDKPeerHandler : IScopedHostedService
         if (config.Peers.ContainsKey(nodeInfo.NodeId.ToString()))
             return;
         var endpoint = new IPEndPoint(IPAddress.Parse(nodeInfo.Host), nodeInfo.Port);
-        await _node.Peer(nodeInfo.NodeId.ToString(), new PeerInfo()
+        await _node.Peer(nodeInfo.NodeId, new PeerInfo()
         {
             Endpoint = endpoint.ToString(),
             Persistent = true,
@@ -224,7 +224,7 @@ public class LDKPeerHandler : IScopedHostedService
                 if (peer.Endpoint != remote.ToString())
                 {
                     peer.Endpoint = remote.ToString()!;
-                    await _node.Peer(theirNodeId.ToString(), peer);
+                    await _node.Peer(theirNodeId, peer);
                 }
             }
 

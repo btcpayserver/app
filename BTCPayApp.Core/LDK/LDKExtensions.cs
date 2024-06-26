@@ -303,7 +303,9 @@ public static class LDKExtensions
         services.AddScoped<Router>(provider => provider.GetRequiredService<DefaultRouter>().as_Router());
 
         
-        services.AddScoped<IJITService, VoltageFlow2Jit>();
+        services.AddScoped<VoltageFlow2Jit>();
+        services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
+        services.AddScoped<IJITService, VoltageFlow2Jit>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
         
         return services;
     }
