@@ -32,9 +32,9 @@ public class AppDbContext : DbContext
     }
 }
 
-public class SpendableCoin
-{
-    public string Script { get; set; }
-    [Key] public string Outpoint { get; set; }
-    public byte[] Data { get; set; }
-}
+// public class SpendableCoin
+// {
+//     public string Script { get; set; }
+//     [Key] public string Outpoint { get; set; }
+//     public byte[] Data { get; set; }
+// }

@@ -6,21 +6,16 @@ using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Newtonsoft.Json;
 using org.ldk.structs;
 using org.ldk.util;
+using JsonSerializer = System.Text.Json.JsonSerializer;
 using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
-public class FlowInvoiceDetails()
-{
-
-    public string FeeId { get; set; }
-    public long FeeAmount { get; set; }
-    
-}
 
 /// <summary>
 /// https://docs.voltage.cloud/flow/flow-2.0
@@ -32,6 +27,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     private readonly Network _network;
     private readonly LDKNode _node;
     private readonly ChannelManager _channelManager;
+    private readonly ILogger<VoltageFlow2Jit> _logger;
 
     public static Uri? BaseAddress(Network network)
     {
@@ -45,7 +41,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     }
 
     public VoltageFlow2Jit(IHttpClientFactory httpClientFactory, Network network, LDKNode node,
-        ChannelManager channelManager)
+        ChannelManager channelManager, ILogger<VoltageFlow2Jit> logger)
     {
         var httpClientInstance = httpClientFactory.CreateClient("VoltageFlow2JIT");
         httpClientInstance.BaseAddress = BaseAddress(network);
@@ -54,6 +50,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         _network = network;
         _node = node;
         _channelManager = channelManager;
+        _logger = logger;
     }
 
     public VoltageFlow2Jit(HttpClient httpClient, Network network)
@@ -109,31 +106,50 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     }
 
     public string ProviderName => "Voltage";
-    public async Task<(LightMoney invoiceAmount, LightMoney fee)> CalculateInvoiceAmount(LightMoney expectedAmount)
+    public async Task<JITFeeResponse?> CalculateInvoiceAmount(LightMoney expectedAmount)
     {
-        var fee = await GetFee(expectedAmount, _node.NodeId);
-        return (LightMoney.MilliSatoshis(expectedAmount.MilliSatoshi-fee.Amount), LightMoney.MilliSatoshis(fee.Amount));
+        try
+        {
+
+            var fee = await GetFee(expectedAmount, _node.NodeId);
+            return new JITFeeResponse(expectedAmount, expectedAmount + fee.Amount, fee.Amount, fee.Id, ProviderName);
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error while calculating invoice amount");
+            return null;
+        }
     }
 
-    public async Task WrapInvoice(LightningPayment lightningPayment)
+    public const string LightningPaymentJITFeeKey = "JITFeeKey";
+    public const string LightningPaymentLSPKey = "LSP";
+    public async Task<bool> WrapInvoice(LightningPayment lightningPayment, JITFeeResponse? fee = null)
     {
 
         if (lightningPayment.PaymentRequests.Count > 1)
         {
-            return;
+            return false;
         }
-        if(lightningPayment.AdditionalData?.TryGetValue("flowlsp", out var lsp) is true && lsp.RootElement.Deserialize<FlowInvoiceDetails>() is { } invoiceDetails)
-            return;
-        
-        var lm = new LightMoney(lightningPayment.Value);
-        var fee = await GetFee(lm, _node.NodeId);
+        if(lightningPayment.AdditionalData?.ContainsKey(LightningPaymentLSPKey) is true)
+            return false;
         
         
-        if (lm < fee.Amount)
-            throw new InvalidOperationException("Invoice amount is too low to use Voltage LSP");
+        fee??= await CalculateInvoiceAmount(new LightMoney(lightningPayment.Value));
+        
+        if(fee is null)
+            return false;
+        var invoice = BOLT11PaymentRequest.Parse(lightningPayment.PaymentRequests[0], _network);
         
         
-        return await GetProposal(invoice, null, fee.Id);
+        var proposal =  await GetProposal(invoice,null, fee!.FeeIdentifier);
+        if(proposal.MinimumAmount != fee.AmountToRequestPayer || proposal.PaymentHash != invoice.PaymentHash)
+            return false;
+        
+        lightningPayment.PaymentRequests.Insert(0, proposal.ToString());
+        lightningPayment.AdditionalData ??= new Dictionary<string, JsonDocument>();
+        lightningPayment.AdditionalData[LightningPaymentLSPKey] = JsonSerializer.SerializeToDocument(ProviderName);
+        lightningPayment.AdditionalData[LightningPaymentJITFeeKey] = JsonSerializer.SerializeToDocument(fee);
+        return true;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -204,72 +220,6 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
            channelConfig.set_accept_underpaying_htlcs(true);
            _channelManager.update_channel_config(@event.counterparty_node_id, new[] {@event.channel_id}, channelConfig);
         }
-    }
-
-    private bool VerifyInvoice(BOLT11PaymentRequest ourInvoice,
-        BOLT11PaymentRequest lspInvoice,
-        LightMoney fee)
-    {
-        if(ourInvoice.PaymentHash != lspInvoice.PaymentHash)
-            return false;
-        
-        var expected_lsp_invoice_amt = our_invoice_amt + lsp_fee_msats;
-        
-        if (Bolt11Invoice.from_str(ourInvoice.ToString()) is Result_Bolt11InvoiceParseOrSemanticErrorZ.Result_Bolt11InvoiceParseOrSemanticErrorZ_OK
-                ourInvoiceResult &&
-            Bolt11Invoice.from_str(lspInvoice.ToString()) is Result_Bolt11InvoiceParseOrSemanticErrorZ.Result_Bolt11InvoiceParseOrSemanticErrorZ_OK lspInvoiceResult)
-        {
-            ourInvoiceResult.res.
-            
-        }
-
-        return false;
-
-        if lsp_invoice.network() != our_invoice.network() {
-            return Some(format!(
-                "Received invoice on wrong network: {} != {}",
-                lsp_invoice.network(),
-                our_invoice.network()
-            ));
-        }
-
-        if lsp_invoice.payment_hash() != our_invoice.payment_hash() {
-            return Some(format!(
-                "Received invoice with wrong payment hash: {} != {}",
-                lsp_invoice.payment_hash(),
-                our_invoice.payment_hash()
-            ));
-        }
-
-        let invoice_pubkey = lsp_invoice.recover_payee_pub_key();
-        if invoice_pubkey != self.pubkey {
-            return Some(format!(
-                "Received invoice from wrong node: {invoice_pubkey} != {}",
-                self.pubkey
-            ));
-        }
-
-        if lsp_invoice.amount_milli_satoshis().is_none() {
-            return Some("Invoice amount is missing".to_string());
-        }
-
-        if our_invoice.amount_milli_satoshis().is_none() {
-            return Some("Invoice amount is missing".to_string());
-        }
-
-        let lsp_invoice_amt = lsp_invoice.amount_milli_satoshis().expect("just checked");
-        let our_invoice_amt = our_invoice.amount_milli_satoshis().expect("just checked");
-
-        let expected_lsp_invoice_amt = our_invoice_amt + lsp_fee_msats;
-
-        // verify invoice within 10 sats of our target
-        if lsp_invoice_amt.abs_diff(expected_lsp_invoice_amt) > 10_000 {
-            return Some(format!(
-                "Received invoice with wrong amount: {lsp_invoice_amt} when amount was {expected_lsp_invoice_amt}",
-            ));
-        }
-
-        None
     }
     
 }
