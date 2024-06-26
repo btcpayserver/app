@@ -42,6 +42,16 @@
                 <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                 <label>Node ID</label>
             </div>
+              <div class="form-floating">
+                <select class="form-select" @onchange="OnSelectLSP" value="@_config.JITLSP" >
+                    <option value="">None</option>
+                    @foreach (var jit in JITOptions)
+                    {
+                        <option value="@jit">@jit</option>
+                    }
+                </select>
+                <label>JIT LSP</label>
+            </div>
         }
 
         @if (!string.IsNullOrEmpty(_config?.LightningDerivationPath))
@@ -83,7 +93,7 @@
 
     private string? ConfiguredConnectionString;
     private string ConnectionString => $"type=app;group={OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier}".ToLower();
-
+    private string[] JITOptions;
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -91,6 +101,7 @@
         if (LightningNodeManager?.Node is not null)
         {
             _config = await LightningNodeManager.Node.GetConfig();
+            JITOptions = await LightningNodeManager.Node.GetJITLSPs();
         }
         var acc = AccountManager.GetAccount();
         if (acc?.CurrentStoreId != null)
@@ -152,4 +163,13 @@
             Logger.LogError(ex, "Error configuring LN wallet");
         }
     }
+
+    private async Task OnSelectLSP(ChangeEventArgs obj)
+    {
+        
+        _config = await LightningNodeManager.Node.GetConfig();
+        _config.JITLSP = obj.Value?.ToString();
+        await LightningNodeManager.Node.UpdateConfig(_config);
+    }
+
 }

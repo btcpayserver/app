@@ -53,17 +53,6 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         _logger = logger;
     }
 
-    public VoltageFlow2Jit(HttpClient httpClient, Network network)
-    {
-        if (httpClient.BaseAddress == null)
-            throw new ArgumentException(
-                "HttpClient must have a base address, use Flow2Client.BaseAddress to get a predefined URI",
-                nameof(httpClient));
-
-        _httpClient = httpClient;
-        _network = network;
-    }
-
     public async Task<FlowInfoResponse> GetInfo(CancellationToken cancellationToken = default)
     {
         var path = "/api/v1/info";
