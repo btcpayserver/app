@@ -38,7 +38,15 @@
                     {
                         <li class="list-group-item">
                             <label class="form-check-label stretched-link d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                <InputRadio Name="StoreIds" Value="@store.Id" class="form-check-input m-0" Se/>
+                                <InputRadio Name="StoreIds" Value="@store.Id" class="form-check-input m-0"/>
+                                @if (string.IsNullOrEmpty(store.LogoUrl))
+                                {
+                                    <Icon Symbol="nav-store"/>
+                                }
+                                else
+                                {
+                                    <img src="@store.LogoUrl" alt="@store.Name" class="icon icon-nav-store"/>
+                                }
                                 <strong>@store.Name</strong>
                                 <span class="badge bg-light ms-auto">@store.RoleId</span>
                             </label>
