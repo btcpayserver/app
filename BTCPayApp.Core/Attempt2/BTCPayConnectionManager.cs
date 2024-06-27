@@ -148,8 +148,12 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         var account = _accountManager.GetAccount();
         if (account is null)
             return;
+        
         Connection = new HubConnectionBuilder()
-            .AddNewtonsoftJsonProtocol()
+            .AddNewtonsoftJsonProtocol(options =>
+            {
+                NBitcoin.JsonConverters.Serializer.RegisterFrontConverters(options.PayloadSerializerSettings);
+            })
             .WithUrl(new Uri(new Uri(account.BaseUri), "hub/btcpayapp").ToString(), options =>
             {
                 options.AccessTokenProvider = () => Task.FromResult(_accountManager.GetAccount()?.AccessToken);

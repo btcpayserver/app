@@ -8,9 +8,50 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Crypto;
-using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment;
 
 namespace BTCPayApp.Core.Attempt2;
+
+public static class AppToServerHelper
+{
+    
+    public static LightningInvoice ToInvoice(this AppLightningPayment lightningPayment)
+    {
+        return new LightningInvoice()
+        {
+            Id = lightningPayment.PaymentHash.ToString(),
+            Amount = lightningPayment.Value,
+            PaymentHash = lightningPayment.PaymentHash.ToString(),
+            Preimage = lightningPayment.Preimage,
+            PaidAt = lightningPayment.Status == LightningPaymentStatus.Complete? DateTimeOffset.UtcNow: null, //TODO: store these in ln payment
+            BOLT11 = lightningPayment.PaymentRequest.ToString(),
+            Status = lightningPayment.Status == LightningPaymentStatus.Complete? LightningInvoiceStatus.Paid: lightningPayment.PaymentRequest.ExpiryDate < DateTimeOffset.UtcNow? LightningInvoiceStatus.Expired: LightningInvoiceStatus.Unpaid
+        };
+    }
+
+    public static LightningPayment ToPayment(this AppLightningPayment lightningPayment)
+    {
+        return new LightningPayment()
+        {
+            Id = lightningPayment.PaymentHash.ToString(),
+            Amount = LightMoney.MilliSatoshis(lightningPayment.Value),
+            PaymentHash = lightningPayment.PaymentHash.ToString(),
+            Preimage = lightningPayment.Preimage,
+            BOLT11 = lightningPayment.PaymentRequest.ToString(),
+            Status = lightningPayment.Status
+        };
+    }
+    
+    public static async Task<List<LightningPayment>> ToPayments(this Task<List<AppLightningPayment>> appLightningPayments)
+    {
+        var result = await appLightningPayments;
+        return result.Select(ToPayment).ToList();
+    }
+    public static async Task<List<LightningInvoice>> ToInvoices(this Task<List<AppLightningPayment>> appLightningPayments)
+    {
+        var result = await appLightningPayments;
+        return result.Select(ToInvoice).ToList();
+    }
+}
 
 public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServiceProvider serviceProvider) : IBTCPayAppHubClient
 {
@@ -53,36 +94,36 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServi
     private PaymentsManager PaymentsManager =>
         serviceProvider.GetRequiredService<LightningNodeManager>().Node.PaymentsManager;
 
-    public async Task<LightningPayment> CreateInvoice(CreateLightningInvoiceRequest createLightningInvoiceRequest)
+    public async Task<LightningInvoice> CreateInvoice(CreateLightningInvoiceRequest createLightningInvoiceRequest)
     {
         var descHash = new uint256(Hashes.SHA256(Encoding.UTF8.GetBytes(createLightningInvoiceRequest.Description)),
             false);
-        return await PaymentsManager.RequestPayment(createLightningInvoiceRequest.Amount,
-            createLightningInvoiceRequest.Expiry, descHash);
+        return (await PaymentsManager.RequestPayment(createLightningInvoiceRequest.Amount,
+            createLightningInvoiceRequest.Expiry, descHash)).ToInvoice();
     }
 
-    public async Task<LightningPayment?> GetLightningInvoice(string paymentHash)
+    public async Task<LightningInvoice?> GetLightningInvoice(uint256 paymentHash)
     {
         var invs = await PaymentsManager.List(payments =>
             payments.Where(payment => payment.Inbound && payment.PaymentHash == paymentHash));
-        return invs.FirstOrDefault();
+        return invs.FirstOrDefault()?.ToInvoice();
     }
 
-    public async Task<LightningPayment?> GetLightningPayment(string paymentHash)
+    public async Task<LightningPayment?> GetLightningPayment(uint256 paymentHash)
     {
         var invs = await PaymentsManager.List(payments =>
             payments.Where(payment => !payment.Inbound && payment.PaymentHash == paymentHash));
-        return invs.FirstOrDefault();
+        return invs.FirstOrDefault()?.ToPayment();
     }
 
     public async Task<List<LightningPayment>> GetLightningPayments(ListPaymentsParams request)
     {
-        return await PaymentsManager.List(payments => payments.Where(payment => !payment.Inbound), default);
+        return await PaymentsManager.List(payments => payments.Where(payment => !payment.Inbound), default).ToPayments();
     }
 
-    public async Task<List<LightningPayment>> GetLightningInvoices(ListInvoicesParams request)
+    public async Task<List<LightningInvoice>> GetLightningInvoices(ListInvoicesParams request)
     {
-        return await PaymentsManager.List(payments => payments.Where(payment => payment.Inbound), default);
+        return await PaymentsManager.List(payments => payments.Where(payment => payment.Inbound), default).ToInvoices();
     }
 
     public async Task<PayResponse> PayInvoice(string bolt11, long? amountMilliSatoshi)
@@ -94,21 +135,21 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServi
             var result = await PaymentsManager.PayInvoice(bolt,
                 amountMilliSatoshi is null ? null : LightMoney.MilliSatoshis(amountMilliSatoshi.Value));
             return new PayResponse()
+            {
+                Result = result.Status switch
                 {
-                    Result = result.Status switch
-                    {
-                        LightningPaymentStatus.Unknown => PayResult.Unknown,
-                        LightningPaymentStatus.Pending => PayResult.Unknown,
-                        LightningPaymentStatus.Complete => PayResult.Ok,
-                        LightningPaymentStatus.Failed => PayResult.Error,
-                        _ => throw new ArgumentOutOfRangeException()
-                    },
-                    Details = new PayDetails()
-                    {
-                        Preimage = result.Preimage is not null ? new uint256(result.Preimage) : null,
-                        Status = result.Status
-                    }
-                };
+                    LightningPaymentStatus.Unknown => PayResult.Unknown,
+                    LightningPaymentStatus.Pending => PayResult.Unknown,
+                    LightningPaymentStatus.Complete => PayResult.Ok,
+                    LightningPaymentStatus.Failed => PayResult.Error,
+                    _ => throw new ArgumentOutOfRangeException()
+                },
+                Details = new PayDetails()
+                {
+                    Preimage = result.Preimage is not null ? new uint256(result.Preimage) : null,
+                    Status = result.Status
+                }
+            };
         }
         catch (Exception e)
         {

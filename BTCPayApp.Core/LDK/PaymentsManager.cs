@@ -1,19 +1,46 @@
 ﻿using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.JsonConverters;
 using BTCPayApp.Core.LSP.JIT;
 using BTCPayServer.Lightning;
 using Microsoft.EntityFrameworkCore;
 using NBitcoin;
 using org.ldk.structs;
 using org.ldk.util;
-// using BTCPayServer.Lightning;
-using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment;
+
 
 namespace BTCPayApp.Core.LDK;
+public partial class AppLightningPayment
+{
+    
+    [JsonConverter(typeof(UInt256JsonConverter))]
+    public uint256 PaymentHash { get; set; }
+    public string PaymentId { get; set; }
+    public string? Preimage { get; set; }
+    
+    [JsonConverter(typeof(UInt256JsonConverter))]
+    public uint256 Secret { get; set; }
+    public bool Inbound { get; set; }
+    [JsonConverter(typeof(DateTimeToUnixTimeConverter))]
+    public DateTimeOffset Timestamp { get; set; }
+    
+    [JsonConverter(typeof(LightMoneyJsonConverter))]
+    public LightMoney Value { get; set; }
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public LightningPaymentStatus Status { get; set; }
+    [JsonConverter(typeof(BOLT11PaymentRequestJsonConverter))]
+    public BOLT11PaymentRequest PaymentRequest { get; set; }
+
+    [JsonExtensionData] public Dictionary<string, JsonElement> AdditionalData { get; set; } = new();
+
+}
+
+
 
 public class PaymentsManager :
     IScopedHostedService,
@@ -52,8 +79,8 @@ public class PaymentsManager :
         _ldkNode = ldkNode;
     }
 
-    public async Task<List<LightningPayment>> List(
-        Func<IQueryable<LightningPayment>, IQueryable<LightningPayment?>> filter,
+    public async Task<List<AppLightningPayment>> List(
+        Func<IQueryable<AppLightningPayment>, IQueryable<AppLightningPayment?>> filter,
         CancellationToken cancellationToken = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -77,7 +104,7 @@ public class PaymentsManager :
     //     var invoice = Bolt11Invoice.from_signed(_channelManager, _nodeSigner, _logger, _network.GetLdkCurrency(),
     // }
 
-    public async Task<LightningPayment> RequestPayment(LightMoney amount, TimeSpan expiry, uint256 descriptionHash)
+    public async Task<AppLightningPayment> RequestPayment(LightMoney amount, TimeSpan expiry, uint256 descriptionHash)
     {
         var amt = amount == LightMoney.Zero ? Option_u64Z.none() : Option_u64Z.some(amount.MilliSatoshi);
 
@@ -126,23 +153,22 @@ public class PaymentsManager :
              _ => throw new Exception("Unknown error retrieving preimage")
          };
 
-
          var parsedOriginalInvoice= BOLT11PaymentRequest.Parse(originalInvoice.to_str(), _network);
-         var lp = new LightningPayment()
+         var lp = new AppLightningPayment()
         {
             Inbound = true,
             PaymentId = "default",
             Value = amount.MilliSatoshi,
-            PaymentHash = parsedOriginalInvoice.PaymentHash!.ToString(),
-            Secret = parsedOriginalInvoice.PaymentSecret!.ToString(),
+            PaymentHash = parsedOriginalInvoice.PaymentHash!,
+            Secret = parsedOriginalInvoice.PaymentSecret!,
             Preimage = Convert.ToHexString(preimage!).ToLower(),
             Status = LightningPaymentStatus.Pending,
             Timestamp = now,
-            PaymentRequests = [parsedOriginalInvoice.ToString()],
-            AdditionalData = new Dictionary<string, JsonDocument>()
+            PaymentRequest = parsedOriginalInvoice,
+            AdditionalData = new Dictionary<string, JsonElement>()
             {
-                [LightningPaymentDescriptionKey] = JsonSerializer.SerializeToDocument(descriptionHash.ToString()),
-                [LightningPaymentExpiryKey] = JsonSerializer.SerializeToDocument(originalInvoice.expires_at())
+                [LightningPaymentDescriptionKey] = JsonSerializer.SerializeToElement(descriptionHash.ToString()),
+                [LightningPaymentExpiryKey] = JsonSerializer.SerializeToElement(now.Add(expiry))
             }
         };
          
@@ -162,7 +188,7 @@ public class PaymentsManager :
         return lp;
     }
     
-    public async Task<LightningPayment> PayInvoice(BOLT11PaymentRequest paymentRequest,
+    public async Task<AppLightningPayment> PayInvoice(BOLT11PaymentRequest paymentRequest,
         LightMoney? explicitAmount = null)
     {
         var id = RandomUtils.GetBytes(32);
@@ -175,15 +201,15 @@ public class PaymentsManager :
 
         //check if we have a db record with same pay hash but has the preimage set
 
-var payHash = Convert.ToHexString(invoice.payment_hash()).ToLower();
-var paySecret = Convert.ToHexString(invoice.payment_secret()).ToLower();
+var payHash = new uint256(invoice.payment_hash());
+var paySecret = new uint256(invoice.payment_secret());
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var inbound = await context.LightningPayments.FirstOrDefaultAsync(lightningPayment =>
             lightningPayment.PaymentHash == payHash && lightningPayment.Inbound);
 
         if (inbound is not null)
         {
-            var newOutbound = new LightningPayment()
+            var newOutbound = new AppLightningPayment()
             {
                 Inbound = false,
                 Value = amt,
@@ -192,7 +218,7 @@ var paySecret = Convert.ToHexString(invoice.payment_secret()).ToLower();
                 Status = LightningPaymentStatus.Complete,
                 Timestamp = DateTimeOffset.UtcNow,
                 PaymentId = Convert.ToHexString(id).ToLower(),
-                PaymentRequests = [invoiceStr],
+                PaymentRequest = paymentRequest,
                 Preimage = inbound.Preimage
             };
             await context.LightningPayments.AddAsync(newOutbound);
@@ -211,7 +237,7 @@ var paySecret = Convert.ToHexString(invoice.payment_secret()).ToLower();
             return newOutbound;
         }
 
-        var outbound = new LightningPayment()
+        var outbound = new AppLightningPayment()
         {
             Inbound = false,
             Value = amt,
@@ -220,7 +246,7 @@ var paySecret = Convert.ToHexString(invoice.payment_secret()).ToLower();
             Status = LightningPaymentStatus.Pending,
             Timestamp = DateTimeOffset.UtcNow,
             PaymentId = Convert.ToHexString(id).ToLower(),
-            PaymentRequests = [invoiceStr],
+            PaymentRequest = paymentRequest,
         };
         await context.LightningPayments.AddAsync(outbound);
         await context.SaveChangesAsync();
@@ -257,41 +283,46 @@ var paySecret = Convert.ToHexString(invoice.payment_secret()).ToLower();
         return outbound;
     }
 
-    public async Task Cancel(string id, bool inbound)
+    public async Task CancelInbound(uint256 paymentHash)
     {
-        if (!inbound)
-        {
-            await  Task.Run(() => _channelManager.abandon_payment(Convert.FromHexString(id)) );
-            
-            // return;
-        }
         
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var payment = await context.LightningPayments.FirstOrDefaultAsync(lightningPayment =>
-            lightningPayment.Status == LightningPaymentStatus.Pending &&
-            
-            ((inbound && lightningPayment.Inbound && lightningPayment.PaymentHash == id) ||
-             (!inbound && !lightningPayment.Inbound && lightningPayment.PaymentId == id)));
+            lightningPayment.Status == LightningPaymentStatus.Pending && lightningPayment.Inbound && lightningPayment.PaymentHash == paymentHash);
         if (payment is not null)
         {
             payment.Status = LightningPaymentStatus.Failed;
             await context.SaveChangesAsync();
         }
+    } 
+    public async Task CancelOutbound(string paymentId)
+    {
+      
+        await  Task.Run(() => _channelManager.abandon_payment(Convert.FromHexString(paymentId)) );
         
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var payment = await context.LightningPayments.FirstOrDefaultAsync(lightningPayment =>
+            lightningPayment.Status == LightningPaymentStatus.Pending &&
+             !lightningPayment.Inbound && lightningPayment.PaymentId == paymentId);
+        if (payment is not null)
+        {
+            payment.Status = LightningPaymentStatus.Failed;
+            await context.SaveChangesAsync();
+        }
     }
 
 
-    private async Task Payment(LightningPayment lightningPayment, CancellationToken cancellationToken = default)
+    private async Task Payment(AppLightningPayment lightningPayment, CancellationToken cancellationToken = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var x = await context.LightningPayments.Upsert(lightningPayment).RunAsync(cancellationToken);
+        var x = await context.CrappyUpsert(lightningPayment, cancellationToken);
         if (x > 0)
         {
             OnPaymentUpdate?.Invoke(this, lightningPayment);
         }
     }
 
-    private async Task PaymentUpdate(string paymentHash, bool inbound, string paymentId, bool failure,
+    private async Task PaymentUpdate(uint256 paymentHash, bool inbound, string paymentId, bool failure,
         string? preimage, CancellationToken cancellationToken = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
@@ -320,13 +351,14 @@ var paySecret = Convert.ToHexString(invoice.payment_secret()).ToLower();
         }
     }
 
-    public AsyncEventHandler<LightningPayment>? OnPaymentUpdate { get; set; }
+    public AsyncEventHandler<AppLightningPayment>? OnPaymentUpdate { get; set; }
 
     public async Task Handle(Event.Event_PaymentClaimable eventPaymentClaimable)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var paymentHash = new uint256(eventPaymentClaimable.payment_hash);
         var accept = await context.LightningPayments.FirstOrDefaultAsync(payment =>
-            payment.PaymentHash == Convert.ToHexString(eventPaymentClaimable.payment_hash).ToLower() &&
+            payment.PaymentHash == paymentHash &&
             payment.Inbound && payment.Status == LightningPaymentStatus.Pending);
 
 
@@ -375,18 +407,18 @@ var paySecret = Convert.ToHexString(invoice.payment_secret()).ToLower();
     {
         var preimage = eventPaymentClaimed.purpose.GetPreimage(out var secret);
         
-        await PaymentUpdate( Convert.ToHexString(eventPaymentClaimed.payment_hash).ToLower(), true, "default", false, preimage is null ? null : Convert.ToHexString(preimage).ToLower());
+        await PaymentUpdate( new uint256(eventPaymentClaimed.payment_hash), true, "default", false, preimage is null ? null : Convert.ToHexString(preimage).ToLower());
     }
 
     public async Task Handle(Event.Event_PaymentFailed @eventPaymentFailed)
     {
-        await PaymentUpdate(Convert.ToHexString(eventPaymentFailed.payment_hash).ToLower(), false,
+        await PaymentUpdate(new uint256(eventPaymentFailed.payment_hash), false,
             Convert.ToHexString(eventPaymentFailed.payment_id).ToLower(), true, null);
     }
 
     public async Task Handle(Event.Event_PaymentSent eventPaymentSent)
     {
-        await PaymentUpdate(Convert.ToHexString(eventPaymentSent.payment_hash).ToLower(), false,
+        await PaymentUpdate(new uint256(eventPaymentSent.payment_hash), false,
             Convert.ToHexString(
                 ((Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some) eventPaymentSent.payment_id).some).ToLower(), false,
             Convert.ToHexString(eventPaymentSent.payment_preimage).ToLower());
