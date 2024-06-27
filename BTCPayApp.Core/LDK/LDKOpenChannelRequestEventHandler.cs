@@ -1,4 +1,5 @@
 ﻿using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.Helpers;
 using org.ldk.structs;
 using UInt128 = org.ldk.util.UInt128;
 
@@ -33,6 +34,7 @@ public class LDKOpenChannelRequestEventHandler: ILDKEventHandler<Event.Event_Ope
                     eventOpenChannelRequest.counterparty_node_id,
                     userChannelId
                 );
+                AcceptedChannel?.Invoke(this, eventOpenChannelRequest);
                 return;
             }
         }
@@ -43,8 +45,11 @@ public class LDKOpenChannelRequestEventHandler: ILDKEventHandler<Event.Event_Ope
             eventOpenChannelRequest.counterparty_node_id,
             userChannelId);
         
+        AcceptedChannel?.Invoke(this, eventOpenChannelRequest);
         //TODO: if we want to reject the channel, we can call reject_channel
         //_channelManager.force_close_without_broadcasting_txn(eventOpenChannelRequest.temporary_channel_id, eventOpenChannelRequest.counterparty_node_id);
         
     }
+
+    public AsyncEventHandler<Event.Event_OpenChannelRequest>? AcceptedChannel;
 }

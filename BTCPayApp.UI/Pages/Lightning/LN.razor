@@ -108,45 +108,45 @@ else
         @if (_channels?.Any() is true)
         {
             <div class="table-responsive">
-            <table class="table">
-                <thead>
-                <tr>
-                    <th>Channel ID</th>
-                    <th>User Channel ID</th>
-                    <th>Counterparty</th>
-                    <th>Short Channel ID</th>
-                    <th>Confirmations</th>
-                    <th>Confirmations Required</th>
-                    <th>Funding Transaction Hash</th>
-                    <th>Usable</th>
-                    <th>Ready</th>
-                    <th>Balance</th>
-                    <th>Inbound</th>
-                    <th>Outbound</th>
-                    <th>State</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var channel in _channels)
-                {
+                <table class="table">
+                    <thead>
                     <tr>
-                        <td>@channel.id</td>
-                        <td>@channel.userId</td>
-                        <td>@channel.counterparty</td>
-                        <td>@channel.shortChannelId</td>
-                        <td>@channel.confirmations</td>
-                        <td>@channel.confirmationsRequired</td>
-                        <td>@channel.fundingTransactionHash</td>
-                        <td>@channel.usable</td>
-                        <td>@channel.ready</td>
-                        <td>@channel.Balance</td>
-                        <td>@channel.Inbound</td>
-                        <td>@channel.Outbound</td>
-                        <td>@channel.State</td>
+                        <th>Channel ID</th>
+                        <th>User Channel ID</th>
+                        <th>Counterparty</th>
+                        <th>Short Channel ID</th>
+                        <th>Confirmations</th>
+                        <th>Confirmations Required</th>
+                        <th>Funding Transaction Hash</th>
+                        <th>Usable</th>
+                        <th>Ready</th>
+                        <th>Balance</th>
+                        <th>Inbound</th>
+                        <th>Outbound</th>
+                        <th>State</th>
                     </tr>
-                }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    @foreach (var channel in _channels)
+                    {
+                        <tr>
+                            <td>@channel.id</td>
+                            <td>@channel.userId</td>
+                            <td>@channel.counterparty</td>
+                            <td>@channel.shortChannelId</td>
+                            <td>@channel.confirmations</td>
+                            <td>@channel.confirmationsRequired</td>
+                            <td>@channel.fundingTransactionHash</td>
+                            <td>@channel.usable</td>
+                            <td>@channel.ready</td>
+                            <td>@channel.Balance</td>
+                            <td>@channel.Inbound</td>
+                            <td>@channel.Outbound</td>
+                            <td>@channel.State</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
             </div>
         }
         else
@@ -155,7 +155,8 @@ else
         }
         @if (_peers?.Any() is true)
         {
-            <div> Open channel to
+            <div>
+                Open channel to
                 <select @bind="selectedPeer">
                     <option >Select peer</option>
                     @foreach (var peer in _peers)
@@ -163,13 +164,13 @@ else
                         <option value="@peer.nodeId">@peer.nodeId</option>
                     }
                 </select>
-                <input type="number" min="0" @bind="channelOpenAmount" />
+                <input type="number" min="0" @bind="channelOpenAmount"/>
                 <button type="button" @onclick="OpenChannel">Open channel</button>
                 @if (channelResponse is not null)
                 {
                     <p>@channelResponse</p>
                 }
-                </div>
+            </div>
         }
     </article>
     <article class="my-4">
@@ -177,45 +178,45 @@ else
         @if (_payments?.Any() is true)
         {
             <div class="table-responsive">
-            <table class="table">
-                <thead>
-                <tr>
-                    <th></th>
-                    <th>Payment Hash</th>
-                    <th>Inbound</th>
-                    <th>Id</th>
-                    <th>Preimage</th>
-                    <th>Secret</th>
-                    <th>Timestamp</th>
-                    <th>Value</th>
-                    <th>Status</th>
-                    <th>Invoices</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var payment in _payments)
-                {
+                <table class="table">
+                    <thead>
                     <tr>
-                        <td>
-                            @if (payment.Status == LightningPaymentStatus.Pending)
-                            {
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => Cancel( payment.Inbound? payment.PaymentHash:payment.PaymentId, payment.Inbound)">Cancel</button>
-                            }
-
-                        </td>
-                        <td>@payment.PaymentHash</td>
-                        <td>@payment.Inbound</td>
-                        <td>@payment.PaymentId</td>
-                        <td>@payment.Preimage</td>
-                        <td>@payment.Secret</td>
-                        <td>@payment.Timestamp</td>
-                        <td>@payment.Value</td>
-                        <td>@payment.Status</td>
-                        <td>@string.Join('\n', payment.PaymentRequests)</td>
+                        <th></th>
+                        <th>Payment Hash</th>
+                        <th>Inbound</th>
+                        <th>Id</th>
+                        <th>Preimage</th>
+                        <th>Secret</th>
+                        <th>Timestamp</th>
+                        <th>Value</th>
+                        <th>Status</th>
+                        <th>Invoices</th>
                     </tr>
-                }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    @foreach (var payment in _payments)
+                    {
+                        <tr>
+                            <td>
+                                @if (payment.Status == LightningPaymentStatus.Pending)
+                                {
+                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => Cancel(payment.Inbound ? payment.PaymentHash : payment.PaymentId, payment.Inbound)">Cancel</button>
+                                }
+
+                            </td>
+                            <td>@payment.PaymentHash</td>
+                            <td>@payment.Inbound</td>
+                            <td>@payment.PaymentId</td>
+                            <td>@payment.Preimage</td>
+                            <td>@payment.Secret</td>
+                            <td>@payment.Timestamp</td>
+                            <td>@payment.Value</td>
+                            <td>@payment.Status</td>
+                            <td>@string.Join('\n', payment.PaymentRequests)</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
             </div>
         }
         else
@@ -231,18 +232,18 @@ else
             </div>
 
 
-              <div class="input-group">
-                            <input type="number" class="form-control" placeholder="explicit amount in sats, optional" min="0" @bind="paymentRequestAmt"/>
-                            <input type="text"class="form-control" placeholder="bolt11" @bind="paymentRequestSend"/>
-                            <button type="button" class=" btn btn-primary"  @onclick="SendPayment">Send payment</button>
-                        </div>
+            <div class="input-group">
+                <input type="number" class="form-control" placeholder="explicit amount in sats, optional" min="0" @bind="paymentRequestAmt"/>
+                <input type="text"class="form-control" placeholder="bolt11" @bind="paymentRequestSend"/>
+                <button type="button" class=" btn btn-primary" @onclick="SendPayment">Send payment</button>
+            </div>
 
 
             @if (paymentResponse is not null)
             {
                 <p>@paymentResponse</p>
             }
-            </div>
+        </div>
     </article>
     <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
 }
@@ -338,15 +339,15 @@ else
         }
     }
 
-    private async void UpdatePeer(string toString, PeerInfo? value)
+    private async void UpdatePeer(string nodeId, PeerInfo? value)
     {
         try
         {
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-
-            await Node.Peer(toString, value);
+            var peer = new PubKey(nodeId);
+            await Node.Peer(peer, value);
         }
         finally
         {
@@ -378,27 +379,27 @@ else
     private string? selectedPeer { get; set; }
     private decimal? channelOpenAmount { get; set; }
     private string? channelResponse { get; set; }
+
     private async void OpenChannel()
     {
-        if(Loading || channelOpenAmount is null || selectedPeer is null)
+        if (Loading || channelOpenAmount is null || selectedPeer is null)
             return;
         try
         {
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            var result = await Node.OpenChannel(Money.Coins(channelOpenAmount.Value), new PubKey(selectedPeer) );
+            var result = await Node.OpenChannel(Money.Coins(channelOpenAmount.Value), new PubKey(selectedPeer));
             if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
             {
                 channelResponse = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
                 channelOpenAmount = null;
                 selectedPeer = null;
             }
-            else if(result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
+            else if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
             {
                 channelResponse = $"Error: {err.err.GetError()}";
             }
-
         }
         finally
         {
@@ -411,9 +412,10 @@ else
     private decimal? paymentRequestAmt;
     private string? paymentRequestSend;
     private string? paymentResponse;
+
     private async void ReceivePayment()
     {
-        if(Loading || paymentRequestAmt is null)
+        if (Loading || paymentRequestAmt is null)
             return;
         try
         {
@@ -421,11 +423,10 @@ else
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
             var hash = new uint256(Hashes.SHA256(RandomUtils.GetBytes(32)));
-            var result = await Node.PaymentsManager.RequestPayment(LightMoney.Satoshis(paymentRequestAmt??0), TimeSpan.FromDays(1), hash);
+            var result = await Node.PaymentsManager.RequestPayment(LightMoney.Satoshis(paymentRequestAmt ?? 0), TimeSpan.FromDays(1), hash);
 
-            paymentResponse = $"Payment request created with invs {string.Join(',',result.PaymentRequests)}";
+            paymentResponse = $"Payment request created with invs {string.Join(',', result.PaymentRequests)}";
             paymentRequestAmt = null;
-
         }
         catch (Exception e)
         {
@@ -438,20 +439,20 @@ else
             _semaphore.Release();
         }
     }
+
     public async void SendPayment()
     {
-        if(Loading ||  paymentRequestSend is null)
+        if (Loading || paymentRequestSend is null)
             return;
         try
         {
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            var invoice = BOLT11PaymentRequest.Parse(paymentRequestSend, Node.Network );
+            var invoice = BOLT11PaymentRequest.Parse(paymentRequestSend, Node.Network);
 
 
-
-            var result = await Node.PaymentsManager.PayInvoice(invoice, paymentRequestAmt is null? null: LightMoney.Satoshis((long)paymentRequestAmt.Value));
+            var result = await Node.PaymentsManager.PayInvoice(invoice, paymentRequestAmt is null ? null : LightMoney.Satoshis((long) paymentRequestAmt.Value));
             paymentResponse = $"Payment {result.PaymentId} sent with status {result.Status}";
             paymentRequestAmt = null;
             paymentRequestSend = null;
@@ -467,9 +468,10 @@ else
             _semaphore.Release();
         }
     }
+
     public async void Cancel(string paymentId, bool inb)
     {
-        if(Loading)
+        if (Loading)
             return;
         try
         {
