@@ -23,9 +23,10 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
         _serviceProvider = serviceProvider;
     }
 
-    public async Task NotifyServerEvent(string eventName)
-    { 
-        await OnNotifyServerEvent?.Invoke(this, eventName);
+    public async Task NotifyServerEvent(IServerEvent serverEvent)
+    {
+        _logger.LogInformation("NotifyServerEvent: {ServerEventType}", serverEvent.Type);
+        await OnNotifyServerEvent?.Invoke(this, serverEvent)!;
     }
 
     public async Task NotifyNetwork(string network)
@@ -45,7 +46,6 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
         _logger.LogInformation($"OnTransactionDetected: {request.TxId}");
         await OnTransactionDetected?.Invoke(this, request);
     }
-
 
     public async Task NewBlock(string block)
     {
@@ -124,5 +124,5 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
     public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
     public event AsyncEventHandler<string>? OnNotifyNetwork;
     public event AsyncEventHandler<string>? OnServerNodeInfo;
-    public event AsyncEventHandler<string>? OnNotifyServerEvent;
+    public event AsyncEventHandler<IServerEvent>? OnNotifyServerEvent;
 }

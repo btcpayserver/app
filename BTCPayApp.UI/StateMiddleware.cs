@@ -1,6 +1,8 @@
-﻿using BTCPayApp.Core.Attempt2;
+﻿using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.UI.Features;
+using BTCPayServer.Events;
 using Fluxor;
 
 namespace BTCPayApp.UI;
@@ -74,10 +76,32 @@ public class StateMiddleware : Middleware
             dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(_onChainWalletManager.State));
             return Task.CompletedTask;
         };
-        _btcpayAppServerClient.OnNotifyServerEvent += (sender, eventName) =>
+
+        _btcpayAppServerClient.OnNotifyServerEvent += (sender, serverEvent) =>
         {
-            if(eventName == "notifications-updated")
-                dispatcher.Dispatch(new NotificationState.FetchNotifications());
+            switch (serverEvent.Type)
+            {
+                case "notifications-updated":
+                    dispatcher.Dispatch(new NotificationState.FetchNotifications());
+                    break;
+                case "invoice-updated":
+                    var storeId = ((ServerEvent<InvoiceEvent>)serverEvent).Event?.Invoice.StoreId;
+                    if (storeId != null) dispatcher.Dispatch(new StoreState.FetchInvoices(storeId));
+                    break;
+                case "store-created":
+                    break;
+                case "store-updated":
+                    break;
+                case "store-removed":
+                    break;
+                case "user-store-added":
+                    break;
+                case "user-store-updated":
+                    break;
+                case "user-store-removed":
+                    break;
+            }
+
             return Task.CompletedTask;
         };
     }
