@@ -1,8 +1,7 @@
-﻿using BTCPayApp.CommonServer.Models;
-using BTCPayApp.Core.Data;
+﻿using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
-using Microsoft.Extensions.Logging;
+using BTCPayServer.Lightning;
 
 namespace BTCPayApp.Core.Attempt2;
 
@@ -26,14 +25,16 @@ public class BTCPayPaymentsNotifier : IScopedHostedService
         _paymentsManager.OnPaymentUpdate += OnPaymentUpdate;
     }
 
-    private async Task OnPaymentUpdate(object? sender, LightningPayment e)
+    private async Task OnPaymentUpdate(object? sender, AppLightningPayment e)
     {
         await _connectionManager.HubProxy
-            .SendPaymentUpdate(
-                _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier, e)
+            .SendInvoiceUpdate(
+                _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier, e.ToInvoice())
             .RunSync();
     }
 
+   
+    
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _paymentsManager.OnPaymentUpdate -= OnPaymentUpdate;

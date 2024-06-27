@@ -1,6 +1,5 @@
 ﻿using System.Net;
 using System.Text.Json;
-using AngleSharp.Dom;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
@@ -10,9 +9,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using Newtonsoft.Json;
 using org.ldk.structs;
-using org.ldk.util;
 using JsonSerializer = System.Text.Json.JsonSerializer;
-using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
@@ -112,13 +109,9 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
 
     public const string LightningPaymentJITFeeKey = "JITFeeKey";
     public const string LightningPaymentLSPKey = "LSP";
-    public async Task<bool> WrapInvoice(LightningPayment lightningPayment, JITFeeResponse? fee = null)
+    public const string LightningPaymentOriginalPaymentRequest = "OriginalPaymentRequest";
+    public async Task<bool> WrapInvoice(AppLightningPayment lightningPayment, JITFeeResponse? fee)
     {
-
-        if (lightningPayment.PaymentRequests.Count > 1)
-        {
-            return false;
-        }
         if(lightningPayment.AdditionalData?.ContainsKey(LightningPaymentLSPKey) is true)
             return false;
         
@@ -127,28 +120,24 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         
         if(fee is null)
             return false;
-        var invoice = BOLT11PaymentRequest.Parse(lightningPayment.PaymentRequests[0], _network);
+        var invoice = lightningPayment.PaymentRequest;
         
         
         var proposal =  await GetProposal(invoice,null, fee!.FeeIdentifier);
         if(proposal.MinimumAmount != fee.AmountToRequestPayer || proposal.PaymentHash != invoice.PaymentHash)
             return false;
-        
-        lightningPayment.PaymentRequests.Insert(0, proposal.ToString());
-        lightningPayment.AdditionalData ??= new Dictionary<string, JsonDocument>();
-        lightningPayment.AdditionalData[LightningPaymentLSPKey] = JsonSerializer.SerializeToDocument(ProviderName);
-        lightningPayment.AdditionalData[LightningPaymentJITFeeKey] = JsonSerializer.SerializeToDocument(fee);
+        lightningPayment.PaymentRequest = proposal;
+        lightningPayment.AdditionalData ??= new Dictionary<string, JsonElement>();
+        lightningPayment.AdditionalData[LightningPaymentOriginalPaymentRequest] = JsonSerializer.SerializeToElement(invoice);
+        lightningPayment.AdditionalData[LightningPaymentLSPKey] = JsonSerializer.SerializeToElement(ProviderName);
+        lightningPayment.AdditionalData[LightningPaymentJITFeeKey] = JsonSerializer.SerializeToElement(fee);
         return true;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _node.ConfigUpdated += ConfigUpdated;
-        _ = Task.Run(async () =>
-        {
-
-            await ConfigUpdated(this, await _node.GetConfig());
-        }, cancellationToken);
+        _ = ConfigUpdated(this, await _node.GetConfig()).WithCancellation(cancellationToken);
     }
 
     private FlowInfoResponse? _info;

@@ -17,45 +17,6 @@ namespace BTCPayApp.Core.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.6");
 
-            modelBuilder.Entity("BTCPayApp.CommonServer.Models.LightningPayment", b =>
-                {
-                    b.Property<string>("PaymentHash")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("Inbound")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("PaymentId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AdditionalData")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("PaymentRequests")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Preimage")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Secret")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTimeOffset>("Timestamp")
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("Value")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("PaymentHash", "Inbound", "PaymentId");
-
-                    b.ToTable("LightningPayments");
-                });
-
             modelBuilder.Entity("BTCPayApp.Core.Data.Channel", b =>
                 {
                     b.Property<string>("Id")
@@ -86,6 +47,46 @@ namespace BTCPayApp.Core.Migrations
                     b.HasKey("Key");
 
                     b.ToTable("Settings");
+                });
+
+            modelBuilder.Entity("BTCPayApp.Core.LDK.AppLightningPayment", b =>
+                {
+                    b.Property<string>("PaymentHash")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Inbound")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("PaymentId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AdditionalData")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("PaymentRequest")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Preimage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Secret")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Value")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("PaymentHash", "Inbound", "PaymentId");
+
+                    b.ToTable("LightningPayments");
                 });
 #pragma warning restore 612, 618
         }

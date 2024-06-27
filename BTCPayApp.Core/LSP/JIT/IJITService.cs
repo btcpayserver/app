@@ -1,7 +1,7 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
+using BTCPayApp.Core.JsonConverters;
+using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
-using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
@@ -9,25 +9,7 @@ public interface IJITService
 {
     public string ProviderName { get; }
     public Task<JITFeeResponse?> CalculateInvoiceAmount(LightMoney expectedAmount);
-    public Task<bool> WrapInvoice(LightningPayment lightningPayment, JITFeeResponse? feeReponse);
-}
-
-public class LightMoneyJsonConverter : JsonConverter<LightMoney>
-{
-    public override LightMoney? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        return reader.TokenType switch
-        {
-            JsonTokenType.String => LightMoney.Parse(reader.GetString()),
-            JsonTokenType.Null => null,
-            _ => throw new ArgumentOutOfRangeException()
-        };
-    }
-
-    public override void Write(Utf8JsonWriter writer, LightMoney value, JsonSerializerOptions options)
-    {
-        writer.WriteStringValue(value.ToString());
-    }
+    public Task<bool> WrapInvoice(AppLightningPayment lightningPayment, JITFeeResponse? feeReponse);
 }
 
 public record JITFeeResponse

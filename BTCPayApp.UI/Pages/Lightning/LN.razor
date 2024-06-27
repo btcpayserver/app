@@ -3,7 +3,6 @@
 @using BTCPayServer.Lightning
 @using NBitcoin
 @using org.ldk.structs
-@using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment
 @using NodeInfo = BTCPayServer.Lightning.NodeInfo
 @using BTCPayApp.Core.Data
 @using BTCPayApp.Core.Helpers
@@ -200,7 +199,7 @@ else
                             <td>
                                 @if (payment.Status == LightningPaymentStatus.Pending)
                                 {
-                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => Cancel(payment.Inbound ? payment.PaymentHash : payment.PaymentId, payment.Inbound)">Cancel</button>
+                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => Cancel(payment)">Cancel</button>
                                 }
 
                             </td>
@@ -212,7 +211,7 @@ else
                             <td>@payment.Timestamp</td>
                             <td>@payment.Value</td>
                             <td>@payment.Status</td>
-                            <td>@string.Join('\n', payment.PaymentRequests)</td>
+                            <td>@payment.PaymentRequest</td>
                         </tr>
                     }
                     </tbody>
@@ -254,7 +253,7 @@ else
     private LightningConfig? _config;
     private (string id, string userId, string counterparty, long? shortChannelId, int? confirmations, int? confirmationsRequired, string fundingTransactionHash, bool usable, bool ready, LightMoney Balance, LightMoney Inbound, LightMoney Outbound, string? State)[]? _channels;
     private (string nodeId, string? socket)[]? _peers;
-    private List<LightningPayment?>? _payments;
+    private List<AppLightningPayment?>? _payments;
     public LDKNode? Node => LightningNodeManager.Node;
 
 
@@ -425,7 +424,7 @@ else
             var hash = new uint256(Hashes.SHA256(RandomUtils.GetBytes(32)));
             var result = await Node.PaymentsManager.RequestPayment(LightMoney.Satoshis(paymentRequestAmt ?? 0), TimeSpan.FromDays(1), hash);
 
-            paymentResponse = $"Payment request created with invs {string.Join(',', result.PaymentRequests)}";
+            paymentResponse = $"Payment request created with inv {result.PaymentRequest}";
             paymentRequestAmt = null;
         }
         catch (Exception e)
@@ -469,7 +468,7 @@ else
         }
     }
 
-    public async void Cancel(string paymentId, bool inb)
+    public async void Cancel(AppLightningPayment payment)
     {
         if (Loading)
             return;
@@ -478,13 +477,17 @@ else
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            await Node.PaymentsManager.Cancel(paymentId, inb);
+            
+            if(payment.Inbound)
+                await Node.PaymentsManager.CancelInbound(payment.PaymentHash);
+            else
+                await Node.PaymentsManager.CancelOutbound(payment.PaymentId);
         }
         finally
         {
             Loading = false;
-            await InvokeAsync(StateHasChanged);
             _semaphore.Release();
+            await InvokeAsync(StateHasChanged);
         }
     }
 

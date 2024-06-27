@@ -29,17 +29,19 @@ namespace BTCPayApp.Core.Migrations
                 columns: table => new
                 {
                     PaymentHash = table.Column<string>(type: "TEXT", nullable: false),
+                    PaymentId = table.Column<string>(type: "TEXT", nullable: false),
                     Inbound = table.Column<bool>(type: "INTEGER", nullable: false),
-                    PaymentId = table.Column<string>(type: "TEXT", nullable: true),
                     Preimage = table.Column<string>(type: "TEXT", nullable: true),
-                    Secret = table.Column<string>(type: "TEXT", nullable: true),
+                    Secret = table.Column<string>(type: "TEXT", nullable: false),
                     Timestamp = table.Column<DateTimeOffset>(type: "TEXT", nullable: false),
                     Value = table.Column<long>(type: "INTEGER", nullable: false),
-                    Status = table.Column<int>(type: "INTEGER", nullable: false)
+                    Status = table.Column<int>(type: "INTEGER", nullable: false),
+                    PaymentRequest = table.Column<string>(type: "TEXT", nullable: false),
+                    AdditionalData = table.Column<string>(type: "jsonb", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_LightningPayments", x => new { x.PaymentHash, x.Inbound });
+                    table.PrimaryKey("PK_LightningPayments", x => new { x.PaymentHash, x.Inbound, x.PaymentId });
                 });
 
             migrationBuilder.CreateTable(
