@@ -11,14 +11,6 @@
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back="@(!string.IsNullOrEmpty(_initialStoreId))">
-        @if (string.IsNullOrEmpty(_initialStoreId))
-        {
-            <SectionContent SectionId="Titlebar.End">
-                <NavLink class="btn-icon" href="@Routes.Dashboard">
-                    <Icon Symbol="close"/>
-                </NavLink>
-            </SectionContent>
-        }
         <h1>Select your store</h1>
     </Titlebar>
 </SectionContent>
