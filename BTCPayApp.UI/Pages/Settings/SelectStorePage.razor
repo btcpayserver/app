@@ -22,7 +22,11 @@
     }
     @if (_userInfo!.Stores?.Any() is true)
     {
-        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" FormName="SelectStore" method="post">
+        if (string.IsNullOrEmpty(_initialStoreId))
+        {
+            <p class="lead text-secondary mb-4 text-center">Select a store to begin accepting payments.</p>
+        }
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
             <DataAnnotationsValidator />
             <InputRadioGroup Name="StoreIds" @bind-Value="@Model.StoreId">
                 <ul class="list-group list-group-flush mb-3">

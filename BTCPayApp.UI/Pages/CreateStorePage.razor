@@ -37,6 +37,7 @@
 }
 else if (_data is not null)
 {
+    <p class="lead text-secondary mb-4">Create a store to begin accepting payments.</p>
     <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" FormName="CreateStore" method="post">
         <div class="form-group">
             <label for="Name" class="form-label" data-required>Name</label>

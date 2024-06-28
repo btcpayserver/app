@@ -1,5 +1,5 @@
 .container {
   max-width: 480px;
-  padding-top: var(--btcpay-space-l);
-  padding-bottom: var(--btcpay-space-l);
+  padding-top: var(--btcpay-space-m);
+  padding-bottom: var(--btcpay-space-m);
 }
