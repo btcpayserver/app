@@ -28,15 +28,15 @@
     {
         if (!firstRender) return;
         var reference = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("Interop.addModalEvent", reference, "#ScanQrCodeModal", "show", "OnShow");
-        await JS.InvokeVoidAsync("Interop.addModalEvent", reference, "#ScanQrCodeModal", "hide", "OnHide");
+        await JS.InvokeVoidAsync("Interop.addEventListener", reference, "#ScanQrCodeModal", "show.bs.modal", "OnShow");
+        await JS.InvokeVoidAsync("Interop.addEventListener", reference, "#ScanQrCodeModal", "hide.bs.modal", "OnHide");
     }
 
     public async ValueTask DisposeAsync()
     {
-        var show = new[] {"#ScanQrCodeModal", "show", "OnShow"};
-        var hide = new[] {"#ScanQrCodeModal", "hide", "OnHide"};
-        await JS.InvokeVoidAsync("Interop.removeModalEvents", [show, hide]);
+        var show = new[] {"#ScanQrCodeModal", "show.bs.modal", "OnShow"};
+        var hide = new[] {"#ScanQrCodeModal", "hide.bs.modal", "OnHide"};
+        await JS.InvokeVoidAsync("Interop.removeEventListeners", [show, hide]);
     }
 
     [JSInvokable]
