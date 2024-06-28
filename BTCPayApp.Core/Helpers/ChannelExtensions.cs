@@ -23,17 +23,17 @@ public static class ChannelExtensions
             await channel.Writer.WriteAsync(evt, cancellationToken);
         }
 
-        add(new AsyncEventHandler<TEvent>(OnEvent));
-        _ = ProcessChannel(channel, processor, cancellationToken);
+        add(OnEvent);
+        _ = channel.ProcessChannel(processor, cancellationToken);
 
         return new DisposableWrapper(async () =>
         {
-            remove(new AsyncEventHandler<TEvent>(OnEvent));
+            remove(OnEvent);
             channel.Writer.Complete();
         });
     }
 
-    private static async Task ProcessChannel<TEvent>(Channel<TEvent> channel, Func<TEvent, CancellationToken, Task> processor, CancellationToken cancellationToken)
+    public  static async Task ProcessChannel<TEvent>(this Channel<TEvent> channel, Func<TEvent, CancellationToken, Task> processor, CancellationToken cancellationToken)
     {
         while (await channel.Reader.WaitToReadAsync(cancellationToken))
         {

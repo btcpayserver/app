@@ -12,6 +12,8 @@
 
     <ItemGroup>
 
+      <PackageReference Include="Laraue.EfCoreTriggers.SqlLite" Version="8.0.3" />
+
       <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.6" />
 
       <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.6" />

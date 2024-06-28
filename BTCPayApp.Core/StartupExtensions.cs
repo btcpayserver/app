@@ -4,6 +4,7 @@ using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.LDK;
+using Laraue.EfCoreTriggers.SqlLite.Extensions;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +21,7 @@ public static class StartupExtensions
         {
             var dir = provider.GetRequiredService<IDataDirectoryProvider>().GetAppDataDirectory().ConfigureAwait(false).GetAwaiter().GetResult();
             options.UseSqlite($"Data Source={dir}/app.db");
+            options.UseSqlLiteTriggers();
         });
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddHttpClient();
