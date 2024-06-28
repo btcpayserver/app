@@ -3,10 +3,12 @@ using System.Text.Json;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
+using BTCPayApp.VSS;
 using BTCPayServer.Lightning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging;
+using VSSProto;
 
 namespace BTCPayApp.Core;
 
@@ -26,13 +28,27 @@ public class VSSMapperInterceptor : SaveChangesInterceptor
         return base.SavedChangesAsync(eventData, result, cancellationToken);
     }
 
+    private IVSSAPI api;
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result,
         CancellationToken cancellationToken = new CancellationToken())
     {
         foreach (var entry in eventData.Context.ChangeTracker.Entries())
         {
+
             if (entry.Entity is LightningPayment lightningPayment)
             {
+                if (entry.State == EntityState.Deleted)
+                {
+                 
+                    api.DeleteObjectAsync(new DeleteObjectRequest
+                    {
+                        KeyValue = new KeyValue()
+                        {
+                            
+                        }
+                        Key = $"LightningPayment/{lightningPayment.Id}"
+                    });
+                }
             }
             if (entry.Entity is Channel channel)
             {
