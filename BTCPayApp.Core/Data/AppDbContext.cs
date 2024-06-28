@@ -1,16 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.JsonConverters;
 using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
+using Laraue.EfCoreTriggers.Common.Extensions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Microsoft.Extensions.Hosting;
 using NBitcoin;
-using Newtonsoft.Json;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace BTCPayApp.Core.Data;
 
@@ -24,60 +20,142 @@ public class AppDbContext : DbContext
 
     public DbSet<Channel> LightningChannels { get; set; }
     public DbSet<AppLightningPayment> LightningPayments { get; set; }
-    // public DbSet<SpendableCoin> SpendableCoins { get; set; }
+    public DbSet<Outbox> OutboxItems { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.PaymentRequest)
             .HasConversion(
-                request => request.ToString(), 
+                request => request.ToString(),
                 str => NetworkHelper.Try(network => BOLT11PaymentRequest.Parse(str, network)));
-        
+
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.Secret)
             .HasConversion(
-                request => request.ToString(), 
-                str =>uint256.Parse(str));
-        
+                request => request.ToString(),
+                str => uint256.Parse(str));
+
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.PaymentHash)
             .HasConversion(
-                request => request.ToString(), 
-                str =>uint256.Parse(str));
-        
+                request => request.ToString(),
+                str => uint256.Parse(str));
+
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.Value)
             .HasConversion(
-                request => request.MilliSatoshi, 
+                request => request.MilliSatoshi,
                 str => new LightMoney(str));
 
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.AdditionalData).HasJsonConversion();
         modelBuilder.Entity<AppLightningPayment>()
             .HasKey(w => new {w.PaymentHash, w.Inbound, w.PaymentId});
+
+
+        //handling versioned data
+        modelBuilder.Entity<Channel>().AfterDelete(trigger => trigger.Action(group => group.Insert<Outbox>(
+            @ref => new Outbox()
+            {
+                Version = @ref.Old.Version,
+                Key = "Channel-" + @ref.Old.Id,
+                ActionType = "delete"
+            })));
+
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if(typeof(VersionedData).IsAssignableFrom(entityType.ClrType))
+            {
+                var builder = modelBuilder.Entity(entityType.ClrType);
+                
+                builder.Property<ulong>("Version").IsConcurrencyToken().HasDefaultValue(0);
+            }
+        }
+        
+        modelBuilder.Entity<Channel>()
+            .BeforeUpdate(trigger => trigger
+                .Action(action => action
+                    .Condition(refs => refs.Old.Id == refs.New.Id)
+                    .Update<Channel>(
+                        (tableRefs, entity) => tableRefs.Old.Id == entity.Id,
+                        (tableRefs, oldChannel) => new Channel() {Version = oldChannel.Version + 1})
+                    .Insert<Outbox>(insert => new Outbox()
+                    {
+                        Key = "Channel-" + insert.New.Id,
+                        Version = insert.New.Version,
+                        ActionType = "update",
+                        Timestamp = DateTimeOffset.UtcNow
+                    }))
+                .Action(action => action
+                    .Condition(refs => refs.Old.Id != refs.New.Id)
+                    .Insert<Outbox>(insert => new Outbox()
+                    {
+                        Key = "Channel-" + insert.Old.Id,
+                        Version = insert.Old.Version,
+                        ActionType = "delete",
+                        Timestamp = DateTimeOffset.UtcNow
+                    })
+                    .Insert<Outbox>(insert => new Outbox()
+                    {
+                        Key = "Channel-" + insert.New.Id,
+                        Version = insert.New.Version,
+                        ActionType = "update",
+                        Timestamp = DateTimeOffset.UtcNow
+                    })))
+            .AfterInsert(trigger => trigger
+                .Action(action => action
+                    .Insert<Outbox>(insert => new Outbox()
+                    {
+                        Key = "Channel-" + insert.New.Id,
+                        Version = insert.New.Version,
+                        ActionType = "insert",
+                        Timestamp = DateTimeOffset.UtcNow
+                    }))).AfterDelete(trigger => trigger
+                .Action(action => action
+                    .Insert<Outbox>(insert => new Outbox()
+                    {
+                        Key = "Channel-" + insert.Old.Id,
+                        Version = insert.Old.Version,
+                        ActionType = "delete",
+                        Timestamp = DateTimeOffset.UtcNow
+                    })));
+
         base.OnModelCreating(modelBuilder);
     }
 }
 
-public static class ValueConversionExtensions
+public class Outbox
 {
-    public static PropertyBuilder<T> HasJsonConversion<T>(this PropertyBuilder<T> propertyBuilder) where T : class, new()
+    public DateTimeOffset Timestamp { get; set; }
+    public string ActionType { get; set; }
+    public string Key { get; set; }
+    public ulong Version { get; set; }
+}
+
+public class OutboxProcessor : IHostedService
+{
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+
+    public OutboxProcessor(IDbContextFactory<AppDbContext> dbContextFactory)
     {
-        var converter = new ValueConverter<T, string>
-        (
-            v => JsonSerializer.Serialize(v, JsonSerializerOptions.Default),
-            v => JsonSerializer.Deserialize<T>(v, JsonSerializerOptions.Default) ?? new T()
-        );
+        _dbContextFactory = dbContextFactory;
+    }
 
-        var comparer = new ValueComparer<T>
-        (
-            (l, r) => JsonSerializer.Serialize(l,JsonSerializerOptions.Default) == JsonSerializer.Serialize(r,JsonSerializerOptions.Default),
-            v => v == null ? 0 : JsonConvert.SerializeObject(v).GetHashCode(),
-            v => JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(v,JsonSerializerOptions.Default), JsonSerializerOptions.Default)!
-        );
+    private async Task ProcessOutbox(CancellationToken cancellationToken = default)
+    {
+        await using var db =
+            new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite("Data Source=outbox.db").Options);
+        var outbox = db.Set<Outbox>();
+        var outboxItems = await outbox.ToListAsync();
+        foreach (var outboxItem in outboxItems)
+        {
+            // Process outbox item
+        }
+    }
 
-        propertyBuilder.HasConversion(converter);
-        propertyBuilder.Metadata.SetValueConverter(converter);
-        propertyBuilder.Metadata.SetValueComparer(comparer);
-        propertyBuilder.HasColumnType("jsonb");
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+    }
 
-        return propertyBuilder;
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
     }
 }

@@ -2,9 +2,11 @@
 
 namespace BTCPayApp.Core.Data;
 
-public class Setting
+public class Setting:VersionedData
 {
     [Key]
     public string Key { get; set; }
     public byte[] Value { get; set; }
+
+    public override string Entity => "Setting";
 }

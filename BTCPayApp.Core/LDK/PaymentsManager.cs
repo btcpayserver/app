@@ -1,45 +1,15 @@
 ﻿using System.Collections.Concurrent;
-using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using BTCPayApp.Core;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
-using BTCPayApp.Core.JsonConverters;
+using BTCPayApp.Core.LDK;
 using BTCPayApp.Core.LSP.JIT;
 using BTCPayServer.Lightning;
 using Microsoft.EntityFrameworkCore;
 using NBitcoin;
 using org.ldk.structs;
-using org.ldk.util;
-
-
-namespace BTCPayApp.Core.LDK;
-public partial class AppLightningPayment
-{
-    
-    [JsonConverter(typeof(UInt256JsonConverter))]
-    public uint256 PaymentHash { get; set; }
-    public string PaymentId { get; set; }
-    public string? Preimage { get; set; }
-    
-    [JsonConverter(typeof(UInt256JsonConverter))]
-    public uint256 Secret { get; set; }
-    public bool Inbound { get; set; }
-    [JsonConverter(typeof(DateTimeToUnixTimeConverter))]
-    public DateTimeOffset Timestamp { get; set; }
-    
-    [JsonConverter(typeof(LightMoneyJsonConverter))]
-    public LightMoney Value { get; set; }
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public LightningPaymentStatus Status { get; set; }
-    [JsonConverter(typeof(BOLT11PaymentRequestJsonConverter))]
-    public BOLT11PaymentRequest PaymentRequest { get; set; }
-
-    [JsonExtensionData] public Dictionary<string, JsonElement> AdditionalData { get; set; } = new();
-
-}
-
 
 
 public class PaymentsManager :

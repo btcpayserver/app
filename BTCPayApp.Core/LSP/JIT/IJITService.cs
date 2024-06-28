@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
+using BTCPayApp.Core.Data;
 using BTCPayApp.Core.JsonConverters;
-using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
 
 namespace BTCPayApp.Core.LSP.JIT;
