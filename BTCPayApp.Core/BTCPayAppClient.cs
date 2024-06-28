@@ -55,7 +55,7 @@ public class BTCPayAppClient(string baseUri) : BTCPayServerClient(new Uri(baseUr
                 // try refresh and recurse if the token could be renewed
                 var uri = req!.RequestUri;
                 var path = uri!.AbsolutePath;
-                if (path != RefreshPath)
+                if (!path.EndsWith(RefreshPath))
                 {
                     var (refresh, _) = await RefreshAccess(RefreshToken);
                     if (refresh != null)
