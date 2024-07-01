@@ -232,30 +232,7 @@
                     </div>
                 }
             }
-
-            @if (Invoice.Metadata.TryGetValue("posData", out var posData))
-            {
-                Dictionary<string, object>? parsedPosData = null;
-                try
-                {
-                    parsedPosData = PosDataParser.ParsePosData(JObject.Parse(posData.ToString()));
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-                if (parsedPosData != null)
-                {
-                    <button class="btn btn-secondary mt-4" type="button" data-bs-toggle="collapse" data-bs-target="#AdditionalInformation" aria-expanded="false" aria-controls="AdditionalInformation">
-                        Show Additional Information
-                    </button>
-                    <div id="AdditionalInformation" class="collapse">
-                        <div class="py-4">
-                            <DataDisplay Data="@parsedPosData"/>
-                        </div>
-                    </div>
-                }
-            }
+            
         </div>
 
         <h4 class="mt-5">Payment Information</h4>
