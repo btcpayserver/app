@@ -1,0 +1,6 @@
+.logo {
+  height: var(--profile-picture-size, 2.1rem);
+  width: var(--profile-picture-size, 2.1rem);
+  border-radius: 50%;
+  object-fit: cover;
+}
