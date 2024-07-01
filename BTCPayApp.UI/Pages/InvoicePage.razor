@@ -17,7 +17,7 @@
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>Invoice Details</h1>
+        <h1>Invoice</h1>
     </Titlebar>
 </SectionContent>
 
@@ -29,8 +29,8 @@
     @if (Invoice is not null)
     {
         <div class="invoice">
-            <span>Invoice</span>
-            <div class="h3">@Invoice.Id</div>
+            <span>Invoice @Invoice.Id</span>
+            <div class="h3"><span data-sensitive>@DisplayFormatter.Currency(Invoice.Amount, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span></div>
             <div class="status d-flex flex-wrap align-items-center gap-2">
                 <span class="badge badge-@Invoice.Status.ToString().ToLower()">@Invoice.Status.ToString().ToLower()</span>
                 @if (Invoice.Archived)
@@ -40,69 +40,47 @@
             </div>
 
             <h4 class="mt-4">General Information</h4>
-            <table class="table my-0">
-                <tbody>
-                <tr>
-                    <th>Invoice Id</th>
-                    <td>@Invoice.Id</td>
-                </tr>
-                @if (Invoice.Metadata.TryGetValue("orderId", out var orderId))
-                {
+            <div class="box">
+                <table class="table my-0">
+                    <tbody>
+                    @if (Invoice.Metadata.TryGetValue("orderId", out var orderId))
+                    {
+                        <tr>
+                            <th>Order Id</th>
+                            <td>
+                                @if (Invoice.Metadata.TryGetValue("orderUrl", out var orderUrl))
+                                {
+                                    <a href="@orderUrl" rel="noreferrer noopener" target="_blank">@orderId</a>
+                                }
+                                else
+                                {
+                                    <span>@orderId</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (Invoice.Metadata.TryGetValue("paymentRequestId", out var paymentRequestId))
+                    {
+                        <tr>
+                            <th>Payment Request Id</th>
+                            <td>@paymentRequestId</td>
+                        </tr>
+                    }
                     <tr>
-                        <th>Order Id</th>
+                        <th>Created</th>
                         <td>
-                            @if (Invoice.Metadata.TryGetValue("orderUrl", out var orderUrl))
-                            {
-                                <a href="@orderUrl" rel="noreferrer noopener" target="_blank">@orderId</a>
-                            }
-                            else
-                            {
-                                <span>@orderId</span>
-                            }
+                            <DateDisplay DateTimeOffset="@Invoice.CreatedTime"/>
                         </td>
                     </tr>
-                }
-                @if (Invoice.Metadata.TryGetValue("paymentRequestId", out var paymentRequestId))
-                {
                     <tr>
-                        <th>Payment Request Id</th>
-                        <td>@paymentRequestId</td>
-                    </tr>
-                }
-                <tr>
-                    <th>Created</th>
-                    <td><DateDisplay DateTimeOffset="@Invoice.CreatedTime"/></td>
-                </tr>
-                <tr>
-                    <th>Expiration</th>
-                    <td><DateDisplay DateTimeOffset="@Invoice.ExpirationTime"/></td>
-                </tr>
-                <tr>
-                    <th>Monitoring Date</th>
-                    <td><DateDisplay DateTimeOffset="@Invoice.MonitoringExpiration"/></td>
-                </tr>
-                @if (Invoice.Checkout.SpeedPolicy != null)
-                {
-                    <tr>
-                        <th>Transaction Speed</th>
-                        <td>@Invoice.Checkout.SpeedPolicy?.ToString().Replace("Speed", "")</td>
-                    </tr>
-                }
-                <tr>
-                    <th>Total Amount Due</th>
-                    <td><span data-sensitive>@DisplayFormatter.Currency(Invoice.Amount, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span></td>
-                </tr>
-                @if (!string.IsNullOrEmpty(Invoice.Checkout.RedirectURL))
-                {
-                    <tr>
-                        <th>Redirect Url</th>
+                        <th>Expired</th>
                         <td>
-                            <a href="@Invoice.Checkout.RedirectURL" rel="noreferrer noopener" target="_blank">@Invoice.Checkout.RedirectURL</a>
+                            <DateDisplay DateTimeOffset="@Invoice.ExpirationTime"/>
                         </td>
                     </tr>
-                }
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
+            </div>
 
             @{
                 // Product
@@ -113,31 +91,33 @@
             @if (!string.IsNullOrEmpty(itemCode?.ToString()) || !string.IsNullOrEmpty(itemDesc?.ToString()) || taxIncluded is not null)
             {
                 <h4 class="mt-5">Product Information</h4>
-                <table class="table my-0">
-                    <tbody>
-                    @if (!string.IsNullOrEmpty(itemCode?.ToString()))
-                    {
-                        <tr>
-                            <th>Item code</th>
-                            <td>@itemCode</td>
-                        </tr>
-                    }
-                    @if (!string.IsNullOrEmpty(itemDesc?.ToString()))
-                    {
-                        <tr>
-                            <th>Item Description</th>
-                            <td>@itemDesc</td>
-                        </tr>
-                    }
-                    @if (taxIncluded is not null)
-                    {
-                        <tr>
-                            <th>Tax Included</th>
-                            <td>@taxIncluded</td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
+                <div class="box">
+                    <table class="table my-0">
+                        <tbody>
+                        @if (!string.IsNullOrEmpty(itemCode?.ToString()))
+                        {
+                            <tr>
+                                <th>Item code</th>
+                                <td>@itemCode</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(itemDesc?.ToString()))
+                        {
+                            <tr>
+                                <th>Item Description</th>
+                                <td>@itemDesc</td>
+                            </tr>
+                        }
+                        @if (taxIncluded is not null)
+                        {
+                            <tr>
+                                <th>Tax Included</th>
+                                <td>@taxIncluded</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
             }
 
             @{
@@ -159,75 +139,77 @@
                  !string.IsNullOrEmpty(buyerZip?.ToString()))
             {
                 <h4 class="mt-5">Buyer Information</h4>
-                <table class="table my-0">
-                    <tbody>
-                    @if (!string.IsNullOrEmpty(buyerName?.ToString()) )
-                    {
-                        <tr>
-                            <th>Name</th>
-                            <td>@buyerName</td>
-                        </tr>
-                    }
-                    @if (!string.IsNullOrEmpty(buyerEmail?.ToString()))
-                    {
-                        <tr>
-                            <th>Email</th>
-                            <td>
-                                <a href="mailto:@buyerEmail">@buyerEmail</a>
-                            </td>
-                        </tr>
-                    }
-                    @if (!string.IsNullOrEmpty(buyerPhone?.ToString()))
-                    {
-                        <tr>
-                            <th>Phone</th>
-                            <td>@buyerPhone</td>
-                        </tr>
-                    }
-                    @if (!string.IsNullOrEmpty(buyerAddress1?.ToString()))
-                    {
-                        <tr>
-                            <th>Address 1</th>
-                            <td>@buyerAddress1</td>
-                        </tr>
-                    }
-                    @if (!string.IsNullOrEmpty(buyerAddress2?.ToString()))
-                    {
-                        <tr>
-                            <th>Address 2</th>
-                            <td>@buyerAddress2</td>
-                        </tr>
-                    }
-                    @if (!string.IsNullOrEmpty(buyerCity?.ToString()))
-                    {
-                        <tr>
-                            <th>City</th>
-                            <td>@buyerCity</td>
-                        </tr>
-                    }
-                    @if (!string.IsNullOrEmpty(buyerState?.ToString()))
-                    {
-                        <tr>
-                            <th>State</th>
-                            <td>@buyerState</td>
-                        </tr>
-                    }
-                    @if (!string.IsNullOrEmpty(buyerCountry?.ToString()))
-                    {
-                        <tr>
-                            <th>Country</th>
-                            <td>@buyerCountry</td>
-                        </tr>
-                    }
-                    @if (!string.IsNullOrEmpty(buyerZip?.ToString()))
-                    {
-                        <tr>
-                            <th>Zip</th>
-                            <td>@buyerZip</td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
+                <div class="box">
+                    <table class="table my-0">
+                        <tbody>
+                        @if (!string.IsNullOrEmpty(buyerName?.ToString()))
+                        {
+                            <tr>
+                                <th>Name</th>
+                                <td>@buyerName</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(buyerEmail?.ToString()))
+                        {
+                            <tr>
+                                <th>Email</th>
+                                <td>
+                                    <a href="mailto:@buyerEmail">@buyerEmail</a>
+                                </td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(buyerPhone?.ToString()))
+                        {
+                            <tr>
+                                <th>Phone</th>
+                                <td>@buyerPhone</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(buyerAddress1?.ToString()))
+                        {
+                            <tr>
+                                <th>Address 1</th>
+                                <td>@buyerAddress1</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(buyerAddress2?.ToString()))
+                        {
+                            <tr>
+                                <th>Address 2</th>
+                                <td>@buyerAddress2</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(buyerCity?.ToString()))
+                        {
+                            <tr>
+                                <th>City</th>
+                                <td>@buyerCity</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(buyerState?.ToString()))
+                        {
+                            <tr>
+                                <th>State</th>
+                                <td>@buyerState</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(buyerCountry?.ToString()))
+                        {
+                            <tr>
+                                <th>Country</th>
+                                <td>@buyerCountry</td>
+                            </tr>
+                        }
+                        @if (!string.IsNullOrEmpty(buyerZip?.ToString()))
+                        {
+                            <tr>
+                                <th>Zip</th>
+                                <td>@buyerZip</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
             }
 
             @if (Invoice.Metadata.TryGetValue("receiptData", out var receiptData))
@@ -245,7 +227,9 @@
                 if (parsedReceiptData != null)
                 {
                     <h4 class="mt-5">Receipt Information</h4>
-                    <DataDisplay Data="@parsedReceiptData"/>
+                    <div class="box">
+                        <DataDisplay Data="@parsedReceiptData"/>
+                    </div>
                 }
             }
 
@@ -279,51 +263,54 @@
         {
             <Alert Type="danger">@PaymentMethodsError</Alert>
         }
-        @if (PaymentMethods is not null && PaymentMethods.Any())
-        {
-            @foreach (var pm in PaymentMethods)
+
+        <div class="box">
+            @if (PaymentMethods is not null && PaymentMethods.Any())
             {
-                @if (pm.Payments.Any())
+                @foreach (var pm in PaymentMethods)
                 {
-                    <h5 class="mt-3">@pm.PaymentMethodId</h5>
-                    <div class="payment-methods table-responsive">
-                        <table class="table table-hover my-0">
-                            <thead>
-                            <tr>
-                                <th class="text-nowrap w-175px">Payment method</th>
-                                <th>Destination</th>
-                                <th class="w-150px text-end">Rate</th>
-                                <th class="w-150px text-end">Paid</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach (var payment in pm.Payments)
-                            {
+                    @if (pm.Payments.Any())
+                    {
+                        <h5 class="mt-3">@pm.PaymentMethodId</h5>
+                        <div class="payment-methods table-responsive">
+                            <table class="table table-hover my-0">
+                                <thead>
                                 <tr>
-                                    <td class="text-nowrap">@pm.PaymentMethodId</td>
-                                    <td title="@payment.Destination">
-                                        <TruncateCenter Text="@payment.Destination"/>
-                                    </td>
-                                    <td class="text-nowrap text-end">
-                                        <span data-sensitive>@DisplayFormatter.Currency(@pm.Rate, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
-                                    </td>
-                                    <td class="text-nowrap text-end">
-                                        <span data-sensitive>@DisplayFormatter.Currency(payment.Value, pm.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
-                                    </td>
+                                    <th class="text-nowrap w-175px">Payment method</th>
+                                    <th>Destination</th>
+                                    <th class="w-150px text-end">Rate</th>
+                                    <th class="w-150px text-end">Paid</th>
                                 </tr>
-                            }
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                @foreach (var payment in pm.Payments)
+                                {
+                                    <tr>
+                                        <td class="text-nowrap">@pm.PaymentMethodId</td>
+                                        <td title="@payment.Destination">
+                                            <TruncateCenter Text="@payment.Destination"/>
+                                        </td>
+                                        <td class="text-nowrap text-end">
+                                            <span data-sensitive>@DisplayFormatter.Currency(@pm.Rate, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
+                                        </td>
+                                        <td class="text-nowrap text-end">
+                                            <span data-sensitive>@DisplayFormatter.Currency(payment.Value, pm.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
+                                        </td>
+                                    </tr>
+                                }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
                 }
             }
-        }
-        else if (PaymentMethodsLoading)
-        {
-            <div class="p-3 text-center">
-                <LoadingIndicator/>
-            </div>
-        }
+            else if (PaymentMethodsLoading)
+            {
+                <div class="p-3 text-center">
+                    <LoadingIndicator/>
+                </div>
+            }
+        </div>
     }
     else if (Loading)
     {
