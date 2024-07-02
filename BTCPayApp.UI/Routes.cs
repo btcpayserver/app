@@ -19,11 +19,9 @@ public static class Routes
     public const string EnterPasscode = "/passcode";
     public const string Pair = "/pair";
     public const string Wallet = "/wallet";
-    public const string WalletSetup = "/wallet/setup";
     public const string WalletSend = "/wallet/send";
     public const string WalletReceive = "/wallet/receive";
     public const string Lightning = "/lightning";
-    public const string LightningSetup = "/lightning/setup";
     public const string Invoices = "/invoices";
     public const string Invoice = "/invoices/{InvoiceId}";
     public const string PointOfSale = "/pos";
@@ -35,6 +33,8 @@ public static class Routes
     public const string Store = "/settings/store/{StoreId}";
     public const string PosSettings = "/settings/pos/{AppId}";
     public const string NotificationSettings = "/settings/notifications";
+    public const string WalletSettings = "/settings/wallet";
+    public const string LightningSettings = "/settings/lightning";
     public const string User = "/settings/user";
 
     public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);

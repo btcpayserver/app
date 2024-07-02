@@ -15,7 +15,7 @@
     <Titlebar Back>
         <h1>Lightning</h1>
         <SectionContent SectionId="Titlebar.End">
-            <NavLink class="btn-icon" href="@Routes.LightningSetup">
+            <NavLink class="btn-icon" href="@Routes.LightningSettings">
                 <Icon Symbol="settings"/>
             </NavLink>
         </SectionContent>
@@ -55,7 +55,7 @@
 
         if (CanConfigureLNWallet)
         {
-            NavigationManager.NavigateTo(Routes.LightningSetup);
+            NavigationManager.NavigateTo(Routes.LightningSettings);
         }
     }
 }

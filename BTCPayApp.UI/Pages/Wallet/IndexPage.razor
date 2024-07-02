@@ -18,7 +18,7 @@
     <Titlebar Back>
         <h1>Wallet</h1>
         <SectionContent SectionId="Titlebar.End">
-            <NavLink class="btn-icon" href="@Routes.WalletSetup">
+            <NavLink class="btn-icon" href="@Routes.WalletSettings">
                 <Icon Symbol="settings"/>
             </NavLink>
         </SectionContent>
@@ -115,7 +115,7 @@
 
         if (CanConfigureWallet)
         {
-            NavigationManager.NavigateTo(Routes.WalletSetup);
+            NavigationManager.NavigateTo(Routes.WalletSettings);
         }
     }
 

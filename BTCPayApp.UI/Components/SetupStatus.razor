@@ -61,8 +61,8 @@
     {
         if (SetupStateConnection() == SetupState.Failed) return NavigationManager.GetUriWithQueryParameters(Routes.Error, new Dictionary<string, object?> { {"title", "Connection failed" }, {"message", "Unable to connect to the BTCPay Server instance." } } );
         if (SetupStateAccount() != SetupState.Completed) return Routes.SelectStore;
-        if (SetupStateOnchain() != SetupState.Completed) return Routes.WalletSetup;
-        if (SetupStateLightning() != SetupState.Completed) return Routes.LightningSetup;
+        if (SetupStateOnchain() != SetupState.Completed) return Routes.WalletSettings;
+        if (SetupStateLightning() != SetupState.Completed) return Routes.LightningSettings;
         return Routes.Dashboard;
     }
 }
