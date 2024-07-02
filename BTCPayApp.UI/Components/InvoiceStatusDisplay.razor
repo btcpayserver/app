@@ -1,0 +1,31 @@
+@using BTCPayServer.Client.Models
+
+<div @attributes="InputAttributes" class="d-inline-flex align-items-center gap-2 @InputAttributes?["class"]">
+    @if (Invoice.Archived)
+    {
+        <span class="badge bg-warning">Archived</span>
+    }
+    <span class="badge badge-@Invoice.Status.ToString().ToLower()">
+        @GetInvoiceStatus(Invoice.Status, Invoice.AdditionalStatus)
+    </span>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public InvoiceData Invoice { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    private string GetInvoiceStatus(InvoiceStatus status, InvoiceExceptionStatus exceptionStatus)
+    {
+        return status + exceptionStatus switch
+        {
+            InvoiceExceptionStatus.PaidOver => " (paid over)",
+            InvoiceExceptionStatus.PaidLate => " (paid late)",
+            InvoiceExceptionStatus.PaidPartial => " (paid partial)",
+            InvoiceExceptionStatus.Marked => " (marked)",
+            _ => ""
+        };
+    }
+}
