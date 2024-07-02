@@ -1,19 +1,18 @@
 @using BTCPayServer.Client.Models
 <a href="@Routes.InvoicePath(Id)" class="list-group-item">
-    <div class="container d-flex align-items-center justify-content-between gap-3">
+    <div class="container d-flex align-items-center justify-content-between gap-3 px-1">
         <div class="d-flex flex-column flex-grow-1 gap-2">
             <div class="d-flex align-items-center justify-content-between">
+                <span class="text-end">
+                    <span class="fw-semibold">@Amount</span> @Currency
+                </span>
                 <TruncateCenter Text="@Id" class="truncate-center-id"/>
-                <span class="text-muted text-end">@Amount @Currency</span>
-            </div>
-            <div class="d-flex align-items-center justify-content-between">
                 <span class="text-muted">
                     <DateDisplay DateTimeOffset="@Date"/>
                 </span>
                 <span class="badge badge-@State">@State</span>
             </div>
         </div>
-        <Icon Symbol="caret-right"/>
     </div>
 </a>
 

@@ -40,20 +40,18 @@
     <Alert Type="danger">@Error</Alert>
 }
 @if (Invoices is not null)
-{
-    @if (Invoices.Any())
     {
-        <div class="box">
-            <div class="list-group list-group-flush">
-                @foreach (var i in Invoices)
-                {
+        @if (Invoices.Any())
+        {
+            @foreach (var i in Invoices)
+            {
+                <div class="box mb-1">
                     <InvoiceItem Invoice="@i"/>
-                }
-            </div>
-        </div>
-    }
-    else
-    {
+                </div>
+            }
+        }
+        else
+        {
         <div class="box">
             <p class="text-muted text-center py-4">There are no invoices, yet.</p>
         </div>
