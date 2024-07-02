@@ -35,7 +35,7 @@
             Show seed
         </button>
         <div id="seed" class="collapse">
-            <div class="p-4">
+            <div class="box p-4 mt-3">
                 <ol class="m-0">
                     @foreach (var word in config.Mnemonic.Split(' '))
                     {
@@ -48,7 +48,7 @@
         <h3 class="mt-4">Derivations</h3>
         @foreach (var d in config.Derivations)
         {
-            <article class="mb-3">
+            <div class="box mb-3">
                 <h4>@(d.Value.Name)</h4>
 
                 @if (!string.IsNullOrEmpty(d.Value.Identifier))
@@ -70,7 +70,7 @@
                 {
                     <button class="btn btn-primary" @onclick="() => SetStorePaymentMethod(d.Key)">Set as Store Payment Method</button>
                 }
-            </article>
+            </div>
         }
     }
 </section>
