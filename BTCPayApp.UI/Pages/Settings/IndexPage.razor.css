@@ -22,3 +22,8 @@ header .btn-icon {
   font-weight: var(--btcpay-font-weight-semibold);
   margin-bottom: var(--btcpay-space-xs);
 }
+
+.user .icon-caret-right {
+  margin-left: auto;
+  color: var(--btcpay-body-text-muted);
+}

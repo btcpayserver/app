@@ -52,6 +52,7 @@
             <ul class="list-group list-group-flush list-group-links">
                 <li class="list-group-item">
                     <a href="@Routes.NotificationSettings">
+                        <Icon Symbol="nav-notifications"/>
                         <span>Notifications</span>
                         <Icon Symbol="caret-right"/>
                     </a>
@@ -63,6 +64,7 @@
 
                 <li class="list-group-item">
                     <a href="@Routes.WalletSettings">
+                        <Icon Symbol="wallet-wallet"/>
                         <span>Wallet</span>
                         <Icon Symbol="caret-right"/>
                     </a>
@@ -74,6 +76,7 @@
 
                 <li class="list-group-item">
                     <a href="@Routes.LightningSettings">
+                        <Icon Symbol="lightning-node"/>
                         <span>Lightning Node</span>
                         <Icon Symbol="caret-right"/>
                     </a>
@@ -89,6 +92,7 @@
                 {
                     <li class="list-group-item">
                         <a href="@Routes.SelectStore">
+                            <Icon Symbol="nav-store"/>
                             <span>Select Store</span>
                             <Icon Symbol="caret-right"/>
                         </a>
@@ -99,6 +103,7 @@
                     <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@store.Id">
                         <li class="list-group-item">
                             <a href="@Routes.StorePath(store.Id!)">
+                                <Icon Symbol="nav-store"/>
                                 <span>@store.Name</span>
                                 <Icon Symbol="caret-right"/>
                             </a>
@@ -107,6 +112,7 @@
                         {
                             <li class="list-group-item">
                                 <a href="@Routes.PosSettingsPath(store.PosAppId)">
+                                    <Icon Symbol="nav-pointofsale"/>
                                     <span>Point of Sale</span>
                                     <Icon Symbol="caret-right"/>
                                 </a>
