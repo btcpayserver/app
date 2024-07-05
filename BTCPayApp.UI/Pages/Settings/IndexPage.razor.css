@@ -23,7 +23,7 @@ header .btn-icon {
   margin-bottom: var(--btcpay-space-xs);
 }
 
-.user .icon-caret-right {
+.user ::deep .icon-caret-right {
   margin-left: auto;
   color: var(--btcpay-body-text-muted);
 }

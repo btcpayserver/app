@@ -42,7 +42,7 @@
             {
                 <Icon Symbol="nav-account" class="profile-picture" />
             }
-            <div class="me-auto">
+            <div>
                 <h5>@(_userInfo.Name ?? _userInfo.Email)</h5>
                 <span>@_userInfo.Email</span>
             </div>
@@ -128,6 +128,7 @@
             <ul class="list-group list-group-flush list-group-links">
                 <li class="list-group-item">
                     <a href="@Routes.ChangePasscode">
+                        <Icon Symbol="key"/>
                         <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
                         <Icon Symbol="caret-right"/>
                     </a>
@@ -135,7 +136,10 @@
                 @if (HasPasscode)
                 {
                     <li class="list-group-item">
-                        <button class="btn btn-link text-danger" type="button" @onclick="RemovePasscode">Remove passcode</button>
+                        <button class="btn btn-link text-danger" type="button" @onclick="RemovePasscode">
+                            <Icon Symbol="key" class="text-body"/>
+                            <span class="me-auto">Remove passcode</span>
+                        </button>
                     </li>
                 }
             </ul>

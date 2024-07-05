@@ -90,7 +90,6 @@
             if (!OnChainWalletManager.WalletConfig.Derivations.TryGetValue(key, out var derivation) || derivation.Descriptor is null)
             {
                 return;
-
             }
 
             var xpub = derivation.Descriptor.ExtractFromDescriptor(OnChainWalletManager.Network);
@@ -108,7 +107,6 @@
         {
             Logger.LogError(ex, "Error setting store payment method");
         }
-
     }
 
     protected override async Task OnInitializedAsync()

@@ -192,7 +192,7 @@
   font-weight: var(--btcpay-font-weight-semibold);
 }
 
-.list-group-flush.list-group-links .list-group-item > a > .icon:first-child {
+.list-group-flush.list-group-links .list-group-item > * > .icon:first-child {
   --icon-size: 2rem;
   padding: var(--btcpay-space-xs);
   background: var(--btcpay-neutral-400);
@@ -200,7 +200,7 @@
   margin: calc(var(--btcpay-space-xs) * -1) 0;
 }
 
-.list-group-flush.list-group-links .list-group-item > a > .icon:last-child {
+.list-group-flush.list-group-links .list-group-item > * > .icon:last-child {
   margin-left: auto;
   color: var(--btcpay-body-text-muted);
 }
