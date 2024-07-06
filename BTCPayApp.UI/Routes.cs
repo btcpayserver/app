@@ -35,6 +35,7 @@ public static class Routes
     public const string NotificationSettings = "/settings/notifications";
     public const string WalletSettings = "/settings/wallet";
     public const string LightningSettings = "/settings/lightning";
+    public const string ChannelsPeers = "/settings/lightning/channels";
     public const string User = "/settings/user";
 
     public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);

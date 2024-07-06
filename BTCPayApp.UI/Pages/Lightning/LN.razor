@@ -1,12 +1,8 @@
 ﻿@using BTCPayApp.Core.Attempt2
-@using BTCPayApp.Core.LDK
 @using BTCPayServer.Lightning
 @using NBitcoin
-@using org.ldk.structs
 @using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment
-@using NodeInfo = BTCPayServer.Lightning.NodeInfo
 @using BTCPayApp.Core.Data
-@using BTCPayApp.Core.Helpers
 @using NBitcoin.Crypto
 @inject LightningNodeManager LightningNodeManager
 @inject IDispatcher Dispatcher
@@ -21,157 +17,6 @@ else
         <TruncateCenter Text="@_nodeId" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
         <label>Node ID</label>
     </div>
-    <article class="my-4">
-        <h3>Peers</h3>
-        @if (_peers?.Any() is true || _config?.Peers.Any() is true)
-        {
-            <table>
-                <thead>
-                <tr>
-                    <th>Node ID</th>
-                    <th>Socket</th>
-                    <th>X</th>
-                </tr>
-                </thead>
-                <tbody>
-                @{
-                    var rememberedButUnconnected = _config.Peers.Keys.Where(peer => _peers.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
-                }
-                @foreach (var peer in _peers)
-                {
-                    var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
-
-                    <tr>
-                        <td>@peer.nodeId</td>
-                        <td>@peer.socket</td>
-                        <td>
-
-                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
-                            @if (peerRemembered)
-                            {
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Persistent})">
-                                    Constant conn = @peerConfig.Persistent Toggle
-                                </button>
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Trusted = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
-                            }
-                            else if (peer.socket is not null)
-                            {
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo() {Endpoint = peer.socket})">Remember peer</button>
-                            }
-
-
-                        </td>
-                    </tr>
-                }
-                @foreach (var peer in rememberedButUnconnected)
-                {
-                    var peerConfig = _config.Peers[peer];
-                    <tr>
-                        <td>@peer</td>
-                        <td>@peerConfig.Endpoint</td>
-                        <td>
-                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
-                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
-                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">
-                                Constant conn = @peerConfig.Persistent Toggle
-                            </button>
-                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Trusted = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
-                        </td>
-                    </tr>
-                }
-                </tbody>
-                <tfoot>
-                <tr>
-                    <td colspan="3">
-                        <div class="input-group">
-                            <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
-                            <button class="btn btn-primary" type="button" @onclick="ConnectToNewPeer">Connect</button>
-                        </div>
-                    </td>
-                </tr>
-                </tfoot>
-            </table>
-        }
-        else
-        {
-            <p class="text-muted">There are no peers, yet.</p>
-
-            <div class="input-group">
-                <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
-                <button class="btn btn-primary" type="button" @onclick="ConnectToNewPeer">Connect</button>
-            </div>
-        }
-    </article>
-    <article class="my-4">
-        <h3>Channels</h3>
-        @if (_channels?.Any() is true)
-        {
-            <div class="table-responsive">
-            <table class="table">
-                <thead>
-                <tr>
-                    <th>Channel ID</th>
-                    <th>User Channel ID</th>
-                    <th>Counterparty</th>
-                    <th>Short Channel ID</th>
-                    <th>Confirmations</th>
-                    <th>Confirmations Required</th>
-                    <th>Funding Transaction Hash</th>
-                    <th>Usable</th>
-                    <th>Ready</th>
-                    <th>Balance</th>
-                    <th>Inbound</th>
-                    <th>Outbound</th>
-                    <th>State</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var channel in _channels)
-                {
-                    <tr>
-                        <td>@channel.id</td>
-                        <td>@channel.userId</td>
-                        <td>@channel.counterparty</td>
-                        <td>@channel.shortChannelId</td>
-                        <td>@channel.confirmations</td>
-                        <td>@channel.confirmationsRequired</td>
-                        <td>@channel.fundingTransactionHash</td>
-                        <td>@channel.usable</td>
-                        <td>@channel.ready</td>
-                        <td>@channel.Balance</td>
-                        <td>@channel.Inbound</td>
-                        <td>@channel.Outbound</td>
-                        <td>@channel.State</td>
-                    </tr>
-                }
-                </tbody>
-            </table>
-            </div>
-        }
-        else
-        {
-            <p class="text-muted">There are no channels, yet.</p>
-        }
-        @if (_peers?.Any() is true)
-        {
-            <div> Open channel to
-                <select @bind="selectedPeer">
-                    <option >Select peer</option>
-                    @foreach (var peer in _peers)
-                    {
-                        <option value="@peer.nodeId">@peer.nodeId</option>
-                    }
-                </select>
-                <input type="number" min="0" @bind="channelOpenAmount" />
-                <button type="button" @onclick="OpenChannel">Open channel</button>
-                @if (channelResponse is not null)
-                {
-                    <p>@channelResponse</p>
-                }
-                </div>
-        }
-    </article>
     <article class="my-4">
         <h3>Payments</h3>
         @if (_payments?.Any() is true)
@@ -249,22 +94,20 @@ else
 
 @code {
     private string _nodeId;
-
     private LightningConfig? _config;
-    private (string id, string userId, string counterparty, long? shortChannelId, int? confirmations, int? confirmationsRequired, string fundingTransactionHash, bool usable, bool ready, LightMoney Balance, LightMoney Inbound, LightMoney Outbound, string? State)[]? _channels;
-    private (string nodeId, string? socket)[]? _peers;
     private List<LightningPayment?>? _payments;
-    public LDKNode? Node => LightningNodeManager.Node;
-
+    private LDKNode? Node => LightningNodeManager.Node;
+    private decimal? paymentRequestAmt;
+    private string? paymentRequestSend;
+    private string? paymentResponse;
+    private bool Loading { get; set; }
+    private SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
         _ = FetchData();
     }
-
-    private bool Loading { get; set; }
-    private SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
     private async Task FetchData()
     {
@@ -276,8 +119,6 @@ else
             await _semaphore.WaitAsync();
             _config = await Node.GetConfig();
             _nodeId = Node.NodeId.ToString();
-            _channels = (await Node.GetChannels()).Select(details => (id: Convert.ToHexString(details.get_channel_id().get_a()), userId: Convert.ToHexString(details.get_user_channel_id().getLEBytes()), counterparty: Convert.ToHexString(details.get_counterparty().get_node_id()), shortChannelId: details.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some1 ? some1.some : (long?) null, confirmations: details.get_confirmations() is Option_u32Z.Option_u32Z_Some some2 ? some2.some : (int?) null, confirmationsRequired: details.get_confirmations_required() is Option_u32Z.Option_u32Z_Some some3 ? some3.some : (int?) null, fundingTransactionHash: new uint256(details.get_funding_txo().get_txid()).ToString(), usable: details.get_is_usable(), ready: details.get_is_channel_ready(), Balance: LightMoney.MilliSatoshis(details.get_balance_msat()), Inbound: LightMoney.MilliSatoshis(details.get_inbound_capacity_msat()), Outbound: LightMoney.MilliSatoshis(details.get_outbound_capacity_msat()), State: details.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some4 ? some4.some.ToString() : null)).ToArray();
-            _peers = (await Node.GetPeers()).Select(peer => (nodeId: Convert.ToHexString(peer.get_counterparty_node_id()), socket: peer.get_socket_address() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null)).ToArray();
             _payments = await LightningNodeManager.Node?.PaymentsManager.List(payments => payments);
         }
         finally
@@ -288,133 +129,9 @@ else
         }
     }
 
-
-    private async Task ConnectToNewPeer()
-    {
-        try
-        {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-            if (!NodeInfo.TryParse(NewPeer, out var nodeInfo))
-            {
-                return;
-            }
-
-
-            var result = await LightningNodeManager.Node.PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
-            if (result is null)
-            {
-                return;
-            }
-
-            NewPeer = "";
-        }
-        finally
-        {
-            Loading = false;
-            _semaphore.Release();
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private string NewPeer { get; set; }
-
-    private async void DisconnectPeer(string nodeId)
-    {
-        try
-        {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-
-            await LightningNodeManager.Node.PeerHandler.DisconnectAsync(new PubKey(nodeId));
-        }
-        finally
-        {
-            Loading = false;
-            _semaphore.Release();
-            await InvokeAsync(StateHasChanged);
-        }
-    }
-
-    private async void UpdatePeer(string toString, PeerInfo? value)
-    {
-        try
-        {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-
-            await Node.Peer(toString, value);
-        }
-        finally
-        {
-            Loading = false;
-            await InvokeAsync(StateHasChanged);
-            _semaphore.Release();
-        }
-    }
-
-    private async Task ConnectPeer(string peer, PeerInfo peerConfig)
-    {
-        try
-        {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-
-            EndPointParser.TryParse(peerConfig.Endpoint, 9735, out var endpoint);
-            await LightningNodeManager.Node.PeerHandler.ConnectAsync(new PubKey(peer), endpoint);
-        }
-        finally
-        {
-            Loading = false;
-            await InvokeAsync(StateHasChanged);
-            _semaphore.Release();
-        }
-    }
-
-    private string? selectedPeer { get; set; }
-    private decimal? channelOpenAmount { get; set; }
-    private string? channelResponse { get; set; }
-    private async void OpenChannel()
-    {
-        if(Loading || channelOpenAmount is null || selectedPeer is null)
-            return;
-        try
-        {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-            var result = await Node.OpenChannel(Money.Coins(channelOpenAmount.Value), new PubKey(selectedPeer) );
-            if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
-            {
-                channelResponse = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
-                channelOpenAmount = null;
-                selectedPeer = null;
-            }
-            else if(result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
-            {
-                channelResponse = $"Error: {err.err.GetError()}";
-            }
-
-        }
-        finally
-        {
-            Loading = false;
-            await InvokeAsync(StateHasChanged);
-            _semaphore.Release();
-        }
-    }
-
-    private decimal? paymentRequestAmt;
-    private string? paymentRequestSend;
-    private string? paymentResponse;
     private async void ReceivePayment()
     {
-        if(Loading || paymentRequestAmt is null)
-            return;
+        if (Loading || paymentRequestAmt is null) return;
         try
         {
             Loading = true;
@@ -425,7 +142,6 @@ else
 
             paymentResponse = $"Payment request created with invs {string.Join(',',result.PaymentRequests)}";
             paymentRequestAmt = null;
-
         }
         catch (Exception e)
         {
@@ -438,19 +154,16 @@ else
             _semaphore.Release();
         }
     }
-    public async void SendPayment()
+
+    private async void SendPayment()
     {
-        if(Loading ||  paymentRequestSend is null)
-            return;
+        if (Loading ||  paymentRequestSend is null) return;
         try
         {
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
             var invoice = BOLT11PaymentRequest.Parse(paymentRequestSend, Node.Network );
-
-
-
             var result = await Node.PaymentsManager.PayInvoice(invoice, paymentRequestAmt is null? null: LightMoney.Satoshis((long)paymentRequestAmt.Value));
             paymentResponse = $"Payment {result.PaymentId} sent with status {result.Status}";
             paymentRequestAmt = null;
@@ -467,10 +180,10 @@ else
             _semaphore.Release();
         }
     }
-    public async void Cancel(string paymentId, bool inb)
+
+    private async void Cancel(string paymentId, bool inb)
     {
-        if(Loading)
-            return;
+        if (Loading) return;
         try
         {
             Loading = true;
@@ -485,5 +198,4 @@ else
             _semaphore.Release();
         }
     }
-
 }

@@ -59,9 +59,8 @@
                 </li>
             </ul>
         </div>
-        <div class="box mb-2">
+        <div class="box">
             <ul class="list-group list-group-flush list-group-links">
-
                 <li class="list-group-item">
                     <a href="@Routes.WalletSettings">
                         <Icon Symbol="wallet-wallet"/>
@@ -71,13 +70,21 @@
                 </li>
             </ul>
         </div>
+
+        <h2>Lightning</h2>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
-
                 <li class="list-group-item">
                     <a href="@Routes.LightningSettings">
                         <Icon Symbol="lightning-node"/>
-                        <span>Lightning Node</span>
+                        <span>Lightning Node Management</span>
+                        <Icon Symbol="caret-right"/>
+                    </a>
+                </li>
+                <li class="list-group-item">
+                    <a href="@Routes.ChannelsPeers">
+                        <Icon Symbol="lightning-node"/>
+                        <span>Channels and Peers</span>
                         <Icon Symbol="caret-right"/>
                     </a>
                 </li>

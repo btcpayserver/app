@@ -23,7 +23,7 @@
     </Titlebar>
 </SectionContent>
 <section class="container">
-    @if(State.Value.LightningNodeState is LightningNodeState.Error)
+    @if (State.Value.LightningNodeState is LightningNodeState.Error)
     {
         <div class="alert alert-danger" role="alert">
             <h4 class="alert-heading">Error</h4>
@@ -44,6 +44,10 @@
                 <br/>
                 Color: <code>@_config.Color</code>
             </p>
+            <div class="form-floating">
+                <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                <label>Node ID</label>
+            </div>
         }
 
         @if (!string.IsNullOrEmpty(_config?.LightningDerivationPath))
@@ -72,7 +76,7 @@
             }
             else if (State.Value.LightningNodeState is LightningNodeState.Loaded)
             {
-                <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
+                <button class="btn btn-outline-warning" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
             }
             <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
         </div>
@@ -81,6 +85,7 @@
 
 @code {
     private LightningConfig? _config;
+    private LDKNode? Node => LightningNodeManager.Node;
 
     private string? ConfiguredConnectionString;
     private string ConnectionString => $"type=app;group={OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier}".ToLower();
