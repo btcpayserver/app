@@ -7,7 +7,7 @@
 @inject IAccountManager AccountManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
-<PageTitle>Settings</PageTitle>
+<PageTitle>User</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
@@ -17,8 +17,8 @@
 <section class="container">
     @if (_userInfo != null)
     {
-        <header class="d-flex align-items-center justify-content-between gap-3 mb-4">
-            <h1>@_userInfo.Email</h1>
+        <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+            <h2 class="mb-0">Account</h2>
             @if (_userInfo.Roles?.Any() is true)
             {
                 @foreach (var role in _userInfo.Roles)
@@ -26,9 +26,7 @@
                     <span class="badge bg-light">@role</span>
                 }
             }
-        </header>
-
-        <h2>Account</h2>
+        </div>
         <div class="box">
             <ValidationEditContext Model="Account" OnValidSubmit="HandleValidAccountSubmit" SuccessMessage="@_accountSuccessMessage" ErrorMessage="@_accountErrorMessage">
                 <DataAnnotationsValidator />
