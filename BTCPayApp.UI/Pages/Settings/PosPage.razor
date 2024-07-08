@@ -1,11 +1,15 @@
 ﻿@attribute [Route(Routes.PosSettings)]
 @using System.Text.RegularExpressions
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
+@using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @using Newtonsoft.Json
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
+@inject NavigationManager NavigationManager
 @inject IState<StoreState> StoreState
 @inject IDispatcher Dispatcher
 @inject IActionSubscriber ActionSubscriber
@@ -19,76 +23,88 @@
 </SectionContent>
 
 <section class="container">
-    @if (!string.IsNullOrEmpty(Error))
+    @if (AppData is null)
     {
-        <Alert Type="danger">@Error</Alert>
-    }
-    else if (!string.IsNullOrEmpty(_successMessage))
-    {
-        <Alert Type="success">@_successMessage</Alert>
-    }
-    @if (Loading && AppData is null)
-    {
-        <div class="p-3 text-center">
-            <LoadingIndicator/>
-        </div>
+        if (Loading)
+        {
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
     }
     else if (Model is not null)
     {
-        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
-            <DataAnnotationsValidator />
-            <div class="form-group">
-                <label for="Title" class="form-label">Title</label>
-                <InputText @bind-Value="Model.Title" id="Title" class="form-control"/>
-                <ValidationMessage For="@(() => Model.Title)" />
-            </div>
-            <div class="form-group">
-                <label for="Currency" class="form-label">Currency</label>
-                <InputText @bind-Value="Model.Currency" id="Currency" class="form-control"/>
-                <ValidationMessage For="@(() => Model.Currency)" />
-                <div class="form-text">Uses the store's default currency (EUR) if empty.</div>
-            </div>
-            <fieldset id="tips" class="mt-2">
-                <legend class="h5 mb-3 fw-semibold">Tips</legend>
-                <div class="form-group d-flex align-items-center pt-2">
-                    <InputCheckbox @bind-Value="@Model.EnableTips" id="EnableTips" class="btcpay-toggle me-3" data-bs-toggle="collapse" data-bs-target="#CustomTipsSettings" aria-expanded="@Model.EnableTips" aria-controls="CustomTipsSettings"/>
-                    <label class="form-check-label" for="EnableTips">Enable tips</label>
-                </div>
-                <div class="collapse @(Model.EnableTips ? "show" : "")" id="CustomTipsSettings">
-                    <div class="form-group">
-                        <label for="TipText" class="form-label" data-required>Text to display in the tip input</label>
-                        <InputText @bind-Value="Model.TipText" id="TipText" class="form-control"/>
-                        <ValidationMessage For="@(() => Model.TipText)" />
-                    </div>
-                    <div class="form-group">
-                        <label for="CustomTipPercentages" class="form-label">Tip percentage amounts (comma separated)</label>
-                        <InputText @bind-Value="Model.CustomTipPercentages" id="CustomTipPercentages" class="form-control"/>
-                        <ValidationMessage For="@(() => Model.CustomTipPercentages)" />
-                    </div>
-                </div>
-            </fieldset>
-            <fieldset id="discounts" class="mt-2">
-                <legend class="h5 mb-3 fw-semibold">Discounts</legend>
-                <div class="form-group d-flex align-items-center">
-                    <InputCheckbox @bind-Value="@Model.ShowDiscount" id="ShowDiscount" class="btcpay-toggle me-3"/>
-                    <div>
-                        <label for="ShowDiscount" class="form-check-label">User can input discount in %</label>
-                        <div class="text-muted">Not recommended for customer self-checkout.</div>
-                    </div>
-                    <span asp-validation-for="ShowDiscount" class="text-danger"></span>
-                </div>
-            </fieldset>
-            <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext.Invalid || Sending)">
-                @if (Sending)
+        if (_canView is true)
+        {
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
+                <DataAnnotationsValidator />
+                <fieldset disabled="@(_canModify is not true)">
+                    <h2>Point of Sale</h2>
+                    <fieldset class="box">
+                        <div class="form-group">
+                            <label for="Title" class="form-label">Title</label>
+                            <InputText @bind-Value="Model.Title" id="Title" class="form-control"/>
+                            <ValidationMessage For="@(() => Model.Title)" />
+                        </div>
+                        <div class="form-group">
+                            <label for="Currency" class="form-label">Currency</label>
+                            <InputText @bind-Value="Model.Currency" id="Currency" class="form-control"/>
+                            <ValidationMessage For="@(() => Model.Currency)" />
+                            <div class="form-text">Uses the store's default currency (EUR) if empty.</div>
+                        </div>
+                    </fieldset>
+
+                    <h2>Tips</h2>
+                    <fieldset id="tips" class="box">
+                        <div class="form-group mb-0 d-flex align-items-center pt-2">
+                            <InputCheckbox @bind-Value="@Model.EnableTips" id="EnableTips" class="btcpay-toggle me-3" data-bs-toggle="collapse" data-bs-target="#CustomTipsSettings" aria-expanded="@Model.EnableTips" aria-controls="CustomTipsSettings"/>
+                            <label class="form-check-label" for="EnableTips">Enable tips</label>
+                        </div>
+                        <div class="collapse @(Model.EnableTips ? "show" : "")" id="CustomTipsSettings">
+                            <div class="form-group pt-3">
+                                <label for="TipText" class="form-label" data-required>Text to display in the tip input</label>
+                                <InputText @bind-Value="Model.TipText" id="TipText" class="form-control"/>
+                                <ValidationMessage For="@(() => Model.TipText)" />
+                            </div>
+                            <div class="form-group mb-0">
+                                <label for="CustomTipPercentages" class="form-label">Tip percentage amounts (comma separated)</label>
+                                <InputText @bind-Value="Model.CustomTipPercentages" id="CustomTipPercentages" class="form-control"/>
+                                <ValidationMessage For="@(() => Model.CustomTipPercentages)" />
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <h2>Discounts</h2>
+                    <fieldset id="discounts" class="box">
+                        <div class="form-group d-flex align-items-center">
+                            <InputCheckbox @bind-Value="@Model.ShowDiscount" id="ShowDiscount" class="btcpay-toggle me-3"/>
+                            <div>
+                                <label for="ShowDiscount" class="form-check-label">User can input discount in %</label>
+                                <div class="text-muted">Not recommended for customer self-checkout.</div>
+                            </div>
+                            <ValidationMessage For="@(() => Model.ShowDiscount)"/>
+                        </div>
+                    </fieldset>
+                </fieldset>
+                @if (_canModify is true)
                 {
-                    <LoadingIndicator />
+                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
+                        @if (Sending)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Update Point of Sale</span>
+                        }
+                    </button>
                 }
-                else
-                {
-                    <span>Update Point of Sale</span>
-                }
-            </button>
-        </ValidationEditContext>
+            </ValidationEditContext>
+        }
     }
 </section>
 
@@ -99,16 +115,32 @@
     private ValidationEditContext? _validationEditContext;
     private PosAppModel? Model { get; set; }
     private string? _successMessage;
+    private bool? _canView;
+    private bool? _canModify;
 
     private const char ListSeparator = ',';
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+        if (string.IsNullOrEmpty(AppId))
+        {
+            NavigationManager.NavigateTo(Routes.NotFound, true, true);
+        }
+
+        _canView = await AccountManager.IsAuthorized(Policies.CanViewStoreSettings, StoreId!);
+        _canModify = await AccountManager.IsAuthorized(Policies.CanModifyStoreSettings, StoreId!);
+        if (_canView is not true)
+        {
+            var error = NavigationManager.GetUriWithQueryParameters(Routes.Error, new Dictionary<string, object?> { {"title", "Unauthorized"}, {"message", "You are not allowed to access this page."} });
+            NavigationManager.NavigateTo(error, true, true);
+            return;
+        }
 
         ActionSubscriber.SubscribeToAction<StoreState.SetPointOfSale>(this, action =>
         {
-            UpdateModel(action.AppData);
+            if (action.AppData != null)
+                UpdateModel(action.AppData);
         });
 
         ActionSubscriber.SubscribeToAction<StoreState.UpdatedPointOfSale>(this, action =>
@@ -138,7 +170,7 @@
         _successMessage = null;
 
         var app = AppData!;
-        var request = new PointOfSaleAppRequest
+        Dispatcher.Dispatch(new StoreState.UpdatePointOfSale(AppId!, new PointOfSaleAppRequest
         {
             Title = Model!.Title,
             Currency = Model.Currency,
@@ -163,25 +195,24 @@
             FormId = app.FormId,
             Template = app.Items != null
                 ? JsonConvert.SerializeObject(app.Items, Formatting.None, new JsonSerializerSettings
-                    {
-                        ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
-                        Formatting = Formatting.None
-                    })
+                {
+                    ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
+                    Formatting = Formatting.None
+                })
                 : null
-        };
-        Dispatcher.Dispatch(new StoreState.UpdatePointOfSale(AppId!, request));
+        }));
     }
 
-    private void UpdateModel(PointOfSaleAppData? data)
+    private void UpdateModel(PointOfSaleAppData data)
     {
         Model = new PosAppModel
         {
-            Title = data?.Title,
-            Currency = data?.Currency,
-            EnableTips = data?.EnableTips is true,
-            TipText = data?.TipText,
-            CustomTipPercentages = data?.CustomTipPercentages != null ? string.Join(ListSeparator, data.CustomTipPercentages) : null,
-            ShowDiscount = data?.ShowDiscount is true
+            Title = data.Title,
+            Currency = data.Currency,
+            EnableTips = data.EnableTips is true,
+            TipText = data.TipText,
+            CustomTipPercentages = data.CustomTipPercentages != null ? string.Join(ListSeparator, data.CustomTipPercentages) : null,
+            ShowDiscount = data.ShowDiscount is true
         };
     }
 
@@ -198,6 +229,7 @@
         public bool ShowDiscount { get; set; }
     }
 
+    private string? StoreId => AccountManager.GetCurrentStore()!.Id;
     private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;
     private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
     private bool Sending => StoreState.Value.PointOfSale?.Sending is true;

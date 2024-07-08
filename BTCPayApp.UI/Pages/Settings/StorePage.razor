@@ -1,62 +1,324 @@
 ﻿@attribute [Route(Routes.Store)]
-@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
 @using BTCPayServer.Client
+@using BTCPayServer.Client.Models
+@using ExchangeSharp
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
+@inject IState<StoreState> StoreState
+@inject IDispatcher Dispatcher
+@inject IActionSubscriber ActionSubscriber
 
-<PageTitle>@Store.Name</PageTitle>
+<PageTitle>Update Store</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>@Store.Name</h1>
+        <h1>Update Store</h1>
     </Titlebar>
 </SectionContent>
 
 <section class="container">
-    <div>
-        <strong>@Store.Name</strong>
-        <span class="badge bg-light">@Store.RoleId</span>
-        @if (Store.Archived)
+    @if (Store is null)
+    {
+        if (Loading)
         {
-            <span class="badge bg-info">archived</span>
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
+            </div>
         }
-    </div>
-    @if (Store.Permissions?.Any() is true)
+        else if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
+    }
+    else if (Model is not null)
     {
-        <ul>
-            @foreach (var permission in Store.Permissions)
+        var storeInfo = AccountManager.GetUserStore(StoreId)!;
+        <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+            <h2 class="mb-0">Store</h2>
+            <span class="badge bg-light">@storeInfo.RoleId</span>
+            @if (storeInfo.Archived)
             {
-                <li>@permission</li>
+                <span class="badge bg-info">archived</span>
             }
-        </ul>
-    }
-    else
-    {
-        <p class="text-secondary">No permissions</p>
-    }
+        </div>
+        @if (_canView is true)
+        {
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
+                <DataAnnotationsValidator/>
+                    <fieldset disabled="@(_canModify is not true)">
+                        <fieldset class="box">
+                            <div class="form-group">
+                                <label for="Name" class="form-label">Name</label>
+                                <InputText @bind-Value="Model.Name" id="Name" class="form-control"/>
+                                <ValidationMessage For="@(() => Model.Name)"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="Website" class="form-label">Website</label>
+                                <InputText @bind-Value="Model.Website" id="Website" class="form-control"/>
+                                <ValidationMessage For="@(() => Model.Website)"/>
+                            </div>
+                        </fieldset>
 
-    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
-        <p>You satisfy the 'CanModifyStoreSettings' policy.</p>
-    </AuthorizeView>
+                        <h2>Payment</h2>
+                        <fieldset class="box">
+                            <div class="form-group">
+                                <label for="DefaultCurrency" class="form-label" data-required>Default Currency</label>
+                                <InputText @bind-Value="Model.DefaultCurrency" id="DefaultCurrency" class="form-control"/>
+                                <ValidationMessage For="@(() => Model.DefaultCurrency)"/>
+                            </div>
+                            @*
+                            <div class="form-group d-flex align-items-center">
+                                <InputCheckbox @bind-Value="@Model.AnyoneCanCreateInvoice" id="AnyoneCanCreateInvoice" class="btcpay-toggle me-3"/>
+                                <div>
+                                    <label for="AnyoneCanCreateInvoice" class="form-check-label me-1">Allow anyone to create invoice</label>
+                                    <a href="https://docs.btcpayserver.org/FAQ/Stores/#allow-anyone-to-create-invoice" target="_blank" rel="noreferrer noopener" title="More information...">
+                                        <Icon Symbol="info"/>
+                                    </a>
+                                </div>
+                                <ValidationMessage For="@(() => Model.AnyoneCanCreateInvoice)"/>
+                            </div>
+                            *@
+                            <div class="form-group">
+                                <label for="NetworkFeeMode" class="form-label">Invoice expires if the full amount has not been paid after …</label>
+                                <a href="https://docs.btcpayserver.org/FAQ/Stores/#add-network-fee-to-invoice-vary-with-mining-fees" target="_blank" rel="noreferrer noopener" title="More information...">
+                                    <Icon Symbol="info"/>
+                                </a>
+                                <InputSelect @bind-Value="Model.NetworkFeeMode" id="NetworkFeeMode" class="form-select w-auto">
+                                    <option value="@NetworkFeeMode.MultiplePaymentsOnly">... only if the customer makes more than one payment for the invoice</option>
+                                    <option value="@NetworkFeeMode.Always">... on every payment</option>
+                                    <option value="@NetworkFeeMode.Never">Never add network fee</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => Model.NetworkFeeMode)"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="InvoiceExpiration" class="form-label">Invoice expires if the full amount has not been paid after …</label>
+                                <a href="https://docs.btcpayserver.org/FAQ/Stores/#invoice-expires-if-the-full-amount-has-not-been-paid-after-minutes" target="_blank" rel="noreferrer noopener" title="More information...">
+                                    <Icon Symbol="info"/>
+                                </a>
+                                <div class="input-group">
+                                    <InputNumber @bind-Value="Model.InvoiceExpiration" id="InvoiceExpiration" class="form-control" inputmode="numeric" style="max-width:12ch;"/>
+                                    <span class="input-group-text">minutes</span>
+                                </div>
+                                <ValidationMessage For="@(() => Model.InvoiceExpiration)"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="PaymentTolerance" class="form-label">Consider the invoice paid even if the paid amount is ... % less than expected</label>
+                                <a href="https://docs.btcpayserver.org/FAQ/Stores/#consider-the-invoice-paid-even-if-the-paid-amount-is-less-than-expected" target="_blank" rel="noreferrer noopener" title="More information...">
+                                    <Icon Symbol="info"/>
+                                </a>
+                                <div class="input-group">
+                                    <InputNumber @bind-Value="Model.PaymentTolerance" id="PaymentTolerance" class="form-control" inputmode="decimal" style="max-width:12ch;"/>
+                                    <span class="input-group-text">percent</span>
+                                </div>
+                                <ValidationMessage For="@(() => Model.PaymentTolerance)"/>
+                            </div>
+                        </fieldset>
+
+                        <h2>Checkout</h2>
+                        <fieldset class="box">
+                            <div class="form-group d-flex align-items-center">
+                                <InputCheckbox @bind-Value="@Model.CelebratePayment" id="CelebratePayment" class="btcpay-toggle me-3"/>
+                                <label for="CelebratePayment" class="form-check-label">Celebrate payment with confetti</label>
+                                <ValidationMessage For="@(() => Model.CelebratePayment)"/>
+                            </div>
+                            <div class="form-group d-flex align-items-center">
+                                <InputCheckbox @bind-Value="@Model.PlaySoundOnPayment" id="PlaySoundOnPayment" class="btcpay-toggle me-3"/>
+                                <label for="PlaySoundOnPayment" class="form-check-label">Enable sounds on checkout page</label>
+                                <ValidationMessage For="@(() => Model.PlaySoundOnPayment)"/>
+                            </div>
+                            <div class="form-group d-flex align-items-center">
+                                <InputCheckbox @bind-Value="@Model.ShowStoreHeader" id="ShowStoreHeader" class="btcpay-toggle me-3"/>
+                                <label for="ShowStoreHeader" class="form-check-label">Show the store header</label>
+                                <ValidationMessage For="@(() => Model.ShowStoreHeader)"/>
+                            </div>
+                            <div class="form-group d-flex align-items-center">
+                                <InputCheckbox @bind-Value="@Model.ShowPayInWalletButton" id="ShowPayInWalletButton" class="btcpay-toggle me-3"/>
+                                <label for="ShowPayInWalletButton" class="form-check-label">Show "Pay in wallet" button</label>
+                                <ValidationMessage For="@(() => Model.ShowPayInWalletButton)"/>
+                            </div>
+                            <div class="form-group d-flex align-items-center">
+                                <InputCheckbox @bind-Value="@Model.OnChainWithLnInvoiceFallback" id="OnChainWithLnInvoiceFallback" class="btcpay-toggle me-3"/>
+                                <label for="OnChainWithLnInvoiceFallback" class="form-check-label">Unify on-chain and lightning payment URL/QR code</label>
+                                <a href="https://bitcoinqr.dev/" target="_blank" rel="noreferrer noopener">
+                                    <Icon Symbol="info"/>
+                                </a>
+                                <ValidationMessage For="@(() => Model.OnChainWithLnInvoiceFallback)"/>
+                            </div>
+                            <div class="form-group d-flex align-items-center">
+                                <InputCheckbox @bind-Value="@Model.LightningAmountInSatoshi" id="LightningAmountInSatoshi" class="btcpay-toggle me-3"/>
+                                <label for="LightningAmountInSatoshi" class="form-check-label">Display Lightning payment amounts in Satoshis</label>
+                                <ValidationMessage For="@(() => Model.LightningAmountInSatoshi)"/>
+                            </div>
+                        </fieldset>
+                    </fieldset>
+                    @if (_canModify is true)
+                    {
+                        <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
+                            @if (Sending)
+                            {
+                                <LoadingIndicator/>
+                            }
+                            else
+                            {
+                                <span>Update Store</span>
+                            }
+                        </button>
+                    }
+            </ValidationEditContext>
+        }
+    }
 </section>
 
 @code {
     [Parameter, EditorRequired]
     public string? StoreId { get; set; }
 
-    private AppUserStoreInfo? Store { get; set; }
+    private ValidationEditContext? _validationEditContext;
+    private StoreModel? Model { get; set; }
+    private string? _successMessage;
+    private bool? _canView;
+    private bool? _canModify;
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-
-        Store = AccountManager.GetUserStore(StoreId);
-        if (Store == null)
+        if (string.IsNullOrEmpty(StoreId) || AccountManager.GetUserStore(StoreId) == null)
         {
             NavigationManager.NavigateTo(Routes.NotFound, true, true);
         }
+
+        _canView = await AccountManager.IsAuthorized(Policies.CanViewStoreSettings, StoreId!);
+        _canModify = await AccountManager.IsAuthorized(Policies.CanModifyStoreSettings, StoreId!);
+        if (_canView is not true)
+        {
+            var error = NavigationManager.GetUriWithQueryParameters(Routes.Error, new Dictionary<string, object?> { {"title", "Unauthorized"}, {"message", "You are not allowed to access this page."} });
+            NavigationManager.NavigateTo(error, true, true);
+            return;
+        }
+
+        ActionSubscriber.SubscribeToAction<StoreState.SetStore>(this, action =>
+        {
+            if (action.Store != null)
+                UpdateModel(action.Store);
+        });
+
+        ActionSubscriber.SubscribeToAction<StoreState.UpdatedStore>(this, action =>
+        {
+            if (action.Store == null || action.Error != null) return;
+            _successMessage = $"Store \"{action.Store.Name}\" successfully updated";
+            StateHasChanged();
+        });
+
+        if (Store != null)
+            UpdateModel(Store);
+        else if (!string.IsNullOrEmpty(StoreId))
+            Dispatcher.Dispatch(new StoreState.FetchStore(StoreId));
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        ActionSubscriber.UnsubscribeFromAllActions(this);
+
+        return ValueTask.CompletedTask;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _successMessage = null;
+
+        var store = Store!;
+        Dispatcher.Dispatch(new StoreState.UpdateStore(StoreId!, new UpdateStoreRequest
+        {
+            Name = Model!.Name,
+            Website = Model.Website,
+            DefaultCurrency = Model.DefaultCurrency,
+            AnyoneCanCreateInvoice = Model.AnyoneCanCreateInvoice,
+            NetworkFeeMode = Model.NetworkFeeMode,
+            PaymentTolerance = Model.PaymentTolerance,
+            InvoiceExpiration = TimeSpan.FromMinutes(Model.InvoiceExpiration),
+            CelebratePayment = Model.CelebratePayment,
+            ShowPayInWalletButton = Model.ShowPayInWalletButton,
+            ShowStoreHeader = Model.ShowStoreHeader,
+            LightningAmountInSatoshi = Model.LightningAmountInSatoshi,
+            OnChainWithLnInvoiceFallback = Model.OnChainWithLnInvoiceFallback,
+            PlaySoundOnPayment = Model.PlaySoundOnPayment,
+            // pass these attributes to not reset them
+            BrandColor = store.BrandColor,
+            LogoUrl = store.LogoUrl,
+            CssUrl = store.CssUrl,
+            PaymentSoundUrl = store.PaymentSoundUrl,
+            SupportUrl = store.SupportUrl,
+            DisplayExpirationTimer = store.DisplayExpirationTimer,
+            MonitoringExpiration = store.MonitoringExpiration,
+            SpeedPolicy = store.SpeedPolicy,
+            LightningDescriptionTemplate = store.LightningDescriptionTemplate,
+            LightningPrivateRouteHints = store.LightningPrivateRouteHints,
+            LazyPaymentMethods = store.LazyPaymentMethods,
+            RedirectAutomatically = store.RedirectAutomatically,
+            Archived = store.Archived,
+            ShowRecommendedFee = store.ShowRecommendedFee,
+            RecommendedFeeBlockTarget = store.RecommendedFeeBlockTarget,
+            DefaultPaymentMethod = store.DefaultPaymentMethod,
+            DefaultLang = store.DefaultLang,
+            HtmlTitle = store.HtmlTitle,
+            PaymentMethodCriteria = store.PaymentMethodCriteria,
+            PayJoinEnabled = store.PayJoinEnabled,
+            AutoDetectLanguage = store.AutoDetectLanguage,
+            Receipt = store.Receipt,
+            AdditionalData = store.AdditionalData
+        }));
+    }
+
+    private void UpdateModel(StoreData data)
+    {
+        Model = new StoreModel
+        {
+            Name = data.Name,
+            Website = data.Website,
+            DefaultCurrency = data.DefaultCurrency,
+            AnyoneCanCreateInvoice = data.AnyoneCanCreateInvoice,
+            NetworkFeeMode = data.NetworkFeeMode,
+            PaymentTolerance = data.PaymentTolerance,
+            InvoiceExpiration = data.InvoiceExpiration.Minutes,
+            LightningAmountInSatoshi = data.LightningAmountInSatoshi,
+            OnChainWithLnInvoiceFallback = data.OnChainWithLnInvoiceFallback,
+            CelebratePayment = data.CelebratePayment is true,
+            ShowPayInWalletButton = data.ShowPayInWalletButton is true,
+            ShowStoreHeader = data.ShowStoreHeader is true,
+            PlaySoundOnPayment = data.PlaySoundOnPayment is true
+        };
+    }
+
+    private StoreData? Store => StoreState.Value.Store?.Data;
+    private bool Loading => StoreState.Value.Store?.Loading is true;
+    private bool Sending => StoreState.Value.Store?.Sending is true;
+    private string? Error => StoreState.Value.Store?.Error;
+
+    private class StoreModel
+    {
+        [Required]
+        public string? Name { get; set; }
+        [Url]
+        public string? Website { get; set; }
+
+        // Payment
+        [Required]
+        public string? DefaultCurrency { get; set; }
+        public bool AnyoneCanCreateInvoice { get; set; }
+        public bool LightningAmountInSatoshi { get; set; }
+        public bool OnChainWithLnInvoiceFallback { get; set; }
+        public NetworkFeeMode NetworkFeeMode { get; set; }
+        public double PaymentTolerance { get; set; }
+        public int InvoiceExpiration { get; set; }
+        public bool CelebratePayment { get; set; }
+        public bool ShowPayInWalletButton { get; set; }
+        public bool ShowStoreHeader { get; set; }
+        public bool PlaySoundOnPayment { get; set; }
     }
 }

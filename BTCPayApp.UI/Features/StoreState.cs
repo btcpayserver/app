@@ -9,6 +9,7 @@ namespace BTCPayApp.UI.Features;
 public record StoreState
 {
     public AppUserStoreInfo? StoreInfo;
+    public RemoteData<StoreData>? Store;
     public RemoteData<PointOfSaleAppData>? PointOfSale;
     public RemoteData<IEnumerable<StoreRateResult>>? Rates;
     public RemoteData<IEnumerable<InvoiceData>>? Invoices;
@@ -18,6 +19,7 @@ public record StoreState
     private static string[] RateFetchExcludes = ["BTC", "SATS"];
 
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
+    public record FetchStore(string StoreId);
     public record FetchInvoices(string StoreId);
     public record FetchedInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
     public record FetchInvoice(string StoreId, string InvoiceId);
@@ -27,6 +29,9 @@ public record StoreState
     public record FetchRates(string StoreId, string? Currency);
     public record FetchedRates(IEnumerable<StoreRateResult>? Rates, string? Error);
     public record FetchPointOfSale(string AppId);
+    public record UpdateStore(string StoreId, UpdateStoreRequest Request);
+    public record SetStore(StoreData? Store, string? Error);
+    public record UpdatedStore(StoreData? Store, string? Error) : SetStore(Store, Error);
     public record UpdatePointOfSale(string AppId, PointOfSaleAppRequest Request);
     public record SetPointOfSale(PointOfSaleAppData? AppData, string? Error);
     public record UpdatedPointOfSale(PointOfSaleAppData? AppData, string? Error) : SetPointOfSale(AppData, Error);
@@ -38,9 +43,54 @@ public record StoreState
             return state with
             {
                 StoreInfo = action.StoreInfo,
+                Store = new RemoteData<StoreData>(),
                 PointOfSale = new RemoteData<PointOfSaleAppData>(),
                 Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>()
+            };
+        }
+    }
+
+    protected class FetchStoreReducer : Reducer<StoreState, FetchStore>
+    {
+        public override StoreState Reduce(StoreState state, FetchStore action)
+        {
+            return state with
+            {
+                Store = (state.Store ?? new RemoteData<StoreData>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class SetStoreReducer : Reducer<StoreState, SetStore>
+    {
+        public override StoreState Reduce(StoreState state, SetStore action)
+        {
+            return state with
+            {
+                Store = (state.Store ?? new RemoteData<StoreData>()) with {
+                    Data = action.Store ?? state.Store?.Data,
+                    Error = action.Error,
+                    Loading = false,
+                    Sending = false
+                }
+            };
+        }
+    }
+
+    protected class UpdateStoreReducer : Reducer<StoreState, UpdateStore>
+    {
+        public override StoreState Reduce(StoreState state, UpdateStore action)
+        {
+            return state with
+            {
+                Store = (state.Store ?? new RemoteData<StoreData>()) with
+                {
+                    Sending = true
+                }
             };
         }
     }
@@ -253,6 +303,36 @@ public record StoreState
                     dispatcher.Dispatch(new FetchRates(store.Id!, store.DefaultCurrency));
             }
             return Task.CompletedTask;
+        }
+
+        [EffectMethod]
+        public async Task UpdateStoreEffect(UpdateStore action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var store = await accountManager.GetClient().UpdateStore(action.StoreId, action.Request);
+                dispatcher.Dispatch(new UpdatedStore(store, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new UpdatedStore(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchStoreEffect(FetchStore action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var store = await accountManager.GetClient().GetStore(action.StoreId);
+                dispatcher.Dispatch(new SetStore(store, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetStore(null, error));
+            }
         }
 
         [EffectMethod]

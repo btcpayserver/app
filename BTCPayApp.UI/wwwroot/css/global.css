@@ -260,6 +260,13 @@
   --icon-size: .75rem;
 }
 
+.icon.icon-info {
+  --icon-size: 1rem;
+  position: relative;
+  top: -.05em;
+  color: var(--btcpay-neutral-500);
+}
+
 /* Forms */
 .form-floating label {
   padding-left: 0;
