@@ -118,14 +118,11 @@
 
     private async Task GetStorePaymentMethod()
     {
+        var storeId = AccountManager.GetCurrentStore()?.Id;
+        if (string.IsNullOrEmpty(storeId) || CanConfigureWallet) return;
         try
         {
-            if(CanConfigureWallet)
-                return;
-            var acc = AccountManager.GetAccount();
-            if (acc?.CurrentStoreId is null)
-                return;
-            var pm = await AccountManager.GetClient().GetStorePaymentMethod(acc.CurrentStoreId, "BTC-CHAIN", true);
+            var pm = await AccountManager.GetClient().GetStorePaymentMethod(storeId, "BTC-CHAIN", true);
             if (pm?.Config is JObject configObj && configObj.TryGetValue("accountDerivation", out var derivationSchemeToken) && derivationSchemeToken.Value<string>() is {} derivationScheme)
             {
                 StorePaymentMethodIdentifier = derivationScheme;
@@ -133,7 +130,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error getting store payment method");
+            Logger.LogDebug(ex, "Payment method BTC-CHAIN unset for store {StoreId}", storeId);
         }
     }
 
