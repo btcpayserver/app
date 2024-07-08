@@ -38,12 +38,6 @@
     {
         @if (_config is not null)
         {
-            <h3>Lightning Node</h3>
-            <p>
-                Alias: <code>@_config.Alias</code>
-                <br/>
-                Color: <code>@_config.Color</code>
-            </p>
             <div class="form-floating">
                 <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                 <label>Node ID</label>

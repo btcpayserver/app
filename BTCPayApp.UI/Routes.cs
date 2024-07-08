@@ -33,6 +33,7 @@ public static class Routes
     public const string Store = "/settings/store/{StoreId}";
     public const string PosSettings = "/settings/pos/{AppId}";
     public const string NotificationSettings = "/settings/notifications";
+    public const string Withdraw = "/settings/withdraw";
     public const string WalletSettings = "/settings/wallet";
     public const string LightningSettings = "/settings/lightning";
     public const string ChannelsPeers = "/settings/lightning/channels";
