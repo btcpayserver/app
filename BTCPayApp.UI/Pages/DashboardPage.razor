@@ -32,7 +32,7 @@
 }
 @if (SetupStateOnchain == SetupState.Completed)
 {
-    <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="StoreState.Value.StoreInfo?.Id">
+    <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="StoreId">
         <section class="container d-flex flex-column gap-4 wallet">
             @if (_balance == null)
             {
@@ -63,82 +63,6 @@
         </section>
     </AuthorizeView>
 }
-<section class="container">
-    <h2>Getting Started</h2>
-    <div class="box">
-        <ul class="list-group list-group-flush list-group-links">
-            <li class="list-group-item @(SetupStateConnection == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateConnection == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateConnection.ToString().ToLowerInvariant()">
-                <NavLink class="nav-link" href="@(SetupStateAccount == SetupState.Completed ? Routes.StorePath(AccountManager.GetCurrentStore()!.Id) : Routes.SelectStore)" Match="NavLinkMatch.All">
-                    <span>Connect a store</span>
-                    @switch (SetupStateConnection)
-                    {
-                        case SetupState.Failed:
-                            <Icon Symbol="warning" class="text-warning"/>
-                            break;
-                        case SetupState.Pending:
-                        case SetupState.Undetermined:
-                            <LoadingIndicator />
-                            break;
-                        default:
-                            <Icon Symbol="@(SetupStateAccount == SetupState.Completed ? "done" : "caret-right")"/>
-                            break;
-                    }
-                </NavLink>
-            </li>
-            <li class="list-group-item @(SetupStateOnchain == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateOnchain == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateOnchain.ToString().ToLowerInvariant()" data-onchain-state="@State.Value.OnchainWalletState.GetValueOrDefault()">
-                <NavLink class="nav-link" href="@(SetupStateOnchain == SetupState.Completed ? Routes.Wallet : Routes.WalletSettings)" Match="NavLinkMatch.All">
-                    <span>Set up wallet</span>
-                    @switch (SetupStateOnchain)
-                    {
-                        case SetupState.Undetermined:
-                            <LoadingIndicator />
-                            break;
-                        case SetupState.Completed:
-                            <Icon Symbol="done"/>
-                            break;
-                        default:
-                            <Icon Symbol="caret-right"/>
-                            break;
-                    }
-                </NavLink>
-            </li>
-            <li class="list-group-item @(SetupStateLightning == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateLightning == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateLightning.ToString().ToLowerInvariant()" data-lightning-state="@State.Value.LightningNodeState.GetValueOrDefault()">
-                <NavLink class="nav-link" href="@(SetupStateLightning == SetupState.Completed ? Routes.Lightning : Routes.LightningSettings)" Match="NavLinkMatch.All">
-                    <span>Configure node</span>
-                    @switch (SetupStateLightning)
-                    {
-                        case SetupState.Undetermined:
-                            <LoadingIndicator />
-                            break;
-                        case SetupState.Completed:
-                            <Icon Symbol="done"/>
-                            break;
-                        case SetupState.Failed:
-                            <Icon Symbol="warning" class="text-warning"/>
-                            break;
-                        default:
-                            <Icon Symbol="caret-right"/>
-                            break;
-                    }
-                </NavLink>
-            </li>
-            @*
-            <li class="list-group-item">
-                <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
-                    <span>Set up recovery tools</span>
-                    <Icon Symbol="caret-right"/>
-                </NavLink>
-            </li>
-            <li class="list-group-item">
-                <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
-                    <span>Configure LSP</span>
-                    <Icon Symbol="caret-right"/>
-                </NavLink>
-            </li>
-            *@
-        </ul>
-    </div>
-</section>
 
 @if (StoreState.Value.StoreInfo is not null && InvoicesLoading || Invoices is not null)
 {
@@ -232,6 +156,7 @@
     private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;
     private string? InvoicesError => StoreState.Value.Invoices?.Error;
 
+    private string? StoreId => AccountManager.GetCurrentStore()!.Id;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
     private decimal? CurrencyValue => _balance != null && Rate.HasValue && !string.IsNullOrEmpty(Currency)

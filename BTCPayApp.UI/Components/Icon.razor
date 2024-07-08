@@ -1,4 +1,4 @@
-<svg @attributes="InputAttributes" role="img" class="icon icon-@Symbol @InputAttributes?["class"]">
+<svg @attributes="InputAttributes" role="img" class="@CssClass">
     <use href="#@Symbol" />
 </svg>
 
@@ -8,4 +8,6 @@
 
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? InputAttributes { get; set; }
+
+    private string CssClass => $"icon icon-{Symbol} {InputAttributes?["class"]}".Trim();
 }

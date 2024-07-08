@@ -7,7 +7,7 @@
 @inject NavigationManager NavigationManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
-<div class="status">
+<div class="@CssClass">
     @if (SetupStateOverall() == SetupState.Undetermined)
     {
         <LoadingIndicator />
@@ -21,6 +21,9 @@
 </div>
 
 @code {
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
     public SetupState SetupStateConnection() {
         return State.Value.ConnectionState switch
         {
@@ -65,4 +68,6 @@
         if (SetupStateLightning() != SetupState.Completed) return Routes.LightningSettings;
         return Routes.Dashboard;
     }
+
+    private string CssClass => $"status {InputAttributes?["class"]}".Trim();
 }

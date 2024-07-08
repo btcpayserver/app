@@ -1,0 +1,95 @@
+@using BTCPayApp.Core.Attempt2
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Features
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
+@inject IState<RootState> State
+
+<section class="container">
+    <div class="d-flex align-items-center justify-content-between gap-2">
+        <h2>Getting Started</h2>
+        <SetupStatus @ref="_setupStatus" class="visually-hidden"/>
+    </div>
+    <div class="box">
+        <ul class="list-group list-group-flush list-group-links">
+            <li class="list-group-item @(SetupStateConnection == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateConnection == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateConnection.ToString().ToLowerInvariant()">
+                <NavLink class="nav-link" href="@(SetupStateAccount == SetupState.Completed && !string.IsNullOrEmpty(StoreId) ? Routes.StorePath(StoreId) : Routes.SelectStore)" Match="NavLinkMatch.All">
+                    <span>Connect a store</span>
+                    @switch (SetupStateConnection)
+                    {
+                        case SetupState.Failed:
+                            <Icon Symbol="warning" class="text-warning"/>
+                            break;
+                        case SetupState.Pending:
+                        case SetupState.Undetermined:
+                            <LoadingIndicator/>
+                            break;
+                        default:
+                            <Icon Symbol="@(SetupStateAccount == SetupState.Completed ? "done" : "caret-right")"/>
+                            break;
+                    }
+                </NavLink>
+            </li>
+            <li class="list-group-item @(SetupStateOnchain == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateOnchain == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateOnchain.ToString().ToLowerInvariant()" data-onchain-state="@State.Value.OnchainWalletState.GetValueOrDefault()">
+                <NavLink class="nav-link" href="@(SetupStateOnchain == SetupState.Completed ? Routes.Wallet : Routes.WalletSettings)" Match="NavLinkMatch.All">
+                    <span>Set up wallet</span>
+                    @switch (SetupStateOnchain)
+                    {
+                        case SetupState.Undetermined:
+                            <LoadingIndicator/>
+                            break;
+                        case SetupState.Completed:
+                            <Icon Symbol="done"/>
+                            break;
+                        default:
+                            <Icon Symbol="caret-right"/>
+                            break;
+                    }
+                </NavLink>
+            </li>
+            <li class="list-group-item @(SetupStateLightning == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateLightning == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateLightning.ToString().ToLowerInvariant()" data-lightning-state="@State.Value.LightningNodeState.GetValueOrDefault()">
+                <NavLink class="nav-link" href="@(SetupStateLightning == SetupState.Completed ? Routes.Lightning : Routes.LightningSettings)" Match="NavLinkMatch.All">
+                    <span>Configure node</span>
+                    @switch (SetupStateLightning)
+                    {
+                        case SetupState.Undetermined:
+                            <LoadingIndicator/>
+                            break;
+                        case SetupState.Completed:
+                            <Icon Symbol="done"/>
+                            break;
+                        case SetupState.Failed:
+                            <Icon Symbol="warning" class="text-warning"/>
+                            break;
+                        default:
+                            <Icon Symbol="caret-right"/>
+                            break;
+                    }
+                </NavLink>
+            </li>
+            @*
+            <li class="list-group-item">
+                <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
+                    <span>Set up recovery tools</span>
+                    <Icon Symbol="caret-right"/>
+                </NavLink>
+            </li>
+            <li class="list-group-item">
+                <NavLink class="nav-link" href="#" Match="NavLinkMatch.All">
+                    <span>Configure LSP</span>
+                    <Icon Symbol="caret-right"/>
+                </NavLink>
+            </li>
+            *@
+        </ul>
+    </div>
+</section>
+
+@code {
+    private SetupStatus? _setupStatus;
+    private string? StoreId => AccountManager.GetCurrentStore()!.Id;
+    private SetupState SetupStateConnection => _setupStatus?.SetupStateConnection() ?? SetupState.Undetermined;
+    private SetupState SetupStateAccount => _setupStatus?.SetupStateAccount() ?? SetupState.Undetermined;
+    private SetupState SetupStateOnchain => _setupStatus?.SetupStateOnchain() ?? SetupState.Undetermined;
+    private SetupState SetupStateLightning => _setupStatus?.SetupStateLightning() ?? SetupState.Undetermined;
+}
