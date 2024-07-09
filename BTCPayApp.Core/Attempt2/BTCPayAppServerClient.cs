@@ -12,49 +12,46 @@ using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment;
 
 namespace BTCPayApp.Core.Attempt2;
 
-public class BTCPayAppServerClient : IBTCPayAppHubClient
+public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServiceProvider serviceProvider) : IBTCPayAppHubClient
 {
-    private readonly ILogger<BTCPayAppServerClient> _logger;
-    private readonly IServiceProvider _serviceProvider;
+    public event AsyncEventHandler<string>? OnNewBlock;
+    public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
+    public event AsyncEventHandler<string>? OnNotifyNetwork;
+    public event AsyncEventHandler<string>? OnServerNodeInfo;
+    public event AsyncEventHandler<string>? OnNotifyServerEvent;
 
-    public BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServiceProvider serviceProvider)
+    public async Task NotifyServerEvent(ServerEvent serverEvent)
     {
-        _logger = logger;
-        _serviceProvider = serviceProvider;
-    }
-
-    public async Task NotifyServerEvent(IServerEvent serverEvent)
-    {
-        _logger.LogInformation("NotifyServerEvent: {ServerEventType}", serverEvent.Type);
-        await OnNotifyServerEvent?.Invoke(this, serverEvent)!;
+        logger.LogInformation("NotifyServerEvent: {Type} - {Details}", serverEvent.Type, serverEvent.ToString());
+        await OnNotifyServerEvent?.Invoke(this, serverEvent.Type)!;
     }
 
     public async Task NotifyNetwork(string network)
     {
-        _logger.LogInformation("NotifyNetwork: {network}", network);
+        logger.LogInformation("NotifyNetwork: {network}", network);
         await OnNotifyNetwork?.Invoke(this, network);
     }
 
     public async Task NotifyServerNode(string nodeInfo)
     {
-        _logger.LogInformation("NotifyServerNode: {nodeInfo}", nodeInfo);
+        logger.LogInformation("NotifyServerNode: {nodeInfo}", nodeInfo);
         await OnServerNodeInfo?.Invoke(this, nodeInfo);
     }
 
     public async Task TransactionDetected(TransactionDetectedRequest request)
     {
-        _logger.LogInformation($"OnTransactionDetected: {request.TxId}");
+        logger.LogInformation($"OnTransactionDetected: {request.TxId}");
         await OnTransactionDetected?.Invoke(this, request);
     }
 
     public async Task NewBlock(string block)
     {
-        _logger.LogInformation("NewBlock: {block}", block);
+        logger.LogInformation("NewBlock: {block}", block);
         await OnNewBlock?.Invoke(this, block);
     }
 
     private PaymentsManager PaymentsManager =>
-        _serviceProvider.GetRequiredService<LightningNodeManager>().Node.PaymentsManager;
+        serviceProvider.GetRequiredService<LightningNodeManager>().Node.PaymentsManager;
 
     public async Task<LightningPayment> CreateInvoice(CreateLightningInvoiceRequest createLightningInvoiceRequest)
     {
@@ -90,7 +87,7 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
 
     public async Task<PayResponse> PayInvoice(string bolt11, long? amountMilliSatoshi)
     {
-        var network = _serviceProvider.GetRequiredService<OnChainWalletManager>().Network;
+        var network = serviceProvider.GetRequiredService<OnChainWalletManager>().Network;
         var bolt = BOLT11PaymentRequest.Parse(bolt11, network);
         try
         {
@@ -115,14 +112,8 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error paying invoice");
+            logger.LogError(e, "Error paying invoice");
             return new PayResponse(PayResult.Error, e.Message);
         }
     }
-
-    public event AsyncEventHandler<string>? OnNewBlock;
-    public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
-    public event AsyncEventHandler<string>? OnNotifyNetwork;
-    public event AsyncEventHandler<string>? OnServerNodeInfo;
-    public event AsyncEventHandler<IServerEvent>? OnNotifyServerEvent;
 }

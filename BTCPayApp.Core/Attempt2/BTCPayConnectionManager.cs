@@ -25,6 +25,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     public HubConnection? Connection { get; private set; }
     public Network? ReportedNetwork { get; private set; }
 
+    public string ReportedNodeInfo { get; set; }
+
     public event AsyncEventHandler<(HubConnectionState Old, HubConnectionState New)>? ConnectionChanged;
     private HubConnectionState _connectionState = HubConnectionState.Disconnected;
 
@@ -58,26 +60,30 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _authStateProvider.AuthenticationStateChanged += AuthStateProviderOnAuthenticationStateChanged;
-        _btcPayAppServerClient.OnNotifyNetwork += BtcPayAppServerClientOnOnNotifyNetwork;
-        _btcPayAppServerClient.OnServerNodeInfo += BtcPayAppServerClientOnOnServerNodeInfo;
+        _authStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        _btcPayAppServerClient.OnNotifyNetwork += OnNotifyNetwork;
+        _btcPayAppServerClient.OnNotifyServerEvent += OnNotifyServerEvent;
+        _btcPayAppServerClient.OnServerNodeInfo += OnServerNodeInfo;
         await StartOrReplace();
         _ = TryStayConnected();
     }
 
-    private async Task BtcPayAppServerClientOnOnServerNodeInfo(object? sender, string e)
+    private async Task OnServerNodeInfo(object? sender, string e)
     {
         ReportedNodeInfo = e;
     }
 
-    public string ReportedNodeInfo { get; set; }
+    private async Task OnNotifyServerEvent(object? sender, string e)
+    {
+        _logger.LogInformation("OnNotifyServerEvent: {ServerEventType}", e);
+    }
 
-    private async Task BtcPayAppServerClientOnOnNotifyNetwork(object? sender, string e)
+    private async Task OnNotifyNetwork(object? sender, string e)
     {
         ReportedNetwork = Network.GetNetwork(e);
     }
 
-    private async void AuthStateProviderOnAuthenticationStateChanged(Task<AuthenticationState> task)
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
         try
         {
@@ -157,8 +163,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _authStateProvider.AuthenticationStateChanged -= AuthStateProviderOnAuthenticationStateChanged;
-        _btcPayAppServerClient.OnNotifyNetwork += BtcPayAppServerClientOnOnNotifyNetwork;
+        _authStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        _btcPayAppServerClient.OnNotifyNetwork += OnNotifyNetwork;
         return Task.CompletedTask;
     }
 
