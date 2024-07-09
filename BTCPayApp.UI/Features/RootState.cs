@@ -15,14 +15,6 @@ public record RootState
     public record OnChainWalletStateUpdatedAction(OnChainWalletState State);
     public record LightningNodeStateUpdatedAction(LightningNodeState State);
 
-    public enum LoadingHandles
-    {
-        UiState,
-        Connection,
-        WalletState,
-        LightningState
-    }
-
     protected class ConnectionUpdatedReducer : Reducer<RootState, ConnectionStateUpdatedAction>
     {
         public override RootState Reduce(RootState state, ConnectionStateUpdatedAction action)

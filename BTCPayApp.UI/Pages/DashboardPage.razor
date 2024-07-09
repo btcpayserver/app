@@ -17,7 +17,6 @@
 
 <header class="container d-flex align-items-center justify-content-between py-2">
     <div class="d-flex align-items-center justify-content-between gap-2">
-        <SetupStatus @ref="_setupStatus" />
         <AccountSwitch />
     </div>
     <div class="notifications">
@@ -30,7 +29,7 @@
         <Alert Type="success" Margin="0" Dismissible>@_successMessage</Alert>
     </section>
 }
-@if (SetupStateOnchain == SetupState.Completed)
+@if (State.Value.OnchainWalletState == OnChainWalletState.Loaded)
 {
     <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="StoreId">
         <section class="container d-flex flex-column gap-4 wallet">
@@ -103,7 +102,6 @@
     [SupplyParameterFromQuery]
     public string? Success { get; set; }
 
-    private SetupStatus? _setupStatus;
     private Money? _balance;
 
     private string? _successMessage;
@@ -146,11 +144,6 @@
             await InvokeAsync(StateHasChanged);
         }
     }
-
-    private SetupState SetupStateConnection => _setupStatus?.SetupStateConnection() ?? SetupState.Undetermined;
-    private SetupState SetupStateAccount => _setupStatus?.SetupStateAccount() ?? SetupState.Undetermined;
-    private SetupState SetupStateOnchain => _setupStatus?.SetupStateOnchain() ?? SetupState.Undetermined;
-    private SetupState SetupStateLightning => _setupStatus?.SetupStateLightning() ?? SetupState.Undetermined;
 
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data?.Take(5);
     private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;

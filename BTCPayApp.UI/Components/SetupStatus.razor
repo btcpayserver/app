@@ -14,7 +14,7 @@
     }
     else
     {
-        <a href="@GetLink()">
+        <a href="@Routes.Settings">
             <span class="btcpay-status btcpay-status--@(SetupStateOverall() == SetupState.Completed ? "enabled" : (SetupStateOverall() == SetupState.Failed ? "disabled" : "pending"))"></span>
         </a>
     }
@@ -58,15 +58,6 @@
             State.Value.LightningNodeState is LightningNodeState.Loading) return SetupState.Undetermined;
         if (State.Value.LightningNodeState is LightningNodeState.Error or LightningNodeState.Stopped) return SetupState.Failed;
         return State.Value.LightningNodeState == LightningNodeState.Loaded ? SetupState.Completed : SetupState.Pending;
-    }
-
-    private string GetLink()
-    {
-        if (SetupStateConnection() == SetupState.Failed) return NavigationManager.GetUriWithQueryParameters(Routes.Error, new Dictionary<string, object?> { {"title", "Connection failed" }, {"message", "Unable to connect to the BTCPay Server instance." } } );
-        if (SetupStateAccount() != SetupState.Completed) return Routes.SelectStore;
-        if (SetupStateOnchain() != SetupState.Completed) return Routes.WalletSettings;
-        if (SetupStateLightning() != SetupState.Completed) return Routes.LightningSettings;
-        return Routes.Dashboard;
     }
 
     private string CssClass => $"status {InputAttributes?["class"]}".Trim();
