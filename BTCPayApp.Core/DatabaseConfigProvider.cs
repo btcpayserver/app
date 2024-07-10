@@ -1,103 +1,91 @@
-﻿using System.Collections.Concurrent;
+﻿// using System.Collections.Concurrent;
+// using System.Text.Json;
+// using BTCPayApp.Core.Attempt2;
+// using BTCPayApp.Core.Contracts;
+// using BTCPayApp.Core.Data;
+// using BTCPayApp.VSS;
+// using BTCPayServer.Lightning;
+// using Microsoft.EntityFrameworkCore;
+// using Microsoft.EntityFrameworkCore.Diagnostics;
+// using Microsoft.Extensions.Logging;
+// using VSSProto;
+//
+// namespace BTCPayApp.Core;
+//
+//
+//
+// public class VSSMapperInterceptor : SaveChangesInterceptor
+// {
+//
+//     public VSSMapperInterceptor(BTCPayConnectionManager btcPayConnectionManager, ILogger<VSSMapperInterceptor> logger)
+//     {
+//     }
+//     
+//     private ConcurrentDictionary<EventId, object> PendingEvents = new ConcurrentDictionary<EventId, object>();
+//     public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
+//         CancellationToken cancellationToken = new CancellationToken())
+//     {
+//         return base.SavedChangesAsync(eventData, result, cancellationToken);
+//     }
+//
+//     private IVSSAPI api;
+//     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result,
+//         CancellationToken cancellationToken = new CancellationToken())
+//     {
+//         foreach (var entry in eventData.Context.ChangeTracker.Entries())
+//         {
+//
+//             if (entry.Entity is LightningPayment lightningPayment)
+//             {
+//                 if (entry.State == EntityState.Deleted)
+//                 {
+//                  
+//                     api.DeleteObjectAsync(new DeleteObjectRequest
+//                     {
+//                         KeyValue = new KeyValue()
+//                         {
+//                             
+//                         }
+//                         Key = $"LightningPayment/{lightningPayment.Id}"
+//                     });
+//                 }
+//             }
+//             if (entry.Entity is Channel channel)
+//             {
+//                 
+//             }
+//             if (entry.Entity is Setting setting)
+//             {
+//                 
+//             }
+//         }
+//         
+//         return base.SavingChangesAsync(eventData, result, cancellationToken);
+//     }
+//
+//     public override Task SaveChangesCanceledAsync(DbContextEventData eventData,
+//         CancellationToken cancellationToken = new CancellationToken())
+//     {
+//         PendingEvents.Remove(eventData.EventId, out _);
+//         return base.SaveChangesCanceledAsync(eventData, cancellationToken);
+//     }
+//
+//     public override Task SaveChangesFailedAsync(DbContextErrorEventData eventData,
+//         CancellationToken cancellationToken = new CancellationToken())
+//     {
+//         PendingEvents.Remove(eventData.EventId, out _);
+//         return base.SaveChangesFailedAsync(eventData, cancellationToken);
+//     }
+//     
+//     
+// }
+//
+
+
 using System.Text.Json;
-using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
-using BTCPayApp.VSS;
-using BTCPayServer.Lightning;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.Logging;
-using VSSProto;
-
-namespace BTCPayApp.Core;
-
-
-
-public class VSSMapperInterceptor : SaveChangesInterceptor
-{
-
-    public VSSMapperInterceptor(BTCPayConnectionManager btcPayConnectionManager, ILogger<VSSMapperInterceptor> logger)
-    {
-    }
-    
-    private ConcurrentDictionary<EventId, object> PendingEvents = new ConcurrentDictionary<EventId, object>();
-    public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
-        CancellationToken cancellationToken = new CancellationToken())
-    {
-        return base.SavedChangesAsync(eventData, result, cancellationToken);
-    }
-
-    private IVSSAPI api;
-    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(DbContextEventData eventData, InterceptionResult<int> result,
-        CancellationToken cancellationToken = new CancellationToken())
-    {
-        foreach (var entry in eventData.Context.ChangeTracker.Entries())
-        {
-
-            if (entry.Entity is LightningPayment lightningPayment)
-            {
-                if (entry.State == EntityState.Deleted)
-                {
-                 
-                    api.DeleteObjectAsync(new DeleteObjectRequest
-                    {
-                        KeyValue = new KeyValue()
-                        {
-                            
-                        }
-                        Key = $"LightningPayment/{lightningPayment.Id}"
-                    });
-                }
-            }
-            if (entry.Entity is Channel channel)
-            {
-                
-            }
-            if (entry.Entity is Setting setting)
-            {
-                
-            }
-        }
-        
-        return base.SavingChangesAsync(eventData, result, cancellationToken);
-    }
-
-    public override Task SaveChangesCanceledAsync(DbContextEventData eventData,
-        CancellationToken cancellationToken = new CancellationToken())
-    {
-        PendingEvents.Remove(eventData.EventId, out _);
-        return base.SaveChangesCanceledAsync(eventData, cancellationToken);
-    }
-
-    public override Task SaveChangesFailedAsync(DbContextErrorEventData eventData,
-        CancellationToken cancellationToken = new CancellationToken())
-    {
-        PendingEvents.Remove(eventData.EventId, out _);
-        return base.SaveChangesFailedAsync(eventData, cancellationToken);
-    }
-    
-    
-}
-
-public static class EFExtensions
-{
-
-    public static async Task<int> CrappyUpsert<T>(this DbContext ctx, T item, CancellationToken cancellationToken)
-    {
-        ctx.Attach(item);
-        ctx.Entry(item).State = EntityState.Modified;
-        try
-        {
-          return   await ctx.SaveChangesAsync(cancellationToken);
-        }
-        catch (DbUpdateException)
-        {
-            ctx.Entry(item).State = EntityState.Added;
-            return await ctx.SaveChangesAsync(cancellationToken);
-        }
-    }
-}
 
 public class DatabaseConfigProvider: IConfigProvider
 {

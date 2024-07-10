@@ -253,6 +253,18 @@ var paySecret = new uint256(invoice.payment_secret());
         return outbound;
     }
 
+    public async Task Cancel(AppLightningPayment lightningPayment)
+    {
+        if (lightningPayment.Inbound)
+        {
+            await CancelInbound(lightningPayment.PaymentHash);
+        }
+        else
+        {
+            await CancelOutbound(lightningPayment.PaymentId);
+        }
+    }
+    
     public async Task CancelInbound(uint256 paymentHash)
     {
         

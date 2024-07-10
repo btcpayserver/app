@@ -68,7 +68,7 @@ public class StateMiddleware(
         btcpayAppServerClient.OnNotifyServerEvent += (sender, serverEvent) =>
         {
             Logger.LogDebug("Received Server Event: {ServerEventType}", serverEvent);
-            switch (serverEvent)
+            switch (serverEvent.Type.ToLowerInvariant())
             {
                 case "notifications-updated":
                     dispatcher.Dispatch(new NotificationState.FetchNotifications());

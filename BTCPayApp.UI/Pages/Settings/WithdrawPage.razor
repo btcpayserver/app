@@ -3,10 +3,9 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.UI.Components.Layout
-@using BTCPayServer.Lightning
 @using NBitcoin
-@using LightningPayment = BTCPayApp.CommonServer.Models.LightningPayment
 @using BTCPayApp.Core.Data
+@using BTCPayServer.Lightning
 @using NBitcoin.Crypto
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
@@ -22,88 +21,87 @@
     @if (State.Value.LightningNodeState is LightningNodeState.Loaded)
     {
         <article class="my-4">
-        <h3>Payments</h3>
-        @if (_payments?.Any() is true)
-        {
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                    <tr>
-                        <th></th>
-                        <th>Payment Hash</th>
-                        <th>Inbound</th>
-                        <th>Id</th>
-                        <th>Preimage</th>
-                        <th>Secret</th>
-                        <th>Timestamp</th>
-                        <th>Value</th>
-                        <th>Status</th>
-                        <th>Invoices</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach (var payment in _payments)
-                    {
-                    <tr>
-                        <td>
-                            @if (payment.Status == LightningPaymentStatus.Pending)
-                            {
-                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => Cancel( payment.Inbound? payment.PaymentHash:payment.PaymentId, payment.Inbound)">Cancel</button>
-                            }
-
-                        </td>
-                        <td>@payment.PaymentHash</td>
-                        <td>@payment.Inbound</td>
-                        <td>@payment.PaymentId</td>
-                        <td>@payment.Preimage</td>
-                        <td>@payment.Secret</td>
-                        <td>@payment.Timestamp</td>
-                        <td>@payment.Value</td>
-                        <td>@payment.Status</td>
-                        <td>@string.Join('\n', payment.PaymentRequests)</td>
-                    </tr>
-                    }
-                    </tbody>
-                </table>
-            </div>
-        }
-        else
-        {
-            <p class="text-muted">There are no payments, yet.</p>
-        }
-
-        <div>
-
-            <div class="input-group">
-                <input type="number" class="form-control" min="0" @bind="paymentRequestAmt" placeholder="sats"/>
-                <button type="button" class=" btn btn-primary" @onclick="ReceivePayment">Receive payment</button>
-            </div>
-
-
-            <div class="input-group">
-                <input type="number" class="form-control" placeholder="explicit amount in sats, optional" min="0" @bind="paymentRequestAmt"/>
-                <input type="text"class="form-control" placeholder="bolt11" @bind="paymentRequestSend"/>
-                <button type="button" class=" btn btn-primary"  @onclick="SendPayment">Send payment</button>
-            </div>
-
-
-            @if (paymentResponse is not null)
+            <h3>Payments</h3>
+            @if (_payments?.Any() is true)
             {
-            <p>@paymentResponse</p>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th></th>
+                            <th>Payment Hash</th>
+                            <th>Inbound</th>
+                            <th>Id</th>
+                            <th>Preimage</th>
+                            <th>Secret</th>
+                            <th>Timestamp</th>
+                            <th>Value</th>
+                            <th>Status</th>
+                            <th>Invoices</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var payment in _payments)
+                        {
+                            <tr>
+                                <td>
+                                    @if (payment.Status == LightningPaymentStatus.Pending)
+                                    {
+                                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => Cancel(payment)">Cancel</button>
+                                    }
+
+                                </td>
+                                <td>@payment.PaymentHash</td>
+                                <td>@payment.Inbound</td>
+                                <td>@payment.PaymentId</td>
+                                <td>@payment.Preimage</td>
+                                <td>@payment.Secret</td>
+                                <td>@payment.Timestamp</td>
+                                <td>@payment.Value</td>
+                                <td>@payment.Status</td>
+                                <td>@payment.PaymentRequest</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
             }
-        </div>
-    </article>
-    <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
-    } else if (Loading)
+            else
+            {
+                <p class="text-muted">There are no payments, yet.</p>
+            }
+
+            <div>
+
+                <div class="input-group">
+                    <input type="number" class="form-control" min="0" @bind="paymentRequestAmt" placeholder="sats"/>
+                    <button type="button" class=" btn btn-primary" @onclick="ReceivePayment">Receive payment</button>
+                </div>
+
+
+                <div class="input-group">
+                    <input type="number" class="form-control" placeholder="explicit amount in sats, optional" min="0" @bind="paymentRequestAmt"/>
+                    <input type="text"class="form-control" placeholder="bolt11" @bind="paymentRequestSend"/>
+                    <button type="button" class=" btn btn-primary" @onclick="SendPayment">Send payment</button>
+                </div>
+
+
+                @if (paymentResponse is not null)
+                {
+                    <p>@paymentResponse</p>
+                }
+            </div>
+        </article>
+        <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
+    }
+    else if (Loading)
     {
         <span>loading...</span>
     }
 </section>
 
 @code {
-    private string _nodeId;
-    private LightningConfig? _config;
-    private List<LightningPayment?>? _payments;
+    private List<AppLightningPayment>? _payments;
     private LDKNode? Node => LightningNodeManager.Node;
     private decimal? paymentRequestAmt;
     private string? paymentRequestSend;
@@ -119,77 +117,54 @@
 
     private async Task FetchData()
     {
-        Loading = true;
-        await InvokeAsync(StateHasChanged);
-
-        try
+        await Wrap(async () =>
         {
-            await _semaphore.WaitAsync();
-            _config = await Node.GetConfig();
-            _nodeId = Node.NodeId.ToString();
-            _payments = await LightningNodeManager.Node?.PaymentsManager.List(payments => payments);
-        }
-        finally
-        {
-            Loading = false;
-            await InvokeAsync(StateHasChanged);
-            _semaphore.Release();
-        }
+            if (Node is null) return;
+            _payments = await Node.PaymentsManager.List(payments => payments);
+        });
     }
 
     private async void ReceivePayment()
     {
-        if (Loading || paymentRequestAmt is null) return;
-        try
+        if (paymentRequestSend is null) return;
+        await Wrap(async () =>
         {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-            var hash = new uint256(Hashes.SHA256(RandomUtils.GetBytes(32)));
-            var result = await Node.PaymentsManager.RequestPayment(LightMoney.Satoshis(paymentRequestAmt??0), TimeSpan.FromDays(1), hash);
+            try
+            {
+                var hash = new uint256(Hashes.SHA256(RandomUtils.GetBytes(32)));
+                var result = await Node.PaymentsManager.RequestPayment(LightMoney.Satoshis(paymentRequestAmt ?? 0), TimeSpan.FromDays(1), hash);
 
-            paymentResponse = $"Payment request created with invs {string.Join(',',result.PaymentRequests)}";
-            paymentRequestAmt = null;
-        }
-        catch (Exception e)
-        {
-            paymentResponse = $"Error: {e.Message}";
-        }
-        finally
-        {
-            Loading = false;
-            await InvokeAsync(StateHasChanged);
-            _semaphore.Release();
-        }
+                paymentResponse = $"Payment request created: {result.PaymentRequest}";
+                paymentRequestAmt = null;
+            }
+            catch (Exception e)
+            {
+                paymentResponse = $"Error: {e.Message}";
+            }
+        });
     }
 
     private async void SendPayment()
     {
-        if (Loading ||  paymentRequestSend is null) return;
-        try
+        if (paymentRequestSend is null) return;
+        await Wrap(async () =>
         {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-            var invoice = BOLT11PaymentRequest.Parse(paymentRequestSend, Node.Network );
-            var result = await Node.PaymentsManager.PayInvoice(invoice, paymentRequestAmt is null? null: LightMoney.Satoshis((long)paymentRequestAmt.Value));
-            paymentResponse = $"Payment {result.PaymentId} sent with status {result.Status}";
-            paymentRequestAmt = null;
-            paymentRequestSend = null;
-        }
-        catch (Exception e)
-        {
-            paymentResponse = $"Error: {e.Message}";
-        }
-        finally
-        {
-            Loading = false;
-            await InvokeAsync(StateHasChanged);
-            _semaphore.Release();
-        }
+            try
+            {
+                var invoice = BOLT11PaymentRequest.Parse(paymentRequestSend, Node.Network);
+                var result = await Node.PaymentsManager.PayInvoice(invoice, paymentRequestAmt is null ? null : LightMoney.Satoshis((long) paymentRequestAmt.Value));
+                paymentResponse = $"Payment {result.PaymentId} sent with status {result.Status}";
+                paymentRequestAmt = null;
+                paymentRequestSend = null;
+            }
+            catch (Exception e)
+            {
+                paymentResponse = $"Error: {e.Message}";
+            }
+        });
     }
 
-    private async void Cancel(string paymentId, bool inb)
+    private async Task Wrap(Func<Task> action)
     {
         if (Loading) return;
         try
@@ -197,7 +172,7 @@
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            await Node.PaymentsManager.Cancel(paymentId, inb);
+            await action();
         }
         finally
         {
@@ -206,4 +181,13 @@
             _semaphore.Release();
         }
     }
+
+    private async Task Cancel(AppLightningPayment payment)
+    {
+        await Wrap(async () =>
+        {
+            await Node.PaymentsManager.Cancel(payment);
+        });
+    }
+
 }

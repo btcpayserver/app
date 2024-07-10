@@ -1,5 +1,6 @@
 using System.Text;
 using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
 using BTCPayServer.Client.Models;
@@ -53,46 +54,49 @@ public static class AppToServerHelper
     }
 }
 
-public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServiceProvider serviceProvider) : IBTCPayAppHubClient
+public class BTCPayAppServerClient : IBTCPayAppHubClient
 {
-    public event AsyncEventHandler<string>? OnNewBlock;
-    public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
-    public event AsyncEventHandler<string>? OnNotifyNetwork;
-    public event AsyncEventHandler<string>? OnServerNodeInfo;
-    public event AsyncEventHandler<string>? OnNotifyServerEvent;
+    private readonly ILogger<BTCPayAppServerClient> _logger;
+    private readonly IServiceProvider _serviceProvider;
 
-    public async Task NotifyServerEvent(ServerEvent serverEvent)
+    public BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServiceProvider serviceProvider)
     {
-        logger.LogInformation("NotifyServerEvent: {Type} - {Details}", serverEvent.Type, serverEvent.ToString());
-        await OnNotifyServerEvent?.Invoke(this, serverEvent.Type)!;
+        _logger = logger;
+        _serviceProvider = serviceProvider;
+    }
+
+    public async Task NotifyServerEvent(IServerEvent serverEvent)
+    {
+        _logger.LogInformation("NotifyServerEvent: {ServerEventType}", serverEvent.Type);
+        await OnNotifyServerEvent?.Invoke(this, serverEvent)!;
     }
 
     public async Task NotifyNetwork(string network)
     {
-        logger.LogInformation("NotifyNetwork: {network}", network);
+        _logger.LogInformation("NotifyNetwork: {network}", network);
         await OnNotifyNetwork?.Invoke(this, network);
     }
 
     public async Task NotifyServerNode(string nodeInfo)
     {
-        logger.LogInformation("NotifyServerNode: {nodeInfo}", nodeInfo);
+        _logger.LogInformation("NotifyServerNode: {nodeInfo}", nodeInfo);
         await OnServerNodeInfo?.Invoke(this, nodeInfo);
     }
 
     public async Task TransactionDetected(TransactionDetectedRequest request)
     {
-        logger.LogInformation($"OnTransactionDetected: {request.TxId}");
+        _logger.LogInformation($"OnTransactionDetected: {request.TxId}");
         await OnTransactionDetected?.Invoke(this, request);
     }
 
     public async Task NewBlock(string block)
     {
-        logger.LogInformation("NewBlock: {block}", block);
+        _logger.LogInformation("NewBlock: {block}", block);
         await OnNewBlock?.Invoke(this, block);
     }
 
     private PaymentsManager PaymentsManager =>
-        serviceProvider.GetRequiredService<LightningNodeManager>().Node.PaymentsManager;
+        _serviceProvider.GetRequiredService<LightningNodeManager>().Node.PaymentsManager;
 
     public async Task<LightningInvoice> CreateInvoice(CreateLightningInvoiceRequest createLightningInvoiceRequest)
     {
@@ -128,7 +132,7 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServi
 
     public async Task<PayResponse> PayInvoice(string bolt11, long? amountMilliSatoshi)
     {
-        var network = serviceProvider.GetRequiredService<OnChainWalletManager>().Network;
+        var network = _serviceProvider.GetRequiredService<OnChainWalletManager>().Network;
         var bolt = BOLT11PaymentRequest.Parse(bolt11, network);
         try
         {
@@ -153,8 +157,14 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServi
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Error paying invoice");
+            _logger.LogError(e, "Error paying invoice");
             return new PayResponse(PayResult.Error, e.Message);
         }
     }
+
+    public event AsyncEventHandler<string>? OnNewBlock;
+    public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
+    public event AsyncEventHandler<string>? OnNotifyNetwork;
+    public event AsyncEventHandler<string>? OnServerNodeInfo;
+    public event AsyncEventHandler<IServerEvent>? OnNotifyServerEvent;
 }

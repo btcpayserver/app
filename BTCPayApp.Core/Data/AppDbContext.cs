@@ -51,13 +51,31 @@ public class AppDbContext : DbContext
 
 
         //handling versioned data
-        modelBuilder.Entity<Channel>().AfterDelete(trigger => trigger.Action(group => group.Insert<Outbox>(
+        
+        
+        modelBuilder.Entity<Channel>()
+            .AfterDelete(trigger => 
+                trigger.Action(group => 
+                    group.Insert<Outbox>(
             @ref => new Outbox()
             {
                 Version = @ref.Old.Version,
                 Key = "Channel-" + @ref.Old.Id,
                 ActionType = "delete"
             })));
+
+        modelBuilder.Entity<Setting>()
+            .AfterDelete(trigger => trigger.Action(group =>
+                group
+                    .Condition(@ref => @ref.Old.Backup)
+                    .Insert<Outbox>(
+                        @ref => new Outbox()
+                        {
+                            Version = @ref.Old.Version,
+                            Key = "Setting-" + @ref.Old.Key,
+                            ActionType = "delete"
+                        })));
+
 
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
@@ -119,7 +137,11 @@ public class AppDbContext : DbContext
 
         base.OnModelCreating(modelBuilder);
     }
+    
 }
+
+
+
 
 public class Outbox
 {
