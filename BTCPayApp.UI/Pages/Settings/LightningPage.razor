@@ -9,7 +9,6 @@
 @using BTCPayServer.Client.Models
 @using Newtonsoft.Json.Linq
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@inject OnChainWalletManager OnChainWalletManager
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
 @inject ILogger<IndexPage> Logger
@@ -82,7 +81,7 @@
     private LDKNode? Node => LightningNodeManager.Node;
 
     private string? ConfiguredConnectionString;
-    private string ConnectionString => $"type=app;group={OnChainWalletManager.WalletConfig?.Derivations[WalletDerivation.LightningScripts].Identifier}".ToLower();
+    private string ConnectionString => LightningNodeManager.ConnectionString;
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,7 +123,7 @@
         var acc = AccountManager.GetAccount();
         if (acc?.CurrentStoreId != null)
         {
-            var pm = await  AccountManager.GetClient().UpdateStorePaymentMethod(acc.CurrentStoreId, "BTC-LN", new UpdatePaymentMethodRequest()
+            var pm = await  AccountManager.GetClient().UpdateStorePaymentMethod(acc.CurrentStoreId, "BTC-LN", new UpdatePaymentMethodRequest
             {
                 Enabled = true,
                 Config = new JObject

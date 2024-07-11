@@ -9,6 +9,8 @@ namespace BTCPayApp.Core.Attempt2;
 
 public class LightningNodeManager : BaseHostedService
 {
+    public const string PaymentMethodId = "BTC-LN";
+
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<LightningNodeManager> _logger;
     private readonly OnChainWalletManager _onChainWalletManager;
@@ -22,6 +24,9 @@ public class LightningNodeManager : BaseHostedService
     private bool IsOnchainConfigured => _onChainWalletManager.WalletConfig is not null;
     private bool IsOnchainLightningDerivationConfigured => _onChainWalletManager.WalletConfig?.Derivations.ContainsKey(WalletDerivation.LightningScripts) is true;
     public bool CanConfigureLightningNode => IsHubConnected && IsOnchainConfigured && !IsOnchainLightningDerivationConfigured && State == LightningNodeState.NotConfigured;
+    public string? ConnectionString => IsOnchainLightningDerivationConfigured
+        ? $"type=app;group={_onChainWalletManager.WalletConfig!.Derivations[WalletDerivation.LightningScripts].Identifier}".ToLower()
+        : null;
 
     public LightningNodeState State
     {
