@@ -139,8 +139,9 @@
 
         ActionSubscriber.SubscribeToAction<StoreState.SetPointOfSale>(this, action =>
         {
-            if (action.AppData != null)
-                UpdateModel(action.AppData);
+            if (action.AppData == null) return;
+            UpdateModel(action.AppData);
+            StateHasChanged();
         });
 
         ActionSubscriber.SubscribeToAction<StoreState.UpdatedPointOfSale>(this, action =>

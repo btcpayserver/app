@@ -202,8 +202,9 @@
 
         ActionSubscriber.SubscribeToAction<StoreState.SetStore>(this, action =>
         {
-            if (action.Store != null)
-                UpdateModel(action.Store);
+            if (action.Store == null) return;
+            UpdateModel(action.Store);
+            StateHasChanged();
         });
 
         ActionSubscriber.SubscribeToAction<StoreState.UpdatedStore>(this, action =>
