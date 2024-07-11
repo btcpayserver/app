@@ -20,7 +20,10 @@
         <AccountSwitch />
     </div>
     <div class="notifications">
-        <NotificationsBell />
+        @if (!string.IsNullOrEmpty(StoreId))
+        {
+            <NotificationsBell/>
+        }
     </div>
 </header>
 @if (!string.IsNullOrEmpty(_successMessage))

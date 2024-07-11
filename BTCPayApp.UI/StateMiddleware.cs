@@ -1,8 +1,7 @@
-﻿using BTCPayApp.CommonServer;
-using BTCPayApp.Core.Attempt2;
+﻿using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.UI.Features;
-using BTCPayServer.Events;
 using Fluxor;
 using Microsoft.Extensions.Logging;
 
@@ -14,6 +13,7 @@ public class StateMiddleware(
     LightningNodeManager lightningNodeService,
     OnChainWalletManager onChainWalletManager,
     BTCPayAppServerClient btcpayAppServerClient,
+    IAccountManager accountManager,
     ILogger<StateMiddleware> Logger)
     : Middleware
 {
@@ -71,7 +71,11 @@ public class StateMiddleware(
             switch (serverEvent)
             {
                 case "notifications-updated":
-                    dispatcher.Dispatch(new NotificationState.FetchNotifications());
+                    var storeId = accountManager.GetCurrentStore()!.Id;
+                    if (storeId != null)
+                        dispatcher.Dispatch(new StoreState.FetchNotifications(storeId));
+                    else
+                        dispatcher.Dispatch(new NotificationState.FetchNotifications());
                     break;
                 case "invoice-updated":
                     /*var storeId = ((ServerEvent<InvoiceEvent>)serverEvent).Event?.Invoice.StoreId;

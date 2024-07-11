@@ -13,6 +13,7 @@ public record StoreState
     public RemoteData<PointOfSaleAppData>? PointOfSale;
     public RemoteData<IEnumerable<StoreRateResult>>? Rates;
     public RemoteData<IEnumerable<InvoiceData>>? Invoices;
+    public RemoteData<IEnumerable<NotificationData>>? Notifications;
     private IDictionary<string,RemoteData<InvoiceData>?> _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>();
     private IDictionary<string,RemoteData<InvoicePaymentMethodDataModel[]>?> _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>();
 
@@ -20,6 +21,8 @@ public record StoreState
 
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
     public record FetchStore(string StoreId);
+    public record FetchNotifications(string StoreId);
+    public record FetchedNotifications(IEnumerable<NotificationData>? Notifications, string? Error);
     public record FetchInvoices(string StoreId);
     public record FetchedInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
     public record FetchInvoice(string StoreId, string InvoiceId);
@@ -46,7 +49,8 @@ public record StoreState
                 Store = new RemoteData<StoreData>(),
                 PointOfSale = new RemoteData<PointOfSaleAppData>(),
                 Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
-                Invoices = new RemoteData<IEnumerable<InvoiceData>>()
+                Invoices = new RemoteData<IEnumerable<InvoiceData>>(),
+                Notifications = new RemoteData<IEnumerable<NotificationData>>()
             };
         }
     }
@@ -90,6 +94,36 @@ public record StoreState
                 Store = (state.Store ?? new RemoteData<StoreData>()) with
                 {
                     Sending = true
+                }
+            };
+        }
+    }
+
+    protected class FetchNotificationsReducer : Reducer<StoreState, FetchNotifications>
+    {
+        public override StoreState Reduce(StoreState state, FetchNotifications action)
+        {
+            return state with
+            {
+                Notifications = (state.Notifications ?? new RemoteData<IEnumerable<NotificationData>>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class FetchedNotificationsReducer : Reducer<StoreState, FetchedNotifications>
+    {
+        public override StoreState Reduce(StoreState state, FetchedNotifications action)
+        {
+            return state with
+            {
+                Notifications = (state.Notifications ?? new RemoteData<IEnumerable<NotificationData>>()) with
+                {
+                    Data = action.Notifications,
+                    Error = action.Error,
+                    Loading = false
                 }
             };
         }
@@ -297,10 +331,12 @@ public record StoreState
             var store = action.StoreInfo;
             if (store != null)
             {
-                dispatcher.Dispatch(new FetchInvoices(store.Id!));
+                var storeId = store.Id!;
+                dispatcher.Dispatch(new FetchNotifications(storeId));
+                dispatcher.Dispatch(new FetchInvoices(storeId));
                 dispatcher.Dispatch(new FetchPointOfSale(store.PosAppId!));
                 if (!RateFetchExcludes.Contains(store.DefaultCurrency))
-                    dispatcher.Dispatch(new FetchRates(store.Id!, store.DefaultCurrency));
+                    dispatcher.Dispatch(new FetchRates(storeId, store.DefaultCurrency));
             }
             return Task.CompletedTask;
         }
@@ -332,6 +368,21 @@ public record StoreState
             {
                 var error = e.InnerException?.Message ?? e.Message;
                 dispatcher.Dispatch(new SetStore(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchNotificationsEffect(FetchNotifications action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var notifications = await accountManager.GetClient().GetNotifications(storeId: [action.StoreId]);
+                dispatcher.Dispatch(new FetchedNotifications(notifications, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new FetchedNotifications(null, error));
             }
         }
 

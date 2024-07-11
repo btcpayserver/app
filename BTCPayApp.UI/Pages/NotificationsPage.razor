@@ -1,10 +1,12 @@
 ﻿@attribute [Route(Routes.Notifications)]
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
 @inject IDispatcher Dispatcher
-@inject IState<NotificationState> NotificationState
+@inject IState<StoreState> StoreState
 
 <PageTitle>Notifications</PageTitle>
 
@@ -54,10 +56,12 @@
 @code {
     private void LoadNotifications()
     {
-        Dispatcher.Dispatch(new NotificationState.FetchNotifications());
+        var storeId = AccountManager.GetCurrentStore()!.Id;
+        if (storeId != null)
+            Dispatcher.Dispatch(new StoreState.FetchNotifications(storeId));
     }
 
-    private IEnumerable<NotificationData>? Notifications => NotificationState.Value.Notifications?.Data;
-    private bool Loading => NotificationState.Value.Notifications?.Loading is true;
-    private string? Error => NotificationState.Value.Notifications?.Error;
+    private IEnumerable<NotificationData>? Notifications => StoreState.Value.Notifications?.Data;
+    private bool Loading => StoreState.Value.Notifications?.Loading is true;
+    private string? Error => StoreState.Value.Notifications?.Error;
 }
