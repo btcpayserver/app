@@ -18,12 +18,12 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServi
     public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
     public event AsyncEventHandler<string>? OnNotifyNetwork;
     public event AsyncEventHandler<string>? OnServerNodeInfo;
-    public event AsyncEventHandler<string>? OnNotifyServerEvent;
+    public event AsyncEventHandler<ServerEvent>? OnNotifyServerEvent;
 
     public async Task NotifyServerEvent(ServerEvent serverEvent)
     {
         logger.LogInformation("NotifyServerEvent: {Type} - {Details}", serverEvent.Type, serverEvent.ToString());
-        await OnNotifyServerEvent?.Invoke(this, serverEvent.Type)!;
+        await OnNotifyServerEvent?.Invoke(this, serverEvent)!;
     }
 
     public async Task NotifyNetwork(string network)

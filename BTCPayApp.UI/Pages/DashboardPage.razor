@@ -152,7 +152,7 @@
     private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;
     private string? InvoicesError => StoreState.Value.Invoices?.Error;
 
-    private string? StoreId => AccountManager.GetCurrentStore()!.Id;
+    private string? StoreId => AccountManager.GetCurrentStore()?.Id;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
     private decimal? CurrencyValue => _balance != null && Rate.HasValue && !string.IsNullOrEmpty(Currency)
