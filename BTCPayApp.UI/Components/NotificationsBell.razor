@@ -1,4 +1,4 @@
-@inject IState<NotificationState> NotificationState
+@inject IState<StoreState> StoreState
 @using BTCPayApp.UI.Features
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -12,6 +12,6 @@
 </a>
 
 @code {
-    private int? UnreadNotificationsCount => NotificationState.Value.Notifications?.Data?.Count(n => !n.Seen);
+    private int? UnreadNotificationsCount => StoreState.Value.Notifications?.Data?.Count(n => !n.Seen);
 }
 

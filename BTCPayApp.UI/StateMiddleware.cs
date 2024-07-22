@@ -1,10 +1,10 @@
-﻿using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.UI.Features;
-using BTCPayServer.Events;
 using Fluxor;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Components;
 
 namespace BTCPayApp.UI;
 
@@ -14,7 +14,9 @@ public class StateMiddleware(
     LightningNodeManager lightningNodeService,
     OnChainWalletManager onChainWalletManager,
     BTCPayAppServerClient btcpayAppServerClient,
-    ILogger<StateMiddleware> Logger)
+    IAccountManager accountManager,
+    NavigationManager navigationManager,
+    ILogger<StateMiddleware> logger)
     : Middleware
 {
     public const string UiStateConfigKey = "uistate";
@@ -38,7 +40,6 @@ public class StateMiddleware(
         }
 
         await base.InitializeAsync(dispatcher, store);
-
     }
 
     private void ListenIn(IDispatcher dispatcher)
@@ -65,33 +66,43 @@ public class StateMiddleware(
             return Task.CompletedTask;
         };
 
-        btcpayAppServerClient.OnNotifyServerEvent += (sender, serverEvent) =>
+        btcpayAppServerClient.OnNotifyServerEvent += async (sender, serverEvent) =>
         {
-            Logger.LogDebug("Received Server Event: {ServerEventType}", serverEvent);
-            switch (serverEvent.Type.ToLowerInvariant())
+            logger.LogDebug("Received Server Event: {Type} - {Details}", serverEvent.Type, serverEvent.ToString());
+            var currentUserId = accountManager.GetUserInfo()?.UserId;
+            if (string.IsNullOrEmpty(currentUserId)) return;
+            var currentStoreId = accountManager.GetCurrentStore()?.Id;
+            string? eventStoreId = null;
+            switch (serverEvent.Type)
             {
                 case "notifications-updated":
-                    dispatcher.Dispatch(new NotificationState.FetchNotifications());
+                    if (currentStoreId != null)
+                        dispatcher.Dispatch(new StoreState.FetchNotifications(currentStoreId));
+                    else
+                        dispatcher.Dispatch(new NotificationState.FetchNotifications());
                     break;
                 case "invoice-updated":
-                    /*var storeId = ((ServerEvent<InvoiceEvent>)serverEvent).Event?.Invoice.StoreId;
-                    if (storeId != null) dispatcher.Dispatch(new StoreState.FetchInvoices(storeId));*/
+                    if (serverEvent.StoreId != null && serverEvent.StoreId == currentStoreId) dispatcher.Dispatch(new StoreState.FetchInvoices(serverEvent.StoreId));
                     break;
                 case "store-created":
-                    break;
                 case "store-updated":
-                    break;
                 case "store-removed":
-                    break;
                 case "user-store-added":
-                    break;
                 case "user-store-updated":
-                    break;
                 case "user-store-removed":
+                    if (serverEvent.StoreId != null)
+                    {
+                        // TODO: Move manager actions to state and dispatch them
+                        await accountManager.CheckAuthenticated(true);
+                        if (serverEvent.Type is "store-removed" or "user-store-removed" &&
+                            serverEvent.StoreId == currentStoreId)
+                        {
+                            await accountManager.UnsetCurrentStore();
+                            navigationManager.NavigateTo(Routes.SelectStore, true, true);
+                        }
+                    }
                     break;
             }
-
-            return Task.CompletedTask;
         };
     }
 }

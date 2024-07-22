@@ -3,8 +3,11 @@
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Components.Layout
+@using Microsoft.AspNetCore.StaticFiles
 @inject IAccountManager AccountManager
+@inject IDataDirectoryProvider DataDirectoryProvider
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>User</PageTitle>
@@ -28,7 +31,7 @@
             }
         </div>
         <div class="box">
-            <ValidationEditContext Model="Account" OnValidSubmit="HandleValidAccountSubmit" SuccessMessage="@_accountSuccessMessage" ErrorMessage="@_accountErrorMessage">
+            <ValidationEditContext Model="Account" OnValidSubmit="HandleValidAccountSubmit" SuccessMessage="@_accountSuccessMessage" ErrorMessage="@_accountErrorMessage" enctype="multipart/form-data">
                 <DataAnnotationsValidator />
                 <div class="form-group">
                     <label for="Email" class="form-label" data-required>Email</label>
@@ -41,10 +44,25 @@
                     <ValidationMessage For="@(() => Account.Name)" />
                 </div>
                 <div class="form-group">
-                    <label for="ImageUrl" class="form-label">Image Url</label>
-                    <InputText @bind-Value="Account.ImageUrl" id="ImageUrl" type="url" class="form-control"/>
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                        <label for="ProfilePicture" class="form-label">Profile Picture</label>
+                        @if (!string.IsNullOrEmpty(Account.ImageUrl))
+                        {
+                            <button type="button" class="btn btn-link p-0 text-danger" @onclick="UnsetProfilePicture">
+                                <Icon Symbol="cross" /> Remove
+                            </button>
+                        }
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <InputFile OnChange="LoadProfilePicture" @key="@_inputFileId" id="ProfilePicture" class="form-control"/>
+                        @if (!string.IsNullOrEmpty(Account.ImageUrl))
+                        {
+                            <img src="@Account.ImageUrl" alt="Profile picture" class="profile-picture"/>
+                        }
+                    </div>
                     <ValidationMessage For="@(() => Account.ImageUrl)" />
                 </div>
+
                 <button type="submit" class="btn btn-primary w-100" disabled="@(_accountSending)">
                     @if (_accountSending)
                     {
@@ -115,6 +133,7 @@
     private bool _passwordSending;
     private string? _passwordErrorMessage;
     private string? _passwordSuccessMessage;
+    private Guid _inputFileId = Guid.NewGuid();
 
     protected override async Task OnInitializedAsync()
     {
@@ -147,6 +166,22 @@
     {
         _accountErrorMessage = _accountSuccessMessage = null;
         _accountSending = true;
+
+        if (!string.IsNullOrEmpty(Account!.ImagePath))
+        {
+            var path = Account.ImagePath;
+            var mimeType = GetContentType(path);
+            var upload = await AccountManager.GetClient().UploadCurrentUserProfilePicture(path, mimeType);
+            Account.ImageUrl = upload.ImageUrl;
+            // cleanup
+            File.Delete(path);
+            Account.ImagePath = null;
+            _inputFileId = Guid.NewGuid();
+        }
+        else if (string.IsNullOrEmpty(Account!.ImageUrl))
+        {
+            await AccountManager.GetClient().DeleteCurrentUserProfilePicture();
+        }
 
         var result = await AccountManager.ChangeAccountInfo(Account.Email!, Account.Name, Account.ImageUrl);
         _accountSending = false;
@@ -187,6 +222,45 @@
         }
     }
 
+    private async Task LoadProfilePicture(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var appData = await DataDirectoryProvider.GetAppDataDirectory();
+            var fileName = e.File.Name;
+            var dirPath = Path.Combine(appData, "tmp");
+            var filePath = Path.Combine(dirPath, fileName);
+            Directory.CreateDirectory(dirPath);
+
+            await using FileStream fs = new(filePath, FileMode.Create);
+            await e.File.OpenReadStream().CopyToAsync(fs);
+            await fs.FlushAsync();
+            Account!.ImagePath = filePath;
+            _accountErrorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _accountErrorMessage = $"Profile picture could not be applied: {ex.Message}";
+        }
+    }
+
+    private void UnsetProfilePicture()
+    {
+        Account!.ImageUrl = null;
+        Account.ImagePath = null;
+        _inputFileId = Guid.NewGuid();
+    }
+
+    private static string GetContentType(string filePath)
+    {
+        var mimeProvider = new FileExtensionContentTypeProvider();
+        if (!mimeProvider.TryGetContentType(filePath, out var contentType))
+        {
+            contentType = "application/octet-stream";
+        }
+        return contentType;
+    }
+
     private class AccountModel
     {
         [Required, EmailAddress]
@@ -194,6 +268,7 @@
         public string? Name { get; set; }
         [Url]
         public string? ImageUrl { get; set; }
+        public string? ImagePath { get; set; }
     }
 
     private class PasswordModel

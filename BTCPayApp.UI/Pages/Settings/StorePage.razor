@@ -1,11 +1,13 @@
 ﻿@attribute [Route(Routes.Store)]
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
-@using ExchangeSharp
+@using Microsoft.AspNetCore.StaticFiles
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IDataDirectoryProvider DataDirectoryProvider
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 @inject IState<StoreState> StoreState
@@ -47,7 +49,7 @@
         </div>
         @if (_canView is true)
         {
-            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error" class="mb-5">
                 <DataAnnotationsValidator/>
                     <fieldset disabled="@(_canModify is not true)">
                         <fieldset class="box">
@@ -60,6 +62,34 @@
                                 <label for="Website" class="form-label">Website</label>
                                 <InputText @bind-Value="Model.Website" id="Website" class="form-control"/>
                                 <ValidationMessage For="@(() => Model.Website)"/>
+                            </div>
+                        </fieldset>
+
+                        <h2>Branding</h2>
+                        <fieldset class="box">
+                            <div class="form-group">
+                                <label for="BrandColor" class="form-label">Brand Color</label>
+                                <div class="input-group">
+                                    <InputText @bind-Value="Model.BrandColor" class="form-control form-control-color flex-grow-0" id="BrandColor" type="color" style="width:3rem" aria-describedby="BrandColorValue"/>
+                                    <InputText @bind-Value="Model.BrandColor" class="form-control form-control-color flex-grow-0 font-monospace" pattern="^#[0-9a-fA-F]{6}$" style="width:5.5rem;font-size:0.9rem"/>
+                                </div>
+                                <ValidationMessage For="@(() => Model.BrandColor)"/>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <label for="Logo" class="form-label">Logo</label>
+                                @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                                {
+                                    <button type="button" class="btn btn-link p-0 text-danger" @onclick="UnsetLogo">
+                                        <Icon Symbol="cross" /> Remove
+                                    </button>
+                                }
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <InputFile OnChange="LoadLogo" @key="@_inputFileId" id="Logo" class="form-control"/>
+                                @if (!string.IsNullOrEmpty(Model.LogoUrl))
+                                {
+                                    <img src="@Model.LogoUrl" alt="Logo" class="logo"/>
+                                }
                             </div>
                         </fieldset>
 
@@ -180,8 +210,10 @@
     private ValidationEditContext? _validationEditContext;
     private StoreModel? Model { get; set; }
     private string? _successMessage;
+    private string? _errorMessage;
     private bool? _canView;
     private bool? _canModify;
+    private Guid _inputFileId = Guid.NewGuid();
 
     protected override async Task OnInitializedAsync()
     {
@@ -202,8 +234,9 @@
 
         ActionSubscriber.SubscribeToAction<StoreState.SetStore>(this, action =>
         {
-            if (action.Store != null)
-                UpdateModel(action.Store);
+            if (action.Store == null) return;
+            UpdateModel(action.Store);
+            StateHasChanged();
         });
 
         ActionSubscriber.SubscribeToAction<StoreState.UpdatedStore>(this, action =>
@@ -233,10 +266,29 @@
         _successMessage = null;
 
         var store = Store!;
+
+        if (!string.IsNullOrEmpty(Model!.LogoPath))
+        {
+            var path = Model.LogoPath;
+            var mimeType = GetContentType(path);
+            var upload = await AccountManager.GetClient().UploadStoreLogo(store.Id, path, mimeType);
+            Model.LogoUrl = upload.LogoUrl;
+            // cleanup
+            File.Delete(path);
+            Model.LogoPath = null;
+            _inputFileId = Guid.NewGuid();
+        }
+        else if (string.IsNullOrEmpty(Model!.LogoUrl))
+        {
+            await AccountManager.GetClient().DeleteStoreLogo(store.Id);
+        }
+
         Dispatcher.Dispatch(new StoreState.UpdateStore(StoreId!, new UpdateStoreRequest
         {
             Name = Model!.Name,
             Website = Model.Website,
+            BrandColor = Model.BrandColor,
+            LogoUrl = Model.LogoUrl,
             DefaultCurrency = Model.DefaultCurrency,
             AnyoneCanCreateInvoice = Model.AnyoneCanCreateInvoice,
             NetworkFeeMode = Model.NetworkFeeMode,
@@ -249,8 +301,6 @@
             OnChainWithLnInvoiceFallback = Model.OnChainWithLnInvoiceFallback,
             PlaySoundOnPayment = Model.PlaySoundOnPayment,
             // pass these attributes to not reset them
-            BrandColor = store.BrandColor,
-            LogoUrl = store.LogoUrl,
             CssUrl = store.CssUrl,
             PaymentSoundUrl = store.PaymentSoundUrl,
             SupportUrl = store.SupportUrl,
@@ -281,6 +331,8 @@
         {
             Name = data.Name,
             Website = data.Website,
+            BrandColor = data.BrandColor,
+            LogoUrl = data.LogoUrl,
             DefaultCurrency = data.DefaultCurrency,
             AnyoneCanCreateInvoice = data.AnyoneCanCreateInvoice,
             NetworkFeeMode = data.NetworkFeeMode,
@@ -298,7 +350,46 @@
     private StoreData? Store => StoreState.Value.Store?.Data;
     private bool Loading => StoreState.Value.Store?.Loading is true;
     private bool Sending => StoreState.Value.Store?.Sending is true;
-    private string? Error => StoreState.Value.Store?.Error;
+    private string? Error => _errorMessage ?? StoreState.Value.Store?.Error;
+
+    private async Task LoadLogo(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var appData = await DataDirectoryProvider.GetAppDataDirectory();
+            var fileName = e.File.Name;
+            var dirPath = Path.Combine(appData, "tmp");
+            var filePath = Path.Combine(dirPath, fileName);
+            Directory.CreateDirectory(dirPath);
+
+            await using FileStream fs = new(filePath, FileMode.Create);
+            await e.File.OpenReadStream().CopyToAsync(fs);
+            await fs.FlushAsync();
+            Model!.LogoPath = filePath;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Profile picture could not be applied: {ex.Message}";
+        }
+    }
+
+    private void UnsetLogo()
+    {
+        Model!.LogoUrl = null;
+        Model.LogoPath = null;
+        _inputFileId = Guid.NewGuid();
+    }
+
+    private static string GetContentType(string filePath)
+    {
+        var mimeProvider = new FileExtensionContentTypeProvider();
+        if (!mimeProvider.TryGetContentType(filePath, out var contentType))
+        {
+            contentType = "application/octet-stream";
+        }
+        return contentType;
+    }
 
     private class StoreModel
     {
@@ -306,6 +397,12 @@
         public string? Name { get; set; }
         [Url]
         public string? Website { get; set; }
+
+        // Branding
+        public string? BrandColor { get; set; }
+        [Url]
+        public string? LogoUrl { get; set; }
+        public string? LogoPath { get; set; }
 
         // Payment
         [Required]

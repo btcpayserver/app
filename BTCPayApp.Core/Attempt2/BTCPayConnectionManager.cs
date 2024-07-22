@@ -73,9 +73,9 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         ReportedNodeInfo = e;
     }
 
-    private async Task OnNotifyServerEvent(object? sender, IServerEvent serverEvent)
+    private async Task OnNotifyServerEvent(object? sender, ServerEvent e)
     {
-        _logger.LogInformation("OnNotifyServerEvent: {ServerEventType}", serverEvent.Type);
+        _logger.LogInformation("OnNotifyServerEvent: {Type} - {Details}", e.Type, e.ToString());
     }
 
     private async Task OnNotifyNetwork(object? sender, string e)

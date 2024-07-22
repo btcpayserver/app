@@ -21,6 +21,7 @@ public interface IAccountManager
     public Task<FormResult<ApplicationUserData>> ChangeAccountInfo(string email, string? name, string? imageUrl, CancellationToken? cancellation = default);
     public Task<FormResult> RefreshAccess(CancellationToken? cancellation = default);
     public Task<FormResult> SetCurrentStoreId(string storeId);
+    public Task UnsetCurrentStore();
     public AppUserStoreInfo? GetCurrentStore();
     public AppUserStoreInfo? GetUserStore(string storeId);
     public Task Logout();

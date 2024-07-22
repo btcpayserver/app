@@ -13,18 +13,15 @@ namespace BTCPayApp.Core.Attempt2;
 
 public class BTCPayAppServerClient : IBTCPayAppHubClient
 {
-    private readonly ILogger<BTCPayAppServerClient> _logger;
-    private readonly IServiceProvider _serviceProvider;
+    public event AsyncEventHandler<string>? OnNewBlock;
+    public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
+    public event AsyncEventHandler<string>? OnNotifyNetwork;
+    public event AsyncEventHandler<string>? OnServerNodeInfo;
+    public event AsyncEventHandler<ServerEvent>? OnNotifyServerEvent;
 
     public BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServiceProvider serviceProvider)
     {
-        _logger = logger;
-        _serviceProvider = serviceProvider;
-    }
-
-    public async Task NotifyServerEvent(IServerEvent serverEvent)
-    {
-        _logger.LogInformation("NotifyServerEvent: {ServerEventType}", serverEvent.Type);
+        logger.LogInformation("NotifyServerEvent: {Type} - {Details}", serverEvent.Type, serverEvent.ToString());
         await OnNotifyServerEvent?.Invoke(this, serverEvent)!;
     }
 

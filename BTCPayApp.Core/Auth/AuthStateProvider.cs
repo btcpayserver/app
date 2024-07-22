@@ -20,6 +20,8 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
     private const string CurrentAccountKey = "CurrentAccount";
     private bool _isInitialized;
     private BTCPayAccount? _account;
+
+    // TODO: Move _userInfo to state
     private AppUserInfo? _userInfo;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly ClaimsPrincipal _unauthenticated = new(new ClaimsIdentity());
@@ -183,6 +185,12 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         await UpdateAccount(_account);
 
         return new FormResult(true, string.IsNullOrEmpty(message) ? null : [message]);
+    }
+
+    public async Task UnsetCurrentStore()
+    {
+        _account!.CurrentStoreId = null;
+        await UpdateAccount(_account);
     }
 
     public AppUserStoreInfo? GetUserStore(string storeId)

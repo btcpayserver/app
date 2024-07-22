@@ -44,9 +44,6 @@
         if (authState.User.Identity?.IsAuthenticated is true && !string.IsNullOrEmpty(account?.BaseUri))
         {
             Dispatcher.Dispatch(new UIState.FetchInstanceInfo(account.BaseUri));
-
-            // notifications
-            Dispatcher.Dispatch(new NotificationState.FetchNotifications());
         }
 
         // store
