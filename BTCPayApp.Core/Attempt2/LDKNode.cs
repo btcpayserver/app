@@ -291,23 +291,23 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     
     public async Task<byte[]?> GetRawChannelManager()
     {
-        return await _configProvider.Get<byte[]>("ChannelManager") ?? null;
+        return await _configProvider.Get<byte[]>("ln:ChannelManager") ?? null;
     }
 
     public async Task UpdateChannelManager(ChannelManager serializedChannelManager)
     {
-        await _configProvider.Set("ChannelManager", serializedChannelManager.write());
+        await _configProvider.Set("ln:ChannelManager", serializedChannelManager.write());
     }
 
     
     public async Task UpdateNetworkGraph(NetworkGraph networkGraph)
     {
-        await _configProvider.Set("NetworkGraph", networkGraph.write());
+        await _configProvider.Set("ln:NetworkGraph", networkGraph.write());
     }
 
     public async Task UpdateScore(WriteableScore score)
     {
-        await _configProvider.Set("Score", score.write());
+        await _configProvider.Set("ln:Score", score.write());
     }
 
     
@@ -351,33 +351,32 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         }
     }
 
-    public async Task UpdateChannel(string id, byte[] write)
+    public async Task UpdateChannel(List<ChannelAlias> identifiers, byte[] write)
     {
+        var ids = identifiers.Select(alias => alias.Id).ToArray();
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        
-        var channel = await context.LightningChannels.SingleOrDefaultAsync(lightningChannel => lightningChannel.Id == id || lightningChannel.Aliases.Contains(id));
+        var channel = (await context.ChannelAliases.Include(alias => alias.Channel)
+            .ThenInclude(channel1 => channel1.Aliases).FirstOrDefaultAsync(alias => ids.Contains(alias.Id)))?.Channel;
 
         if (channel is not null)
         {
-            if (!channel.Aliases.Contains(channel.Id))
+            foreach (var alias in identifiers)
             {
-                channel.Aliases.Add(channel.Id);
-            }
-            if (!channel.Aliases.Contains(id))
-            {
-                channel.Aliases.Add(id);
+                if (channel.Aliases.All(a => a.Id != alias.Id))
+                {
+                    channel.Aliases.Add(alias);
+                }
             }
 
-            channel.Id = id;
             channel.Data = write;
         }
         else
         {
             await context.LightningChannels.AddAsync(new Channel()
             {
-                Id = id,
+                Id = identifiers.First().ChannelId,
                 Data = write,
-                Aliases = [id]
+                Aliases = identifiers.ToList()
             });
         }
         await context.SaveChangesAsync();

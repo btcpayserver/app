@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -28,6 +29,8 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
 
     private ConcurrentDictionary<long, Task> updateTasks = new();
     
+    
+    
     public ChannelMonitorUpdateStatus persist_new_channel(OutPoint channel_funding_outpoint, ChannelMonitor data,
         MonitorUpdateId update_id)
     {
@@ -44,9 +47,32 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
                 var outs = data.get_outputs_to_watch()
                     .SelectMany(zzzz => zzzz.get_b().Select(zz => Script.FromBytesUnsafe(zz.get_b()))).ToArray();
 
-                var id = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()).ToLower();
+                
+                var fundingId = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()).ToLower();
+                
+                var identifiers = new  List<ChannelAlias>();
+                identifiers.Add(new ChannelAlias()
+                {
+                    Id = fundingId,
+                    Type = "funding_outpoint"
+                });
+                var otherId = data.channel_id().is_zero()? null: Convert.ToHexString(data.channel_id().get_a()).ToLower();
+                if(otherId == fundingId)
+                {
+                    otherId = null;
+                    
+                }
+                if(otherId != null)
+                {
+                    identifiers.Add(new ChannelAlias()
+                    {
+                        Id = otherId,
+                        Type = "arbitrary_id"
+                    });
+                }
+                
                 // var trackTask = _node.TrackScripts(outs).ContinueWith(task => _logger.LogDebug($"Tracking scripts finished for  updateid: {update_id.hash()}"));;
-                var updateTask = _node.UpdateChannel(id, data.write()).ContinueWith(task => _logger.LogDebug($"Updating channel finished for  updateid: {update_id.hash()}"));;
+                var updateTask = _node.UpdateChannel(identifiers, data.write()).ContinueWith(task => _logger.LogDebug($"Updating channel finished for  updateid: {update_id.hash()}"));;
                 await updateTask;
                 
                 await Task.Run(() =>
@@ -108,9 +134,31 @@ public class LDKPersistInterface : PersistInterface//, IScopedHostedService
 
         var taskResult = updateTasks.GetOrAdd(updateId, async l =>
         {
-            await _node.UpdateChannel(
-                Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()).ToLower(),
-                data.write());
+            
+            var fundingId = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()).ToLower();
+                
+            var identifiers = new  List<ChannelAlias>();
+            identifiers.Add(new ChannelAlias()
+            {
+                Id = fundingId,
+                Type = "funding_outpoint"
+            });
+            var otherId = data.channel_id().is_zero()? null: Convert.ToHexString(data.channel_id().get_a()).ToLower();
+            if(otherId == fundingId)
+            {
+                otherId = null;
+                    
+            }
+            if(otherId != null)
+            {
+                identifiers.Add(new ChannelAlias()
+                {
+                    Id = otherId,
+                    Type = "arbitrary_id"
+                });
+            }
+            
+            await _node.UpdateChannel(identifiers, data.write());
 
             await Task.Run(() =>
             {

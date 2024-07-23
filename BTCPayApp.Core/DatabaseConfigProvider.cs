@@ -83,17 +83,22 @@
 
 
 using System.Text.Json;
+using AsyncKeyedLock;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 public class DatabaseConfigProvider: IConfigProvider
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
+    private readonly ILogger<DatabaseConfigProvider> _logger;
+    private AsyncKeyedLocker<string> _lock = new();
 
-    public DatabaseConfigProvider(IDbContextFactory<AppDbContext> dbContextFactory)
+    public DatabaseConfigProvider(IDbContextFactory<AppDbContext> dbContextFactory, ILogger<DatabaseConfigProvider> logger)
     {
         _dbContextFactory = dbContextFactory;
+        _logger = logger;
     }
 
     public async Task<T?> Get<T>(string key)
@@ -107,6 +112,8 @@ public class DatabaseConfigProvider: IConfigProvider
 
     public async Task Set<T>(string key, T? value)
     {
+        using var releaser = await _lock.LockAsync(key);
+        _logger.LogDebug("Setting {key} to {value}", key, value);
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         if (value is null)
         {

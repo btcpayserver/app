@@ -3,7 +3,7 @@
 namespace BTCPayApp.Core.Data;
 public class LightningConfig
 {
-    public const string Key = "lightningconfig";
+    public const string Key = "ln:lightningconfig";
 
     public string Alias { get; set; } = "BTCPay Server";
     public string ScriptDerivationKey { get; set; } = WalletDerivation.NativeSegwit; //when ldk asks for an address, where do we get it from?

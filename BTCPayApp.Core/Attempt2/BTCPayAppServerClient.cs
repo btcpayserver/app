@@ -1,7 +1,6 @@
 using System.Text;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Helpers;
-using BTCPayApp.Core.LDK;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,7 +10,7 @@ using NBitcoin.Crypto;
 
 namespace BTCPayApp.Core.Attempt2;
 
-public class BTCPayAppServerClient : IBTCPayAppHubClient
+public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServiceProvider _serviceProvider) : IBTCPayAppHubClient
 {
     public event AsyncEventHandler<string>? OnNewBlock;
     public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
@@ -19,10 +18,10 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
     public event AsyncEventHandler<string>? OnServerNodeInfo;
     public event AsyncEventHandler<ServerEvent>? OnNotifyServerEvent;
 
-    public BTCPayAppServerClient(ILogger<BTCPayAppServerClient> logger, IServiceProvider serviceProvider)
+    public async Task NotifyServerEvent(ServerEvent ev)
     {
-        logger.LogInformation("NotifyServerEvent: {Type} - {Details}", serverEvent.Type, serverEvent.ToString());
-        await OnNotifyServerEvent?.Invoke(this, serverEvent)!;
+        _logger.LogInformation("NotifyServerEvent: {ev}", ev);
+        await OnNotifyServerEvent?.Invoke(this, ev);
     }
 
     public async Task NotifyNetwork(string network)
@@ -115,10 +114,4 @@ public class BTCPayAppServerClient : IBTCPayAppHubClient
             return new PayResponse(PayResult.Error, e.Message);
         }
     }
-
-    public event AsyncEventHandler<string>? OnNewBlock;
-    public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
-    public event AsyncEventHandler<string>? OnNotifyNetwork;
-    public event AsyncEventHandler<string>? OnServerNodeInfo;
-    public event AsyncEventHandler<IServerEvent>? OnNotifyServerEvent;
 }

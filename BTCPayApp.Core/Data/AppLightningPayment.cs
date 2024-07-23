@@ -32,6 +32,4 @@ public class AppLightningPayment : VersionedData
     public BOLT11PaymentRequest PaymentRequest { get; set; }
 
     [JsonExtensionData] public Dictionary<string, JsonElement> AdditionalData { get; set; } = new();
-
-    public override string Entity => "LightningPayment";
 }

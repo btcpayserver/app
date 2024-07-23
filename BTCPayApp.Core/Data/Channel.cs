@@ -3,9 +3,14 @@
 public class Channel:VersionedData
 {
     public string Id { get; set; }
-    public List<string> Aliases { get; set; }
     public byte[] Data { get; set; }
+    public List<ChannelAlias> Aliases { get; set; }
+}
 
-
-    public override string Entity => "Channel";
+public class ChannelAlias
+{
+    public string Id { get; set; }
+    public string Type { get; set; }
+    public string ChannelId { get; set; }
+    public Channel Channel { get; set; }
 }
