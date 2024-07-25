@@ -14,6 +14,8 @@ using TxOut = NBitcoin.TxOut;
 namespace BTCPayApp.Core.Attempt2;
 public class OnChainWalletManager : BaseHostedService
 {
+    public const string PaymentMethodId = "BTC-CHAIN";
+
     private readonly IConfigProvider _configProvider;
     private readonly BTCPayAppServerClient _btcPayAppServerClient;
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
@@ -75,7 +77,7 @@ public class OnChainWalletManager : BaseHostedService
     }
 
     private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is HubConnectionState.Connected;
-    private bool IsConfigured => WalletConfig is not null;
+    public bool IsConfigured => WalletConfig is not null;
 
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
     {

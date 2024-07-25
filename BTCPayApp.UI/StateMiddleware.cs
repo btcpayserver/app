@@ -1,10 +1,14 @@
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Data;
 using BTCPayApp.UI.Features;
 using Fluxor;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Components;
+using BTCPayServer.Client;
+using BTCPayServer.Client.Models;
+using Newtonsoft.Json.Linq;
 
 namespace BTCPayApp.UI;
 
@@ -54,16 +58,24 @@ public class StateMiddleware(
             return Task.CompletedTask;
         };
 
-        lightningNodeService.StateChanged += (sender, args) =>
-        {
-            dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
-            return Task.CompletedTask;
-        };
-
-        onChainWalletManager.StateChanged += (sender, args) =>
+        onChainWalletManager.StateChanged += async (sender, args) =>
         {
             dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
-            return Task.CompletedTask;
+            if (onChainWalletManager.State == OnChainWalletState.Loaded)
+                await TryApplyingAppPaymentMethodsToCurrentStore(true, false);
+        };
+
+        lightningNodeService.StateChanged += async (sender, args) =>
+        {
+            dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
+
+            if (lightningNodeService.State == LightningNodeState.Loaded)
+                await TryApplyingAppPaymentMethodsToCurrentStore(false, true);
+        };
+
+        accountManager.OnAfterStoreChange += async (sender, storeInfo) =>
+        {
+            await TryApplyingAppPaymentMethodsToCurrentStore(true, true);
         };
 
         btcpayAppServerClient.OnNotifyServerEvent += async (sender, serverEvent) =>
@@ -104,5 +116,37 @@ public class StateMiddleware(
                     break;
             }
         };
+    }
+
+    private async Task<(GenericPaymentMethodData? onchain, GenericPaymentMethodData? lightning)?> TryApplyingAppPaymentMethodsToCurrentStore(bool applyOnchain, bool applyLighting)
+    {
+        var storeId = accountManager.GetCurrentStore()?.Id;
+        if (// is a store present?
+            string.IsNullOrEmpty(storeId) ||
+            // is user permitted? (store owner)
+            !await accountManager.IsAuthorized(Policies.CanModifyStoreSettings, storeId) ||
+            // is the onchain wallet configured?
+            onChainWalletManager.WalletConfig?.Derivations.TryGetValue(WalletDerivation.NativeSegwit, out var onchainDerivation) is not true || string.IsNullOrEmpty(onchainDerivation.Descriptor)) return null;
+        // check the store's payment methods
+        var pms = await accountManager.GetClient().GetStorePaymentMethods(storeId);
+        var onchain = pms.FirstOrDefault(pm => pm.PaymentMethodId == OnChainWalletManager.PaymentMethodId);
+        if (onchain is null && applyOnchain)
+        {
+            onchain = await accountManager.GetClient().UpdateStorePaymentMethod(storeId, OnChainWalletManager.PaymentMethodId, new UpdatePaymentMethodRequest
+            {
+                Enabled = true,
+                Config = onchainDerivation.Descriptor
+            });
+        }
+        var lightning = pms.FirstOrDefault(pm => pm.PaymentMethodId == LightningNodeManager.PaymentMethodId);
+        if (lightning is null && !string.IsNullOrEmpty(lightningNodeService.ConnectionString) && applyLighting)
+        {
+            lightning = await accountManager.GetClient().UpdateStorePaymentMethod(storeId, LightningNodeManager.PaymentMethodId, new UpdatePaymentMethodRequest
+            {
+                Enabled = true,
+                Config = new JObject { ["connectionString"] = lightningNodeService.ConnectionString }
+            });
+        }
+        return (onchain, lightning);
     }
 }

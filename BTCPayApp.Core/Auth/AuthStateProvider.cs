@@ -4,7 +4,6 @@ using BTCPayApp.Core.AspNetRip;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
 using BTCPayServer.Abstractions.Constants;
-using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -34,6 +33,8 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
 
     public AsyncEventHandler<BTCPayAccount?>? OnBeforeAccountChange { get; set; }
     public AsyncEventHandler<BTCPayAccount?>? OnAfterAccountChange { get; set; }
+    public AsyncEventHandler<AppUserStoreInfo?>? OnBeforeStoreChange { get; set; }
+    public AsyncEventHandler<AppUserStoreInfo?>? OnAfterStoreChange { get; set; }
 
     public AuthStateProvider(
         IConfigProvider config,
@@ -145,7 +146,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
     public async Task<bool> IsAuthorized(string policy, object? resource = null)
     {
         var authState = await GetAuthenticationStateAsync();
-        var result = await _authService.AuthorizeAsync(authState.User, resource,Policies.CanViewStoreSettings);
+        var result = await _authService.AuthorizeAsync(authState.User, resource, policy);
         return result.Succeeded;
     }
 
@@ -162,6 +163,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         var store = GetUserStore(storeId);
         if (store == null) return new FormResult(false, $"Store with ID '{storeId}' does not exist or belong to the user.");
 
+        OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
         string? message = null;
 
         // create associated POS app if there is none
@@ -183,6 +185,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
 
         _account!.CurrentStoreId = storeId;
         await UpdateAccount(_account);
+        OnAfterStoreChange?.Invoke(this, store);
 
         return new FormResult(true, string.IsNullOrEmpty(message) ? null : [message]);
     }

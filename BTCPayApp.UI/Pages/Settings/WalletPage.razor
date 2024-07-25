@@ -1,12 +1,12 @@
 ﻿@attribute [Route(Routes.WalletSettings)]
 @layout BaseLayout
+@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.UI.Features
 @using Microsoft.AspNetCore.SignalR.Client
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.Core.Auth
 @using Microsoft.Extensions.Logging
 @using BTCPayApp.UI.Components.Layout
-@using BTCPayApp.Core.Helpers
 @using BTCPayServer.Client.Models
 @using Newtonsoft.Json.Linq
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -14,22 +14,18 @@
 @inject IState<RootState> State
 @inject ILogger<IndexPage> Logger
 @inject IAccountManager AccountManager
-<PageTitle>Wallet Setup</PageTitle>
+<PageTitle>Onchain Wallet</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>Wallet Setup</h1>
+        <h1>Onchain Wallet</h1>
     </Titlebar>
 </SectionContent>
 <section class="container">
-    @if (CanConfigureWallet)
+    @if (OnChainWalletManager.IsConfigured)
     {
-        <button class="btn btn-primary" @onclick="GenerateWallet">Generate Wallet</button>
-    }
-    @if (OnChainWalletManager.State == OnChainWalletState.Loaded)
-    {
-        var config = OnChainWalletManager.WalletConfig;
-        <h3>@config.Network Wallet</h3>
+        var config = OnChainWalletManager.WalletConfig!;
+        <h3>Network: @config.Network</h3>
         <p>Fingerprint: <code>@config.Fingerprint</code></p>
         <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#seed" aria-expanded="false" aria-controls="seed">
             Show seed
@@ -48,30 +44,40 @@
         <h3 class="mt-4">Derivations</h3>
         @foreach (var d in config.Derivations)
         {
+            var identifier = d.Value.Identifier;
+            var descriptor = d.Value.Descriptor;
+            var isStorePaymentMethod = IsStorePaymentMethodId(identifier);
             <div class="box mb-3">
                 <h4>@(d.Value.Name)</h4>
-
-                @if (!string.IsNullOrEmpty(d.Value.Identifier))
+                @if (!string.IsNullOrEmpty(identifier))
                 {
                     <div class="form-floating">
-                        <TruncateCenter Text="@d.Value.Identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                        <TruncateCenter Text="@identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
                         <label>Identifier</label>
                     </div>
-
                 }
-                @if (!string.IsNullOrEmpty(d.Value.Descriptor))
+                @if (!string.IsNullOrEmpty(descriptor))
                 {
                     <div class="form-floating">
-                        <TruncateCenter Text="@d.Value.Descriptor" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                        <TruncateCenter Text="@descriptor" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
                         <label>Descriptor</label>
                     </div>
-                }
-                @if (d.Value.Descriptor is not null && d.Value.Identifier is not null && (StorePaymentMethodIdentifier is null || !d.Value.Identifier.Contains(StorePaymentMethodIdentifier)))
-                {
-                    <button class="btn btn-primary" @onclick="() => SetStorePaymentMethod(d.Key)">Set as Store Payment Method</button>
+                    @if (isStorePaymentMethod is false)
+                    {
+                        <button class="btn btn-primary" @onclick="() => SetStorePaymentMethod(d.Key)">
+                            Set as onchain payment method for store "@Store!.Name"
+                        </button>
+                    }
                 }
             </div>
         }
+    }
+    else
+    {
+        <ul>
+            <li>Connection state: @State.Value.ConnectionState</li>
+            <li>Onchain wallet state: @State.Value.OnchainWalletState</li>
+        </ul>
     }
 </section>
 
@@ -79,35 +85,8 @@
     private bool CanConfigureWallet =>
         State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
         State.Value.ConnectionState == HubConnectionState.Connected;
-
-    private string? StorePaymentMethodIdentifier = null;
-
-    private async Task SetStorePaymentMethod(string key)
-    {
-
-        try
-        {
-            if (!OnChainWalletManager.WalletConfig.Derivations.TryGetValue(key, out var derivation) || derivation.Descriptor is null)
-            {
-                return;
-            }
-
-            var xpub = derivation.Descriptor.ExtractFromDescriptor(OnChainWalletManager.Network);
-            var identifierSUffix = derivation.Identifier.Split(':').Last();
-            var acc = AccountManager.GetAccount();
-            if (acc?.CurrentStoreId is null)
-                return;
-            var pm = await AccountManager.GetClient().UpdateStorePaymentMethod(acc.CurrentStoreId, "BTC-CHAIN", new UpdatePaymentMethodRequest()
-            {
-                Enabled = true,
-                Config = derivation.Descriptor
-            });
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error setting store payment method");
-        }
-    }
+    private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
+    private string? _storePaymentMethodIdentifier;
 
     protected override async Task OnInitializedAsync()
     {
@@ -118,32 +97,46 @@
 
     private async Task GetStorePaymentMethod()
     {
-        var storeId = AccountManager.GetCurrentStore()?.Id;
+        var storeId = Store?.Id;
+        var pmId = OnChainWalletManager.PaymentMethodId;
         if (string.IsNullOrEmpty(storeId) || CanConfigureWallet) return;
         try
         {
-            var pm = await AccountManager.GetClient().GetStorePaymentMethod(storeId, "BTC-CHAIN", true);
+            var pm = await AccountManager.GetClient().GetStorePaymentMethod(storeId, pmId, true);
             if (pm?.Config is JObject configObj && configObj.TryGetValue("accountDerivation", out var derivationSchemeToken) && derivationSchemeToken.Value<string>() is {} derivationScheme)
             {
-                StorePaymentMethodIdentifier = derivationScheme;
+                _storePaymentMethodIdentifier = derivationScheme;
             }
         }
         catch (Exception ex)
         {
-            Logger.LogDebug(ex, "Payment method BTC-CHAIN unset for store {StoreId}", storeId);
+            Logger.LogDebug(ex, "Payment method {PaymentMethodId} unset for store {StoreId}", pmId, storeId);
         }
     }
 
-
-    private async Task GenerateWallet()
+    private async Task SetStorePaymentMethod(string key)
     {
+        var pmId = OnChainWalletManager.PaymentMethodId;
+        var storeId = AccountManager.GetCurrentStore()?.Id;
         try
         {
-            await OnChainWalletManager.Generate();
+            if (storeId is null || OnChainWalletManager.WalletConfig?.Derivations.TryGetValue(key, out var derivation) is not true || derivation.Descriptor is null) return;
+            await AccountManager.GetClient().UpdateStorePaymentMethod(storeId, pmId, new UpdatePaymentMethodRequest
+            {
+                Enabled = true,
+                Config = derivation.Descriptor
+            });
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error configuring wallet");
+            Logger.LogError(ex, "Error setting payment method {PaymentMethodId} for store {StoreId}", pmId, storeId);
         }
+    }
+
+    private bool? IsStorePaymentMethodId(string identifier)
+    {
+        return !string.IsNullOrEmpty(identifier) && !string.IsNullOrEmpty(_storePaymentMethodIdentifier)
+                ? identifier.Contains(_storePaymentMethodIdentifier)
+                : null;
     }
 }
