@@ -42,14 +42,14 @@ public class LDKKVStore:KVStoreInterface
     public Result_NoneIOErrorZ write(string primary_namespace, string secondary_namespace, string key, byte[] buf)
     {
         var key1 = CombineKey(primary_namespace, secondary_namespace, key);
-        _configProvider.Set(key1, buf).ConfigureAwait(false).GetAwaiter().GetResult();
+        _configProvider.Set(key1, buf, true).ConfigureAwait(false).GetAwaiter().GetResult();
         return Result_NoneIOErrorZ.ok();
     }
 
     public Result_NoneIOErrorZ remove(string primary_namespace, string secondary_namespace, string key, bool lazy)
     {
         var key1 = CombineKey(primary_namespace, secondary_namespace, key);
-        _configProvider.Set<byte[]>(key1, null).ConfigureAwait(false).GetAwaiter().GetResult();
+        _configProvider.Set<byte[]>(key1, null, true).ConfigureAwait(false).GetAwaiter().GetResult();
         return Result_NoneIOErrorZ.ok();
     }
 

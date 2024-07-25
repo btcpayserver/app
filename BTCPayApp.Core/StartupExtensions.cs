@@ -1,4 +1,5 @@
-﻿using BTCPayApp.CommonServer;
+﻿using System.Xml.Linq;
+using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
@@ -6,6 +7,8 @@ using BTCPayApp.Core.Data;
 using BTCPayApp.Core.LDK;
 using Laraue.EfCoreTriggers.SqlLite.Extensions;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -39,11 +42,9 @@ public static class StartupExtensions
         serviceCollection.AddSingleton(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddSingleton<IConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddLDK();
-
         return serviceCollection;
     }
 }
-
 
 public class AppDatabaseMigrator: IHostedService
 {

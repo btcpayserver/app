@@ -33,7 +33,7 @@ public class StateMiddleware(
             uiStateFeature.StateChanged += async (sender, args) =>
             {
                 var state = (UIState)uiStateFeature.GetState() with { Instance = null };
-                await configProvider.Set(UiStateConfigKey, state);
+                await configProvider.Set(UiStateConfigKey, state, false);
             };
 
             store.Initialized.ContinueWith(task => ListenIn(dispatcher));

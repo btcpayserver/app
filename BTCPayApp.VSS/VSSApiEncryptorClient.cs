@@ -4,6 +4,7 @@ using VSSProto;
 
 namespace BTCPayApp.VSS;
 
+
 public class VSSApiEncryptorClient: IVSSAPI
 {
     private readonly IVSSAPI _vssApi;

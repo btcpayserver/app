@@ -202,7 +202,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     public async Task UpdateConfig(LightningConfig config)
     {
         await _started.Task;
-        await _configProvider.Set(LightningConfig.Key, config);
+        await _configProvider.Set(LightningConfig.Key, config, true);
         _config = config;
         
         ConfigUpdated?.Invoke(this, config);
@@ -296,18 +296,18 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
     public async Task UpdateChannelManager(ChannelManager serializedChannelManager)
     {
-        await _configProvider.Set("ln:ChannelManager", serializedChannelManager.write());
+        await _configProvider.Set("ln:ChannelManager", serializedChannelManager.write(), true);
     }
 
     
     public async Task UpdateNetworkGraph(NetworkGraph networkGraph)
     {
-        await _configProvider.Set("ln:NetworkGraph", networkGraph.write());
+        await _configProvider.Set("ln:NetworkGraph", networkGraph.write(), true);
     }
 
     public async Task UpdateScore(WriteableScore score)
     {
-        await _configProvider.Set("ln:Score", score.write());
+        await _configProvider.Set("ln:Score", score.write(), true);
     }
 
     

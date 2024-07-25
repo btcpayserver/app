@@ -6,7 +6,7 @@ using NBitcoin;
 
 namespace BTCPayApp.Core.Data;
 
-public class AppLightningPayment : VersionedData
+public class AppLightningPayment : VersionedData<AppLightningPayment>
 {
     [JsonConverter(typeof(UInt256JsonConverter))]
     public uint256 PaymentHash { get; set; }

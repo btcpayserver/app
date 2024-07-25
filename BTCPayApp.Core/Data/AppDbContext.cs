@@ -30,7 +30,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Outbox>()
             .HasKey(w => new {w.Entity, w.Key, w.ActionType, w.Version});
         modelBuilder.Entity<Outbox>().Property(payment => payment.Timestamp).HasDefaultValueSql("datetime('now')");
-        
+
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.PaymentRequest)
             .HasConversion(
                 request => request.ToString(),
@@ -57,12 +57,12 @@ public class AppDbContext : DbContext
 
 
         //handling versioned data
-        
+
         //settings, channels, payments
-        
+
         //when creating, set the version to 0
         //when updating, increment the version
-        
+
         // outbox creation
         // when creating, insert an outbox item
         // when updating, insert an outbox item
@@ -94,109 +94,109 @@ public class AppDbContext : DbContext
                             ActionType = OutboxAction.Delete
                         })))
             .AfterUpdate(trigger => trigger
-                .Action(group => group.Update<Setting>(
-                    (tableRefs, setting) => tableRefs.Old.Key == setting.Key,
-                    (tableRefs, setting) => new Setting() {Version = tableRefs.Old.Version + 1})));
-                // .AfterUpdate(trigger => trigger
+                .Action(group => group
+                    // .Condition(@ref => @ref.Old.Value != @ref.New.Value)
+                    .Update<Setting>(
+                        (tableRefs, setting) => tableRefs.Old.Key == setting.Key,
+                        (tableRefs, setting) => new Setting() {Version = tableRefs.Old.Version + 1})
+                    .Insert(
+                        // .InsertIfNotExists( (@ref, outbox) => @ref.New.Version == outbox.Version && outbox.ActionType == OutboxAction.Update && outbox.Entity == "Setting" && outbox.Key == @ref.New.Key,
+                        @ref => new Outbox()
+                        {
+                            Entity = "Setting",
+                            Version = @ref.Old.Version + 1,
+                            Key = @ref.New.Key,
+                            ActionType = OutboxAction.Update
+                        })));
                 // .Action(group => group
-                //     .Condition(@ref => @ref.Old.Backup)
+                //     .Condition(@ref => @ref.Old.Backup && !@ref.New.Backup)
                 //     .Insert(
-                //     // .InsertIfNotExists( (@ref, outbox) => @ref.New.Version == outbox.Version && outbox.ActionType == OutboxAction.Update && outbox.Entity == "Setting" && outbox.Key == @ref.New.Key,
+                //         // .InsertIfNotExists( (@ref, outbox) => @ref.New.Version == outbox.Version && outbox.ActionType == OutboxAction.Update && outbox.Entity == "Setting" && outbox.Key == @ref.New.Key,
                 //         @ref => new Outbox()
                 //         {
                 //             Entity = "Setting",
-                //             Version = @ref.New.Version,
+                //             Version = @ref.Old.Version +1,
                 //             Key = @ref.New.Key,
-                //             ActionType = OutboxAction.Update
+                //             ActionType = OutboxAction.Delete
                 //         })));
 
-                modelBuilder.Entity<Channel>()
-                    .AfterInsert(trigger => trigger
-                        .Action(group => group
-                            .Insert(
-                                // .InsertIfNotExists( (@ref, outbox) => outbox.Version == @ref.New.Version && outbox.ActionType == OutboxAction.Insert && outbox.Entity == "Channel" && outbox.Key == @ref.New.Id,
-                                @ref => new Outbox()
-                                {
-                                    Entity = "Channel",
-                                    Version = @ref.New.Version,
-                                    Key = @ref.New.Id,
-                                    ActionType = OutboxAction.Insert
-                                })))
-                    .AfterDelete(trigger => trigger
-                        .Action(group => group
-                            .Insert(
-                                // .InsertIfNotExists( (@ref, outbox) => @ref.Old.Version == outbox.Version && outbox.ActionType == OutboxAction.Delete && outbox.Entity == "Channel" && outbox.Key == @ref.Old.Id,
-                                @ref => new Outbox()
-                                {
-                                    Entity = "Channel",
-                                    Version = @ref.Old.Version,
-                                    Key = @ref.Old.Id,
-                                    ActionType = OutboxAction.Delete
-                                })))
+        modelBuilder.Entity<Channel>()
+            .AfterInsert(trigger => trigger
+                .Action(group => group
+                    .Insert(
+                        // .InsertIfNotExists( (@ref, outbox) => outbox.Version == @ref.New.Version && outbox.ActionType == OutboxAction.Insert && outbox.Entity == "Channel" && outbox.Key == @ref.New.Id,
+                        @ref => new Outbox()
+                        {
+                            Entity = "Channel",
+                            Version = @ref.New.Version,
+                            Key = @ref.New.Id,
+                            ActionType = OutboxAction.Insert
+                        })))
+            .AfterDelete(trigger => trigger
+                .Action(group => group
+                    .Insert(
+                        // .InsertIfNotExists( (@ref, outbox) => @ref.Old.Version == outbox.Version && outbox.ActionType == OutboxAction.Delete && outbox.Entity == "Channel" && outbox.Key == @ref.Old.Id,
+                        @ref => new Outbox()
+                        {
+                            Entity = "Channel",
+                            Version = @ref.Old.Version,
+                            Key = @ref.Old.Id,
+                            ActionType = OutboxAction.Delete
+                        })))
+            .AfterUpdate(trigger => trigger
+                .Action(group => group.Update<Channel>(
+                    (tableRefs, setting) => tableRefs.Old.Id == setting.Id,
+                    (tableRefs, setting) => new Channel() {Version = tableRefs.Old.Version + 1}).Insert(
+                        // .InsertIfNotExists( (@ref, outbox) => @ref.New.Version == outbox.Version && outbox.ActionType == OutboxAction.Update && outbox.Entity == "Channel" && outbox.Key == @ref.New.Id,
+                        @ref => new Outbox()
+                        {
+                            Entity = "Channel",
+                            Version = @ref.Old.Version +1,
+                            Key = @ref.New.Id,
+                            ActionType = OutboxAction.Update
+                        })));
 
-                    .AfterUpdate(trigger => trigger
-                        .Action(group => group.Update<Channel>(
-                            (tableRefs, setting) => tableRefs.Old.Id == setting.Id,
-                            (tableRefs, setting) => new Channel() {Version = tableRefs.Old.Version + 1})))
-                    ;
-                // .AfterUpdate(trigger => trigger
-                // .Action(group => group
-                //     .Insert(
-                //     // .InsertIfNotExists( (@ref, outbox) => @ref.New.Version == outbox.Version && outbox.ActionType == OutboxAction.Update && outbox.Entity == "Channel" && outbox.Key == @ref.New.Id,
-                //         @ref => new Outbox()
-                //         {
-                //             Entity = "Channel",
-                //             Version = @ref.New.Version,
-                //             Key = @ref.New.Id,
-                //             ActionType = OutboxAction.Update
-                //         })));
-                //
-                modelBuilder.Entity<AppLightningPayment>()
-                    .AfterInsert(trigger => trigger
-                        .Action(group => group
-                            .Insert(
-                                // .InsertIfNotExists( (@ref, outbox) => outbox.Version == @ref.New.Version && outbox.ActionType == OutboxAction.Insert && outbox.Entity == "Payment" && outbox.Key == @ref.New.PaymentHash+ "_"+@ref.New.PaymentId+ "_"+@ref.New.Inbound,
-                                @ref => new Outbox()
-                                {
-                                    Entity = "Payment",
-                                    Version = @ref.New.Version,
-                                    Key = @ref.New.PaymentHash + "_" + @ref.New.PaymentId + "_" + @ref.New.Inbound,
-                                    ActionType = OutboxAction.Insert
-                                })))
-                    .AfterDelete(trigger => trigger
-                        .Action(group => group
-                            .Insert(
-                                // .InsertIfNotExists( (@ref, outbox) => @ref.Old.Version == outbox.Version && outbox.ActionType == OutboxAction.Delete && outbox.Entity == "Payment" && outbox.Key == @ref.Old.PaymentHash+ "_"+@ref.Old.PaymentId+ "_"+@ref.Old.Inbound,
-                                @ref => new Outbox()
-                                {
-                                    Entity = "Payment",
-                                    Version = @ref.Old.Version,
-                                    Key = @ref.Old.PaymentHash + "_" + @ref.Old.PaymentId + "_" + @ref.Old.Inbound,
-                                    ActionType = OutboxAction.Delete
-                                })))
-
-                    .AfterUpdate(trigger => trigger
-                        .Action(group => group.Update<AppLightningPayment>(
-                            (tableRefs, setting) => tableRefs.Old.PaymentHash == setting.PaymentHash,
-                            (tableRefs, setting) => new AppLightningPayment() {Version = tableRefs.Old.Version + 1})))
-                    ;
-                // .AfterUpdate(trigger => trigger
-                // .Action(group => group
-                //     .Insert(
-                //     // .InsertIfNotExists( (@ref, outbox) => 
-                //         // outbox.Version != @ref.New.Version || outbox.ActionType != OutboxAction.Update || outbox.Entity != "Payment" || outbox.Key != @ref.New.PaymentHash+ "_"+@ref.New.PaymentId+ "_"+@ref.New.Inbound,
-                //         @ref => new Outbox()
-                //         {
-                //             Entity = "Payment",
-                //             Version = @ref.New.Version,
-                //             Key = @ref.New.PaymentHash+ "_"+@ref.New.PaymentId+ "_"+@ref.New.Inbound,
-                //             ActionType = OutboxAction.Update
-                //         })));
+        modelBuilder.Entity<AppLightningPayment>()
+            .AfterInsert(trigger => trigger
+                .Action(group => group
+                    .Insert(
+                        // .InsertIfNotExists( (@ref, outbox) => outbox.Version == @ref.New.Version && outbox.ActionType == OutboxAction.Insert && outbox.Entity == "Payment" && outbox.Key == @ref.New.PaymentHash+ "_"+@ref.New.PaymentId+ "_"+@ref.New.Inbound,
+                        @ref => new Outbox()
+                        {
+                            Entity = "Payment",
+                            Version = @ref.New.Version,
+                            Key = @ref.New.PaymentHash + "_" + @ref.New.PaymentId + "_" + @ref.New.Inbound,
+                            ActionType = OutboxAction.Insert
+                        })))
+            .AfterDelete(trigger => trigger
+                .Action(group => group
+                    .Insert(
+                        // .InsertIfNotExists( (@ref, outbox) => @ref.Old.Version == outbox.Version && outbox.ActionType == OutboxAction.Delete && outbox.Entity == "Payment" && outbox.Key == @ref.Old.PaymentHash+ "_"+@ref.Old.PaymentId+ "_"+@ref.Old.Inbound,
+                        @ref => new Outbox()
+                        {
+                            Entity = "Payment",
+                            Version = @ref.Old.Version,
+                            Key = @ref.Old.PaymentHash + "_" + @ref.Old.PaymentId + "_" + @ref.Old.Inbound,
+                            ActionType = OutboxAction.Delete
+                        })))
+            .AfterUpdate(trigger => trigger
+                .Action(group => 
+                    
+                    group.Update<AppLightningPayment>(
+                    (tableRefs, setting) => tableRefs.Old.PaymentHash == setting.PaymentHash,
+                    (tableRefs, setting) => new AppLightningPayment() {Version = tableRefs.Old.Version + 1}).Insert(
+                        // .InsertIfNotExists( (@ref, outbox) => 
+                        // outbox.Version != @ref.New.Version || outbox.ActionType != OutboxAction.Update || outbox.Entity != "Payment" || outbox.Key != @ref.New.PaymentHash+ "_"+@ref.New.PaymentId+ "_"+@ref.New.Inbound,
+                        @ref => new Outbox()
+                        {
+                            Entity = "Payment",
+                            Version = @ref.Old.Version +1,
+                            Key = @ref.New.PaymentHash + "_" + @ref.New.PaymentId + "_" + @ref.New.Inbound,
+                            ActionType = OutboxAction.Update
+                        })));
         base.OnModelCreating(modelBuilder);
     }
-    
 }
-
 
 public enum OutboxAction
 {
@@ -211,36 +211,5 @@ public class Outbox
     public OutboxAction ActionType { get; set; }
     public string Key { get; set; }
     public string Entity { get; set; }
-    public ulong Version { get; set; }
-}
-
-public class OutboxProcessor : IHostedService
-{
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-
-    public OutboxProcessor(IDbContextFactory<AppDbContext> dbContextFactory)
-    {
-        _dbContextFactory = dbContextFactory;
-    }
-
-    private async Task ProcessOutbox(CancellationToken cancellationToken = default)
-    {
-        await using var db =
-            new AppDbContext(new DbContextOptionsBuilder<AppDbContext>().UseSqlite("Data Source=outbox.db").Options);
-        var outbox = db.Set<Outbox>();
-        var outboxItems = await outbox.ToListAsync();
-        foreach (var outboxItem in outboxItems)
-        {
-            // Process outbox item
-        }
-    }
-
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
+    public long Version { get; set; }
 }

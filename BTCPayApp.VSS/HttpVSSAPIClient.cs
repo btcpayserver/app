@@ -10,10 +10,10 @@ public class HttpVSSAPIClient : IVSSAPI
     private readonly Uri _endpoint;
     private readonly HttpClient _httpClient;
 
-    private const string GET_OBJECT = "getObject";
-    private const string PUT_OBJECTS = "putObjects";
-    private const string DELETE_OBJECT = "deleteObject";
-    private const string LIST_KEY_VERSIONS = "listKeyVersions";
+    public const string GET_OBJECT = "getObject";
+    public const string PUT_OBJECTS = "putObjects";
+    public const string DELETE_OBJECT = "deleteObject";
+    public const string LIST_KEY_VERSIONS = "listKeyVersions";
     public HttpVSSAPIClient(Uri endpoint, HttpClient? httpClient = null)
     {
         _endpoint = endpoint;

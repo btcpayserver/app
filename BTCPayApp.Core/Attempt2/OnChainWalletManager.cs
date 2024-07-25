@@ -134,7 +134,7 @@ public class OnChainWalletManager : BaseHostedService
                 walletConfig.Derivations[keyValuePair.Key].Identifier = keyValuePair.Value;
 
             }
-            await _configProvider.Set(WalletConfig.Key, walletConfig);
+            await _configProvider.Set(WalletConfig.Key, walletConfig, true);
             WalletConfig = walletConfig;
             State = OnChainWalletState.Loaded;
         }
@@ -169,7 +169,7 @@ public class OnChainWalletManager : BaseHostedService
                 Descriptor = descriptor,
                 Identifier = result[key]
             };
-            await _configProvider.Set(WalletConfig.Key, WalletConfig);
+            await _configProvider.Set(WalletConfig.Key, WalletConfig, true);
         }
         finally
         {
@@ -436,7 +436,7 @@ public class OnChainWalletManager : BaseHostedService
 
             var updated = key.Aggregate(false, (current, k) => current || WalletConfig.Derivations.Remove(k));
             if (updated)
-                await _configProvider.Set(WalletConfig.Key, WalletConfig);
+                await _configProvider.Set(WalletConfig.Key, WalletConfig, true);
         }
         finally
         {

@@ -209,7 +209,7 @@
         if (HasPasscode)
         {
             _config!.Passcode = null;
-            await ConfigProvider.Set(BTCPayAppConfig.Key, _config);
+            await ConfigProvider.Set(BTCPayAppConfig.Key, _config, true);
         }
     }
 

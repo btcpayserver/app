@@ -18,9 +18,9 @@ public class ConcurrentMultiDictionary<TKey, TValue>
 
     private readonly ConcurrentDictionary<TKey, Bag> _dictionary;
 
-    public ConcurrentMultiDictionary()
+    public ConcurrentMultiDictionary(IEqualityComparer<TKey> invariantCultureIgnoreCase = null)
     {
-        _dictionary = new ConcurrentDictionary<TKey, Bag>();
+        _dictionary = new ConcurrentDictionary<TKey, Bag>(invariantCultureIgnoreCase);
     }
 
     public int Count => _dictionary.Count;
@@ -41,7 +41,7 @@ public class ConcurrentMultiDictionary<TKey, TValue>
     
     public bool AddOrReplace(TKey key, TValue value)
     {
-        Remove(key, value);
+        Remove(key, value, out _);
         return Add(key, value);
     }
 
@@ -60,8 +60,9 @@ public class ConcurrentMultiDictionary<TKey, TValue>
         items = null;
         return false;
     }
-    public bool Remove(TKey key, TValue value)
+    public bool Remove(TKey key, TValue value, out bool keyRemoved)
     {
+        keyRemoved = false;
         var spinWait = new SpinWait();
         while (true)
         {
@@ -82,7 +83,7 @@ public class ConcurrentMultiDictionary<TKey, TValue>
                 }
             }
             if (spinAndRetry) { spinWait.SpinOnce(); continue; }
-            bool keyRemoved = _dictionary.TryRemove(key, out var currentBag);
+            keyRemoved = _dictionary.TryRemove(key, out var currentBag);
             Debug.Assert(keyRemoved, $"Key {key} was not removed");
             Debug.Assert(bag == currentBag, $"Removed wrong bag");
             return true;
@@ -134,6 +135,11 @@ public class ConcurrentMultiDictionary<TKey, TValue>
     {
         return _dictionary.Keys.Any(key => Contains(key, value));
     }
+    
+    public bool ContainsValue(TKey key, TValue value)
+    {
+        return Contains(key, value);
+    }
     public IEnumerable<TKey> GetKeysContainingValue(IEnumerable<TValue> value)
     {
         return _dictionary.Keys.Where(key => Contains(key, value));
@@ -141,5 +147,21 @@ public class ConcurrentMultiDictionary<TKey, TValue>
     public IEnumerable<TKey> GetKeysContainingValue(TValue value)
     {
         return _dictionary.Keys.Where(key => Contains(key, value));
+    }
+
+    public bool RemoveValue(TValue value, out TKey[] keysRemoved)
+    {
+        List<TKey> keys = [];
+        var anyValueRemoved = false;
+        foreach (var key in GetKeysContainingValue(value))
+        {
+            anyValueRemoved = Remove(key, value, out var keyRemoved) || anyValueRemoved;
+            if (keyRemoved)
+            {
+                keys.Add(key);
+            }
+        }
+        keysRemoved = keys.ToArray();
+        return anyValueRemoved;
     }
 }

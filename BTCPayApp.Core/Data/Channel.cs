@@ -1,4 +1,6 @@
-﻿namespace BTCPayApp.Core.Data;
+﻿using System.Text.Json.Serialization;
+
+namespace BTCPayApp.Core.Data;
 
 public class Channel:VersionedData
 {
@@ -12,5 +14,8 @@ public class ChannelAlias
     public string Id { get; set; }
     public string Type { get; set; }
     public string ChannelId { get; set; }
+    [JsonIgnore]
     public Channel Channel { get; set; }
 }
+
+

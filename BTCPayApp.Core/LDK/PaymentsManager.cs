@@ -297,8 +297,8 @@ var paySecret = new uint256(invoice.payment_secret());
     private async Task Payment(AppLightningPayment lightningPayment, CancellationToken cancellationToken = default)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-        var x = await context.CrappyUpsert(lightningPayment, cancellationToken);
-        if (x > 0)
+        var x = await context.Upsert(lightningPayment, cancellationToken);
+        if (x > 1)//we have triggers that create an outbox record everytime so we need to check for more than 1 record
         {
             OnPaymentUpdate?.Invoke(this, lightningPayment);
         }

@@ -110,10 +110,10 @@ public class DatabaseConfigProvider: IConfigProvider
         return config is null ? default : JsonSerializer.Deserialize<T>(config.Value);
     }
 
-    public async Task Set<T>(string key, T? value)
+    public async Task Set<T>(string key, T? value, bool backup)
     {
         using var releaser = await _lock.LockAsync(key);
-        _logger.LogDebug("Setting {key} to {value}", key, value);
+        _logger.LogDebug("Setting {key} to {value} {backup}", key, value, backup? "backup": "no backup");
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         if (value is null)
         {
@@ -129,8 +129,8 @@ public class DatabaseConfigProvider: IConfigProvider
         }
 
         var newValue = typeof(T) == typeof(byte[])? value as byte[]:JsonSerializer.SerializeToUtf8Bytes(value);
-        var setting = new Setting {Key = key, Value = newValue};
-        await dbContext.CrappyUpsert(setting, CancellationToken.None);
+        var setting = new Setting {Key = key, Value = newValue, Backup = backup};
+        await dbContext.Upsert(setting, CancellationToken.None);
 
     }
 

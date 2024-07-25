@@ -15,7 +15,6 @@ public static class StartupExtensions
         serviceCollection.AddDataProtection(options =>
         {
             options.ApplicationDiscriminator = "BTCPayApp";
-            
         });
         serviceCollection.AddSingleton<IDataDirectoryProvider, DesktopDataDirectoryProvider>();
         // serviceCollection.AddSingleton<IConfigProvider, DesktopConfigProvider>();
@@ -25,56 +24,22 @@ public static class StartupExtensions
     }
 }
 
-public class DesktopSecureConfigProvider: DesktopConfigProvider, ISecureConfigProvider
+public class DesktopSecureConfigProvider: ISecureConfigProvider
 {
     private readonly IDataProtector _dataProtector;
 
-    public DesktopSecureConfigProvider(IDataDirectoryProvider directoryProvider, IDataProtectionProvider dataProtectionProvider) : base(directoryProvider)
+    public DesktopSecureConfigProvider(IDataDirectoryProvider directoryProvider, IDataProtectionProvider dataProtectionProvider) 
     {
         _dataProtector = dataProtectionProvider.CreateProtector("SecureConfig");
-    }
-
-    protected override Task<string> ReadFromRaw(string str) => Task.FromResult(_dataProtector.Unprotect(str));
-    protected override Task<string> WriteFromRaw(string str) => Task.FromResult(_dataProtector.Protect(str));
-}
-
-public class FingerprintProvider: IFingerprint
-{
-    public Task<FingerprintAvailability> GetAvailabilityAsync(bool allowAlternativeAuthentication = false)
-    {
-        return Task.FromResult(FingerprintAvailability.NoImplementation);
-    }
-
-    public Task<bool> IsAvailableAsync(bool allowAlternativeAuthentication = false)
-    {
-        return Task.FromResult(false);
-    }
-
-    public Task<FingerprintAuthenticationResult> AuthenticateAsync(AuthenticationRequestConfiguration authRequestConfig,
-        CancellationToken cancellationToken = new CancellationToken())
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<AuthenticationType> GetAuthenticationTypeAsync()
-    {
-        throw new NotImplementedException();
-    }
-}
-
-public class DesktopConfigProvider : IConfigProvider
-{
-    private readonly Task<string> _configDir;
-
-    public DesktopConfigProvider(IDataDirectoryProvider directoryProvider)
-    {
         _configDir = directoryProvider.GetAppDataDirectory().ContinueWith(task =>
         {
-          var res =  Path.Combine(task.Result, "config");
-          Directory.CreateDirectory(res);
-          return res;
+            var res =  Path.Combine(task.Result, "config");
+            Directory.CreateDirectory(res);
+            return res;
         });
     }
+    
+    private readonly Task<string> _configDir;
 
     public async Task<T?> Get<T>(string key)
     {
@@ -88,8 +53,6 @@ public class DesktopConfigProvider : IConfigProvider
         return JsonSerializer.Deserialize<T>(json);
     }
 
-    protected virtual Task<string> ReadFromRaw(string str) => Task.FromResult(str);
-    protected virtual Task<string> WriteFromRaw(string str) => Task.FromResult(str);
 
     public async Task Set<T>(string key, T? value)
     {
@@ -117,8 +80,34 @@ public class DesktopConfigProvider : IConfigProvider
         }
         return Directory.GetFiles(dir, $"{prefix}*").Select(Path.GetFileName).Where(p => p?.StartsWith(prefix) is true)!;
     }
+
+    protected Task<string> ReadFromRaw(string str) => Task.FromResult(_dataProtector.Unprotect(str));
+    protected Task<string> WriteFromRaw(string str) => Task.FromResult(_dataProtector.Protect(str));
 }
 
+public class FingerprintProvider: IFingerprint
+{
+    public Task<FingerprintAvailability> GetAvailabilityAsync(bool allowAlternativeAuthentication = false)
+    {
+        return Task.FromResult(FingerprintAvailability.NoImplementation);
+    }
+
+    public Task<bool> IsAvailableAsync(bool allowAlternativeAuthentication = false)
+    {
+        return Task.FromResult(false);
+    }
+
+    public Task<FingerprintAuthenticationResult> AuthenticateAsync(AuthenticationRequestConfiguration authRequestConfig,
+        CancellationToken cancellationToken = new CancellationToken())
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<AuthenticationType> GetAuthenticationTypeAsync()
+    {
+        throw new NotImplementedException();
+    }
+}
 public class DesktopDataDirectoryProvider : IDataDirectoryProvider
 {
     private readonly IConfiguration _configuration;
