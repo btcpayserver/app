@@ -11,9 +11,10 @@ namespace BTCPayApp.Core.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
+            migrationBuilder.RenameColumn(
                 name: "Aliases",
-                table: "LightningChannels");
+                table: "LightningChannels",
+                newName: "EntityKey");
 
             migrationBuilder.AddColumn<bool>(
                 name: "Backup",
@@ -22,26 +23,40 @@ namespace BTCPayApp.Core.Migrations
                 nullable: false,
                 defaultValue: false);
 
-            migrationBuilder.AddColumn<ulong>(
+            migrationBuilder.AddColumn<string>(
+                name: "EntityKey",
+                table: "Settings",
+                type: "TEXT",
+                nullable: false,
+                defaultValue: "");
+
+            migrationBuilder.AddColumn<long>(
                 name: "Version",
                 table: "Settings",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: 0ul);
+                defaultValue: 0L);
 
-            migrationBuilder.AddColumn<ulong>(
+            migrationBuilder.AddColumn<string>(
+                name: "EntityKey",
+                table: "LightningPayments",
+                type: "TEXT",
+                nullable: false,
+                defaultValue: "");
+
+            migrationBuilder.AddColumn<long>(
                 name: "Version",
                 table: "LightningPayments",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: 0ul);
+                defaultValue: 0L);
 
-            migrationBuilder.AddColumn<ulong>(
+            migrationBuilder.AddColumn<long>(
                 name: "Version",
                 table: "LightningChannels",
                 type: "INTEGER",
                 nullable: false,
-                defaultValue: 0ul);
+                defaultValue: 0L);
 
             migrationBuilder.CreateTable(
                 name: "ChannelAliases",
@@ -69,7 +84,7 @@ namespace BTCPayApp.Core.Migrations
                     ActionType = table.Column<int>(type: "INTEGER", nullable: false),
                     Key = table.Column<string>(type: "TEXT", nullable: false),
                     Entity = table.Column<string>(type: "TEXT", nullable: false),
-                    Version = table.Column<ulong>(type: "INTEGER", nullable: false),
+                    Version = table.Column<long>(type: "INTEGER", nullable: false),
                     Timestamp = table.Column<DateTimeOffset>(type: "TEXT", nullable: false, defaultValueSql: "datetime('now')")
                 },
                 constraints: table =>
@@ -82,23 +97,23 @@ namespace BTCPayApp.Core.Migrations
                 table: "ChannelAliases",
                 column: "ChannelId");
 
-            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_DELETE_APPLIGHTNINGPAYMENT\r\nAFTER DELETE ON \"LightningPayments\"\r\nFOR EACH ROW\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Payment', \r\n  OLD.\"Version\", \r\n  OLD.\"PaymentHash\" || '_' || OLD.\"PaymentId\" || '_' || OLD.\"Inbound\", \r\n  2;\r\nEND;");
+            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_DELETE_APPLIGHTNINGPAYMENT\r\nAFTER DELETE ON \"LightningPayments\"\r\nFOR EACH ROW\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Payment', \r\n  OLD.\"Version\", \r\n  OLD.\"EntityKey\", \r\n  2;\r\nEND;");
 
-            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_INSERT_APPLIGHTNINGPAYMENT\r\nAFTER INSERT ON \"LightningPayments\"\r\nFOR EACH ROW\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Payment', \r\n  NEW.\"Version\", \r\n  NEW.\"PaymentHash\" || '_' || NEW.\"PaymentId\" || '_' || NEW.\"Inbound\", \r\n  0;\r\nEND;");
+            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_INSERT_APPLIGHTNINGPAYMENT\r\nAFTER INSERT ON \"LightningPayments\"\r\nFOR EACH ROW\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Payment', \r\n  NEW.\"Version\", \r\n  NEW.\"EntityKey\", \r\n  0;\r\nEND;");
 
-            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_UPDATE_APPLIGHTNINGPAYMENT\r\nAFTER UPDATE ON \"LightningPayments\"\r\nFOR EACH ROW\r\nBEGIN\r\n  UPDATE \"LightningPayments\"\r\n  SET \"Version\" = OLD.\"Version\" + 1\r\n  WHERE OLD.\"PaymentHash\" = \"LightningPayments\".\"PaymentHash\";\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Payment', \r\n  OLD.\"Version\" + 1, \r\n  NEW.\"PaymentHash\" || '_' || NEW.\"PaymentId\" || '_' || NEW.\"Inbound\", \r\n  1;\r\nEND;");
+            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_UPDATE_APPLIGHTNINGPAYMENT\r\nAFTER UPDATE ON \"LightningPayments\"\r\nFOR EACH ROW\r\nBEGIN\r\n  UPDATE \"LightningPayments\"\r\n  SET \"Version\" = OLD.\"Version\" + 1\r\n  WHERE OLD.\"PaymentHash\" = \"LightningPayments\".\"PaymentHash\";\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Payment', \r\n  OLD.\"Version\" + 1, \r\n  NEW.\"EntityKey\", \r\n  1;\r\nEND;");
 
-            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_DELETE_CHANNEL\r\nAFTER DELETE ON \"LightningChannels\"\r\nFOR EACH ROW\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Channel', \r\n  OLD.\"Version\", \r\n  OLD.\"Id\", \r\n  2;\r\nEND;");
+            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_DELETE_CHANNEL\r\nAFTER DELETE ON \"LightningChannels\"\r\nFOR EACH ROW\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Channel', \r\n  OLD.\"Version\", \r\n  OLD.\"EntityKey\", \r\n  2;\r\nEND;");
 
-            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_INSERT_CHANNEL\r\nAFTER INSERT ON \"LightningChannels\"\r\nFOR EACH ROW\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Channel', \r\n  NEW.\"Version\", \r\n  NEW.\"Id\", \r\n  0;\r\nEND;");
+            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_INSERT_CHANNEL\r\nAFTER INSERT ON \"LightningChannels\"\r\nFOR EACH ROW\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Channel', \r\n  NEW.\"Version\", \r\n  NEW.\"EntityKey\", \r\n  0;\r\nEND;");
 
-            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_UPDATE_CHANNEL\r\nAFTER UPDATE ON \"LightningChannels\"\r\nFOR EACH ROW\r\nBEGIN\r\n  UPDATE \"LightningChannels\"\r\n  SET \"Version\" = OLD.\"Version\" + 1\r\n  WHERE OLD.\"Id\" = \"LightningChannels\".\"Id\";\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Channel', \r\n  OLD.\"Version\" + 1, \r\n  NEW.\"Id\", \r\n  1;\r\nEND;");
+            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_UPDATE_CHANNEL\r\nAFTER UPDATE ON \"LightningChannels\"\r\nFOR EACH ROW\r\nBEGIN\r\n  UPDATE \"LightningChannels\"\r\n  SET \"Version\" = OLD.\"Version\" + 1\r\n  WHERE OLD.\"Id\" = \"LightningChannels\".\"Id\";\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Channel', \r\n  OLD.\"Version\" + 1, \r\n  NEW.\"EntityKey\", \r\n  1;\r\nEND;");
 
-            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_DELETE_SETTING\r\nAFTER DELETE ON \"Settings\"\r\nFOR EACH ROW\r\nWHEN \r\n  \r\n  OLD.\"Backup\" IS TRUE\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  OLD.\"Version\", \r\n  OLD.\"Key\", \r\n  2;\r\nEND;");
+            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_DELETE_SETTING\r\nAFTER DELETE ON \"Settings\"\r\nFOR EACH ROW\r\nWHEN \r\n  \r\n  OLD.\"Backup\" IS TRUE\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  OLD.\"Version\", \r\n  OLD.\"EntityKey\", \r\n  2;\r\nEND;");
 
-            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_INSERT_SETTING\r\nAFTER INSERT ON \"Settings\"\r\nFOR EACH ROW\r\nWHEN \r\n  \r\n  NEW.\"Backup\" IS TRUE\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  NEW.\"Version\", \r\n  NEW.\"Key\", \r\n  0;\r\nEND;");
+            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_INSERT_SETTING\r\nAFTER INSERT ON \"Settings\"\r\nFOR EACH ROW\r\nWHEN \r\n  \r\n  NEW.\"Backup\" IS TRUE\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  NEW.\"Version\", \r\n  NEW.\"EntityKey\", \r\n  0;\r\nEND;");
 
-            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_UPDATE_SETTING\r\nAFTER UPDATE ON \"Settings\"\r\nFOR EACH ROW\r\nBEGIN\r\n  UPDATE \"Settings\"\r\n  SET \"Version\" = OLD.\"Version\" + 1\r\n  WHERE OLD.\"Key\" = \"Settings\".\"Key\";\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  OLD.\"Version\" + 1, \r\n  NEW.\"Key\", \r\n  1;\r\nEND;");
+            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_UPDATE_SETTING\r\nAFTER UPDATE ON \"Settings\"\r\nFOR EACH ROW\r\nBEGIN\r\n  UPDATE \"Settings\"\r\n  SET \"Version\" = OLD.\"Version\" + 1\r\n  WHERE OLD.\"Key\" = \"Settings\".\"Key\";\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  OLD.\"Version\" + 1, \r\n  NEW.\"EntityKey\", \r\n  1;\r\nEND;");
         }
 
         /// <inheritdoc />
@@ -133,8 +148,16 @@ namespace BTCPayApp.Core.Migrations
                 table: "Settings");
 
             migrationBuilder.DropColumn(
+                name: "EntityKey",
+                table: "Settings");
+
+            migrationBuilder.DropColumn(
                 name: "Version",
                 table: "Settings");
+
+            migrationBuilder.DropColumn(
+                name: "EntityKey",
+                table: "LightningPayments");
 
             migrationBuilder.DropColumn(
                 name: "Version",
@@ -144,12 +167,10 @@ namespace BTCPayApp.Core.Migrations
                 name: "Version",
                 table: "LightningChannels");
 
-            migrationBuilder.AddColumn<string>(
-                name: "Aliases",
+            migrationBuilder.RenameColumn(
+                name: "EntityKey",
                 table: "LightningChannels",
-                type: "TEXT",
-                nullable: false,
-                defaultValue: "");
+                newName: "Aliases");
         }
     }
 }

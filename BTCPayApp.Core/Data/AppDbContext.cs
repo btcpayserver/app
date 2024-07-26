@@ -5,6 +5,7 @@ using BTCPayApp.Core.JsonConverters;
 using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
 using Laraue.EfCoreTriggers.Common.Extensions;
+using Laraue.EfCoreTriggers.Common.TriggerBuilders.Actions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;
 using NBitcoin;
@@ -70,17 +71,20 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Setting>()
             .AfterInsert(trigger => trigger
-                .Action(group => group
-                    .Condition(@ref => @ref.New.Backup)
-                    .Insert(
-                        // .InsertIfNotExists( (@ref, outbox) => outbox.Version == @ref.New.Version && outbox.ActionType == OutboxAction.Insert && outbox.Entity == "Setting" && outbox.Key == @ref.New.Key,
-                        @ref => new Outbox()
-                        {
-                            Entity = "Setting",
-                            Version = @ref.New.Version,
-                            Key = @ref.New.Key,
-                            ActionType = OutboxAction.Insert
-                        })))
+                .Action(group =>
+                {
+                    group
+                        .Condition(@ref => @ref.New.Backup)
+                        .Insert(
+                            // .InsertIfNotExists( (@ref, outbox) => outbox.Version == @ref.New.Version && outbox.ActionType == OutboxAction.Insert && outbox.Entity == "Setting" && outbox.Key == @ref.New.Key,
+                            @ref => new Outbox()
+                            {
+                                Entity = "Setting",
+                                Version = @ref.New.Version,
+                                Key = @ref.New.EntityKey,
+                                ActionType = OutboxAction.Insert
+                            });
+                }))
             .AfterDelete(trigger => trigger
                 .Action(group => group
                     .Condition(@ref => @ref.Old.Backup)
@@ -90,7 +94,7 @@ public class AppDbContext : DbContext
                         {
                             Entity = "Setting",
                             Version = @ref.Old.Version,
-                            Key = @ref.Old.Key,
+                            Key = @ref.Old.EntityKey,
                             ActionType = OutboxAction.Delete
                         })))
             .AfterUpdate(trigger => trigger
@@ -105,7 +109,7 @@ public class AppDbContext : DbContext
                         {
                             Entity = "Setting",
                             Version = @ref.Old.Version + 1,
-                            Key = @ref.New.Key,
+                            Key = @ref.New.EntityKey,
                             ActionType = OutboxAction.Update
                         })));
                 // .Action(group => group
@@ -129,7 +133,7 @@ public class AppDbContext : DbContext
                         {
                             Entity = "Channel",
                             Version = @ref.New.Version,
-                            Key = @ref.New.Id,
+                            Key = @ref.New.EntityKey,
                             ActionType = OutboxAction.Insert
                         })))
             .AfterDelete(trigger => trigger
@@ -140,7 +144,7 @@ public class AppDbContext : DbContext
                         {
                             Entity = "Channel",
                             Version = @ref.Old.Version,
-                            Key = @ref.Old.Id,
+                            Key = @ref.Old.EntityKey,
                             ActionType = OutboxAction.Delete
                         })))
             .AfterUpdate(trigger => trigger
@@ -152,7 +156,7 @@ public class AppDbContext : DbContext
                         {
                             Entity = "Channel",
                             Version = @ref.Old.Version +1,
-                            Key = @ref.New.Id,
+                            Key = @ref.New.EntityKey,
                             ActionType = OutboxAction.Update
                         })));
 
@@ -165,7 +169,7 @@ public class AppDbContext : DbContext
                         {
                             Entity = "Payment",
                             Version = @ref.New.Version,
-                            Key = @ref.New.PaymentHash + "_" + @ref.New.PaymentId + "_" + @ref.New.Inbound,
+                            Key = @ref.New.EntityKey,
                             ActionType = OutboxAction.Insert
                         })))
             .AfterDelete(trigger => trigger
@@ -176,7 +180,7 @@ public class AppDbContext : DbContext
                         {
                             Entity = "Payment",
                             Version = @ref.Old.Version,
-                            Key = @ref.Old.PaymentHash + "_" + @ref.Old.PaymentId + "_" + @ref.Old.Inbound,
+                            Key = @ref.Old.EntityKey,
                             ActionType = OutboxAction.Delete
                         })))
             .AfterUpdate(trigger => trigger
@@ -191,7 +195,7 @@ public class AppDbContext : DbContext
                         {
                             Entity = "Payment",
                             Version = @ref.Old.Version +1,
-                            Key = @ref.New.PaymentHash + "_" + @ref.New.PaymentId + "_" + @ref.New.Inbound,
+                            Key = @ref.New.EntityKey,
                             ActionType = OutboxAction.Update
                         })));
         base.OnModelCreating(modelBuilder);

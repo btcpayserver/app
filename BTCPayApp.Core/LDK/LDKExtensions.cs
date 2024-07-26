@@ -2,6 +2,7 @@
 using System.Net.Sockets;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LSP.JIT;
 using Microsoft.Extensions.DependencyInjection;
@@ -213,6 +214,7 @@ public static class LDKExtensions
         services.AddScoped<BTCPayPaymentsNotifier>();
         // services.AddScoped<IScopedHostedService>(provider =>
         //     provider.GetRequiredService<LDKSpendableOutputEventHandler>());
+        services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<OutboxProcessor>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKChannelSync>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<PaymentsManager>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKBackgroundProcessor>());

@@ -20,7 +20,6 @@ public class OnChainWalletManager : BaseHostedService
     private readonly BTCPayAppServerClient _btcPayAppServerClient;
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly ILogger<OnChainWalletManager> _logger;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IMemoryCache _memoryCache;
     private OnChainWalletState _state = OnChainWalletState.Init;
 
@@ -48,14 +47,12 @@ public class OnChainWalletManager : BaseHostedService
         BTCPayAppServerClient btcPayAppServerClient,
         BTCPayConnectionManager btcPayConnectionManager,
         ILogger<OnChainWalletManager> logger,
-        IDbContextFactory<AppDbContext> dbContextFactory,
         IMemoryCache memoryCache)
     {
         _configProvider = configProvider;
         _btcPayAppServerClient = btcPayAppServerClient;
         _btcPayConnectionManager = btcPayConnectionManager;
         _logger = logger;
-        _dbContextFactory = dbContextFactory;
         _memoryCache = memoryCache;
     }
 

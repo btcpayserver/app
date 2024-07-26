@@ -6,7 +6,7 @@ using NBitcoin;
 
 namespace BTCPayApp.Core.Data;
 
-public class AppLightningPayment : VersionedData<AppLightningPayment>
+public class AppLightningPayment : VersionedData
 {
     [JsonConverter(typeof(UInt256JsonConverter))]
     public uint256 PaymentHash { get; set; }
@@ -32,4 +32,10 @@ public class AppLightningPayment : VersionedData<AppLightningPayment>
     public BOLT11PaymentRequest PaymentRequest { get; set; }
 
     [JsonExtensionData] public Dictionary<string, JsonElement> AdditionalData { get; set; } = new();
+
+    public override string EntityKey
+    {
+        get => $"Payment_{PaymentHash}_{PaymentId}_{Inbound}";
+        init { }
+    }
 }

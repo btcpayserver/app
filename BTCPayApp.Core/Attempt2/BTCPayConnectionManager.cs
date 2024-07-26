@@ -1,8 +1,11 @@
 ﻿using System.Net;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Auth;
+using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.VSS;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,6 +15,23 @@ using TypedSignalR.Client;
 
 namespace BTCPayApp.Core.Attempt2;
 
+public static class ConfigHelpers
+{
+
+    public static async Task<T> GetOrSet<T>(this ISecureConfigProvider secureConfigProvider, string key, Func<Task<T>> factory)
+    {
+        var value = await secureConfigProvider.Get<T>(key);
+        if (value is null)
+        {
+            value = await factory();
+            await secureConfigProvider.Set(key, value);
+        }
+
+        return value;
+
+    }
+}
+
 public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 {
     private readonly IAccountManager _accountManager;
@@ -19,6 +39,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     private readonly ILogger<BTCPayConnectionManager> _logger;
     private readonly BTCPayAppServerClient _btcPayAppServerClient;
     private readonly IBTCPayAppHubClient _btcPayAppServerClientInterface;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ISecureConfigProvider _secureConfigProvider;
     private IDisposable? _subscription;
 
     public IBTCPayAppHubServer? HubProxy { get; private set; }
@@ -49,13 +71,17 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         AuthenticationStateProvider authStateProvider,
         ILogger<BTCPayConnectionManager> logger,
         BTCPayAppServerClient btcPayAppServerClient,
-        IBTCPayAppHubClient btcPayAppServerClientInterface)
+        IBTCPayAppHubClient btcPayAppServerClientInterface,
+        IHttpClientFactory httpClientFactory,
+        ISecureConfigProvider secureConfigProvider)
     {
         _accountManager = accountManager;
         _authStateProvider = authStateProvider;
         _logger = logger;
         _btcPayAppServerClient = btcPayAppServerClient;
         _btcPayAppServerClientInterface = btcPayAppServerClientInterface;
+        _httpClientFactory = httpClientFactory;
+        _secureConfigProvider = secureConfigProvider;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -67,7 +93,23 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         await StartOrReplace();
         _ = TryStayConnected();
     }
+    
+    private async Task<IDataProtector> GetDataProtector()
+    {
+        var key = await _secureConfigProvider.GetOrSet("encryptionKey", async () => Convert.ToHexString(RandomUtils.GetBytes(32)).ToLowerInvariant());
+        return new SingleKeyDataProtector(Convert.FromHexString(key));
+    }
 
+    public async Task<IVSSAPI> GetVSSAPI()
+    {
+        if (Connection is null)
+            throw new InvalidOperationException("Connection is not established");
+        var vssUri = new Uri(new Uri(_accountManager.GetAccount().BaseUri), "vss");
+        var vssClient =  new HttpVSSAPIClient(vssUri, _httpClientFactory.CreateClient("vss"));
+        var protector = await GetDataProtector();
+        return new VSSApiEncryptorClient(vssClient, protector);
+    }
+    
     private async Task OnServerNodeInfo(object? sender, string e)
     {
         ReportedNodeInfo = e;
