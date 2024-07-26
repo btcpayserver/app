@@ -113,7 +113,7 @@ namespace BTCPayApp.Core.Migrations
 
             migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_INSERT_SETTING\r\nAFTER INSERT ON \"Settings\"\r\nFOR EACH ROW\r\nWHEN \r\n  \r\n  NEW.\"Backup\" IS TRUE\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  NEW.\"Version\", \r\n  NEW.\"EntityKey\", \r\n  0;\r\nEND;");
 
-            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_UPDATE_SETTING\r\nAFTER UPDATE ON \"Settings\"\r\nFOR EACH ROW\r\nBEGIN\r\n  UPDATE \"Settings\"\r\n  SET \"Version\" = OLD.\"Version\" + 1\r\n  WHERE OLD.\"Key\" = \"Settings\".\"Key\";\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  OLD.\"Version\" + 1, \r\n  NEW.\"EntityKey\", \r\n  1;\r\nEND;");
+            migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_UPDATE_SETTING\r\nAFTER UPDATE ON \"Settings\"\r\nFOR EACH ROW\r\nWHEN \r\n  \r\n  OLD.\"Backup\" IS TRUE\r\nBEGIN\r\n  UPDATE \"Settings\"\r\n  SET \"Version\" = OLD.\"Version\" + 1\r\n  WHERE OLD.\"Key\" = \"Settings\".\"Key\";\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  OLD.\"Version\" + 1, \r\n  NEW.\"EntityKey\", \r\n  1;\r\nEND;");
         }
 
         /// <inheritdoc />

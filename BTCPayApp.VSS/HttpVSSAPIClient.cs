@@ -50,6 +50,11 @@ public class HttpVSSAPIClient : IVSSAPI
     {
         var requestContent = new ByteArrayContent(request.ToByteArray());
         requestContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+        foreach (var (key, value) in _httpClient.DefaultRequestHeaders)
+        {
+            requestContent.Headers.TryAddWithoutValidation(key, value);
+            
+        }
 
         var response = await _httpClient.PostAsync(url, requestContent, cancellationToken);
         if (!response.IsSuccessStatusCode)

@@ -99,6 +99,7 @@ public class AppDbContext : DbContext
                         })))
             .AfterUpdate(trigger => trigger
                 .Action(group => group
+                    .Condition(@ref => @ref.Old.Backup)
                     // .Condition(@ref => @ref.Old.Value != @ref.New.Value)
                     .Update<Setting>(
                         (tableRefs, setting) => tableRefs.Old.Key == setting.Key,
@@ -200,20 +201,4 @@ public class AppDbContext : DbContext
                         })));
         base.OnModelCreating(modelBuilder);
     }
-}
-
-public enum OutboxAction
-{
-    Insert,
-    Update,
-    Delete
-}
-
-public class Outbox
-{
-    public DateTimeOffset Timestamp { get; set; } = DateTimeOffset.Now;
-    public OutboxAction ActionType { get; set; }
-    public string Key { get; set; }
-    public string Entity { get; set; }
-    public long Version { get; set; }
 }

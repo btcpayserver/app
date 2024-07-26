@@ -2,8 +2,8 @@
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Helpers;
 using Google.Protobuf;
-using Microsoft.EntityFrameworkCore;
 using VSSProto;
+using Microsoft.EntityFrameworkCore;
 
 namespace BTCPayApp.Core.Data;
 
@@ -119,7 +119,7 @@ public class OutboxProcessor : IScopedHostedService
         await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         var putObjectRequest = new PutObjectRequest();
-        var outbox = await db.OutboxItems.GroupBy(outbox1 => new {outbox1.Entity, outbox1.Key})
+        var outbox = await db.OutboxItems.GroupBy(outbox1 => new {outbox1.Key})
             .ToListAsync(cancellationToken: cancellationToken);
         foreach (var outboxItemSet in outbox)
         {
@@ -150,6 +150,7 @@ public class OutboxProcessor : IScopedHostedService
         }
 
         await backupAPi.PutObjectAsync(putObjectRequest, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     private CancellationTokenSource _cts = new();

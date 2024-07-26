@@ -1,12 +1,16 @@
 ﻿using System.Net;
+using System.Net.Http.Headers;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.VSS;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -34,6 +38,7 @@ public static class ConfigHelpers
 
 public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 {
+    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IAccountManager _accountManager;
     private readonly AuthenticationStateProvider _authStateProvider;
     private readonly ILogger<BTCPayConnectionManager> _logger;
@@ -67,6 +72,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     }
 
     public BTCPayConnectionManager(
+        IDbContextFactory<AppDbContext> dbContextFactory,
         IAccountManager accountManager,
         AuthenticationStateProvider authStateProvider,
         ILogger<BTCPayConnectionManager> logger,
@@ -75,6 +81,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         IHttpClientFactory httpClientFactory,
         ISecureConfigProvider secureConfigProvider)
     {
+        _dbContextFactory = dbContextFactory;
         _accountManager = accountManager;
         _authStateProvider = authStateProvider;
         _logger = logger;
@@ -104,8 +111,10 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     {
         if (Connection is null)
             throw new InvalidOperationException("Connection is not established");
-        var vssUri = new Uri(new Uri(_accountManager.GetAccount().BaseUri), "vss");
-        var vssClient =  new HttpVSSAPIClient(vssUri, _httpClientFactory.CreateClient("vss"));
+        var vssUri = new Uri(new Uri(_accountManager.GetAccount().BaseUri), "vss/");
+        var httpClient = _httpClientFactory.CreateClient("vss");
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accountManager.GetAccount().AccessToken);
+        var vssClient =  new HttpVSSAPIClient(vssUri, httpClient);
         var protector = await GetDataProtector();
         return new VSSApiEncryptorClient(vssClient, protector);
     }
@@ -142,6 +151,12 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         }
     }
 
+    private async Task MarkConnected()
+    {
+        await new RemoteToLocalSyncService(_dbContextFactory,this).Sync();
+        ConnectionState = HubConnectionState.Connected;
+    }
+    
     private async Task TryStayConnected()
     {
         while (true)
@@ -151,7 +166,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                 if (Connection is not null && ConnectionState == HubConnectionState.Disconnected)
                 {
                     await Connection.StartAsync();
-                    ConnectionState = HubConnectionState.Connected;
+
+                    await MarkConnected();
                 }
                 else
                 {
@@ -221,11 +237,10 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         return Task.CompletedTask;
     }
 
-    public Task OnReconnected(string? connectionId)
+    public async Task OnReconnected(string? connectionId)
     {
         _logger.LogInformation("Hub reconnected: {ConnectionId}", connectionId);
-        ConnectionState = HubConnectionState.Connected;
-        return Task.CompletedTask;
+        await MarkConnected();
     }
 
     public Task OnReconnecting(Exception? exception)

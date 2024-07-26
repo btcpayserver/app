@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Security.Cryptography.X509Certificates;
+using System.Text.Json;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Helpers;
 using Microsoft.AspNetCore.DataProtection;
@@ -7,7 +8,12 @@ using VSSProto;
 
 namespace BTCPayApp.Core.Data;
 
-public class RemoteToLocalSyncService : IScopedHostedService
+class TriggerRecord
+{
+    public string name { get; set; }
+    public string sql { get; set; }
+}
+public class RemoteToLocalSyncService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
@@ -48,32 +54,10 @@ public class RemoteToLocalSyncService : IScopedHostedService
         await db.Database.BeginTransactionAsync();
         try
         {
-            // Step 1: Create a temporary table for trigger definitions
-            await db.Database.ExecuteSqlRawAsync("""
-                                                 
-                                                             CREATE TEMPORARY TABLE IF NOT EXISTS temp_triggers (
-                                                                 name TEXT,
-                                                                 sql TEXT
-                                                             );
-                                                         
-                                                 """);
-
-            // Step 2: Store existing trigger definitions in the temporary table
-            await db.Database.ExecuteSqlRawAsync("""
-                                                 
-                                                             INSERT INTO temp_triggers (name, sql)
-                                                             SELECT name, sql FROM sqlite_master WHERE type = 'trigger';
-                                                         
-                                                 """);
-
-            // Step 3: Drop all existing triggers
-            await db.Database.ExecuteSqlRawAsync("""
-                                                                           
-                                                                                       SELECT 'DROP TRIGGER IF EXISTS ' || name || ';' AS Command 
-                                                                                       FROM sqlite_master 
-                                                                                       WHERE type = 'trigger'
-                                                                                   
-                                                                           """);
+            
+ 
+            var triggers = await db.Database.SqlQuery<TriggerRecord>($"SELECT name, sql FROM sqlite_master WHERE type = 'trigger'").ToListAsync();
+            await db.Database.ExecuteSqlRawAsync(   string.Join("; ", triggers.Select(trigger => $"DROP TRIGGER IF EXISTS {trigger.name}")));
             
             // delete local versions that are not in remote
             // delete local versions which are lower than remote
@@ -119,17 +103,9 @@ public class RemoteToLocalSyncService : IScopedHostedService
             await db.LightningChannels.UpsertRange(channelsToUpsert).On(channel => channel.EntityKey).RunAsync();
             await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payment => payment.EntityKey).RunAsync();
             
-            // Step 5: Restore triggers from the temporary table directly in SQL
-            await db.Database.ExecuteSqlRawAsync("""
-                                                 
-                                                             INSERT INTO sqlite_master (name, sql)
-                                                             SELECT name, sql FROM temp_triggers;
-                                                         
-                                                 """);
-
-            // Step 6: Drop the temporary table
-            await db.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS temp_triggers;");
+            await db.Database.ExecuteSqlRawAsync(string.Join("; ", triggers.Select(record => record.sql)));
             await db.Database.CommitTransactionAsync();
+            await db.SaveChangesAsync();
         }
         catch (Exception e)
         {
@@ -138,13 +114,4 @@ public class RemoteToLocalSyncService : IScopedHostedService
         }
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
 }
