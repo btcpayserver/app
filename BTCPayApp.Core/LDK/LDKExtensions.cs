@@ -212,6 +212,7 @@ public static class LDKExtensions
         services.AddScoped<PaymentsManager>();
         services.AddScoped<BTCPayPaymentsNotifier>();
         services.AddScoped<BTCPayPaymentsNotifier>();
+        services.AddScoped<OutboxProcessor>();
         // services.AddScoped<IScopedHostedService>(provider =>
         //     provider.GetRequiredService<LDKSpendableOutputEventHandler>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<OutboxProcessor>());

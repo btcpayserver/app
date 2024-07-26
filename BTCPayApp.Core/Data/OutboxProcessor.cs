@@ -1,18 +1,14 @@
-﻿using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using BTCPayApp.Core.Attempt2;
-using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
 using Google.Protobuf;
 using Microsoft.EntityFrameworkCore;
-using NBitcoin;
 using VSSProto;
 
 namespace BTCPayApp.Core.Data;
 
 using System;
 using System.Linq;
-using System.Security.Cryptography;
 
 public class OutboxProcessor : IScopedHostedService
 {

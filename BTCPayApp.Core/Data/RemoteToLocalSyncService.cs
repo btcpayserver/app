@@ -1,4 +1,5 @@
-﻿using BTCPayApp.Core.Attempt2;
+﻿using System.Text.Json;
+using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Helpers;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -10,31 +11,29 @@ public class RemoteToLocalSyncService : IScopedHostedService
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
-    private readonly IDataProtector _dataProtector;
 
     public RemoteToLocalSyncService(IDbContextFactory<AppDbContext> dbContextFactory,
-        BTCPayConnectionManager btcPayConnectionManager, IDataProtectionProvider dataProtectionProvider)
+        BTCPayConnectionManager btcPayConnectionManager)
     {
         _dbContextFactory = dbContextFactory;
         _btcPayConnectionManager = btcPayConnectionManager;
-        _dataProtector = dataProtectionProvider.CreateProtector("RemoteToLocalSyncService");
     }
 
     private async Task<KeyValue[]> CreateLocalVersions(AppDbContext dbContext)
     {
         var settings = dbContext.Settings.Where(setting => setting.Backup).Select(setting => new KeyValue()
         {
-            Key = "Setting_" + setting.Key,
+            Key = setting.EntityKey,
             Version = setting.Version
         });
         var channels = dbContext.LightningChannels.Select(channel => new KeyValue()
         {
-            Key = "Channel_" + channel.Id,
+            Key = channel.EntityKey,
             Version = channel.Version
         });
         var payments = dbContext.LightningPayments.Select(payment => new KeyValue()
         {
-            Key = $"Payment_{payment.PaymentHash}_{payment.PaymentId}_{payment.Inbound}",
+            Key = payment.EntityKey,
             Version = payment.Version
         });
         return await settings.Concat(channels).Concat(payments).ToArrayAsync();
@@ -49,142 +48,87 @@ public class RemoteToLocalSyncService : IScopedHostedService
         await db.Database.BeginTransactionAsync();
         try
         {
-            await db.Database.ExecuteSqlRawAsync("//sql to disable all triggers");
-            //   
-            //   // see which ones to delete
-            //   var toDelete = localVersions.Where(localVersion =>
-            //       remoteVersions.KeyVersions(remoteVersion => remoteVersion.Key != localVersion.Key)).ToArray();
-            //
-            //   var settingsToDelete = toDelete.Where(key => key.Key.StartsWith("Setting_")).Select(key => key.Key.Split('_')[1]);
-            //   var channelsToDelete = toDelete.Where(key => key.Key.StartsWith("Channel_")).Select(key => key.Key.Split('_')[1]);
-            //   var paymentsToDelete = toDelete.Where(key => key.Key.StartsWith("Payment_")).Select(key =>
-            //   {
-            //       var keys =  key.Key.Split('_').Skip(1).ToArray();
-            //       return (uint256.Parse(keys[0]), keys[1], bool.Parse(keys[2]));
-            //   });
-            // await db.Settings.Where(setting => settingsToDelete.Contains(setting.Key)).ExecuteDeleteAsync();
-            // await db.LightningChannels.Where(channel => channelsToDelete.Contains(channel.Key)).ExecuteDeleteAsync();
-            //   await db.LightningPayments.Where(payment => paymentsToDelete.Contains((payment.PaymentHash, payment.PaymentId, payment.Inbound))).ExecuteDeleteAsync();
-            //
-            //
-            //
-            // foreach (var key in toDelete)
-            // {
-            //     if (key.Key.StartsWith("Setting_"))
-            //     {
-            //         var settingKey = key.Key.Split('_')[1];
-            //         var setting = await db.Settings.FindAsync(settingKey);
-            //         if (setting != null)
-            //         {
-            //             db.Settings.Remove(setting);
-            //         }
-            //     }
-            //     else if (key.Key.StartsWith( "Channel_"))
-            //     {
-            //         var channelId = key.Key.Split('_')[1];
-            //         var channel = await db.LightningChannels.FindAsync(channelId);
-            //         if (channel != null)
-            //         {
-            //             db.LightningChannels.Remove(channel);
-            //         }
-            //     }
-            //     else if (key.Key.StartsWith( "Payment_"))
-            //     {
-            //         var split = key.Key.Split('_');
-            //         var paymentHash = uint256.Parse(split[1]);
-            //         var paymentId = split[2];
-            //         var inbound = bool.Parse(split[3]);
-            //         var payment = await db.LightningPayments.FindAsync(paymentHash, paymentId, inbound);
-            //         if (payment != null)
-            //         {
-            //             db.LightningPayments.Remove(payment);
-            //         }
-            //     }
-            //     else
-            //     {
-            //         throw new ArgumentOutOfRangeException();
-            //     }
-            // }
-            // var toUpdate = localVersions.Where(localVersion =>
-            //     remoteVersions.KeyVersions(remoteVersion => remoteVersion.Key > localVersion.Key)).ToArray();
-            // // upsert the rest when needed
-            // foreach (var remoteVersion in remoteVersions.KeyVersions)
-            // {
-            //     var localVersion = localVersions.FirstOrDefault(localVersion => localVersion.Key == remoteVersion.Key);
-            //     if (localVersion == null || localVersion.Version < remoteVersion.Version)
-            //     {
-            //         var kv = await backupApi.GetObjectAsync(new GetObjectRequest()
-            //         {
-            //             Key = remoteVersion.Key
-            //         });
-            //         if (kv != null)
-            //         {
-            //             if (remoteVersion.Key.StartsWith("Setting_"))
-            //             {
-            //                 var settingKey = remoteVersion.Key.Split('_')[1];
-            //                 var setting = await db.Settings.FindAsync(settingKey);
-            //                 if (setting == null)
-            //                 {
-            //                     setting = new Setting()
-            //                     {
-            //                         Key = settingKey
-            //                     };
-            //                     db.Settings.Add(setting);
-            //                 }
-            //
-            //                 setting.Value = kv.Value.ToByteArray();
-            //                 setting.Version = kv.Version;
-            //             }
-            //             else if (remoteVersion.Key.StartsWith("Channel_"))
-            //             {
-            //                 var channelId = remoteVersion.Key.Split('_')[1];
-            //                 var channel = await db.LightningChannels.FindAsync(channelId);
-            //                 if (channel == null)
-            //                 {
-            //                     channel = new LightningChannel()
-            //                     {
-            //                         Id = channelId
-            //                     };
-            //                     db.LightningChannels.Add(channel);
-            //                 }
-            //
-            //                 var channelData = JsonSerializer.Deserialize<LightningChannel>(kv.Value.ToStringUtf8());
-            //                 channel.Aliases = channelData.Aliases;
-            //                 channel.Version = kv.Version;
-            //             }
-            //             else if (remoteVersion.Key.StartsWith("Payment_"))
-            //             {
-            //                 var split = remoteVersion.Key.Split('_');
-            //                 var paymentHash = uint256.Parse(split[1]);
-            //                 var paymentId = split[2];
-            //                 var inbound = bool.Parse(split[3]);
-            //                 var payment = await db.LightningPayments.FindAsync(paymentHash, paymentId, inbound);
-            //                 if (payment == null)
-            //                 {
-            //                     payment = new LightningPayment()
-            //                     {
-            //                         PaymentHash = paymentHash,
-            //                         PaymentId = paymentId,
-            //                         Inbound = inbound
-            //                     };
-            //                     db.LightningPayments.Add(payment);
-            //                 }
-            //
-            //                 var paymentData = JsonSerializer.Deserialize<LightningPayment>(kv.Value.ToStringUtf8());
-            //                 payment.Amount = paymentData.Amount;
-            //                 payment.Bolt11 = paymentData.Bolt11;
-            //                 payment.Version = kv.Version;
-            //             }
-            //             else
-            //             {
-            //                 throw new ArgumentOutOfRangeException();
-            //             }
-            //         }
-            //     }
-            // }
-            //
-            //
-            await db.Database.ExecuteSqlRawAsync("//sql to reenable  all triggers");
+            // Step 1: Create a temporary table for trigger definitions
+            await db.Database.ExecuteSqlRawAsync("""
+                                                 
+                                                             CREATE TEMPORARY TABLE IF NOT EXISTS temp_triggers (
+                                                                 name TEXT,
+                                                                 sql TEXT
+                                                             );
+                                                         
+                                                 """);
+
+            // Step 2: Store existing trigger definitions in the temporary table
+            await db.Database.ExecuteSqlRawAsync("""
+                                                 
+                                                             INSERT INTO temp_triggers (name, sql)
+                                                             SELECT name, sql FROM sqlite_master WHERE type = 'trigger';
+                                                         
+                                                 """);
+
+            // Step 3: Drop all existing triggers
+            await db.Database.ExecuteSqlRawAsync("""
+                                                                           
+                                                                                       SELECT 'DROP TRIGGER IF EXISTS ' || name || ';' AS Command 
+                                                                                       FROM sqlite_master 
+                                                                                       WHERE type = 'trigger'
+                                                                                   
+                                                                           """);
+            
+            // delete local versions that are not in remote
+            // delete local versions which are lower than remote
+
+            var toDelete = localVersions.Where(localVersion =>
+                remoteVersions.KeyVersions.All(remoteVersion => remoteVersion.Key != localVersion.Key) 
+                || remoteVersions.KeyVersions.All(remoteVersion => remoteVersion.Key == localVersion.Key && remoteVersion.Version > localVersion.Version)).ToArray();
+            
+            var toUpsert = remoteVersions.KeyVersions.Where(remoteVersion => localVersions.All(localVersion => localVersion.Key != remoteVersion.Key || localVersion.Version < remoteVersion.Version));
+
+            foreach (var upsertItem in toUpsert)
+            {
+                if(upsertItem.Value is null)
+                {
+                    var item = await backupApi.GetObjectAsync(new GetObjectRequest()
+                    {
+                        Key = upsertItem.Key,
+                    });
+                    upsertItem.MergeFrom(item.Value);
+                }
+            }
+            
+            
+            var settingsToDelete = toDelete.Where(key => key.Key.StartsWith("Setting_")).Select(key => key.Key);
+            var channelsToDelete = toDelete.Where(key => key.Key.StartsWith("Channel_")).Select(key => key.Key);
+            var paymentsToDelete = toDelete.Where(key => key.Key.StartsWith("Payment_")).Select(key => key.Key);
+            await db.Settings.Where(setting => settingsToDelete.Contains(setting.EntityKey)).ExecuteDeleteAsync();
+            await db.LightningChannels.Where(channel => channelsToDelete.Contains(channel.EntityKey)).ExecuteDeleteAsync();
+            await db.LightningPayments.Where(payment => paymentsToDelete.Contains(payment.EntityKey)).ExecuteDeleteAsync();
+            
+            // upsert the rest when needed
+            var settingsToUpsert = toUpsert.Where(key => key.Key.StartsWith("Setting_")).Select(setting=> new Setting()
+            {
+                Key = setting.Key.Split('_')[1],
+                Value = setting.Value.ToByteArray(),
+                Version = setting.Version,
+                Backup = true
+            });
+            var channelsToUpsert = toUpsert.Where(key => key.Key.StartsWith("Channel_")).Select(value => JsonSerializer.Deserialize<Channel>(value.Value.ToStringUtf8())!);
+            var paymentsToUpsert = toUpsert.Where(key => key.Key.StartsWith("Payment_")).Select(value => JsonSerializer.Deserialize<AppLightningPayment>(value.Value.ToStringUtf8())!);
+            
+            await db.Settings.UpsertRange(settingsToUpsert).On(setting => setting.EntityKey).RunAsync();
+            await db.LightningChannels.UpsertRange(channelsToUpsert).On(channel => channel.EntityKey).RunAsync();
+            await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payment => payment.EntityKey).RunAsync();
+            
+            // Step 5: Restore triggers from the temporary table directly in SQL
+            await db.Database.ExecuteSqlRawAsync("""
+                                                 
+                                                             INSERT INTO sqlite_master (name, sql)
+                                                             SELECT name, sql FROM temp_triggers;
+                                                         
+                                                 """);
+
+            // Step 6: Drop the temporary table
+            await db.Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS temp_triggers;");
             await db.Database.CommitTransactionAsync();
         }
         catch (Exception e)
