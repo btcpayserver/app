@@ -30,33 +30,14 @@
             </div>
         }
     </header>
-
-@if (Store is null)
-{
-    <Alert Type="info">Please configure a store first.</Alert>
-}
-@if (!string.IsNullOrEmpty(Error))
-{
-    <Alert Type="danger">@Error</Alert>
-}
-@if (Invoices is not null)
-{
-    @if (Invoices.Any())
+    @if (Store is null)
     {
-        @foreach (var i in Invoices)
-        {
-            <div class="box mb-1">
-                <InvoiceItem Invoice="@i"/>
-            </div>
-        }
+        <Alert Type="info">Please configure a store first.</Alert>
     }
     else
     {
-        <div class="box">
-            <p class="text-muted text-center py-4">There are no invoices, yet.</p>
-        </div>
+        <InvoiceList Invoices="Invoices" Loading="Loading" Error="Error"/>
     }
-}
 </section>
 
 @code {

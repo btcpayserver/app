@@ -56,34 +56,7 @@
 {
     <section class="container">
         <h2>Recent Invoices</h2>
-        <div class="box">
-            @if (InvoicesLoading)
-            {
-                <div class="p-3 text-center">
-                    <LoadingIndicator/>
-                </div>
-            }
-            @if (Invoices is not null)
-            {
-                @if (Invoices.Any())
-                {
-                    <div class="list-group list-group-flush invoices">
-                        @foreach (var i in Invoices)
-                        {
-                            <InvoiceItem Invoice="@i"/>
-                        }
-                    </div>
-                }
-                else if (!string.IsNullOrEmpty(InvoicesError))
-                {
-                    <Alert Type="danger">@InvoicesError</Alert>
-                }
-                else
-                {
-                    <p class="text-muted my-0">There are no invoices, yet.</p>
-                }
-            }
-        </div>
+        <InvoiceList Invoices="Invoices" Loading="InvoicesLoading" Error="InvoicesError"/>
     </section>
 }
 
