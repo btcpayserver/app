@@ -10,6 +10,8 @@ public record StoreState
 {
     public AppUserStoreInfo? StoreInfo;
     public RemoteData<StoreData>? Store;
+    public RemoteData<OnChainWalletOverviewData>? OnchainBalance;
+    public RemoteData<LightningNodeBalanceData>? LightningBalance;
     public RemoteData<PointOfSaleAppData>? PointOfSale;
     public RemoteData<IEnumerable<StoreRateResult>>? Rates;
     public RemoteData<IEnumerable<InvoiceData>>? Invoices;
@@ -21,21 +23,25 @@ public record StoreState
 
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
     public record FetchStore(string StoreId);
+    public record FetchOnchainBalance(string StoreId);
+    public record FetchLightningBalance(string StoreId);
     public record FetchNotifications(string StoreId);
-    public record FetchedNotifications(IEnumerable<NotificationData>? Notifications, string? Error);
     public record FetchInvoices(string StoreId);
-    public record FetchedInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
     public record FetchInvoice(string StoreId, string InvoiceId);
-    public record FetchedInvoice(InvoiceData? Invoice, string? Error, string InvoiceId);
     public record FetchInvoicePaymentMethods(string StoreId, string InvoiceId);
-    public record FetchedInvoicePaymentMethods(InvoicePaymentMethodDataModel[]? PaymentMethods, string? Error, string InvoiceId);
     public record FetchRates(string StoreId, string? Currency);
-    public record FetchedRates(IEnumerable<StoreRateResult>? Rates, string? Error);
     public record FetchPointOfSale(string AppId);
     public record UpdateStore(string StoreId, UpdateStoreRequest Request);
-    public record SetStore(StoreData? Store, string? Error);
     public record UpdatedStore(StoreData? Store, string? Error) : SetStore(Store, Error);
     public record UpdatePointOfSale(string AppId, PointOfSaleAppRequest Request);
+    public record SetStore(StoreData? Store, string? Error);
+    public record SetOnchainBalance(OnChainWalletOverviewData? Overview, string? Error);
+    public record SetLightningBalance(LightningNodeBalanceData? Balance, string? Error);
+    public record SetNotifications(IEnumerable<NotificationData>? Notifications, string? Error);
+    public record SetInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
+    public record SetInvoice(InvoiceData? Invoice, string? Error, string InvoiceId);
+    public record SetInvoicePaymentMethods(InvoicePaymentMethodDataModel[]? PaymentMethods, string? Error, string InvoiceId);
+    public record SetRates(IEnumerable<StoreRateResult>? Rates, string? Error);
     public record SetPointOfSale(PointOfSaleAppData? AppData, string? Error);
     public record UpdatedPointOfSale(PointOfSaleAppData? AppData, string? Error) : SetPointOfSale(AppData, Error);
 
@@ -47,6 +53,8 @@ public record StoreState
             {
                 StoreInfo = action.StoreInfo,
                 Store = new RemoteData<StoreData>(),
+                OnchainBalance = new RemoteData<OnChainWalletOverviewData>(),
+                LightningBalance = new RemoteData<LightningNodeBalanceData>(),
                 PointOfSale = new RemoteData<PointOfSaleAppData>(),
                 Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(),
@@ -99,6 +107,66 @@ public record StoreState
         }
     }
 
+    protected class FetchOnchainBalanceReducer : Reducer<StoreState, FetchOnchainBalance>
+    {
+        public override StoreState Reduce(StoreState state, FetchOnchainBalance action)
+        {
+            return state with
+            {
+                OnchainBalance = (state.OnchainBalance ?? new RemoteData<OnChainWalletOverviewData>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class SetOnchainBalanceReducer : Reducer<StoreState, SetOnchainBalance>
+    {
+        public override StoreState Reduce(StoreState state, SetOnchainBalance action)
+        {
+            return state with
+            {
+                OnchainBalance = (state.OnchainBalance ?? new RemoteData<OnChainWalletOverviewData>()) with {
+                    Data = action.Overview ?? state.OnchainBalance?.Data,
+                    Error = action.Error,
+                    Loading = false,
+                    Sending = false
+                }
+            };
+        }
+    }
+
+    protected class FetchLightningBalanceReducer : Reducer<StoreState, FetchLightningBalance>
+    {
+        public override StoreState Reduce(StoreState state, FetchLightningBalance action)
+        {
+            return state with
+            {
+                LightningBalance = (state.LightningBalance ?? new RemoteData<LightningNodeBalanceData>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class SetLightningBalanceReducer : Reducer<StoreState, SetLightningBalance>
+    {
+        public override StoreState Reduce(StoreState state, SetLightningBalance action)
+        {
+            return state with
+            {
+                LightningBalance = (state.LightningBalance ?? new RemoteData<LightningNodeBalanceData>()) with {
+                    Data = action.Balance ?? state.LightningBalance?.Data,
+                    Error = action.Error,
+                    Loading = false,
+                    Sending = false
+                }
+            };
+        }
+    }
+
     protected class FetchNotificationsReducer : Reducer<StoreState, FetchNotifications>
     {
         public override StoreState Reduce(StoreState state, FetchNotifications action)
@@ -113,9 +181,9 @@ public record StoreState
         }
     }
 
-    protected class FetchedNotificationsReducer : Reducer<StoreState, FetchedNotifications>
+    protected class SetNotificationsReducer : Reducer<StoreState, SetNotifications>
     {
-        public override StoreState Reduce(StoreState state, FetchedNotifications action)
+        public override StoreState Reduce(StoreState state, SetNotifications action)
         {
             return state with
             {
@@ -165,9 +233,9 @@ public record StoreState
         }
     }
 
-    protected class FetchedInvoicesReducer : Reducer<StoreState, FetchedInvoices>
+    protected class SetInvoicesReducer : Reducer<StoreState, SetInvoices>
     {
-        public override StoreState Reduce(StoreState state, FetchedInvoices action)
+        public override StoreState Reduce(StoreState state, SetInvoices action)
         {
             return state with
             {
@@ -198,9 +266,9 @@ public record StoreState
         }
     }
 
-    protected class FetchedInvoiceReducer : Reducer<StoreState, FetchedInvoice>
+    protected class SetInvoiceReducer : Reducer<StoreState, SetInvoice>
     {
-        public override StoreState Reduce(StoreState state, FetchedInvoice action)
+        public override StoreState Reduce(StoreState state, SetInvoice action)
         {
             var invoice = action.Invoice ?? GetInvoice(state, action.InvoiceId)?.Data;
             if (state._invoicesById.ContainsKey(action.InvoiceId))
@@ -232,9 +300,9 @@ public record StoreState
         }
     }
 
-    protected class FetchedInvoicePaymentMethodsReducer : Reducer<StoreState, FetchedInvoicePaymentMethods>
+    protected class SetInvoicePaymentMethodsReducer : Reducer<StoreState, SetInvoicePaymentMethods>
     {
-        public override StoreState Reduce(StoreState state, FetchedInvoicePaymentMethods action)
+        public override StoreState Reduce(StoreState state, SetInvoicePaymentMethods action)
         {
             var pms = action.PaymentMethods ?? GetInvoicePaymentMethods(state, action.InvoiceId)?.Data;
             if (state._invoicePaymentMethodsById.ContainsKey(action.InvoiceId))
@@ -263,9 +331,9 @@ public record StoreState
         }
     }
 
-    protected class FetchedRatesReducer : Reducer<StoreState, FetchedRates>
+    protected class SetRatesReducer : Reducer<StoreState, SetRates>
     {
-        public override StoreState Reduce(StoreState state, FetchedRates action)
+        public override StoreState Reduce(StoreState state, SetRates action)
         {
             return state with
             {
@@ -332,6 +400,8 @@ public record StoreState
             if (store != null)
             {
                 var storeId = store.Id!;
+                dispatcher.Dispatch(new FetchOnchainBalance(storeId));
+                dispatcher.Dispatch(new FetchLightningBalance(storeId));
                 dispatcher.Dispatch(new FetchNotifications(storeId));
                 dispatcher.Dispatch(new FetchInvoices(storeId));
                 dispatcher.Dispatch(new FetchPointOfSale(store.PosAppId!));
@@ -372,17 +442,47 @@ public record StoreState
         }
 
         [EffectMethod]
+        public async Task FetchOnchainBalanceEffect(FetchOnchainBalance action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var overview = await accountManager.GetClient().ShowOnChainWalletOverview(action.StoreId, "BTC");
+                dispatcher.Dispatch(new SetOnchainBalance(overview, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetOnchainBalance(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchLightningBalanceEffect(FetchLightningBalance action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var balance = await accountManager.GetClient().GetLightningNodeBalance(action.StoreId, "BTC");
+                dispatcher.Dispatch(new SetLightningBalance(balance, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetLightningBalance(null, error));
+            }
+        }
+
+        [EffectMethod]
         public async Task FetchNotificationsEffect(FetchNotifications action, IDispatcher dispatcher)
         {
             try
             {
                 var notifications = await accountManager.GetClient().GetNotifications(storeId: [action.StoreId]);
-                dispatcher.Dispatch(new FetchedNotifications(notifications, null));
+                dispatcher.Dispatch(new SetNotifications(notifications, null));
             }
             catch (Exception e)
             {
                 var error = e.InnerException?.Message ?? e.Message;
-                dispatcher.Dispatch(new FetchedNotifications(null, error));
+                dispatcher.Dispatch(new SetNotifications(null, error));
             }
         }
 
@@ -422,12 +522,12 @@ public record StoreState
             try
             {
                 var rates = await accountManager.GetClient().GetStoreRates(action.StoreId, [$"BTC_{action.Currency}"]);
-                dispatcher.Dispatch(new FetchedRates(rates, null));
+                dispatcher.Dispatch(new SetRates(rates, null));
             }
             catch (Exception e)
             {
                 var error = e.InnerException?.Message ?? e.Message;
-                dispatcher.Dispatch(new FetchedRates(null, error));
+                dispatcher.Dispatch(new SetRates(null, error));
             }
         }
 
@@ -437,12 +537,12 @@ public record StoreState
             try
             {
                 var invoices = await accountManager.GetClient().GetInvoices(action.StoreId);
-                dispatcher.Dispatch(new FetchedInvoices(invoices, null));
+                dispatcher.Dispatch(new SetInvoices(invoices, null));
             }
             catch (Exception e)
             {
                 var error = e.InnerException?.Message ?? e.Message;
-                dispatcher.Dispatch(new FetchedInvoices(null, error));
+                dispatcher.Dispatch(new SetInvoices(null, error));
             }
         }
 
@@ -452,12 +552,12 @@ public record StoreState
             try
             {
                 var invoice = await accountManager.GetClient().GetInvoice(action.StoreId, action.InvoiceId);
-                dispatcher.Dispatch(new FetchedInvoice(invoice, null, action.InvoiceId));
+                dispatcher.Dispatch(new SetInvoice(invoice, null, action.InvoiceId));
             }
             catch (Exception e)
             {
                 var error = e.InnerException?.Message ?? e.Message;
-                dispatcher.Dispatch(new FetchedInvoice(null, error, action.InvoiceId));
+                dispatcher.Dispatch(new SetInvoice(null, error, action.InvoiceId));
             }
         }
 
@@ -467,12 +567,12 @@ public record StoreState
             try
             {
                 var pms = await accountManager.GetClient().GetInvoicePaymentMethods(action.StoreId, action.InvoiceId);
-                dispatcher.Dispatch(new FetchedInvoicePaymentMethods(pms, null, action.InvoiceId));
+                dispatcher.Dispatch(new SetInvoicePaymentMethods(pms, null, action.InvoiceId));
             }
             catch (Exception e)
             {
                 var error = e.InnerException?.Message ?? e.Message;
-                dispatcher.Dispatch(new FetchedInvoicePaymentMethods(null, error, action.InvoiceId));
+                dispatcher.Dispatch(new SetInvoicePaymentMethods(null, error, action.InvoiceId));
             }
         }
     }
