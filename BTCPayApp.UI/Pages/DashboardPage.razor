@@ -7,7 +7,6 @@
 @using BTCPayServer.Lightning
 @using BTCPayServer.Services
 @using NBitcoin
-@inject IState<RootState> State
 @inject IState<StoreState> StoreState
 @inject IAccountManager AccountManager
 @inject DisplayFormatter DisplayFormatter
@@ -53,7 +52,7 @@
     </section>
 </AuthorizeView>
 
-@if (StoreState.Value.StoreInfo is not null && InvoicesLoading || Invoices is not null)
+@if (InvoicesLoading || Invoices is not null)
 {
     <section class="container">
         <h2>Recent Invoices</h2>
