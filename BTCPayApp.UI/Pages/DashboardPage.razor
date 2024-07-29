@@ -1,4 +1,4 @@
-@attribute [Route(Routes.Dashboard)]
+﻿@attribute [Route(Routes.Dashboard)]
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client
@@ -55,7 +55,7 @@
 {
     <section class="container">
         <h2>Recent Invoices</h2>
-        <InvoiceList Invoices="Invoices" Loading="InvoicesLoading" Error="InvoicesError"/>
+        <InvoiceList Invoices="Invoices" Loading="InvoicesLoading" Error="@InvoicesError"/>
     </section>
 }
 
