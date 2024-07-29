@@ -35,7 +35,7 @@
     }
     else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error or LightningNodeState.Stopped)
     {
-        @if (_config is not null)
+        @if (Node is not null)
         {
             <div class="form-floating">
                 <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
