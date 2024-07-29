@@ -153,7 +153,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
     private async Task MarkConnected()
     {
-        await new RemoteToLocalSyncService(_dbContextFactory,this).Sync();
+        // await new RemoteToLocalSyncService(_dbContextFactory,this).Sync();
         ConnectionState = HubConnectionState.Connected;
     }
     
