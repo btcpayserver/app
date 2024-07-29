@@ -164,7 +164,6 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         if (store == null) return new FormResult(false, $"Store with ID '{storeId}' does not exist or belong to the user.");
 
         OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
-        string? message = null;
 
         // create associated POS app if there is none
         if (string.IsNullOrEmpty(store.PosAppId))
@@ -172,9 +171,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
             try
             {
                 var posConfig = new PointOfSaleAppRequest { AppName = store.Name, DefaultView = PosViewType.Light };
-                var app = await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
-                message = $"The Point of Sale called \"{app.AppName}\" has been created for use with the app.";
-
+                await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
                 await FetchUserInfo();
             }
             catch (Exception e)
@@ -187,7 +184,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         await UpdateAccount(_account);
         OnAfterStoreChange?.Invoke(this, store);
 
-        return new FormResult(true, string.IsNullOrEmpty(message) ? null : [message]);
+        return new FormResult(true);
     }
 
     public async Task UnsetCurrentStore()
