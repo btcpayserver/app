@@ -215,8 +215,7 @@ public class LightningNodeManager : BaseHostedService
                     }
                     else
                     {
-                        //TODO: Introduce a new state so that this node knows that another instance is active
-                        newState = LightningNodeState.Error;
+                        newState = LightningNodeState.Inactive;
                     }
                     break;
 

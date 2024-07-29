@@ -29,6 +29,13 @@
             <p>There was an error with the lightning node. Please try again later.</p>
         </div>
     }
+    else if (State.Value.LightningNodeState is LightningNodeState.Inactive)
+    {
+        <div class="alert alert-info" role="alert">
+            <h4 class="alert-heading">Instance inactive</h4>
+            <p>There seems to be another instance of this lightning node running. This instance is inactive.</p>
+        </div>
+    }
     else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error or LightningNodeState.Stopped)
     {
         <article>

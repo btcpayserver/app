@@ -8,5 +8,6 @@ public enum LightningNodeState
     Loading,
     Loaded,
     Stopped,
-    Error
+    Error,
+    Inactive
 }
