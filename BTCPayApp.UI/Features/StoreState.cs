@@ -77,6 +77,124 @@ public record StoreState
         }
     }
 
+    protected class FetchOnchainBalanceReducer : Reducer<StoreState, FetchOnchainBalance>
+    {
+        public override StoreState Reduce(StoreState state, FetchOnchainBalance action)
+        {
+            return state with
+            {
+                OnchainBalance = (state.OnchainBalance ?? new RemoteData<OnChainWalletOverviewData>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class FetchLightningBalanceReducer : Reducer<StoreState, FetchLightningBalance>
+    {
+        public override StoreState Reduce(StoreState state, FetchLightningBalance action)
+        {
+            return state with
+            {
+                LightningBalance = (state.LightningBalance ?? new RemoteData<LightningNodeBalanceData>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class FetchNotificationsReducer : Reducer<StoreState, FetchNotifications>
+    {
+        public override StoreState Reduce(StoreState state, FetchNotifications action)
+        {
+            return state with
+            {
+                Notifications = (state.Notifications ?? new RemoteData<IEnumerable<NotificationData>>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class FetchInvoicesReducer : Reducer<StoreState, FetchInvoices>
+    {
+        public override StoreState Reduce(StoreState state, FetchInvoices action)
+        {
+            return state with
+            {
+                Invoices = (state.Invoices ?? new RemoteData<IEnumerable<InvoiceData>>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class FetchInvoiceReducer : Reducer<StoreState, FetchInvoice>
+    {
+        public override StoreState Reduce(StoreState state, FetchInvoice action)
+        {
+            var invoice = GetInvoice(state, action.InvoiceId)?.Data;
+            if (state._invoicesById.ContainsKey(action.InvoiceId))
+                state._invoicesById.Remove(action.InvoiceId);
+            return state with
+            {
+                _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
+                {
+                    { action.InvoiceId, new RemoteData<InvoiceData>(invoice, null, true) }
+                }
+            };
+        }
+    }
+
+    protected class FetchInvoicePaymentMethodsReducer : Reducer<StoreState, FetchInvoicePaymentMethods>
+    {
+        public override StoreState Reduce(StoreState state, FetchInvoicePaymentMethods action)
+        {
+            var pms = GetInvoicePaymentMethods(state, action.InvoiceId)?.Data;
+            if (state._invoicePaymentMethodsById.ContainsKey(action.InvoiceId))
+                state._invoicePaymentMethodsById.Remove(action.InvoiceId);
+            return state with
+            {
+                _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(state._invoicePaymentMethodsById)
+                {
+                    { action.InvoiceId, new RemoteData<InvoicePaymentMethodDataModel[]>(pms, null, true) }
+                }
+            };
+        }
+    }
+
+    protected class FetchRatesReducer : Reducer<StoreState, FetchRates>
+    {
+        public override StoreState Reduce(StoreState state, FetchRates action)
+        {
+            return state with
+            {
+                Rates = (state.Rates ?? new RemoteData<IEnumerable<StoreRateResult>>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class FetchPointOfSaleReducer : Reducer<StoreState, FetchPointOfSale>
+    {
+        public override StoreState Reduce(StoreState state, FetchPointOfSale action)
+        {
+            return state with
+            {
+                PointOfSale = (state.PointOfSale ?? new RemoteData<PointOfSaleAppData>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
     protected class SetStoreReducer : Reducer<StoreState, SetStore>
     {
         public override StoreState Reduce(StoreState state, SetStore action)
@@ -107,20 +225,6 @@ public record StoreState
         }
     }
 
-    protected class FetchOnchainBalanceReducer : Reducer<StoreState, FetchOnchainBalance>
-    {
-        public override StoreState Reduce(StoreState state, FetchOnchainBalance action)
-        {
-            return state with
-            {
-                OnchainBalance = (state.OnchainBalance ?? new RemoteData<OnChainWalletOverviewData>()) with
-                {
-                    Loading = true
-                }
-            };
-        }
-    }
-
     protected class SetOnchainBalanceReducer : Reducer<StoreState, SetOnchainBalance>
     {
         public override StoreState Reduce(StoreState state, SetOnchainBalance action)
@@ -132,20 +236,6 @@ public record StoreState
                     Error = action.Error,
                     Loading = false,
                     Sending = false
-                }
-            };
-        }
-    }
-
-    protected class FetchLightningBalanceReducer : Reducer<StoreState, FetchLightningBalance>
-    {
-        public override StoreState Reduce(StoreState state, FetchLightningBalance action)
-        {
-            return state with
-            {
-                LightningBalance = (state.LightningBalance ?? new RemoteData<LightningNodeBalanceData>()) with
-                {
-                    Loading = true
                 }
             };
         }
@@ -167,20 +257,6 @@ public record StoreState
         }
     }
 
-    protected class FetchNotificationsReducer : Reducer<StoreState, FetchNotifications>
-    {
-        public override StoreState Reduce(StoreState state, FetchNotifications action)
-        {
-            return state with
-            {
-                Notifications = (state.Notifications ?? new RemoteData<IEnumerable<NotificationData>>()) with
-                {
-                    Loading = true
-                }
-            };
-        }
-    }
-
     protected class SetNotificationsReducer : Reducer<StoreState, SetNotifications>
     {
         public override StoreState Reduce(StoreState state, SetNotifications action)
@@ -192,6 +268,102 @@ public record StoreState
                     Data = action.Notifications,
                     Error = action.Error,
                     Loading = false
+                }
+            };
+        }
+    }
+
+    protected class SetInvoicesReducer : Reducer<StoreState, SetInvoices>
+    {
+        public override StoreState Reduce(StoreState state, SetInvoices action)
+        {
+            return state with
+            {
+                Invoices = (state.Invoices ?? new RemoteData<IEnumerable<InvoiceData>>()) with
+                {
+                    Data = action.Invoices ?? state.Invoices?.Data,
+                    Error = action.Error,
+                    Loading = false
+                }
+            };
+        }
+    }
+
+    protected class SetInvoiceReducer : Reducer<StoreState, SetInvoice>
+    {
+        public override StoreState Reduce(StoreState state, SetInvoice action)
+        {
+            var invoice = action.Invoice ?? GetInvoice(state, action.InvoiceId)?.Data;
+            if (state._invoicesById.ContainsKey(action.InvoiceId))
+                state._invoicesById.Remove(action.InvoiceId);
+            return state with
+            {
+                _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
+                {
+                    { action.InvoiceId, new RemoteData<InvoiceData>(invoice, action.Error, false) }
+                }
+            };
+        }
+    }
+
+    protected class SetInvoicePaymentMethodsReducer : Reducer<StoreState, SetInvoicePaymentMethods>
+    {
+        public override StoreState Reduce(StoreState state, SetInvoicePaymentMethods action)
+        {
+            var pms = action.PaymentMethods ?? GetInvoicePaymentMethods(state, action.InvoiceId)?.Data;
+            if (state._invoicePaymentMethodsById.ContainsKey(action.InvoiceId))
+                state._invoicePaymentMethodsById.Remove(action.InvoiceId);
+            return state with
+            {
+                _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(state._invoicePaymentMethodsById)
+                {
+                    { action.InvoiceId, new RemoteData<InvoicePaymentMethodDataModel[]>(pms, action.Error) }
+                }
+            };
+        }
+    }
+
+    protected class SetRatesReducer : Reducer<StoreState, SetRates>
+    {
+        public override StoreState Reduce(StoreState state, SetRates action)
+        {
+            return state with
+            {
+                Rates = (state.Rates ?? new RemoteData<IEnumerable<StoreRateResult>>()) with {
+                    Data = action.Rates ?? state.Rates?.Data,
+                    Error = action.Error,
+                    Loading = false
+                }
+            };
+        }
+    }
+
+    protected class SetPointOfSaleReducer : Reducer<StoreState, SetPointOfSale>
+    {
+        public override StoreState Reduce(StoreState state, SetPointOfSale action)
+        {
+            return state with
+            {
+                PointOfSale = (state.PointOfSale ?? new RemoteData<PointOfSaleAppData>()) with
+                {
+                    Data = action.AppData ?? state.PointOfSale?.Data,
+                    Error = action.Error,
+                    Loading = false,
+                    Sending = false
+                }
+            };
+        }
+    }
+
+    protected class UpdatePointOfSaleReducer : Reducer<StoreState, UpdatePointOfSale>
+    {
+        public override StoreState Reduce(StoreState state, UpdatePointOfSale action)
+        {
+            return state with
+            {
+                PointOfSale = (state.PointOfSale ?? new RemoteData<PointOfSaleAppData>()) with
+                {
+                    Sending = true
                 }
             };
         }
@@ -217,178 +389,6 @@ public record StoreState
     private static RemoteData<InvoicePaymentMethodDataModel[]>? GetInvoicePaymentMethods(StoreState state, string invoiceId)
     {
         return state.GetInvoicePaymentMethods(invoiceId);
-    }
-
-    protected class FetchInvoicesReducer : Reducer<StoreState, FetchInvoices>
-    {
-        public override StoreState Reduce(StoreState state, FetchInvoices action)
-        {
-            return state with
-            {
-                Invoices = (state.Invoices ?? new RemoteData<IEnumerable<InvoiceData>>()) with
-                {
-                    Loading = true
-                }
-            };
-        }
-    }
-
-    protected class SetInvoicesReducer : Reducer<StoreState, SetInvoices>
-    {
-        public override StoreState Reduce(StoreState state, SetInvoices action)
-        {
-            return state with
-            {
-                Invoices = (state.Invoices ?? new RemoteData<IEnumerable<InvoiceData>>()) with
-                {
-                    Data = action.Invoices ?? state.Invoices?.Data,
-                    Error = action.Error,
-                    Loading = false
-                }
-            };
-        }
-    }
-
-    protected class FetchInvoiceReducer : Reducer<StoreState, FetchInvoice>
-    {
-        public override StoreState Reduce(StoreState state, FetchInvoice action)
-        {
-            var invoice = GetInvoice(state, action.InvoiceId)?.Data;
-            if (state._invoicesById.ContainsKey(action.InvoiceId))
-                state._invoicesById.Remove(action.InvoiceId);
-            return state with
-            {
-                _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
-                {
-                    { action.InvoiceId, new RemoteData<InvoiceData>(invoice, null, true) }
-                }
-            };
-        }
-    }
-
-    protected class SetInvoiceReducer : Reducer<StoreState, SetInvoice>
-    {
-        public override StoreState Reduce(StoreState state, SetInvoice action)
-        {
-            var invoice = action.Invoice ?? GetInvoice(state, action.InvoiceId)?.Data;
-            if (state._invoicesById.ContainsKey(action.InvoiceId))
-                state._invoicesById.Remove(action.InvoiceId);
-            return state with
-            {
-                _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
-                {
-                    { action.InvoiceId, new RemoteData<InvoiceData>(invoice, action.Error, false) }
-                }
-            };
-        }
-    }
-
-    protected class FetchInvoicePaymentMethodsReducer : Reducer<StoreState, FetchInvoicePaymentMethods>
-    {
-        public override StoreState Reduce(StoreState state, FetchInvoicePaymentMethods action)
-        {
-            var pms = GetInvoicePaymentMethods(state, action.InvoiceId)?.Data;
-            if (state._invoicePaymentMethodsById.ContainsKey(action.InvoiceId))
-                state._invoicePaymentMethodsById.Remove(action.InvoiceId);
-            return state with
-            {
-                _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(state._invoicePaymentMethodsById)
-                {
-                    { action.InvoiceId, new RemoteData<InvoicePaymentMethodDataModel[]>(pms, null, true) }
-                }
-            };
-        }
-    }
-
-    protected class SetInvoicePaymentMethodsReducer : Reducer<StoreState, SetInvoicePaymentMethods>
-    {
-        public override StoreState Reduce(StoreState state, SetInvoicePaymentMethods action)
-        {
-            var pms = action.PaymentMethods ?? GetInvoicePaymentMethods(state, action.InvoiceId)?.Data;
-            if (state._invoicePaymentMethodsById.ContainsKey(action.InvoiceId))
-                state._invoicePaymentMethodsById.Remove(action.InvoiceId);
-            return state with
-            {
-                _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(state._invoicePaymentMethodsById)
-                {
-                    { action.InvoiceId, new RemoteData<InvoicePaymentMethodDataModel[]>(pms, action.Error) }
-                }
-            };
-        }
-    }
-
-    protected class FetchRatesReducer : Reducer<StoreState, FetchRates>
-    {
-        public override StoreState Reduce(StoreState state, FetchRates action)
-        {
-            return state with
-            {
-                Rates = (state.Rates ?? new RemoteData<IEnumerable<StoreRateResult>>()) with
-                {
-                    Loading = true
-                }
-            };
-        }
-    }
-
-    protected class SetRatesReducer : Reducer<StoreState, SetRates>
-    {
-        public override StoreState Reduce(StoreState state, SetRates action)
-        {
-            return state with
-            {
-                Rates = (state.Rates ?? new RemoteData<IEnumerable<StoreRateResult>>()) with {
-                    Data = action.Rates ?? state.Rates?.Data,
-                    Error = action.Error,
-                    Loading = false
-                }
-            };
-        }
-    }
-
-    protected class FetchPointOfSaleReducer : Reducer<StoreState, FetchPointOfSale>
-    {
-        public override StoreState Reduce(StoreState state, FetchPointOfSale action)
-        {
-            return state with
-            {
-                PointOfSale = (state.PointOfSale ?? new RemoteData<PointOfSaleAppData>()) with
-                {
-                    Loading = true
-                }
-            };
-        }
-    }
-
-    protected class UpdatePointOfSaleReducer : Reducer<StoreState, UpdatePointOfSale>
-    {
-        public override StoreState Reduce(StoreState state, UpdatePointOfSale action)
-        {
-            return state with
-            {
-                PointOfSale = (state.PointOfSale ?? new RemoteData<PointOfSaleAppData>()) with
-                {
-                    Sending = true
-                }
-            };
-        }
-    }
-
-    protected class SetPointOfSaleReducer : Reducer<StoreState, SetPointOfSale>
-    {
-        public override StoreState Reduce(StoreState state, SetPointOfSale action)
-        {
-            return state with
-            {
-                PointOfSale = (state.PointOfSale ?? new RemoteData<PointOfSaleAppData>()) with
-                {
-                    Data = action.AppData ?? state.PointOfSale?.Data,
-                    Error = action.Error,
-                    Loading = false,
-                    Sending = false
-                }
-            };
-        }
     }
 
     public class StoreEffects(IAccountManager accountManager)
