@@ -93,6 +93,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();
         _accounts = await AccountManager.GetAccounts();

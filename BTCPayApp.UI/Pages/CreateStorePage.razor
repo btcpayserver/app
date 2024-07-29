@@ -1,4 +1,4 @@
-﻿@attribute [Route(Routes.CreateStore)]
+@attribute [Route(Routes.CreateStore)]
 @layout SimpleLayout
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
@@ -86,6 +86,7 @@ else if (_data is not null)
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
         try
         {
             _loading = true;

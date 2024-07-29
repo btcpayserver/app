@@ -38,6 +38,7 @@
 @code {
     protected override void OnInitialized()
     {
+        base.OnInitialized();
         NavigationManager.LocationChanged += OnLocationChanged;
     }
 

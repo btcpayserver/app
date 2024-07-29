@@ -1,5 +1,4 @@
-﻿@attribute [Route(Routes.Dashboard)]
-@using BTCPayApp.Core.Attempt2
+@attribute [Route(Routes.Dashboard)]
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client
@@ -68,17 +67,14 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await base.OnInitializedAsync();
+
         if (!string.IsNullOrEmpty(Success))
         {
             _successMessage = Uri.UnescapeDataString(Success);
         }
     }
 
-    protected override void OnAfterRender(bool firstRender)
-    {
-        // ensure the ElementReference is set
-        if (firstRender) StateHasChanged();
-    }
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data?.Take(5);
     private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;
     private string? InvoicesError => StoreState.Value.Invoices?.Error;
