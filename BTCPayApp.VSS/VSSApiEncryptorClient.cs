@@ -4,6 +4,7 @@ using VSSProto;
 
 namespace BTCPayApp.VSS;
 
+
 public class VSSApiEncryptorClient: IVSSAPI
 {
     private readonly IVSSAPI _vssApi;
@@ -15,9 +16,9 @@ public class VSSApiEncryptorClient: IVSSAPI
         _encryptor = encryptor;
     }
 
-    public async Task<GetObjectResponse> GetObjectAsync(GetObjectRequest request)
+    public async Task<GetObjectResponse> GetObjectAsync(GetObjectRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await _vssApi.GetObjectAsync(request);
+        var response = await _vssApi.GetObjectAsync(request, cancellationToken);
         if (response.Value?.Value is null)
         {
             return response;
@@ -28,7 +29,7 @@ public class VSSApiEncryptorClient: IVSSAPI
         return response;
     }
 
-    public async Task<PutObjectResponse> PutObjectAsync(PutObjectRequest request)
+    public async Task<PutObjectResponse> PutObjectAsync(PutObjectRequest request, CancellationToken cancellationToken = default)
     {
         var newReq = request.Clone();
         foreach (var obj in newReq.TransactionItems) 
@@ -38,19 +39,19 @@ public class VSSApiEncryptorClient: IVSSAPI
             var encryptedValue = _encryptor.Protect(obj.Value.ToByteArray());
             obj.Value = ByteString.CopyFrom(encryptedValue);
         }
-        return await _vssApi.PutObjectAsync(newReq);
+        return await _vssApi.PutObjectAsync(newReq, cancellationToken);
       
     }
 
-    public Task<DeleteObjectResponse> DeleteObjectAsync(DeleteObjectRequest request)
+    public Task<DeleteObjectResponse> DeleteObjectAsync(DeleteObjectRequest request, CancellationToken cancellationToken = default)
     {
-        return _vssApi.DeleteObjectAsync(request);
+        return _vssApi.DeleteObjectAsync(request, cancellationToken);
     }
 
-    public async Task<ListKeyVersionsResponse> ListKeyVersionsAsync(ListKeyVersionsRequest request)
+    public async Task<ListKeyVersionsResponse> ListKeyVersionsAsync(ListKeyVersionsRequest request, CancellationToken cancellationToken = default)
     {
         
-        var x = await  _vssApi.ListKeyVersionsAsync(request);
+        var x = await  _vssApi.ListKeyVersionsAsync(request, cancellationToken);
         
         foreach (var keyVersion in x.KeyVersions)
         {

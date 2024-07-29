@@ -412,12 +412,12 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
 
     public async Task UpdateAccount(BTCPayAccount account)
     {
-        await _config.Set(GetKey(account.Id), account);
+        await _config.Set(GetKey(account.Id), account, false);
     }
 
     public async Task RemoveAccount(BTCPayAccount account)
     {
-        await _config.Set<BTCPayAccount>(GetKey(account.Id), null);
+        await _config.Set<BTCPayAccount>(GetKey(account.Id), null, false);
     }
 
     private async Task<BTCPayAccount> GetAccount(string serverUrl, string email)
@@ -438,7 +438,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
     {
         OnBeforeAccountChange?.Invoke(this, _account);
         if (account != null) await UpdateAccount(account);
-        await _config.Set(CurrentAccountKey, account?.Id);
+        await _config.Set(CurrentAccountKey, account?.Id, false);
         _account = account;
         _userInfo = null;
 

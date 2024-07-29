@@ -2,7 +2,9 @@
 using System.Net.Sockets;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.LSP.JIT;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NBitcoin;
@@ -210,9 +212,12 @@ public static class LDKExtensions
         services.AddScoped<PaymentsManager>();
         services.AddScoped<BTCPayPaymentsNotifier>();
         services.AddScoped<BTCPayPaymentsNotifier>();
+        services.AddScoped<OutboxProcessor>();
         // services.AddScoped<IScopedHostedService>(provider =>
         //     provider.GetRequiredService<LDKSpendableOutputEventHandler>());
+        services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<OutboxProcessor>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKChannelSync>());
+        services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<PaymentsManager>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKBackgroundProcessor>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKPeerHandler>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKAnnouncementBroadcaster>());
@@ -300,6 +305,11 @@ public static class LDKExtensions
             ProbabilisticScoringFeeParameters.with_default()));
         services.AddScoped<Router>(provider => provider.GetRequiredService<DefaultRouter>().as_Router());
 
+        
+        services.AddScoped<VoltageFlow2Jit>();
+        services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
+        services.AddScoped<IJITService, VoltageFlow2Jit>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
+        
         return services;
     }
 

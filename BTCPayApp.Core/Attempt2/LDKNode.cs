@@ -3,6 +3,7 @@ using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
+using BTCPayApp.Core.LSP.JIT;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -98,6 +99,18 @@ public partial class LDKNode:
         }
        
     }
+
+    public async Task<IJITService?> GetJITLSPService()
+    {
+        var config = await GetConfig();
+        var lsp = config.JITLSP;
+        if(lsp is null)
+        {
+            return null;
+        }
+        var jits = ServiceProvider.GetServices<IJITService>();
+        return jits.FirstOrDefault(jit => jit.ProviderName == lsp);
+    }
 }
 
 public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
@@ -181,12 +194,17 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         await _configLoaded.Task;
         return _config!;
     }
-    
-    private async Task UpdateConfig(LightningConfig config)
+    public async Task<string[]> GetJITLSPs()
+    {
+       return  ServiceProvider.GetServices<IJITService>().Select(jit => jit.ProviderName).ToArray();
+    }
+
+    public async Task UpdateConfig(LightningConfig config)
     {
         await _started.Task;
-        await _configProvider.Set(LightningConfig.Key, config);
+        await _configProvider.Set(LightningConfig.Key, config, true);
         _config = config;
+        
         ConfigUpdated?.Invoke(this, config);
     }
     
@@ -273,23 +291,23 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     
     public async Task<byte[]?> GetRawChannelManager()
     {
-        return await _configProvider.Get<byte[]>("ChannelManager") ?? null;
+        return await _configProvider.Get<byte[]>("ln:ChannelManager") ?? null;
     }
 
     public async Task UpdateChannelManager(ChannelManager serializedChannelManager)
     {
-        await _configProvider.Set("ChannelManager", serializedChannelManager.write());
+        await _configProvider.Set("ln:ChannelManager", serializedChannelManager.write(), true);
     }
 
     
     public async Task UpdateNetworkGraph(NetworkGraph networkGraph)
     {
-        await _configProvider.Set("NetworkGraph", networkGraph.write());
+        await _configProvider.Set("ln:NetworkGraph", networkGraph.write(), true);
     }
 
     public async Task UpdateScore(WriteableScore score)
     {
-        await _configProvider.Set("Score", score.write());
+        await _configProvider.Set("ln:Score", score.write(), true);
     }
 
     
@@ -333,42 +351,41 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         }
     }
 
-    public async Task UpdateChannel(string id, byte[] write)
+    public async Task UpdateChannel(List<ChannelAlias> identifiers, byte[] write)
     {
+        var ids = identifiers.Select(alias => alias.Id).ToArray();
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        
-        var channel = await context.LightningChannels.SingleOrDefaultAsync(lightningChannel => lightningChannel.Id == id || lightningChannel.Aliases.Contains(id));
+        var channel = (await context.ChannelAliases.Include(alias => alias.Channel)
+            .ThenInclude(channel1 => channel1.Aliases).FirstOrDefaultAsync(alias => ids.Contains(alias.Id)))?.Channel;
 
         if (channel is not null)
         {
-            if (!channel.Aliases.Contains(channel.Id))
+            foreach (var alias in identifiers)
             {
-                channel.Aliases.Add(channel.Id);
-            }
-            if (!channel.Aliases.Contains(id))
-            {
-                channel.Aliases.Add(id);
+                if (channel.Aliases.All(a => a.Id != alias.Id))
+                {
+                    channel.Aliases.Add(alias);
+                }
             }
 
-            channel.Id = id;
             channel.Data = write;
         }
         else
         {
             await context.LightningChannels.AddAsync(new Channel()
             {
-                Id = id,
+                Id = identifiers.First().ChannelId,
                 Data = write,
-                Aliases = [id]
+                Aliases = identifiers.ToList()
             });
         }
         await context.SaveChangesAsync();
     }
 
 
-    public async Task Peer(string toString, PeerInfo? value)
+    public async Task Peer(PubKey key, PeerInfo? value)
     {
-        toString = toString.ToLowerInvariant();
+        var toString = key.ToString().ToLowerInvariant();
         var config = await GetConfig();
         if (value is null)
         {

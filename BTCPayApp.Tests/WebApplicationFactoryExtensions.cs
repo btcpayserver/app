@@ -161,11 +161,8 @@ public  static class WebApplicationFactoryExtensions
         if (logging == default)
             return false;
 
-        var includeScopes = logging?.GetValue("Console:IncludeScopes", false);
-        if (!includeScopes.Value)
-            includeScopes = logging?.GetValue("IncludeScopes", false);
-
-        return includeScopes.GetValueOrDefault(false);
+        var includeScopes = logging.GetValue("Console:IncludeScopes", false) || logging.GetValue("IncludeScopes", false);
+        return includeScopes;
     }
 
     #endregion

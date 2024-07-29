@@ -3,7 +3,7 @@
 namespace BTCPayApp.Core.Data;
 public class LightningConfig
 {
-    public const string Key = "lightningconfig";
+    public const string Key = "ln:lightningconfig";
 
     public string Alias { get; set; } = "BTCPay Server";
     public string ScriptDerivationKey { get; set; } = WalletDerivation.NativeSegwit; //when ldk asks for an address, where do we get it from?
@@ -42,11 +42,4 @@ public class LightningConfig
     public Dictionary<string, PeerInfo> Peers { get; set; } = new();
 
     public bool AcceptInboundConnection{ get; set; }
-}
-
-public record PeerInfo
-{
-    public string Endpoint { get; set; }
-    public bool Persistent { get; set; }
-    public bool Trusted { get; set; }
 }

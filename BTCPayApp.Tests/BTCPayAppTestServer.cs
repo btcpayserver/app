@@ -19,23 +19,23 @@ class BTCPayAppTestServer : BaseWebApplicationFactory<Program>
     {
         if (newDir)
         {
-            _config.AddOrReplace("BTCPAYAPP_DIRNAME", "btcpayserver-test-" + RandomUtils.GetUInt32());
+            Config.AddOrReplace("BTCPAYAPP_DIRNAME", "btcpayserver-test-" + RandomUtils.GetUInt32());
         }
     }
 }
 
 class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
 {
-    protected IHost? _host;
-    protected readonly ITestOutputHelper _output;
-    protected readonly Dictionary<string, string> _config;
-    protected readonly Task _playwrightInstallTask;
+    protected IHost? Host;
+    protected readonly ITestOutputHelper Output;
+    protected readonly Dictionary<string, string> Config;
+    protected readonly Task PlaywrightInstallTask;
 
     public string ServerAddress
     {
         get
         {
-            if (_host is null)
+            if (Host is null)
             {
                 CreateDefaultClient();
             }
@@ -46,12 +46,12 @@ class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
 
     public BaseWebApplicationFactory(ITestOutputHelper output,  Dictionary<string, string>? config = null)
     {
-        _output = output;
+        Output = output;
 
-        _config = config ?? new();
+        Config = config ?? new();
 
 
-        _playwrightInstallTask ??= Task.Run(InstallPlaywright);
+        PlaywrightInstallTask ??= Task.Run(InstallPlaywright);
     }
 
     public class LifetimeBridge
@@ -76,9 +76,9 @@ class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
         TaskCompletionSource<string[]> tcs = new TaskCompletionSource<string[]>();
         builder.ConfigureWebHost(webHostBuilder => webHostBuilder.UseKestrel().UseUrls("https://127.0.0.1:0").ConfigureServices(collection => collection.AddSingleton<LifetimeBridge>(provider => new LifetimeBridge(provider.GetRequiredService<IHostApplicationLifetime>(), provider.GetRequiredService<IServer>(), tcs))));
         // configure and start the actual host using Kestrel.
-        _host = builder.Build();
-        _host.Start();
-        _host.Services.GetRequiredService<LifetimeBridge>();
+        Host = builder.Build();
+        Host.Start();
+        Host.Services.GetRequiredService<LifetimeBridge>();
         // Extract the selected dynamic port out of the Kestrel server
         // and assign it onto the client options for convenience so it
         // "just works" as otherwise it'll be the default http://localhost
@@ -96,7 +96,7 @@ class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
         base.ConfigureWebHost(builder);
         builder
             .ConfigureAppConfiguration(configurationBuilder =>
-                configurationBuilder.AddInMemoryCollection(_config))
+                configurationBuilder.AddInMemoryCollection(Config!))
             .ConfigureLogging(
                 logging =>
                 {
@@ -104,8 +104,8 @@ class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
                     var useScopes = logging.UsesScopes();
                     // remove other logging providers, such as remote loggers or unnecessary event logs
                     logging.ClearProviders();
-                    logging.Services.AddSingleton<ILoggerProvider>(r =>
-                        new WebApplicationFactoryExtensions.XunitLoggerProvider(_output, useScopes));
+                    logging.Services.AddSingleton<ILoggerProvider>(_ =>
+                        new WebApplicationFactoryExtensions.XunitLoggerProvider(Output, useScopes));
                 });
     }
 
@@ -117,7 +117,7 @@ class BaseWebApplicationFactory<T> : WebApplicationFactory<T> where T : class
     public async Task<IBrowserContext> InitializeAsync()
     {
         Assert.NotNull(ServerAddress);
-        await _playwrightInstallTask;
+        await PlaywrightInstallTask;
         Playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         Browser = await Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {

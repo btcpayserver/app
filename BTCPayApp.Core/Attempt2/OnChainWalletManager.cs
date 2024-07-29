@@ -20,7 +20,6 @@ public class OnChainWalletManager : BaseHostedService
     private readonly BTCPayAppServerClient _btcPayAppServerClient;
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly ILogger<OnChainWalletManager> _logger;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly IMemoryCache _memoryCache;
     private OnChainWalletState _state = OnChainWalletState.Init;
 
@@ -48,14 +47,12 @@ public class OnChainWalletManager : BaseHostedService
         BTCPayAppServerClient btcPayAppServerClient,
         BTCPayConnectionManager btcPayConnectionManager,
         ILogger<OnChainWalletManager> logger,
-        IDbContextFactory<AppDbContext> dbContextFactory,
         IMemoryCache memoryCache)
     {
         _configProvider = configProvider;
         _btcPayAppServerClient = btcPayAppServerClient;
         _btcPayConnectionManager = btcPayConnectionManager;
         _logger = logger;
-        _dbContextFactory = dbContextFactory;
         _memoryCache = memoryCache;
     }
 
@@ -136,7 +133,7 @@ public class OnChainWalletManager : BaseHostedService
                 walletConfig.Derivations[keyValuePair.Key].Identifier = keyValuePair.Value;
 
             }
-            await _configProvider.Set(WalletConfig.Key, walletConfig);
+            await _configProvider.Set(WalletConfig.Key, walletConfig, true);
             WalletConfig = walletConfig;
             State = OnChainWalletState.Loaded;
         }
@@ -171,7 +168,7 @@ public class OnChainWalletManager : BaseHostedService
                 Descriptor = descriptor,
                 Identifier = result[key]
             };
-            await _configProvider.Set(WalletConfig.Key, WalletConfig);
+            await _configProvider.Set(WalletConfig.Key, WalletConfig, true);
         }
         finally
         {
@@ -438,7 +435,7 @@ public class OnChainWalletManager : BaseHostedService
 
             var updated = key.Aggregate(false, (current, k) => current || WalletConfig.Derivations.Remove(k));
             if (updated)
-                await _configProvider.Set(WalletConfig.Key, WalletConfig);
+                await _configProvider.Set(WalletConfig.Key, WalletConfig, true);
         }
         finally
         {

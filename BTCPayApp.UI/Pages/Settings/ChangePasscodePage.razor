@@ -77,7 +77,7 @@
     public async Task HandleValidSubmit()
     {
         _config!.Passcode = Model.NewPasscode;
-        await ConfigProvider.Set(BTCPayAppConfig.Key, _config);
+        await ConfigProvider.Set(BTCPayAppConfig.Key, _config, false);
         NavigationManager.NavigateTo(Routes.Settings);
     }
 

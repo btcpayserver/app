@@ -263,7 +263,7 @@
         }
     }
 
-    private async void UpdatePeer(string toString, PeerInfo? value)
+    private async void UpdatePeer(string pubKeyHex, PeerInfo? value)
     {
         try
         {
@@ -271,7 +271,7 @@
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
 
-            await Node.Peer(toString, value);
+            await Node.Peer(new PubKey(pubKeyHex), value);
         }
         finally
         {
