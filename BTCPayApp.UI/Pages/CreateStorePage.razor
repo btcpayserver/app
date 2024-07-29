@@ -1,12 +1,14 @@
-@attribute [Route(Routes.CreateStore)]
+﻿@attribute [Route(Routes.CreateStore)]
 @layout SimpleLayout
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
+@inject IDispatcher Dispatcher
 
 <PageTitle>Create a new store</PageTitle>
 
@@ -134,6 +136,8 @@ else if (_data is not null)
                 if (result.Succeeded)
                 {
                     var message = $"The store \"{store.Name}\" has been created.";
+                    var storeInfo = AccountManager.GetUserStore(store.Id);
+                    Dispatcher.Dispatch(new StoreState.SetStoreInfo(storeInfo));
                     var uri = NavigationManager.GetUriWithQueryParameters(Routes.Dashboard,
                         new Dictionary<string, object?> { { "success", message } });
                     NavigationManager.NavigateTo(uri);

@@ -138,7 +138,7 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
 
     public async Task<bool> CheckAuthenticated(bool refreshUser = false)
     {
-        if (refreshUser) await FetchUserInfo();
+        if (refreshUser) _userInfo = null;
         await GetAuthenticationStateAsync();
         return _userInfo != null;
     }
