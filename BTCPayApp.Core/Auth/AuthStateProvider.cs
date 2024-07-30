@@ -46,22 +46,26 @@ public class AuthStateProvider : AuthenticationStateProvider, IAccountManager, I
         _identityOptions = identityOptions;
     }
 
+    private CancellationTokenSource? _pingCts;
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _ = PingOccasionally();
+        _pingCts = new CancellationTokenSource();
+        _ = PingOccasionally(_pingCts.Token);
     }
 
-    private async Task PingOccasionally()
+    private async Task PingOccasionally(CancellationToken pingCtsToken)
     {
-        while (_userInfo != null)
+        while (pingCtsToken.IsCancellationRequested is false)
         {
+            
             await GetAuthenticationStateAsync();
-            await Task.Delay(TimeSpan.FromSeconds(5));
+            await Task.Delay(TimeSpan.FromSeconds(5), pingCtsToken);
         }
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        _pingCts?.Cancel();
         return Task.CompletedTask;
     }
 

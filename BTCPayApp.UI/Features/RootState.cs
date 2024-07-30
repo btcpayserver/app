@@ -7,11 +7,11 @@ namespace BTCPayApp.UI.Features;
 [FeatureState]
 public record RootState
 {
-    public HubConnectionState? ConnectionState;
+    public BTCPayConnectionState ConnectionState;
     public OnChainWalletState? OnchainWalletState;
     public LightningNodeState? LightningNodeState;
 
-    public record ConnectionStateUpdatedAction(HubConnectionState? State);
+    public record ConnectionStateUpdatedAction(BTCPayConnectionState State);
     public record OnChainWalletStateUpdatedAction(OnChainWalletState State);
     public record LightningNodeStateUpdatedAction(LightningNodeState State);
 
