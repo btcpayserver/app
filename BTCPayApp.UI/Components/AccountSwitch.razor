@@ -84,7 +84,6 @@
 }
 
 @code {
-    private AppUserInfo? _userInfo;
     private BTCPayAccount? _account;
     private IEnumerable<BTCPayAccount> _accounts;
     private bool _sending;
@@ -95,9 +94,17 @@
     {
         await base.OnInitializedAsync();
 
-        _userInfo = AccountManager.GetUserInfo();
+        AccountManager.OnAccountInfoChange += OnAccountInfoChange;
+
         _account = AccountManager.GetAccount();
         _accounts = await AccountManager.GetAccounts();
+    }
+
+    private Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
+    {
+        _account = account;
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
     }
 
     private async Task SwitchToAccount(BTCPayAccount account)

@@ -1,6 +1,5 @@
 ﻿@attribute [Route(Routes.User)]
 @using System.ComponentModel
-@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Contracts
@@ -18,17 +17,10 @@
     </Titlebar>
 </SectionContent>
 <section class="container">
-    @if (_userInfo != null)
+    @if (Account != null)
     {
         <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
             <h2 class="mb-0">Account</h2>
-            @if (_userInfo.Roles?.Any() is true)
-            {
-                @foreach (var role in _userInfo.Roles)
-                {
-                    <span class="badge bg-light">@role</span>
-                }
-            }
         </div>
         <div class="box">
             <ValidationEditContext Model="Account" OnValidSubmit="HandleValidAccountSubmit" SuccessMessage="@_accountSuccessMessage" ErrorMessage="@_accountErrorMessage" enctype="multipart/form-data">
@@ -123,8 +115,6 @@
 </section>
 
 @code {
-    private AppUserInfo? _userInfo;
-    private BTCPayAccount? _account;
     private AccountModel? Account { get; set; }
     private PasswordModel? Password { get; set; }
     private bool _accountSending;
@@ -139,16 +129,29 @@
     {
         await base.OnInitializedAsync();
 
-        _userInfo = AccountManager.GetUserInfo()!;
-        _account = AccountManager.GetAccount()!;
+        AccountManager.OnAccountInfoChange += OnAccountInfoChange;
+
+        var account = AccountManager.GetAccount()!;
 
         Password = new PasswordModel();
         Account = new AccountModel
         {
-            Email = _userInfo.Email,
-            Name = _userInfo.Name,
-            ImageUrl = _userInfo.ImageUrl
+            Email = account.Email,
+            Name = account.Name,
+            ImageUrl = account.ImageUrl
         };
+    }
+
+    private Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
+    {
+        Account = new AccountModel
+        {
+            Email = account.Email,
+            Name = account.Name,
+            ImageUrl = account.ImageUrl
+        };
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
     }
 
     private async Task Logout()
@@ -158,8 +161,9 @@
 
     private async Task RemoveAccount()
     {
+        var account = AccountManager.GetAccount()!;
         await Logout();
-        await AccountManager.RemoveAccount(_account!);
+        await AccountManager.RemoveAccount(account!);
     }
 
     public async Task HandleValidAccountSubmit()

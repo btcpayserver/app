@@ -90,6 +90,14 @@ public class StateMiddleware(
             string? eventStoreId = null;
             switch (serverEvent.Type)
             {
+                case "user-updated":
+                    if (currentUserId == serverEvent.UserId)
+                        await accountManager.CheckAuthenticated(true);
+                    break;
+                case "user-deleted":
+                    if (currentUserId == serverEvent.UserId)
+                        await accountManager.Logout();
+                    break;
                 case "notifications-updated":
                     if (currentStoreId != null)
                         dispatcher.Dispatch(new StoreState.FetchNotifications(currentStoreId));

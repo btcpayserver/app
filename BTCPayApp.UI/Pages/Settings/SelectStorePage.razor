@@ -83,6 +83,8 @@
     {
         await base.OnInitializedAsync();
 
+        AccountManager.OnUserInfoChange += OnUserInfoChange;
+
         _userInfo = AccountManager.GetUserInfo();
         _initialStoreId = AccountManager.GetCurrentStore()?.Id;
         Model.StoreId = _initialStoreId;
@@ -95,6 +97,13 @@
         {
             await SelectStore(_userInfo!.Stores!.First().Id!);
         }*/
+    }
+
+    private Task OnUserInfoChange(object? sender, AppUserInfo? userInfo)
+    {
+        _userInfo = userInfo;
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
     }
 
     private async Task HandleValidSubmit()

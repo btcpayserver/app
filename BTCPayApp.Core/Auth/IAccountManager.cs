@@ -29,6 +29,8 @@ public interface IAccountManager
     public Task RemoveAccount(BTCPayAccount account);
     public AsyncEventHandler<BTCPayAccount?>? OnBeforeAccountChange { get; set; }
     public AsyncEventHandler<BTCPayAccount?>? OnAfterAccountChange { get; set; }
+    public AsyncEventHandler<BTCPayAccount?>? OnAccountInfoChange { get; set; }
+    public AsyncEventHandler<AppUserInfo?>? OnUserInfoChange { get; set; }
     public AsyncEventHandler<AppUserStoreInfo?>? OnBeforeStoreChange { get; set; }
     public AsyncEventHandler<AppUserStoreInfo?>? OnAfterStoreChange { get; set; }
 }

@@ -19,7 +19,7 @@
 
 <PageTitle>Settings</PageTitle>
 
-@if (_account != null && _userInfo != null)
+@if (_account != null)
 {
     <section class="container py-4">
         <header class="d-flex align-items-center justify-content-between gap-3 mb-4">
@@ -37,17 +37,17 @@
             }
         </header>
         <a href="@Routes.User" class="box user mb-2">
-            @if (!string.IsNullOrEmpty(_userInfo.ImageUrl))
+            @if (!string.IsNullOrEmpty(_account.ImageUrl))
             {
-                <img src="@_userInfo.ImageUrl" alt="@(_userInfo.Name ?? _userInfo.Email)" class="profile-picture" />
+                <img src="@_account.ImageUrl" alt="@(_account.Name ?? _account.Email)" class="profile-picture" />
             }
             else
             {
                 <Icon Symbol="nav-account" class="profile-picture" />
             }
             <div>
-                <h5>@(_userInfo.Name ?? _userInfo.Email)</h5>
-                <span>@_userInfo.Email</span>
+                <h5>@(_account.Name ?? _account.Email)</h5>
+                <span>@_account.Email</span>
             </div>
             <Icon Symbol="caret-right"/>
         </a>
@@ -67,7 +67,7 @@
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
                 @{ var store = AccountManager.GetCurrentStore(); }
-                @if (_userInfo.Stores?.Count() > 1 || AccountManager.GetCurrentStore() == null)
+                @if (_userInfo?.Stores?.Count() > 1 || AccountManager.GetCurrentStore() == null)
                 {
                     <li class="list-group-item">
                         <a href="@Routes.SelectStore">
@@ -196,11 +196,28 @@
     {
         await base.OnInitializedAsync();
 
+        AccountManager.OnUserInfoChange += OnUserInfoChange;
+        AccountManager.OnAccountInfoChange += OnAccountInfoChange;
+
         Model.Theme = UiState.Value.SelectedTheme;
         _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
         _biometricAuthAvailable = await Fingerprint.IsAvailableAsync();
+    }
+
+    private Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
+    {
+        _account = account;
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
+    }
+
+    private Task OnUserInfoChange(object? sender, AppUserInfo? userInfo)
+    {
+        _userInfo = userInfo;
+        InvokeAsync(StateHasChanged);
+        return Task.CompletedTask;
     }
 
     // TODO: Guard with passcode entering
