@@ -27,11 +27,15 @@
     public SetupState SetupStateConnection() {
         return State.Value.ConnectionState switch
         {
-            HubConnectionState.Connected => SetupState.Completed,
-            HubConnectionState.Connecting => SetupState.Pending,
-            HubConnectionState.Reconnecting => SetupState.Pending,
-            HubConnectionState.Disconnected => SetupState.Pending,
-            _ => SetupState.Undetermined
+            BTCPayConnectionState.Init => SetupState.Pending,
+            BTCPayConnectionState.WaitingForAuth => SetupState.Pending,
+            BTCPayConnectionState.Connecting => SetupState.Pending,
+            BTCPayConnectionState.Syncing => SetupState.Pending,
+            BTCPayConnectionState.Disconnected => SetupState.Failed,
+            BTCPayConnectionState.ConnectedAsMaster => SetupState.Completed,
+            BTCPayConnectionState.ConnectedAsSlave => SetupState.Completed,
+            BTCPayConnectionState.ConnectedFinishedInitialSync => SetupState.Pending,
+            _ =>  SetupState.Undetermined
         };
     }
 

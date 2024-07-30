@@ -73,7 +73,7 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
-    private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is HubConnectionState.Connected;
+    private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
     public bool IsConfigured => WalletConfig is not null;
 
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
@@ -176,7 +176,7 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
-    private async Task ConnectionChanged(object? sender, (HubConnectionState Old, HubConnectionState New) _)
+    private async Task ConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
     {
         DetermineState();
     }
