@@ -1,8 +1,3 @@
-header {
-  height: var(--navbar-top-height);
-  padding: .75rem var(--btcpay-space-m);
-}
-
 .wallet {
   margin-top: var(--btcpay-space-m);
   margin-bottom: var(--btcpay-space-xl);

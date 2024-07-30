@@ -12,52 +12,49 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Dashboard</PageTitle>
-
-<header class="container d-flex align-items-center justify-content-between py-2">
-    <div class="d-flex align-items-center justify-content-between gap-2">
+<section class="container py-4">
+    <header class="d-flex align-items-center justify-content-between gap-3 mb-4 mt-n2">
         <AccountSwitch />
-    </div>
-    <div class="notifications">
-        @if (!string.IsNullOrEmpty(StoreId))
-        {
+        <div class="notifications">
+            @if (!string.IsNullOrEmpty(StoreId))
+            {
             <NotificationsBell/>
-        }
-    </div>
-</header>
-@if (!string.IsNullOrEmpty(_successMessage))
-{
-    <section class="container py-3">
+            }
+        </div>
+    </header>
+    @if (!string.IsNullOrEmpty(_successMessage))
+    {
         <Alert Type="success" Margin="0" Dismissible>@_successMessage</Alert>
-    </section>
-}
-<AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="StoreId">
-    <section class="container d-flex flex-column gap-4 wallet">
-        @if (TotalBalance == null)
-        {
-            <div class="p-3 text-center">
-                <LoadingIndicator/>
-            </div>
-        }
-        else
-        {
-            <div class="amount text-center">
-                <div class="sats fw-bold fs-1">@DisplayFormatter.Currency(TotalBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol)</div>
-                @if (CurrencyValue.HasValue)
-                {
-                    <div class="fiat fw-semibold text-muted">@DisplayFormatter.Currency(CurrencyValue.Value, Currency, DisplayFormatter.CurrencyFormat.Symbol)</div>
-                }
-            </div>
-        }
-    </section>
-</AuthorizeView>
+    }
+    <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="StoreId">
+        <div class="d-flex flex-column gap-4 wallet">
+            @if (TotalBalance == null)
+            {
+                <div class="p-3 text-center">
+                    <LoadingIndicator/>
+                </div>
+            }
+            else
+            {
+                <div class="amount text-center">
+                    <div class="sats fw-bold fs-1">@DisplayFormatter.Currency(TotalBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol)</div>
+                    @if (CurrencyValue.HasValue)
+                    {
+                        <div class="fiat fw-semibold text-muted">@DisplayFormatter.Currency(CurrencyValue.Value, Currency, DisplayFormatter.CurrencyFormat.Symbol)</div>
+                    }
+                </div>
+            }
+        </div>
+    </AuthorizeView>
 
-@if (InvoicesLoading || Invoices is not null)
-{
-    <section class="container">
-        <h2>Recent Invoices</h2>
-        <InvoiceList Invoices="Invoices" Loading="InvoicesLoading" Error="@InvoicesError"/>
-    </section>
-}
+    @if (InvoicesLoading || Invoices is not null)
+    {
+        <div class="invoices">
+            <h2>Recent Invoices</h2>
+            <InvoiceList Invoices="Invoices" Loading="InvoicesLoading" Error="@InvoicesError"/>
+        </div>
+    }
+</section>
 
 @code {
     [SupplyParameterFromQuery]
