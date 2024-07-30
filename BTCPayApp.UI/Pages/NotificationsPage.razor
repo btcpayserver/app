@@ -1,11 +1,8 @@
 ﻿@attribute [Route(Routes.Notifications)]
-@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@inject IAccountManager AccountManager
-@inject IDispatcher Dispatcher
 @inject IState<StoreState> StoreState
 
 <PageTitle>Notifications</PageTitle>
@@ -13,16 +10,10 @@
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
         <SectionContent SectionId="Titlebar.End">
-            <button type="button" class="btn-icon" @onclick="LoadNotifications" disabled="@Loading">
-                @if (Loading)
-                {
-                    <LoadingIndicator/>
-                }
-                else
-                {
-                    <Icon Symbol="actions-refresh"/>
-                }
-            </button>
+            @if (Loading)
+            {
+                <LoadingIndicator/>
+            }
         </SectionContent>
         <h1>Notifications</h1>
     </Titlebar>
@@ -56,13 +47,6 @@
 }
 
 @code {
-    private void LoadNotifications()
-    {
-        var storeId = AccountManager.GetCurrentStore()!.Id;
-        if (storeId != null)
-            Dispatcher.Dispatch(new StoreState.FetchNotifications(storeId));
-    }
-
     private IEnumerable<NotificationData>? Notifications => StoreState.Value.Notifications?.Data;
     private bool Loading => StoreState.Value.Notifications?.Loading is true;
     private string? Error => StoreState.Value.Notifications?.Error;

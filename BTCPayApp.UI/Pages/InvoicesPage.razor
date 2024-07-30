@@ -1,12 +1,10 @@
 ﻿@attribute [Route(Routes.Invoices)]
 @using BTCPayApp.CommonServer.Models
-@using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
-@inject IDispatcher Dispatcher
 @inject IState<StoreState> StoreState
 
 <PageTitle>Invoices</PageTitle>
@@ -16,18 +14,10 @@
         @if (Store is not null)
         {
             <h1>Invoices</h1>
-            <div class="d-flex align-items-center gap-1">
-                <button type="button" class="btn-icon" @onclick="LoadInvoices" disabled="@Loading">
-                    @if (Loading)
-                    {
-                        <LoadingIndicator/>
-                    }
-                    else
-                    {
-                        <Icon Symbol="actions-refresh"/>
-                    }
-                </button>
-            </div>
+            @if (Loading)
+            {
+                <LoadingIndicator/>
+            }
         }
     </header>
     @if (Store is null)
@@ -41,12 +31,6 @@
 </section>
 
 @code {
-    private void LoadInvoices()
-    {
-        if (Store is not null)
-            Dispatcher.Dispatch(new StoreState.FetchInvoices(Store.Id));
-    }
-
     private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data;
     private bool Loading => StoreState.Value.Invoices?.Loading is true;
