@@ -84,7 +84,7 @@
 @code {
     private bool CanConfigureWallet =>
         State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
-        State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster;
+        State.Value.ConnectionState == HubConnectionState.Connected;
     private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
     private string? _storePaymentMethodIdentifier;
 

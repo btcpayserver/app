@@ -164,7 +164,7 @@
             <ul class="list-group list-group-flush list-group-links">
                 <li class="list-group-item">
                     <div class="justify-content-start">
-                        <span class="m-2 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster or BTCPayConnectionState.ConnectedAsSlave => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                        <span class="m-2 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { HubConnectionState.Connected => "enabled", HubConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
                         <span>Hub: @State.Value.ConnectionState</span>
                     </div>
                 </li>

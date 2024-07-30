@@ -101,7 +101,7 @@
 
     private bool CanConfigureWallet =>
         State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
-        State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster;
+        State.Value.ConnectionState == HubConnectionState.Connected;
 
     protected override async Task OnInitializedAsync()
     {

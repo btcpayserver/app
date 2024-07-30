@@ -1,4 +1,3 @@
-using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -12,7 +11,6 @@ public class LightningNodeManager : BaseHostedService
 {
     public const string PaymentMethodId = "BTC-LN";
 
-    private readonly IAccountManager _accountManager;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<LightningNodeManager> _logger;
     private readonly OnChainWalletManager _onChainWalletManager;
@@ -22,12 +20,13 @@ public class LightningNodeManager : BaseHostedService
     private IServiceScope? _nodeScope;
     public LDKNode? Node => _nodeScope?.ServiceProvider.GetService<LDKNode>();
     private LightningNodeState _state = LightningNodeState.Init;
-    private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
+    private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is HubConnectionState.Connected;
     private bool IsOnchainConfigured => _onChainWalletManager.WalletConfig is not null;
     private bool IsOnchainLightningDerivationConfigured => _onChainWalletManager.WalletConfig?.Derivations.ContainsKey(WalletDerivation.LightningScripts) is true;
     public bool CanConfigureLightningNode => IsHubConnected && IsOnchainConfigured && !IsOnchainLightningDerivationConfigured && State == LightningNodeState.NotConfigured;
-    public string? ConnectionString => IsOnchainLightningDerivationConfigured && _accountManager.GetUserInfo() is {} acc
-        ? $"type=app;user={acc.UserId}": null;
+    public string? ConnectionString => IsOnchainLightningDerivationConfigured
+        ? $"type=app;group={_onChainWalletManager.WalletConfig!.Derivations[WalletDerivation.LightningScripts].Identifier}".ToLower()
+        : null;
 
     public LightningNodeState State
     {
@@ -46,14 +45,12 @@ public class LightningNodeManager : BaseHostedService
     public event AsyncEventHandler<(LightningNodeState Old, LightningNodeState New)>? StateChanged;
 
     public LightningNodeManager(
-        IAccountManager accountManager,
         IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<LightningNodeManager> logger,
         OnChainWalletManager onChainWalletManager,
         BTCPayConnectionManager btcPayConnectionManager,
         IServiceScopeFactory serviceScopeFactory)
     {
-        _accountManager = accountManager;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
         _onChainWalletManager = onChainWalletManager;
@@ -163,16 +160,15 @@ public class LightningNodeManager : BaseHostedService
         }
     }
 
-    private async Task OnConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
+    private async Task OnConnectionChanged(object? sender, (HubConnectionState Old, HubConnectionState New) state)
     {
-        switch (IsHubConnected)
+        if (IsHubConnected && State == LightningNodeState.WaitingForConnection)
         {
-            case true when State == LightningNodeState.WaitingForConnection:
-                State = LightningNodeState.Loading;
-                break;
-            case true when State is LightningNodeState.Loading or LightningNodeState.Loaded:
-                _ = StopNode();
-                break;
+            State = LightningNodeState.Loading;
+        }
+        else if (_btcPayConnectionManager.ConnectionState == HubConnectionState.Disconnected && State is LightningNodeState.Loading or LightningNodeState.Loaded)
+        {
+             _ = StopNode();
         }
     }
 
@@ -209,7 +205,18 @@ public class LightningNodeManager : BaseHostedService
                         newState = LightningNodeState.NotConfigured;
                         break;
                     }
-                    await StartNode();
+
+                    var result = await _btcPayConnectionManager.HubProxy!
+                        .IdentifierActive(_onChainWalletManager.WalletConfig!.Derivations[WalletDerivation.LightningScripts].Identifier, true)
+                        .RunSync();
+                    if (result)
+                    {
+                        await StartNode();
+                    }
+                    else
+                    {
+                        newState = LightningNodeState.Inactive;
+                    }
                     break;
 
                 case LightningNodeState.NotConfigured:

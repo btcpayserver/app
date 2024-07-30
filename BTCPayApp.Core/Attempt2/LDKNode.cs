@@ -240,7 +240,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
         if (!exists)
             return;
-        // var identifier = _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier;
+        var identifier = _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier;
         
         
         _logger.LogInformation("Stopping LDKNode services");
@@ -252,7 +252,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             _logger.LogInformation($"Stopped {service.GetType().Name}");
         }).ToArray();
         await Task.WhenAll(tasks);
-        // _ = _connectionManager.HubProxy.DeviceMasterSignal(identifier, false).RunSync();
+        _ = _connectionManager.HubProxy.IdentifierActive(identifier, false).RunSync();
         
     }
 
