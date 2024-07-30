@@ -135,12 +135,9 @@ else if (_data is not null)
                 var resultMessage = result.Messages != null ? string.Join(",", result.Messages) : null;
                 if (result.Succeeded)
                 {
-                    var message = $"The store \"{store.Name}\" has been created.";
                     var storeInfo = AccountManager.GetUserStore(store.Id);
                     Dispatcher.Dispatch(new StoreState.SetStoreInfo(storeInfo));
-                    var uri = NavigationManager.GetUriWithQueryParameters(Routes.Dashboard,
-                        new Dictionary<string, object?> { { "success", message } });
-                    NavigationManager.NavigateTo(uri);
+                    NavigationManager.NavigateTo(Routes.Dashboard);
                 }
                 else
                 {
