@@ -32,6 +32,9 @@ public class AppDbContext : DbContext
             .HasKey(w => new {w.Entity, w.Key, w.ActionType, w.Version});
         modelBuilder.Entity<Outbox>().Property(payment => payment.Timestamp).HasDefaultValueSql("datetime('now')");
 
+        modelBuilder.Entity<AppLightningPayment>().HasIndex(payment => payment.EntityKey).IsUnique();
+        modelBuilder.Entity<Setting>().HasIndex(payment => payment.EntityKey).IsUnique();
+        modelBuilder.Entity<Channel>().HasIndex(payment => payment.EntityKey).IsUnique();
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.PaymentRequest)
             .HasConversion(
                 request => request.ToString(),
