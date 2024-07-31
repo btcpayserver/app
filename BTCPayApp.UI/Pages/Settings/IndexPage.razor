@@ -6,7 +6,10 @@
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client
-@using Microsoft.AspNetCore.SignalR.Client
+@using BTCPayServer.Client.Models
+@using BTCPayServer.Lightning
+@using BTCPayServer.Services
+@using NBitcoin
 @using Plugin.Fingerprint.Abstractions
 @inject IState<RootState> State
 @inject IState<UIState> UiState
@@ -15,6 +18,8 @@
 @inject IAccountManager AccountManager
 @inject IFingerprint Fingerprint
 @inject IState<UIState> UIState
+@inject IState<StoreState> StoreState
+@inject DisplayFormatter DisplayFormatter
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Settings</PageTitle>
@@ -159,7 +164,7 @@
         </div>
         *@
 
-        <h2>Status</h2>
+        <h2>Debug</h2>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
                 <li class="list-group-item">
@@ -180,6 +185,105 @@
                         <span>Lightning: @State.Value.LightningNodeState</span>
                     </div>
                 </li>
+                @if (OnchainConfirmedBalance != null)
+                {
+                    <li class="list-group-item py-2">
+                        <div class="justify-content-start">
+                            <Icon Symbol="wallet-wallet"/>
+                            <span>
+                                @DisplayFormatter.Currency(OnchainConfirmedBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) onchain confirmed
+                            </span>
+                        </div>
+                    </li>
+                }
+                @if (OnchainUnconfirmedBalance != null)
+                {
+                    <li class="list-group-item py-2">
+                        <div class="justify-content-start">
+                            <Icon Symbol="wallet-wallet"/>
+                            <span>
+                                @DisplayFormatter.Currency(OnchainUnconfirmedBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) onchain unconfirmed
+                            </span>
+                        </div>
+                    </li>
+                }
+                @if (LightningOnchainConfirmedBalance != null)
+                {
+                    <li class="list-group-item py-2">
+                        <div class="justify-content-start">
+                            <Icon Symbol="lightning-node"/>
+                            <span>
+                                @DisplayFormatter.Currency(LightningOnchainConfirmedBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN onchain confirmed
+                            </span>
+                        </div>
+                    </li>
+                }
+                @if (LightningOnchainUnconfirmedBalance != null)
+                {
+                    <li class="list-group-item py-2">
+                        <div class="justify-content-start">
+                            <Icon Symbol="lightning-node"/>
+                            <span>
+                                    @DisplayFormatter.Currency(LightningOnchainUnconfirmedBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN onchain unconfirmed
+                                </span>
+                        </div>
+                    </li>
+                }
+                @if (LightningOnchainReservedBalance != null)
+                {
+                    <li class="list-group-item py-2">
+                        <div class="justify-content-start">
+                            <Icon Symbol="lightning-node"/>
+                            <span>
+                                @DisplayFormatter.Currency(LightningOnchainReservedBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN onchain reserved
+                            </span>
+                        </div>
+                    </li>
+                }
+                @if (LightningOffchainOpeningBalance != null)
+                {
+                    <li class="list-group-item py-2">
+                        <div class="justify-content-start">
+                            <Icon Symbol="lightning-node"/>
+                            <span>
+                                @DisplayFormatter.Currency(LightningOffchainOpeningBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN channels opening
+                            </span>
+                        </div>
+                    </li>
+                }
+                @if (LightningOffchainLocalBalance != null)
+                {
+                    <li class="list-group-item py-2">
+                        <div class="justify-content-start">
+                            <Icon Symbol="lightning-node"/>
+                            <span>
+                                @DisplayFormatter.Currency(LightningOffchainLocalBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN channels local
+                            </span>
+                        </div>
+                    </li>
+                }
+                @if (LightningOffchainRemoteBalance != null)
+                {
+                    <li class="list-group-item py-2">
+                        <div class="justify-content-start">
+                            <Icon Symbol="lightning-node"/>
+                            <span>
+                                @DisplayFormatter.Currency(LightningOffchainRemoteBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN channels remote
+                            </span>
+                        </div>
+                    </li>
+                }
+                @if (LightningOffchainClosingBalance != null)
+                {
+                    <li class="list-group-item py-2">
+                        <div class="justify-content-start">
+                            <Icon Symbol="lightning-node"/>
+                            <span>
+                                @DisplayFormatter.Currency(LightningOffchainClosingBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN channels closing
+                            </span>
+                        </div>
+                    </li>
+                }
             </ul>
         </div>
     </section>
@@ -242,4 +346,15 @@
     private static string[] ThemeList => [Themes.System, Themes.Light, Themes.Dark];
     private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
     private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
+    private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
+    private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
+    private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
+    private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
+    private decimal? LightningOnchainConfirmedBalance => LightningBalance?.OnchainBalance.Confirmed.ToDecimal(MoneyUnit.Satoshi);
+    private decimal? LightningOnchainUnconfirmedBalance => LightningBalance?.OnchainBalance.Unconfirmed.ToDecimal(MoneyUnit.Satoshi);
+    private decimal? LightningOnchainReservedBalance => LightningBalance?.OnchainBalance.Reserved.ToDecimal(MoneyUnit.Satoshi);
+    private decimal? LightningOffchainOpeningBalance => LightningBalance?.OffchainBalance.Opening.ToDecimal(LightMoneyUnit.Satoshi);
+    private decimal? LightningOffchainLocalBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(LightMoneyUnit.Satoshi);
+    private decimal? LightningOffchainRemoteBalance => LightningBalance?.OffchainBalance.Remote.ToDecimal(LightMoneyUnit.Satoshi);
+    private decimal? LightningOffchainClosingBalance => LightningBalance?.OffchainBalance.Closing.ToDecimal(LightMoneyUnit.Satoshi);
 }
