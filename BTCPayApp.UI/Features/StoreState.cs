@@ -26,6 +26,8 @@ public record StoreState
     public record FetchOnchainBalance(string StoreId);
     public record FetchLightningBalance(string StoreId);
     public record FetchNotifications(string StoreId);
+    public record UpdateNotification(string NotificationId, bool Seen);
+    public record SetNotification(NotificationData? Notification, string? Error);
     public record FetchInvoices(string StoreId);
     public record FetchInvoice(string StoreId, string InvoiceId);
     public record FetchInvoicePaymentMethods(string StoreId, string InvoiceId);
@@ -273,6 +275,22 @@ public record StoreState
         }
     }
 
+    protected class SetNotificationReducer : Reducer<StoreState, SetNotification>
+    {
+        public override StoreState Reduce(StoreState state, SetNotification action)
+        {
+            if (state.Notifications?.Data == null || action.Notification == null) return state;
+            return state with
+            {
+                Notifications = state.Notifications with
+                {
+                    Data = state.Notifications.Data.Select(n =>
+                        n.Id == action.Notification.Id ? action.Notification : n)
+                }
+            };
+        }
+    }
+
     protected class SetInvoicesReducer : Reducer<StoreState, SetInvoices>
     {
         public override StoreState Reduce(StoreState state, SetInvoices action)
@@ -483,6 +501,21 @@ public record StoreState
             {
                 var error = e.InnerException?.Message ?? e.Message;
                 dispatcher.Dispatch(new SetNotifications(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task UpdateNotificationEffect(UpdateNotification action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var notification = await accountManager.GetClient().UpdateNotification(action.NotificationId, action.Seen);
+                dispatcher.Dispatch(new SetNotification(notification, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetNotification(null, error));
             }
         }
 

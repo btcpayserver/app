@@ -3,7 +3,9 @@
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject NavigationManager NavigationManager
 @inject IState<StoreState> StoreState
+@inject IDispatcher Dispatcher
 
 <PageTitle>Notifications</PageTitle>
 
@@ -32,7 +34,7 @@
         <div class="notifications">
             @foreach (var n in Notifications)
             {
-                <NotificationItem Notification="@n"/>
+                <NotificationItem Notification="@n" OnClick="OnClick"/>
             }
         </div>
     }
@@ -50,4 +52,28 @@
     private IEnumerable<NotificationData>? Notifications => StoreState.Value.Notifications?.Data;
     private bool Loading => StoreState.Value.Notifications?.Loading is true;
     private string? Error => StoreState.Value.Notifications?.Error;
+
+    private void OnClick(NotificationData notification)
+    {
+        if (notification.Seen is false)
+            Dispatcher.Dispatch(new StoreState.UpdateNotification(notification.Id, true));
+        var link = GetLink(notification);
+        if (!string.IsNullOrEmpty(link))
+            NavigationManager.NavigateTo(link);
+    }
+
+    private string? GetLink(NotificationData notification)
+    {
+        var link = notification.Link.ToString();
+        return notification.Identifier switch
+        {
+            "invoice_expired" => link,
+            "invoice_expiredpaidpartial" => link,
+            "invoice_failedtoconfirm" => link,
+            "invoice_confirmed" => link,
+            "invoice_paidafterexpiration" => link,
+            _ => null
+        };
+    }
+
 }
