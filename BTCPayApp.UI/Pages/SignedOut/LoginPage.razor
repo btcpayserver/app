@@ -81,6 +81,12 @@
                     <NavLink href="@GetRegisterUrl()">Create an account</NavLink>
                 </p>
             }
+            else if (InstanceInfo is null)
+            {
+                <p class="mt-4 text-center">
+                    <NavLink href="@Routes.Connect">Connect to a BTCPay Server</NavLink>
+                </p>
+            }
         </ValidationEditContext>
         <QrScanModal OnScan="@OnQrCodeScan"/>
     </NotAuthorized>
