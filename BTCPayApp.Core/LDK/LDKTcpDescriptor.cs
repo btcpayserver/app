@@ -27,6 +27,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         if (result.is_ok())
         {
             logger.LogInformation("New inbound connection accepted");
+            descriptor.Start();
             return descriptor;
         }
         else if(result is Result_NonePeerHandleErrorZ.Result_NonePeerHandleErrorZ_Err err)
@@ -51,6 +52,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
             descriptor.disconnect_socket();
             return null;
         }
+        descriptor.Start();
         var result = peerManager.new_outbound_connection(pubKey.ToBytes(), descriptor.SocketDescriptor,saSocketAddress);
         if (result is Result_CVec_u8ZPeerHandleErrorZ.Result_CVec_u8ZPeerHandleErrorZ_OK ok)
         {
@@ -58,9 +60,9 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         }
 
         if (result.is_ok())
-        {
+        { 
             logger.LogInformation("New outbound connection accepted");
-            // descriptor.Start();
+            
             return descriptor;
         }else if(result is Result_CVec_u8ZPeerHandleErrorZ.Result_CVec_u8ZPeerHandleErrorZ_Err err)
         {
@@ -86,7 +88,6 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         _tcs = new TaskCompletionSource();
         _ = CheckConnection(_cts.Token);
         _ = ReadEvents(_cts.Token);
-        Start();
     }
 
     private void Start()
