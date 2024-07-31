@@ -80,9 +80,9 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
     private async Task EncryptionKeyChanged(object? sender)
     {
-        if (_connectionState == BTCPayConnectionState.Syncing)
+        if (_connectionState == BTCPayConnectionState.WaitingForEncryptionKey)
         {
-            await OnConnectionChanged(this, (BTCPayConnectionState.Syncing, BTCPayConnectionState.Syncing));
+            ConnectionState = BTCPayConnectionState.Syncing;
         }
     }
 
@@ -153,12 +153,19 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                         await _accountManager.RefreshAccess();
                         ConnectionState = BTCPayConnectionState.WaitingForAuth;
                     }
+                    catch (Exception ex)
+                    {
+                        await Task.Delay(500);
+                        _logger.LogError(ex, "Error while connecting to hub");
+                        ConnectionState = BTCPayConnectionState.WaitingForAuth;
+                    }
                 }
 
                 break;
             case BTCPayConnectionState.Syncing:
                 if (await _syncService.EncryptionKeyRequiresImport())
                 {
+                    ConnectionState = BTCPayConnectionState.WaitingForEncryptionKey;
                     _logger.LogWarning("Existing state found but encryption key is missing, waiting until key is provided");
                 }
                 else

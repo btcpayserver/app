@@ -253,8 +253,8 @@ public class SyncService : IDisposable
 
             await db.Database.ExecuteSqlRawAsync(string.Join("; ", triggers.Select(record => record.sql)),
                 cancellationToken: cancellationToken);
-            await db.Database.CommitTransactionAsync(cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
+            await db.Database.CommitTransactionAsync(cancellationToken);
             _logger.LogInformation("Synced to local: {DeleteCount} deleted, {UpsertCount} upserted", deleteCount,
                 upsertCount);
         }
@@ -288,6 +288,7 @@ public class SyncService : IDisposable
                 if (channel == null)
                     return null;
                 var val = JsonSerializer.SerializeToUtf8Bytes(channel);
+                
                 return new KeyValue()
                 {
                     Key = outbox.Key,
@@ -319,7 +320,7 @@ public class SyncService : IDisposable
         await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         var putObjectRequest = new PutObjectRequest();
-        var outbox = await db.OutboxItems.GroupBy(outbox1 => new {outbox1.Key})
+        var outbox = await db.OutboxItems.GroupBy(outbox1 => outbox1.Key)
             .ToListAsync(cancellationToken: cancellationToken);
         if (outbox.Count == 0)
             return;
@@ -356,7 +357,8 @@ public class SyncService : IDisposable
         await backupAPi.PutObjectAsync(putObjectRequest, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         _logger.LogInformation(
-            $"Synced to remote {putObjectRequest.TransactionItems.Count} items and deleted {putObjectRequest.DeleteItems.Count} items");
+            $"Synced to remote {putObjectRequest.TransactionItems.Count} items and deleted {putObjectRequest.DeleteItems.Count} items" +
+            string.Join(", ", putObjectRequest.TransactionItems.Select(kv => kv.Key + " " + kv.Version)));
     }
 
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
