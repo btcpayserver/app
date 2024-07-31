@@ -55,7 +55,7 @@ public class VSSApiEncryptorClient: IVSSAPI
         
         foreach (var keyVersion in x.KeyVersions)
         {
-            if (keyVersion.Value is null)
+            if (keyVersion.Value is null or { Length: 0 })
             {
                 continue;
             }

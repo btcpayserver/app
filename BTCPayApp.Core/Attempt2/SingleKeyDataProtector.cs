@@ -32,14 +32,10 @@ public class SingleKeyDataProtector : IDataProtector
         aes.Key = _key;
         aes.GenerateIV();
 
-        byte[] iv = aes.IV;
-        byte[] encrypted = aes.EncryptCbc(plaintext, iv);
+        var iv = aes.IV;
+        var encrypted = aes.EncryptCbc(plaintext, iv);
 
-        byte[] result = new byte[iv.Length + encrypted.Length];
-        Buffer.BlockCopy(iv, 0, result, 0, iv.Length);
-        Buffer.BlockCopy(encrypted, 0, result, iv.Length, encrypted.Length);
-
-        return result;
+        return iv.Concat(encrypted).ToArray();
     }
 
     public byte[] Unprotect(byte[] protectedData)
@@ -47,11 +43,12 @@ public class SingleKeyDataProtector : IDataProtector
         using var aes = Aes.Create();
         aes.Key = _key;
 
-        byte[] iv = new byte[16];
-        byte[] cipherText = new byte[protectedData.Length - iv.Length];
-
-        Buffer.BlockCopy(protectedData, 0, iv, 0, iv.Length);
-        Buffer.BlockCopy(protectedData, iv.Length, cipherText, 0, cipherText.Length);
+        if(protectedData.Length == 0)
+        {
+            return protectedData;
+        }
+        var iv = protectedData.Take(16).ToArray();
+        var cipherText = protectedData.Skip(16).ToArray();
 
         return aes.DecryptCbc(cipherText, iv);
     }

@@ -103,9 +103,14 @@ public class SyncService
             var toUpsert = remoteVersions.KeyVersions.Where(remoteVersion => localVersions.All(localVersion =>
                 localVersion.Key != remoteVersion.Key || localVersion.Version < remoteVersion.Version));
 
+            if(toDelete.Length == 0 && !toUpsert.Any())
+                return;
+            _logger.LogInformation("Syncing to local: {ToDelete} to delete, {ToUpsert} to upsert", toDelete.Length,
+                toUpsert.Count());
+            
             foreach (var upsertItem in toUpsert)
             {
-                if (upsertItem.Value is null)
+                if (upsertItem.Value is null or { Length: 0 })
                 {
                     var item = await backupApi.GetObjectAsync(new GetObjectRequest()
                     {
@@ -119,11 +124,12 @@ public class SyncService
             var settingsToDelete = toDelete.Where(key => key.Key.StartsWith("Setting_")).Select(key => key.Key);
             var channelsToDelete = toDelete.Where(key => key.Key.StartsWith("Channel_")).Select(key => key.Key);
             var paymentsToDelete = toDelete.Where(key => key.Key.StartsWith("Payment_")).Select(key => key.Key);
-            await db.Settings.Where(setting => settingsToDelete.Contains(setting.EntityKey))
+            var deleteCount = 0;
+            deleteCount += await db.Settings.Where(setting => settingsToDelete.Contains(setting.EntityKey))
                 .ExecuteDeleteAsync(cancellationToken: cancellationToken);
-            await db.LightningChannels.Where(channel => channelsToDelete.Contains(channel.EntityKey))
+            deleteCount +=await db.LightningChannels.Where(channel => channelsToDelete.Contains(channel.EntityKey))
                 .ExecuteDeleteAsync(cancellationToken: cancellationToken);
-            await db.LightningPayments.Where(payment => paymentsToDelete.Contains(payment.EntityKey))
+            deleteCount += await db.LightningPayments.Where(payment => paymentsToDelete.Contains(payment.EntityKey))
                 .ExecuteDeleteAsync(cancellationToken: cancellationToken);
 
             // upsert the rest when needed
@@ -138,22 +144,25 @@ public class SyncService
                 .Select(value => JsonSerializer.Deserialize<Channel>(value.Value.ToStringUtf8())!);
             var paymentsToUpsert = toUpsert.Where(key => key.Key.StartsWith("Payment_")).Select(value =>
                 JsonSerializer.Deserialize<AppLightningPayment>(value.Value.ToStringUtf8())!);
-
-            await db.Settings.UpsertRange(settingsToUpsert).On(setting => setting.EntityKey)
+var upsertCount = 0;
+upsertCount +=  await db.Settings.UpsertRange(settingsToUpsert).On(setting => setting.EntityKey)
                 .RunAsync(cancellationToken);
-            await db.LightningChannels.UpsertRange(channelsToUpsert).On(channel => channel.EntityKey)
+upsertCount +=  await db.LightningChannels.UpsertRange(channelsToUpsert).On(channel => channel.EntityKey)
                 .RunAsync(cancellationToken);
-            await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payment => payment.EntityKey)
+upsertCount += await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payment => payment.EntityKey)
                 .RunAsync(cancellationToken);
 
             await db.Database.ExecuteSqlRawAsync(string.Join("; ", triggers.Select(record => record.sql)),
                 cancellationToken: cancellationToken);
             await db.Database.CommitTransactionAsync(cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation("Synced to local: {DeleteCount} deleted, {UpsertCount} upserted", deleteCount,
+                upsertCount);
         }
         catch (Exception e)
         {
             await db.Database.RollbackTransactionAsync(cancellationToken);
+            _logger.LogError(e, "Error while syncing to local");
             throw;
         }
     }
@@ -211,6 +220,9 @@ public class SyncService
         var putObjectRequest = new PutObjectRequest();
         var outbox = await db.OutboxItems.GroupBy(outbox1 => new {outbox1.Key})
             .ToListAsync(cancellationToken: cancellationToken);
+        if(outbox.Count == 0)
+            return;
+        _logger.LogInformation($"Syncing to remote {outbox.Count} outbox items");
         foreach (var outboxItemSet in outbox)
         {
             var orderedEnumerable = outboxItemSet.OrderByDescending(outbox1 => outbox1.Version)
@@ -242,6 +254,7 @@ public class SyncService
         putObjectRequest.GlobalVersion = deviceIdentifier;
         await backupAPi.PutObjectAsync(putObjectRequest, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation($"Synced to remote {putObjectRequest.TransactionItems.Count} items and deleted {putObjectRequest.DeleteItems.Count} items");
     }
 
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
