@@ -6,7 +6,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
-@inject IDispatcher Dispatcher
+@inject IState<StoreState> StoreState
 <PageTitle>Select your store</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
@@ -50,8 +50,8 @@
                     }
                 </ul>
             </InputRadioGroup>
-            <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext.Invalid || _sending)">
-                @if (_sending)
+            <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext.Invalid || Sending)">
+                @if (Sending)
                 {
                     <LoadingIndicator />
                 }
@@ -72,7 +72,6 @@
 </section>
 
 @code {
-    private bool _sending;
     private string? _errorMessage;
     private string? _initialStoreId;
     private AppUserInfo? _userInfo;
@@ -99,11 +98,10 @@
         }*/
     }
 
-    private Task OnUserInfoChange(object? sender, AppUserInfo? userInfo)
+    private async Task OnUserInfoChange(object? sender, AppUserInfo? userInfo)
     {
         _userInfo = userInfo;
-        InvokeAsync(StateHasChanged);
-        return Task.CompletedTask;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleValidSubmit()
@@ -113,36 +111,22 @@
 
     private async Task SelectStore(string storeId)
     {
-        _sending = true;
         _errorMessage = null;
 
         try
         {
             var result = await AccountManager.SetCurrentStoreId(storeId);
-            var resultMessage = result.Messages != null ? string.Join(",", result.Messages) : null;
-            var uri = Routes.Dashboard;
-            if (result.Succeeded)
-            {
-                var store = AccountManager.GetUserStore(storeId);
-                Dispatcher.Dispatch(new StoreState.SetStoreInfo(store));
 
-                if (!string.IsNullOrEmpty(resultMessage))
-                    uri = NavigationManager.GetUriWithQueryParameters(uri,
-                        new Dictionary<string, object?> { {"success", resultMessage } } );
-                NavigationManager.NavigateTo(uri);
-            }
-            else
+            if (!result.Succeeded)
             {
-                _errorMessage = resultMessage ?? "Store selection failed.";
+                _errorMessage = result.Messages != null
+                    ? string.Join(",", result.Messages)
+                    : "Store selection failed.";
             }
         }
         catch (Exception e)
         {
             _errorMessage = e.Message;
-        }
-        finally
-        {
-            _sending = false;
         }
     }
 
@@ -152,5 +136,6 @@
         public string? StoreId { get; set; }
     }
 
+    private bool Sending => StoreState.Value.Store?.Loading is true;
     private string GetCreateStoreUrl() => NavigationManager.GetUriWithQueryParameters(Routes.CreateStore, new Dictionary<string, object?> { {"backUrl", Routes.SelectStore } } );
 }

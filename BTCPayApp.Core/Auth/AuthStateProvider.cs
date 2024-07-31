@@ -89,7 +89,7 @@ public class AuthStateProvider(
             if (_userInfo == null && _account?.HasTokens is true)
             {
                 var cts = new CancellationTokenSource(5000);
-                await FetchUserInfo(cts.Token);
+                _userInfo = await GetClient().GetUserInfo(cts.Token);
             }
 
             if (_userInfo != null)
@@ -161,25 +161,29 @@ public class AuthStateProvider(
         var store = GetUserStore(storeId);
         if (store == null) return new FormResult(false, $"Store with ID '{storeId}' does not exist or belong to the user.");
 
-        OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
-
-        // create associated POS app if there is none
-        if (string.IsNullOrEmpty(store.PosAppId))
+        if (storeId != GetCurrentStore()?.Id)
         {
-            try
+            OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
+
+            // create associated POS app if there is none
+            if (string.IsNullOrEmpty(store.PosAppId))
             {
-                var posConfig = new PointOfSaleAppRequest { AppName = store.Name, DefaultView = PosViewType.Light };
-                await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
-                await FetchUserInfo();
+                try
+                {
+                    var posConfig = new PointOfSaleAppRequest { AppName = store.Name, DefaultView = PosViewType.Light };
+                    await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
+                    await CheckAuthenticated(true);
+                }
+                catch (Exception e)
+                {
+                    return new FormResult(false, e.Message);
+                }
             }
-            catch (Exception e)
-            {
-                return new FormResult(false, e.Message);
-            }
+
+            _account!.CurrentStoreId = storeId;
+            await UpdateAccount(_account);
         }
 
-        _account!.CurrentStoreId = storeId;
-        await UpdateAccount(_account);
         OnAfterStoreChange?.Invoke(this, store);
 
         return new FormResult(true);
@@ -187,8 +191,10 @@ public class AuthStateProvider(
 
     public async Task UnsetCurrentStore()
     {
+        OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
         _account!.CurrentStoreId = null;
         await UpdateAccount(_account);
+        OnAfterStoreChange?.Invoke(this, null);
     }
 
     public AppUserStoreInfo? GetUserStore(string storeId)
@@ -441,11 +447,5 @@ public class AuthStateProvider(
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
         OnAfterAccountChange?.Invoke(this, _account);
-    }
-
-    private async Task FetchUserInfo(CancellationToken cancellationToken = default)
-    {
-        _userInfo = await GetClient().GetUserInfo(cancellationToken);
-        OnUserInfoChange?.Invoke(this, _userInfo);
     }
 }

@@ -132,16 +132,11 @@ else if (_data is not null)
                 // refresh store info and set id of new store
                 await AccountManager.CheckAuthenticated(true);
                 var result = await AccountManager.SetCurrentStoreId(store.Id);
-                var resultMessage = result.Messages != null ? string.Join(",", result.Messages) : null;
-                if (result.Succeeded)
+                if (!result.Succeeded)
                 {
-                    var storeInfo = AccountManager.GetUserStore(store.Id);
-                    Dispatcher.Dispatch(new StoreState.SetStoreInfo(storeInfo));
-                    NavigationManager.NavigateTo(Routes.Dashboard);
-                }
-                else
-                {
-                    _errorMessage = resultMessage ?? "Store creation failed.";
+                    _errorMessage = result.Messages != null
+                        ? string.Join(",", result.Messages)
+                        : "Store creation failed.";
                 }
             }
         }

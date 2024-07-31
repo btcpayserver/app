@@ -78,6 +78,8 @@ public class StateMiddleware(
 
         accountManager.OnAfterStoreChange += async (sender, storeInfo) =>
         {
+            dispatcher.Dispatch(new StoreState.SetStoreInfo(storeInfo));
+            navigationManager.NavigateTo(Routes.Dashboard);
             await TryApplyingAppPaymentMethodsToCurrentStore(true, true);
         };
 

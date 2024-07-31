@@ -31,7 +31,7 @@ public record StoreState
     public record FetchInvoices(string StoreId);
     public record FetchInvoice(string StoreId, string InvoiceId);
     public record FetchInvoicePaymentMethods(string StoreId, string InvoiceId);
-    public record FetchRates(string StoreId, string? Currency);
+    public record FetchRates(AppUserStoreInfo Store);
     public record FetchPointOfSale(string AppId);
     public record UpdateStore(string StoreId, UpdateStoreRequest Request);
     public record UpdatedStore(StoreData? Store, string? Error) : SetStore(Store, Error);
@@ -418,13 +418,13 @@ public record StoreState
             if (store != null)
             {
                 var storeId = store.Id!;
+                dispatcher.Dispatch(new FetchStore(storeId));
                 dispatcher.Dispatch(new FetchOnchainBalance(storeId));
                 dispatcher.Dispatch(new FetchLightningBalance(storeId));
                 dispatcher.Dispatch(new FetchNotifications(storeId));
                 dispatcher.Dispatch(new FetchInvoices(storeId));
                 dispatcher.Dispatch(new FetchPointOfSale(store.PosAppId!));
-                if (!RateFetchExcludes.Contains(store.DefaultCurrency))
-                    dispatcher.Dispatch(new FetchRates(storeId, store.DefaultCurrency));
+                dispatcher.Dispatch(new FetchRates(store));
             }
             return Task.CompletedTask;
         }
@@ -552,9 +552,11 @@ public record StoreState
         [EffectMethod]
         public async Task FetchRatesEffect(FetchRates action, IDispatcher dispatcher)
         {
+            var currency = action.Store.DefaultCurrency;
+            if (RateFetchExcludes.Contains(currency)) return;
             try
             {
-                var rates = await accountManager.GetClient().GetStoreRates(action.StoreId, [$"BTC_{action.Currency}"]);
+                var rates = await accountManager.GetClient().GetStoreRates(action.Store.Id, [$"BTC_{currency}"]);
                 dispatcher.Dispatch(new SetRates(rates, null));
             }
             catch (Exception e)
