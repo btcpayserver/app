@@ -100,11 +100,10 @@
         _accounts = await AccountManager.GetAccounts();
     }
 
-    private Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
+    private async Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
     {
         _account = account;
-        InvokeAsync(StateHasChanged);
-        return Task.CompletedTask;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task SwitchToAccount(BTCPayAccount account)

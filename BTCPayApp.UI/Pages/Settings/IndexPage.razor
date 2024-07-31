@@ -206,18 +206,16 @@
         _biometricAuthAvailable = await Fingerprint.IsAvailableAsync();
     }
 
-    private Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
+    private async Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
     {
         _account = account;
-        InvokeAsync(StateHasChanged);
-        return Task.CompletedTask;
+        await InvokeAsync(StateHasChanged);
     }
 
-    private Task OnUserInfoChange(object? sender, AppUserInfo? userInfo)
+    private async Task OnUserInfoChange(object? sender, AppUserInfo? userInfo)
     {
         _userInfo = userInfo;
-        InvokeAsync(StateHasChanged);
-        return Task.CompletedTask;
+        await InvokeAsync(StateHasChanged);
     }
 
     // TODO: Guard with passcode entering

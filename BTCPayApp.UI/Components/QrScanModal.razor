@@ -1,7 +1,8 @@
-@inject IJSRuntime JS
 @implements IAsyncDisposable
 @using ReactorBlazorQRCodeScanner
-
+@using Microsoft.Extensions.Logging
+@inject IJSRuntime JS
+@inject ILogger<QrScanModal> Logger
 <div class="modal fade" id="ScanQrCodeModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-fullscreen">
         <div class="modal-content">
@@ -28,15 +29,29 @@
     {
         if (!firstRender) return;
         var reference = DotNetObjectReference.Create(this);
-        await JS.InvokeVoidAsync("Interop.addEventListener", reference, "#ScanQrCodeModal", "show.bs.modal", "OnShow");
-        await JS.InvokeVoidAsync("Interop.addEventListener", reference, "#ScanQrCodeModal", "hide.bs.modal", "OnHide");
+        try
+        {
+            await JS.InvokeVoidAsync("Interop.addEventListener", reference, "#ScanQrCodeModal", "show.bs.modal", "OnShow");
+            await JS.InvokeVoidAsync("Interop.addEventListener", reference, "#ScanQrCodeModal", "hide.bs.modal", "OnHide");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error adding QrScanModel event listeners");
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
         var show = new[] {"#ScanQrCodeModal", "show.bs.modal", "OnShow"};
         var hide = new[] {"#ScanQrCodeModal", "hide.bs.modal", "OnHide"};
-        await JS.InvokeVoidAsync("Interop.removeEventListeners", [show, hide]);
+        try
+        {
+            await JS.InvokeVoidAsync("Interop.removeEventListeners", [show, hide]);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error removing QrScanModel event listeners");
+        }
     }
 
     [JSInvokable]

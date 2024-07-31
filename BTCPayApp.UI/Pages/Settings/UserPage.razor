@@ -142,7 +142,7 @@
         };
     }
 
-    private Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
+    private async Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
     {
         Account = new AccountModel
         {
@@ -150,8 +150,7 @@
             Name = account.Name,
             ImageUrl = account.ImageUrl
         };
-        InvokeAsync(StateHasChanged);
-        return Task.CompletedTask;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task Logout()
