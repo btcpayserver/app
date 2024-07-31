@@ -84,7 +84,7 @@
                 }
                 @if (store != null)
                 {
-                    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@store.Id">
+                    <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@store.Id">
                         <li class="list-group-item">
                             <a href="@Routes.StorePath(store.Id!)">
                                 <Icon Symbol="nav-store"/>
@@ -92,6 +92,8 @@
                                 <Icon Symbol="caret-right"/>
                             </a>
                         </li>
+                    </AuthorizeView>
+                    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@store.Id">
                         @if (store.PosAppId != null)
                         {
                             <li class="list-group-item">

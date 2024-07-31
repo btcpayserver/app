@@ -18,7 +18,7 @@
         <div class="notifications">
             @if (!string.IsNullOrEmpty(StoreId))
             {
-            <NotificationsBell/>
+                <NotificationsBell/>
             }
         </div>
     </header>
@@ -26,9 +26,13 @@
     {
         <Alert Type="success" Margin="0" Dismissible>@_successMessage</Alert>
     }
-    <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="StoreId">
+    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
         <div class="d-flex flex-column gap-4 wallet">
-            @if (TotalBalance == null)
+            @if (!string.IsNullOrEmpty(BalanceError))
+            {
+                <Alert Type="danger">@BalanceError</Alert>
+            }
+            else if (TotalBalance == null)
             {
                 <div class="p-3 text-center">
                     <LoadingIndicator/>
@@ -78,6 +82,7 @@
 
     private string? StoreId => AccountManager.GetCurrentStore()?.Id;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
+    private string? BalanceError => StoreState.Value.OnchainBalance?.Error ?? StoreState.Value.LightningBalance?.Error;
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
     private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
     private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
