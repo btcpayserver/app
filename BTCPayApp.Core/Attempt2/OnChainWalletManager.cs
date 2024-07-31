@@ -21,6 +21,7 @@ public class OnChainWalletManager : BaseHostedService
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly ILogger<OnChainWalletManager> _logger;
     private readonly IMemoryCache _memoryCache;
+    private readonly SyncService _syncService;
     private OnChainWalletState _state = OnChainWalletState.Init;
 
     public WalletConfig? WalletConfig { get; private set; }
@@ -47,13 +48,15 @@ public class OnChainWalletManager : BaseHostedService
         BTCPayAppServerClient btcPayAppServerClient,
         BTCPayConnectionManager btcPayConnectionManager,
         ILogger<OnChainWalletManager> logger,
-        IMemoryCache memoryCache)
+        IMemoryCache memoryCache,
+        SyncService syncService)
     {
         _configProvider = configProvider;
         _btcPayAppServerClient = btcPayAppServerClient;
         _btcPayConnectionManager = btcPayConnectionManager;
         _logger = logger;
         _memoryCache = memoryCache;
+        _syncService = syncService;
     }
 
     protected override async Task ExecuteStartAsync(CancellationToken cancellationToken)
@@ -133,6 +136,8 @@ public class OnChainWalletManager : BaseHostedService
                 walletConfig.Derivations[keyValuePair.Key].Identifier = keyValuePair.Value;
 
             }
+
+            await _syncService.SetEncryptionKey(mnemonic);
             await _configProvider.Set(WalletConfig.Key, walletConfig, true);
             WalletConfig = walletConfig;
             State = OnChainWalletState.Loaded;

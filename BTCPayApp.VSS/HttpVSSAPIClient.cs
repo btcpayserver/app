@@ -59,16 +59,20 @@ public class HttpVSSAPIClient : IVSSAPI
         var response = await _httpClient.PostAsync(url, requestContent, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new VssClientException($"HTTP error {(int)response.StatusCode} occurred: {errorContent}");
+            var error = ErrorResponse.Parser.ParseFrom(await response.Content.ReadAsStreamAsync(cancellationToken));
+            throw new VssClientException( error);
         }
 
         var responseBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
         var parsedResponse = (TResponse)new TResponse().Descriptor.Parser.ParseFrom(responseBytes);
 
-        if (parsedResponse is GetObjectResponse {Value: null})
+        if (parsedResponse is GetObjectResponse {Value: null or {Value.Length: 0}})
         {
-            throw new VssClientException("VSS Server API Violation, expected value in GetObjectResponse but found none.");
+            throw new VssClientException( new ErrorResponse()
+            {
+                ErrorCode = ErrorCode.NoSuchKeyException,
+                Message = "VSS Server API Violation, expected value in GetObjectResponse but found none.",
+            });
         }
 
         return parsedResponse;

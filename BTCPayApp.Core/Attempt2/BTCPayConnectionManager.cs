@@ -74,7 +74,16 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         _btcPayAppServerClient.OnNotifyNetwork += OnNotifyNetwork;
         _btcPayAppServerClient.OnNotifyServerEvent += OnNotifyServerEvent;
         _btcPayAppServerClient.OnServerNodeInfo += OnServerNodeInfo;
+        _syncService.EncryptionKeyChanged += EncryptionKeyChanged;
         await OnConnectionChanged(this, (BTCPayConnectionState.Init, BTCPayConnectionState.Init));
+    }
+
+    private async Task EncryptionKeyChanged(object? sender)
+    {
+        if (_connectionState == BTCPayConnectionState.Syncing)
+        {
+            await OnConnectionChanged(this, (BTCPayConnectionState.Syncing, BTCPayConnectionState.Syncing));
+        }
     }
 
     private async Task<long> GetDeviceIdentifier()
@@ -148,8 +157,16 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
                 break;
             case BTCPayConnectionState.Syncing:
-                await _syncService.SyncToLocal();
-                ConnectionState = BTCPayConnectionState.ConnectedFinishedInitialSync;
+                if (await _syncService.EncryptionKeyRequiresImport())
+                {
+                    _logger.LogWarning("Existing state found but encryption key is missing, waiting until key is provided");
+                }
+                else
+                {
+                    
+                    await _syncService.SyncToLocal();
+                    ConnectionState = BTCPayConnectionState.ConnectedFinishedInitialSync;
+                }
                 break;
             case BTCPayConnectionState.ConnectedFinishedInitialSync:
                 var deviceIdentifier = await GetDeviceIdentifier();
@@ -220,12 +237,14 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         {
             _logger.LogInformation("Sending device master signal to turn off");
             var deviceIdentifier = await GetDeviceIdentifier();
-            await HubProxy.DeviceMasterSignal(deviceIdentifier, true);
+            await HubProxy.DeviceMasterSignal(deviceIdentifier, false);
         }
 
         await Kill();
         _authStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
-        _btcPayAppServerClient.OnNotifyNetwork += OnNotifyNetwork;
+        _btcPayAppServerClient.OnNotifyNetwork -= OnNotifyNetwork;
+        
+        _syncService.EncryptionKeyChanged -= EncryptionKeyChanged;
         ConnectionChanged -= OnConnectionChanged;
     }
 

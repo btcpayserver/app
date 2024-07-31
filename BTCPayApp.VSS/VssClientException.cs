@@ -1,8 +1,13 @@
-﻿namespace BTCPayApp.VSS;
+﻿using VSSProto;
+
+namespace BTCPayApp.VSS;
 
 public class VssClientException : Exception
 {
-    public VssClientException(string message) : base(message)
+    public ErrorResponse Error { get; }
+
+    public VssClientException(ErrorResponse error) : base($"{error.ErrorCode} {error.Message}")
     {
+        Error = error;
     }
 }

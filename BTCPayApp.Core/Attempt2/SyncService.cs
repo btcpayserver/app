@@ -1,8 +1,10 @@
 ﻿using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
+using BTCPayApp.Core.Helpers;
 using BTCPayApp.VSS;
 using Google.Protobuf;
 using Microsoft.AspNetCore.DataProtection;
@@ -13,13 +15,14 @@ using VSSProto;
 
 namespace BTCPayApp.Core.Attempt2;
 
-public class SyncService
+public class SyncService : IDisposable
 {
     private readonly ILogger<SyncService> _logger;
     private readonly IAccountManager _accountManager;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ISecureConfigProvider _secureConfigProvider;
+    public AsyncEventHandler? EncryptionKeyChanged;
 
     public SyncService(
         ILogger<SyncService> logger,
@@ -35,15 +38,102 @@ public class SyncService
         _secureConfigProvider = secureConfigProvider;
     }
 
-    private async Task<IDataProtector> GetDataProtector()
+    private async Task<IDataProtector?> GetDataProtector()
     {
-        var key = await _secureConfigProvider.GetOrSet("encryptionKey",
-            async () => Convert.ToHexString(RandomUtils.GetBytes(32)).ToLowerInvariant());
-        return new SingleKeyDataProtector(Convert.FromHexString(key));
+        var key = await _secureConfigProvider.Get<string>("encryptionKey");
+        return string.IsNullOrEmpty(key) ? null : new SingleKeyDataProtector(Convert.FromHexString(key));
     }
 
 
-    private async Task<IVSSAPI> GetVSSAPI()
+    public async Task<bool> EncryptionKeyRequiresImport()
+    {
+        var dataProtector = await GetDataProtector();
+
+        if (dataProtector is not null)
+            return false;
+        var api = await GetUnencryptedVSSAPI();
+        try
+        {
+            var res = await api.GetObjectAsync(new GetObjectRequest()
+            {
+                Key = "encryptionKeyTest"
+            });
+
+            if (res.Value is null or {Value.Length: 0})
+                return false;
+
+            if (dataProtector is null)
+                return true;
+            var decrypted = dataProtector.Unprotect(res.Value.ToByteArray());
+            return "kukks" == Encoding.UTF8.GetString(decrypted);
+        }
+        catch (VssClientException e) when (e.Error.ErrorCode == ErrorCode.NoSuchKeyException)
+        {
+        }
+
+        return false;
+    }
+
+    public async Task<bool> SetEncryptionKey(Mnemonic mnemonic)
+    {
+        var key = mnemonic.DeriveExtKey().Derive(1337).PrivateKey.ToBytes();
+        return await SetEncryptionKey(Convert.ToHexString(key));
+    }
+
+    public async Task<bool> SetEncryptionKey(string key)
+    {
+        var dataProtector = new SingleKeyDataProtector(Convert.FromHexString(key));
+        var encrypted = dataProtector.Protect("kukks"u8.ToArray());
+        var api = await GetUnencryptedVSSAPI();
+
+        try
+        {
+            var res = await api.GetObjectAsync(new GetObjectRequest()
+            {
+                Key = "encryptionKeyTest"
+            });
+
+            if (res.Value is {Value.Length: > 0})
+            {
+                var decrypted = dataProtector.Unprotect(res.Value.ToByteArray());
+                if ("kukks" == Encoding.UTF8.GetString(decrypted))
+                {
+                    await _secureConfigProvider.Set("encryptionKey", key);
+                    EncryptionKeyChanged?.Invoke(this);
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+        }
+        catch (VssClientException e) when (e.Error.ErrorCode == ErrorCode.NoSuchKeyException)
+        {
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error while setting encryption key");
+            return false;
+        }
+
+        await api.PutObjectAsync(new PutObjectRequest()
+        {
+            TransactionItems =
+            {
+                new KeyValue()
+                {
+                    Key = "encryptionKeyTest",
+                    Value = ByteString.CopyFrom(encrypted)
+                }
+            }
+        });
+        await _secureConfigProvider.Set("encryptionKey", key);
+        EncryptionKeyChanged?.Invoke(this);
+        return true;
+    }
+
+    private async Task<IVSSAPI> GetUnencryptedVSSAPI()
     {
         var account = _accountManager.GetAccount();
         if (account is null)
@@ -52,8 +142,14 @@ public class SyncService
         var httpClient = _httpClientFactory.CreateClient("vss");
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", account.AccessToken);
         var vssClient = new HttpVSSAPIClient(vssUri, httpClient);
-        var protector = await GetDataProtector();
-        return new VSSApiEncryptorClient(vssClient, protector);
+
+        return new AccountAwareVssClient(vssClient, _accountManager);
+    }
+
+    private async Task<IVSSAPI?> GetVSSAPI()
+    {
+        var dataProtector = await GetDataProtector();
+        return dataProtector is null ? null : new VSSApiEncryptorClient(await GetUnencryptedVSSAPI(), dataProtector);
     }
 
     private async Task<KeyValue[]> CreateLocalVersions(AppDbContext dbContext)
@@ -79,8 +175,11 @@ public class SyncService
     public async Task SyncToLocal(CancellationToken cancellationToken = default)
     {
         var backupApi = await GetVSSAPI();
+        if (backupApi is null)
+            return;
         await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var localVersions = await CreateLocalVersions(db);
+
         var remoteVersions = await backupApi.ListKeyVersionsAsync(new ListKeyVersionsRequest(), cancellationToken);
         await db.Database.BeginTransactionAsync(cancellationToken);
         try
@@ -103,14 +202,14 @@ public class SyncService
             var toUpsert = remoteVersions.KeyVersions.Where(remoteVersion => localVersions.All(localVersion =>
                 localVersion.Key != remoteVersion.Key || localVersion.Version < remoteVersion.Version));
 
-            if(toDelete.Length == 0 && !toUpsert.Any())
+            if (toDelete.Length == 0 && !toUpsert.Any())
                 return;
             _logger.LogInformation("Syncing to local: {ToDelete} to delete, {ToUpsert} to upsert", toDelete.Length,
                 toUpsert.Count());
-            
+
             foreach (var upsertItem in toUpsert)
             {
-                if (upsertItem.Value is null or { Length: 0 })
+                if (upsertItem.Value is null or {Length: 0})
                 {
                     var item = await backupApi.GetObjectAsync(new GetObjectRequest()
                     {
@@ -127,7 +226,7 @@ public class SyncService
             var deleteCount = 0;
             deleteCount += await db.Settings.Where(setting => settingsToDelete.Contains(setting.EntityKey))
                 .ExecuteDeleteAsync(cancellationToken: cancellationToken);
-            deleteCount +=await db.LightningChannels.Where(channel => channelsToDelete.Contains(channel.EntityKey))
+            deleteCount += await db.LightningChannels.Where(channel => channelsToDelete.Contains(channel.EntityKey))
                 .ExecuteDeleteAsync(cancellationToken: cancellationToken);
             deleteCount += await db.LightningPayments.Where(payment => paymentsToDelete.Contains(payment.EntityKey))
                 .ExecuteDeleteAsync(cancellationToken: cancellationToken);
@@ -144,12 +243,12 @@ public class SyncService
                 .Select(value => JsonSerializer.Deserialize<Channel>(value.Value.ToStringUtf8())!);
             var paymentsToUpsert = toUpsert.Where(key => key.Key.StartsWith("Payment_")).Select(value =>
                 JsonSerializer.Deserialize<AppLightningPayment>(value.Value.ToStringUtf8())!);
-var upsertCount = 0;
-upsertCount +=  await db.Settings.UpsertRange(settingsToUpsert).On(setting => setting.EntityKey)
+            var upsertCount = 0;
+            upsertCount += await db.Settings.UpsertRange(settingsToUpsert).On(setting => setting.EntityKey)
                 .RunAsync(cancellationToken);
-upsertCount +=  await db.LightningChannels.UpsertRange(channelsToUpsert).On(channel => channel.EntityKey)
+            upsertCount += await db.LightningChannels.UpsertRange(channelsToUpsert).On(channel => channel.EntityKey)
                 .RunAsync(cancellationToken);
-upsertCount += await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payment => payment.EntityKey)
+            upsertCount += await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payment => payment.EntityKey)
                 .RunAsync(cancellationToken);
 
             await db.Database.ExecuteSqlRawAsync(string.Join("; ", triggers.Select(record => record.sql)),
@@ -215,12 +314,14 @@ upsertCount += await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payme
     public async Task SyncToRemote(long deviceIdentifier, CancellationToken cancellationToken = default)
     {
         var backupAPi = await GetVSSAPI();
+        if (backupAPi is null)
+            return;
         await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
         var putObjectRequest = new PutObjectRequest();
         var outbox = await db.OutboxItems.GroupBy(outbox1 => new {outbox1.Key})
             .ToListAsync(cancellationToken: cancellationToken);
-        if(outbox.Count == 0)
+        if (outbox.Count == 0)
             return;
         _logger.LogInformation($"Syncing to remote {outbox.Count} outbox items");
         foreach (var outboxItemSet in outbox)
@@ -254,7 +355,8 @@ upsertCount += await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payme
         putObjectRequest.GlobalVersion = deviceIdentifier;
         await backupAPi.PutObjectAsync(putObjectRequest, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation($"Synced to remote {putObjectRequest.TransactionItems.Count} items and deleted {putObjectRequest.DeleteItems.Count} items");
+        _logger.LogInformation(
+            $"Synced to remote {putObjectRequest.TransactionItems.Count} items and deleted {putObjectRequest.DeleteItems.Count} items");
     }
 
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
@@ -269,7 +371,7 @@ upsertCount += await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payme
         }
 
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _syncTask = (ContinuouslySync(deviceIdentifier,local, cts.Token), cts, local);
+        _syncTask = (ContinuouslySync(deviceIdentifier, local, cts.Token), cts, local);
     }
 
     public async Task StopSync()
@@ -281,7 +383,8 @@ upsertCount += await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payme
         }
     }
 
-    private async Task ContinuouslySync(long deviceIdentifier, bool local, CancellationToken cancellationToken = default)
+    private async Task ContinuouslySync(long deviceIdentifier, bool local,
+        CancellationToken cancellationToken = default)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -298,5 +401,10 @@ upsertCount += await db.LightningPayments.UpsertRange(paymentsToUpsert).On(payme
                 _logger.LogError(e, "Error while syncing to {Local}", local ? "local" : "remote");
             }
         }
+    }
+
+    public void Dispose()
+    {
+        EncryptionKeyChanged = null;
     }
 }
