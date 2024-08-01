@@ -24,7 +24,9 @@
 
     <ItemGroup>
       <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
-      <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Abstractions\BTCPayServer.Abstractions.csproj" />
-      <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer\BTCPayServer.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <EmbeddedResource Include="Util\Currencies.json" />
     </ItemGroup>
 </Project>

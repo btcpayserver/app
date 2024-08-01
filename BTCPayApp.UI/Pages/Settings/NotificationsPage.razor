@@ -15,24 +15,23 @@
 </SectionContent>
 
 <section class="container">
-    @if (!string.IsNullOrEmpty(Error))
+    @if (Settings is null)
     {
-        <Alert Type="danger">@Error</Alert>
+        if (Loading)
+        {
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
     }
-    else if (!string.IsNullOrEmpty(_successMessage))
+    else if (Model is not null)
     {
-        <Alert Type="success">@_successMessage</Alert>
-    }
-    @if (Loading && Settings is null)
-    {
-        <div class="p-3 text-center">
-            <LoadingIndicator/>
-        </div>
-    }
-    else if (Model.Notifications?.Any() is true)
-    {
-        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
-            <DataAnnotationsValidator />
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
+            <DataAnnotationsValidator/>
             @foreach (var item in Model.Notifications)
             {
                 <div class="d-flex align-items-center my-3 gap-3">
@@ -45,7 +44,7 @@
             <button type="submit" class="btn btn-primary w-100 mt-3" disabled="@(Settings == null || Sending)">
                 @if (Sending)
                 {
-                    <LoadingIndicator />
+                    <LoadingIndicator/>
                 }
                 else
                 {
