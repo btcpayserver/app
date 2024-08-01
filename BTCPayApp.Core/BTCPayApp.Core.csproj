@@ -44,7 +44,6 @@
     <ItemGroup>
       <ProjectReference Include="..\BTCPayApp.VSS\BTCPayApp.VSS.csproj" />
       <ProjectReference Include="..\submodules\btcpayserver\BTCPayApp.CommonServer\BTCPayApp.CommonServer.csproj" />
-      <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Abstractions\BTCPayServer.Abstractions.csproj" />
       <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj" />
     </ItemGroup>
 

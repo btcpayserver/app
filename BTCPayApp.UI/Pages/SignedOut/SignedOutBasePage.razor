@@ -1,10 +1,10 @@
 ﻿@attribute [AllowAnonymous]
 @layout SimpleLayout
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@using System.Net.Mail
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
-@using BTCPayServer
 @using Microsoft.Extensions.Logging
 @inject IJSRuntime JS
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -124,7 +124,7 @@
     private async Task<bool> HandleLoginCode(string code)
     {
         var parts = code.Split(LoginCodeSeparator);
-        if (parts.Length == 3 && Uri.TryCreate(parts[1], UriKind.Absolute, out _) && parts[2].IsValidEmail())
+        if (parts.Length == 3 && Uri.TryCreate(parts[1], UriKind.Absolute, out _) && MailAddress.TryCreate(parts[2], out _))
         {
             ErrorMessage = null;
             Sending = true;

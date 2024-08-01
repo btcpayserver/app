@@ -3,7 +3,6 @@ using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.AspNetRip;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
-using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Client.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -106,7 +105,7 @@ public class AuthStateProvider(
                 if (_userInfo.Stores?.Any() is true)
                     claims.AddRange(_userInfo.Stores.Select(store =>
                         new Claim(store.Id, string.Join(',', store.Permissions))));
-                user = new ClaimsPrincipal(new ClaimsIdentity(claims, AuthenticationSchemes.GreenfieldBearer));
+                user = new ClaimsPrincipal(new ClaimsIdentity(claims, "Greenfield.Bearer"));
             }
 
             var res = new AuthenticationState(user);

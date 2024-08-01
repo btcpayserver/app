@@ -1,8 +1,6 @@
-﻿using BTCPayServer.Client;
-using BTCPayServer.Security;
-using BTCPayServer.Security.GreenField;
-using BTCPayServer.Services;
-using BTCPayServer.Services.Rates;
+﻿using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Auth;
+using BTCPayApp.UI.Util;
 using Fluxor;
 using Fluxor.Blazor.Web.ReduxDevTools;
 using Microsoft.AspNetCore.Authorization;
@@ -17,7 +15,6 @@ public static class StartupExtensions
         serviceCollection.AddOptions();
         serviceCollection.AddSingleton<IAuthorizationHandler, BearerAuthorizationHandler>();
         serviceCollection.AddSingleton<DisplayFormatter>();
-        serviceCollection.AddSingleton(CurrencyNameTable.Instance);
         serviceCollection.AddAuthorizationCore(options =>
         {
             options.AddBTCPayPolicies();
