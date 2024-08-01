@@ -16,6 +16,7 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
     public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
     public event AsyncEventHandler<string>? OnNotifyNetwork;
     public event AsyncEventHandler<string>? OnServerNodeInfo;
+    public event AsyncEventHandler<long?>? OnMasterUpdated;
     public event AsyncEventHandler<ServerEvent>? OnNotifyServerEvent;
 
     public async Task NotifyServerEvent(ServerEvent ev)
@@ -113,5 +114,11 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
             _logger.LogError(e, "Error paying invoice");
             return new PayResponse(PayResult.Error, e.Message);
         }
+    }
+
+    public async Task MasterUpdated(long? deviceIdentifier)
+    {
+        _logger.LogInformation("MasterUpdated: {deviceIdentifier}", deviceIdentifier);
+        OnMasterUpdated?.Invoke(this, deviceIdentifier);
     }
 }

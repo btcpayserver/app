@@ -74,8 +74,18 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         _btcPayAppServerClient.OnNotifyNetwork += OnNotifyNetwork;
         _btcPayAppServerClient.OnNotifyServerEvent += OnNotifyServerEvent;
         _btcPayAppServerClient.OnServerNodeInfo += OnServerNodeInfo;
+        _btcPayAppServerClient.OnMasterUpdated += OnMasterUpdated;
         _syncService.EncryptionKeyChanged += EncryptionKeyChanged;
         await OnConnectionChanged(this, (BTCPayConnectionState.Init, BTCPayConnectionState.Init));
+    }
+
+    private Task OnMasterUpdated(object? sender, long? e)
+    {
+        if (e is null && ConnectionState == BTCPayConnectionState.ConnectedAsSlave)
+        {
+            ConnectionState = BTCPayConnectionState.Syncing;
+        }
+        return Task.CompletedTask;
     }
 
     private async Task EncryptionKeyChanged(object? sender)
@@ -163,6 +173,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
                 break;
             case BTCPayConnectionState.Syncing:
+                
+                await _syncService.StopSync();
                 if (await _syncService.EncryptionKeyRequiresImport())
                 {
                     ConnectionState = BTCPayConnectionState.WaitingForEncryptionKey;
