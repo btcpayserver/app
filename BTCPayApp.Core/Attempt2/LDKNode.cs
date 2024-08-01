@@ -169,6 +169,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         _configLoaded.SetResult();
         var keyPath = KeyPath.Parse(_config.LightningDerivationPath);
         Seed = new Mnemonic( _onChainWalletManager.WalletConfig.Mnemonic).DeriveExtKey().Derive(keyPath).PrivateKey.ToBytes();
+        _logger.LogInformation($"Node {_onChainWalletManager.WalletConfig.Mnemonic} SEED: {Convert.ToHexString(Seed)}");
         var services = ServiceProvider.GetServices<IScopedHostedService>();
 
         _logger.LogInformation("Starting LDKNode services");

@@ -81,7 +81,7 @@ public class OnChainWalletManager : BaseHostedService
 
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
     {
-        if (e is { Old: OnChainWalletState.NotConfigured or OnChainWalletState.WaitingForConnection } && IsHubConnected && !IsConfigured)
+        if (e is { New: OnChainWalletState.NotConfigured } && IsHubConnected && !IsConfigured)
         {
             await Generate();
         }
@@ -183,6 +183,10 @@ public class OnChainWalletManager : BaseHostedService
 
     private async Task ConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
     {
+        if (valueTuple.New is BTCPayConnectionState.ConnectedFinishedInitialSync)
+        {
+            WalletConfig = await _configProvider.Get<WalletConfig>(WalletConfig.Key);
+        }
         DetermineState();
     }
 
