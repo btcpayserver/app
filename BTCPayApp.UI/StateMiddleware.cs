@@ -79,8 +79,15 @@ public class StateMiddleware(
         accountManager.OnAfterStoreChange += async (sender, storeInfo) =>
         {
             dispatcher.Dispatch(new StoreState.SetStoreInfo(storeInfo));
-            navigationManager.NavigateTo(Routes.Dashboard);
-            await TryApplyingAppPaymentMethodsToCurrentStore(true, true);
+            if (storeInfo != null)
+            {
+                navigationManager.NavigateTo(Routes.Dashboard);
+                await TryApplyingAppPaymentMethodsToCurrentStore(true, true);
+            }
+            else
+            {
+                navigationManager.NavigateTo(Routes.SelectStore, true, true);
+            }
         };
 
         btcpayAppServerClient.OnNotifyServerEvent += async (sender, serverEvent) =>
@@ -89,7 +96,6 @@ public class StateMiddleware(
             var currentUserId = accountManager.GetUserInfo()?.UserId;
             if (string.IsNullOrEmpty(currentUserId)) return;
             var currentStoreId = accountManager.GetCurrentStore()?.Id;
-            string? eventStoreId = null;
             switch (serverEvent.Type)
             {
                 case "user-updated":
@@ -107,7 +113,8 @@ public class StateMiddleware(
                         dispatcher.Dispatch(new NotificationState.FetchNotifications());
                     break;
                 case "invoice-updated":
-                    if (serverEvent.StoreId != null && serverEvent.StoreId == currentStoreId) dispatcher.Dispatch(new StoreState.FetchInvoices(serverEvent.StoreId));
+                    if (serverEvent.StoreId != null && serverEvent.StoreId == currentStoreId)
+                        dispatcher.Dispatch(new StoreState.FetchInvoices(serverEvent.StoreId));
                     break;
                 case "store-created":
                 case "store-updated":
@@ -117,13 +124,10 @@ public class StateMiddleware(
                 case "user-store-removed":
                     if (serverEvent.StoreId != null)
                     {
-                        // TODO: Move manager actions to state and dispatch them
                         await accountManager.CheckAuthenticated(true);
-                        if (serverEvent.Type is "store-removed" or "user-store-removed" &&
-                            serverEvent.StoreId == currentStoreId)
+                        if (serverEvent.Type is "store-removed" or "user-store-removed" && serverEvent.StoreId == currentStoreId)
                         {
                             await accountManager.UnsetCurrentStore();
-                            navigationManager.NavigateTo(Routes.SelectStore, true, true);
                         }
                     }
                     break;
