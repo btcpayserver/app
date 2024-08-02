@@ -25,7 +25,11 @@ public class OnChainWalletManager : BaseHostedService
     private OnChainWalletState _state = OnChainWalletState.Init;
 
     public WalletConfig? WalletConfig { get; private set; }
+    public WalletDerivation? Derivation => WalletConfig?.Derivations.TryGetValue(WalletDerivation.NativeSegwit, out var derivation) is true ? derivation : null;
     public Network? Network => WalletConfig is null ? null : Network.GetNetwork(WalletConfig.Network);
+    public bool IsConfigured => !string.IsNullOrEmpty(Derivation?.Descriptor);
+    public bool CanConfigureWallet => IsHubConnected && !IsConfigured;
+    private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
 
     public OnChainWalletState State
     {
@@ -76,12 +80,9 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
-    private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
-    public bool IsConfigured => WalletConfig is not null;
-
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
     {
-        if (e is { New: OnChainWalletState.NotConfigured } && IsHubConnected && !IsConfigured)
+        if (e is { New: OnChainWalletState.NotConfigured } && CanConfigureWallet)
         {
             await Generate();
         }
@@ -157,7 +158,7 @@ public class OnChainWalletManager : BaseHostedService
             {
                 throw new InvalidOperationException("Cannot add deriv in current state");
             }
-            if (WalletConfig.Derivations.ContainsKey(key))
+            if (WalletConfig?.Derivations.ContainsKey(key) is true)
                 throw new InvalidOperationException("Derivation already exists");
 
             var result = await _btcPayConnectionManager.HubProxy.Pair(new PairRequest

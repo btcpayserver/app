@@ -154,20 +154,21 @@ public class StateMiddleware(
             // is user permitted? (store owner)
             !await accountManager.IsAuthorized(Policies.CanModifyStoreSettings, storeId) ||
             // is the onchain wallet configured?
-            onChainWalletManager.WalletConfig?.Derivations.TryGetValue(WalletDerivation.NativeSegwit, out var onchainDerivation) is not true || string.IsNullOrEmpty(onchainDerivation.Descriptor)) return null;
+            !onChainWalletManager.IsConfigured) return null;
         // check the store's payment methods
         var pms = await accountManager.GetClient().GetStorePaymentMethods(storeId, includeConfig: true);
         // onchain
         var onchain = pms.FirstOrDefault(pm => pm.PaymentMethodId == OnChainWalletManager.PaymentMethodId);
         if (applyOnchain)
         {
-            if (onchain is null)
+            var onchainDerivation = onChainWalletManager.Derivation;
+            if (onchain is null && onchainDerivation is not null)
                 onchain = await accountManager.GetClient().UpdateStorePaymentMethod(storeId, OnChainWalletManager.PaymentMethodId, new UpdatePaymentMethodRequest
                 {
                     Enabled = true,
                     Config = onchainDerivation.Descriptor
                 });
-            if (onchain?.Config is JObject configObj && configObj.TryGetValue("accountDerivation", out var derivationSchemeToken) && derivationSchemeToken.Value<string>() is {} derivationScheme&& onchainDerivation.Identifier.Contains(derivationScheme))
+            if (onchain?.Config is JObject configObj && configObj.TryGetValue("accountDerivation", out var derivationSchemeToken) && derivationSchemeToken.Value<string>() is {} derivationScheme&& onchainDerivation?.Identifier.Contains(derivationScheme) is true)
                 _dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeId));
         }
         // lightning
