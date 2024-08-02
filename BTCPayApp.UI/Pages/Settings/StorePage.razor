@@ -3,9 +3,9 @@
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Util
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
-@using Microsoft.AspNetCore.StaticFiles
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IDataDirectoryProvider DataDirectoryProvider
 @inject IAccountManager AccountManager
@@ -270,7 +270,7 @@
         if (!string.IsNullOrEmpty(Model!.LogoPath))
         {
             var path = Model.LogoPath;
-            var mimeType = GetContentType(path);
+            var mimeType = FileHelper.GetContentType(path);
             var upload = await AccountManager.GetClient().UploadStoreLogo(store.Id, path, mimeType);
             Model.LogoUrl = upload.LogoUrl;
             // cleanup
@@ -379,16 +379,6 @@
         Model!.LogoUrl = null;
         Model.LogoPath = null;
         _inputFileId = Guid.NewGuid();
-    }
-
-    private static string GetContentType(string filePath)
-    {
-        var mimeProvider = new FileExtensionContentTypeProvider();
-        if (!mimeProvider.TryGetContentType(filePath, out var contentType))
-        {
-            contentType = "application/octet-stream";
-        }
-        return contentType;
     }
 
     private class StoreModel

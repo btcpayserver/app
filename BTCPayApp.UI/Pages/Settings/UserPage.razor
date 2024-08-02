@@ -4,7 +4,7 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Components.Layout
-@using Microsoft.AspNetCore.StaticFiles
+@using BTCPayApp.UI.Util
 @inject IAccountManager AccountManager
 @inject IDataDirectoryProvider DataDirectoryProvider
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -173,7 +173,7 @@
         if (!string.IsNullOrEmpty(Account!.ImagePath))
         {
             var path = Account.ImagePath;
-            var mimeType = GetContentType(path);
+            var mimeType = FileHelper.GetContentType(path);
             var upload = await AccountManager.GetClient().UploadCurrentUserProfilePicture(path, mimeType);
             Account.ImageUrl = upload.ImageUrl;
             // cleanup
@@ -254,15 +254,6 @@
         _inputFileId = Guid.NewGuid();
     }
 
-    private static string GetContentType(string filePath)
-    {
-        var mimeProvider = new FileExtensionContentTypeProvider();
-        if (!mimeProvider.TryGetContentType(filePath, out var contentType))
-        {
-            contentType = "application/octet-stream";
-        }
-        return contentType;
-    }
 
     private class AccountModel
     {
