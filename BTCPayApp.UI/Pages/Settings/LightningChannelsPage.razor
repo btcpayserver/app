@@ -13,11 +13,11 @@
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
 
-<PageTitle>Channels and Peers</PageTitle>
+<PageTitle>Peers and Channels</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>Channels and Peers</h1>
+        <h1>Peers and Channels</h1>
     </Titlebar>
 </SectionContent>
 <section class="container">
@@ -35,78 +35,62 @@
             <p>There seems to be another instance of this lightning node running. This instance is inactive.</p>
         </div>
     }
-    else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error or LightningNodeState.Stopped)
+    else
     {
         <article>
+            <h4>Peers</h4>
             @if (_peers?.Any() is true || _config?.Peers.Any() is true)
             {
-                <table>
-                    <thead>
-                    <tr>
-                        <th>Node ID</th>
-                        <th>Socket</th>
-                        <th>X</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @{
-                        var rememberedButUnconnected = _config.Peers.Keys.Where(peer => _peers.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
-                    }
-                    @foreach (var peer in _peers)
-                    {
-                        var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
-
-                        <tr>
-                            <td>@peer.nodeId</td>
-                            <td>@peer.socket</td>
-                            <td>
-
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
+                var rememberedButUnconnected = _config.Peers.Keys.Where(peer => _peers.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
+                @foreach (var peer in _peers)
+                {
+                    var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
+                    <div class="box">
+                        <div class="form-floating">
+                            <TruncateCenter Text="@peer.nodeId" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                            <label>Node ID</label>
+                        </div>
+                        <div class="form-floating">
+                            <TruncateCenter Text="@peer.socket" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                            <label>Socket</label>
+                        </div>
+                        <div class="d-grid d-sm-flex flex-wrap gap-3 buttons mt-3">
+                                <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
                                 @if (peerRemembered)
                                 {
-                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
-                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Persistent})">
+                                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Persistent})">
                                         Constant conn = @peerConfig.Persistent Toggle
                                     </button>
-                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Trusted = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Trusted = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
                                 }
                                 else if (peer.socket is not null)
                                 {
-                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo() {Endpoint = peer.socket})">Remember peer</button>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo() {Endpoint = peer.socket})">Remember peer</button>
                                 }
-
-
-                            </td>
-                        </tr>
-                    }
-                    @foreach (var peer in rememberedButUnconnected)
-                    {
-                        var peerConfig = _config.Peers[peer];
-                        <tr>
-                            <td>@peer</td>
-                            <td>@peerConfig.Endpoint</td>
-                            <td>
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">
-                                    Constant conn = @peerConfig.Persistent Toggle
-                                </button>
-                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Trusted = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
-                            </td>
-                        </tr>
-                    }
-                    </tbody>
-                    <tfoot>
-                    <tr>
-                        <td colspan="3">
-                            <div class="input-group">
-                                <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
-                                <button class="btn btn-primary" type="button" @onclick="ConnectToNewPeer">Connect</button>
                             </div>
+                    </div>
+                }
+                @foreach (var peer in rememberedButUnconnected)
+                {
+                    var peerConfig = _config.Peers[peer];
+                    <div class="box">
+                        <td>@peer</td>
+                        <td>@peerConfig.Endpoint</td>
+                        <td>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">
+                                Constant conn = @peerConfig.Persistent Toggle
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Trusted = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
                         </td>
-                    </tr>
-                    </tfoot>
-                </table>
+                    </div>
+                }
+                <div class="input-group mt-4">
+                    <input @bind="NewPeer" type="text" placeholder="Connect to peer" class="form-control"/>
+                    <button class="btn btn-primary" type="button" @onclick="ConnectToNewPeer">Connect</button>
+                </div>
             }
             else
             {
@@ -119,7 +103,7 @@
             }
         </article>
         <article class="mt-4">
-            <h3>Channels</h3>
+            <h4>Channels</h4>
             @if (_channels?.Any() is true)
             {
                 <div class="table-responsive">
