@@ -1,5 +1,4 @@
 ﻿@attribute [Route(Routes.Invoice)]
-@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
@@ -8,7 +7,6 @@
 @using BTCPayServer.Services
 @using Newtonsoft.Json.Linq
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@inject IAccountManager AccountManager
 @inject IDispatcher Dispatcher
 @inject IState<StoreState> StoreState
 @inject DisplayFormatter DisplayFormatter
@@ -316,7 +314,7 @@
         }
     }
 
-    private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
+    private StoreData? Store => StoreState.Value.Store?.Data;
     private InvoiceData? Invoice => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoice(InvoiceId!)?.Data : null;
     private bool Loading => !string.IsNullOrEmpty(InvoiceId) && StoreState.Value.GetInvoice(InvoiceId!)?.Loading is true;
     private string? Error => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoice(InvoiceId!)?.Error : null;

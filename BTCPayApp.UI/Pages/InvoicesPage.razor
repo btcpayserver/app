@@ -1,10 +1,7 @@
 ﻿@attribute [Route(Routes.Invoices)]
-@using BTCPayApp.CommonServer.Models
-@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@inject IAccountManager AccountManager
 @inject IState<StoreState> StoreState
 
 <PageTitle>Invoices</PageTitle>
@@ -31,7 +28,7 @@
 </section>
 
 @code {
-    private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
+    private StoreData? Store => StoreState.Value.Store?.Data;
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data;
     private bool Loading => StoreState.Value.Invoices?.Loading is true;
     private string? Error => StoreState.Value.Invoices?.Error;
