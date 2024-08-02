@@ -5,7 +5,6 @@ using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.AspNetRip;
 using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
-using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using AccessTokenResponse = BTCPayApp.Core.AspNetRip.AccessTokenResponse;
