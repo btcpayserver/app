@@ -17,7 +17,13 @@
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>Lightning Node</h1>
+        <h1>
+            @if (!string.IsNullOrEmpty(Node?.Network.Name))
+            {
+                @Node.Network.Name
+            }
+            Lightning Node
+        </h1>
     </Titlebar>
 </SectionContent>
 <section class="container">
@@ -35,27 +41,34 @@
             <p>There seems to be another instance of this lightning node running. This instance is inactive.</p>
         </div>
     }
+    @if (!string.IsNullOrEmpty(_errorMessage))
+    {
+        <Alert Type="danger" Dismissible>@_errorMessage</Alert>
+    }
+    else if (!string.IsNullOrEmpty(_successMessage))
+    {
+        <Alert Type="success" Dismissible>@_successMessage</Alert>
+    }
     @if (LightningNodeManager.CanConfigureLightningNode)
     {
         <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
     }
-    else if (State.Value.LightningNodeState is LightningNodeState.Loaded or LightningNodeState.Init or LightningNodeState.Error or LightningNodeState.Stopped)
+    else
     {
+        <h4 class="d-flex flex-wrap align-items-center gap-2">
+            <span>@(_config?.Alias ?? "Lightning Node")</span>
+            @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier) && _storePaymentMethodIdentifier == ConnectionString)
+            {
+                <span class="badge bg-info">
+                    Current lightning payment method for store
+                </span>
+            }
+        </h4>
         @if (Node is not null)
         {
             <div class="form-floating">
                 <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                 <label>Node ID</label>
-            </div>
-              <div class="form-floating">
-                <select class="form-select" @onchange="OnSelectLSP" value="@_config.JITLSP" >
-                    <option value="">None</option>
-                    @foreach (var jit in JITOptions)
-                    {
-                        <option value="@jit">@jit</option>
-                    }
-                </select>
-                <label>JIT LSP</label>
             </div>
         }
 
@@ -73,11 +86,27 @@
                 <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                 <label>Connection String</label>
             </div>
-            @if (ConfiguredConnectionString != ConnectionString)
+
+            @if (!string.IsNullOrEmpty(StoreId) && _storePaymentMethodIdentifier != ConnectionString)
             {
-                <button class="btn btn-primary" @onclick="SetStoreLNWallet">Set as Store Payment Method</button>
+                <button class="btn btn-primary my-3" @onclick="SetStorePaymentMethod">Set as lightning payment method for store</button>
             }
         }
+
+        @if (Node is not null && JITOptions?.Any() is true)
+        {
+            <div class="form-group mt-4">
+                <label for="JITLSP" class="form-label">JIT LSP</label>
+                <select class="form-select" @onchange="OnSelectLSP" value="@_config?.JITLSP" id="JITLSP">
+                    <option value="">None</option>
+                    @foreach (var jit in JITOptions)
+                    {
+                        <option value="@jit">@jit</option>
+                    }
+                </select>
+            </div>
+        }
+
         <div class="d-grid d-sm-flex flex-wrap gap-3 buttons my-4">
             @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
             {
@@ -87,7 +116,10 @@
             {
                 <button class="btn btn-outline-warning" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
             }
-            <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
+            @if (Node is not null && State.Value.LightningNodeState is not LightningNodeState.NotConfigured)
+            {
+                <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
+            }
         </div>
     }
 </section>
@@ -95,10 +127,15 @@
 @code {
     private LightningConfig? _config;
     private LDKNode? Node => LightningNodeManager.Node;
+    private string? StoreId => AccountManager.GetCurrentStore()?.Id;
+    private string PaymentMethodId => LightningNodeManager.PaymentMethodId;
+    private string? _errorMessage;
+    private string? _successMessage;
+    private string? _storePaymentMethodIdentifier;
 
-    private string? ConfiguredConnectionString;
-    private string ConnectionString => LightningNodeManager.ConnectionString;
+    private string? ConnectionString => LightningNodeManager.ConnectionString;
     private string[] JITOptions;
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -108,39 +145,32 @@
             _config = await LightningNodeManager.Node.GetConfig();
             JITOptions = await LightningNodeManager.Node.GetJITLSPs();
         }
-        var acc = AccountManager.GetAccount();
-        if (acc?.CurrentStoreId != null)
-        {
-            try
-            {
-                var pm = await AccountManager.GetClient().GetStorePaymentMethod(acc.CurrentStoreId, "BTC-LN", true);
-                if(
 
-                    pm?.Config is JObject configObj &&
-                    configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) &&
-                    configuredConnectionStringToken.Value<string>() is {} configuredConnectionString)
-                {
-                    ConfiguredConnectionString = configuredConnectionString;
-                }
-                else
-                {
-                    ConfiguredConnectionString = null;
-                }
-            }
-            catch (Exception e)
-            {
-                ConfiguredConnectionString = null;
-            }
+        if (!string.IsNullOrEmpty(StoreId))
+            await GetStorePaymentMethod();
+    }
+
+    private async Task GetStorePaymentMethod()
+    {
+        if (string.IsNullOrEmpty(StoreId)) return;
+        try
+        {
+            var pm = await AccountManager.GetClient().GetStorePaymentMethod(StoreId, PaymentMethodId, true);
+            _storePaymentMethodIdentifier = GetConnectionString(pm);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Payment method {PaymentMethodId} unset for store {StoreId}", PaymentMethodId, StoreId);
         }
     }
 
-    private async Task SetStoreLNWallet()
+    private async Task SetStorePaymentMethod()
     {
-
-        var acc = AccountManager.GetAccount();
-        if (acc?.CurrentStoreId != null)
+        if (string.IsNullOrEmpty(StoreId) || string.IsNullOrEmpty(LightningNodeManager.ConnectionString)) return;
+        _successMessage = _errorMessage = null;
+        try
         {
-            var pm = await  AccountManager.GetClient().UpdateStorePaymentMethod(acc.CurrentStoreId, "BTC-LN", new UpdatePaymentMethodRequest
+            var pm = await AccountManager.GetClient().UpdateStorePaymentMethod(StoreId, PaymentMethodId, new UpdatePaymentMethodRequest
             {
                 Enabled = true,
                 Config = new JObject
@@ -148,13 +178,16 @@
                     ["connectionString"] = ConnectionString
                 }
             });
-            if (pm?.Config is JObject configObj &&
-                configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) &&
-                configuredConnectionStringToken.Value<string>() is {} configuredConnectionString)
-            {
-                ConfiguredConnectionString = configuredConnectionString;
-            }
+            _storePaymentMethodIdentifier = GetConnectionString(pm);
+            _successMessage = "Store payment method set.";
         }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error setting store payment method: {ex.Message}";
+            Logger.LogError(ex, "Error setting payment method {PaymentMethodId} for store {StoreId}", PaymentMethodId, StoreId);
+        }
+
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ConfigureLNWallet()
@@ -165,6 +198,7 @@
         }
         catch (Exception ex)
         {
+            _errorMessage = "Error configuring LN wallet";
             Logger.LogError(ex, "Error configuring LN wallet");
         }
     }
@@ -174,6 +208,15 @@
         _config = await LightningNodeManager.Node.GetConfig();
         _config.JITLSP = obj.Value?.ToString();
         await LightningNodeManager.Node.UpdateConfig(_config);
+    }
+
+    private string? GetConnectionString(GenericPaymentMethodData? pm)
+    {
+        return pm?.Config is JObject configObj &&
+               configObj.TryGetValue("connectionString", out var connectionStringToken) &&
+               connectionStringToken.Value<string>() is {} connectionString
+            ? connectionString
+            : null;
     }
 
 }

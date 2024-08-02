@@ -1,7 +1,6 @@
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
-using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
