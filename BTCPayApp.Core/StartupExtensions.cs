@@ -22,7 +22,9 @@ public static class StartupExtensions
             var dir = provider.GetRequiredService<IDataDirectoryProvider>().GetAppDataDirectory().ConfigureAwait(false).GetAwaiter().GetResult();
             options.UseSqlite($"Data Source={dir}/app.db");
             options.UseSqlLiteTriggers();
-        });
+        }); 
+        
+        serviceCollection.AddMemoryCache();
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddHttpClient();
         serviceCollection.AddSingleton<BTCPayConnectionManager>();

@@ -165,3 +165,4 @@ public class BTCPayAppClient(string baseUri) : BTCPayServerClient(new Uri(baseUr
         await SendHttpRequest<EmptyResult>(path, payload, HttpMethod.Post, cancellation);
     }
 }
+public class EmptyResult { }
