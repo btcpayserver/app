@@ -25,6 +25,7 @@ public class StateMiddleware(
     : Middleware
 {
     public const string UiStateConfigKey = "uistate";
+    private CancellationTokenSource? _ratesCts;
 
     public override async Task InitializeAsync(IDispatcher dispatcher, IStore store)
     {
@@ -45,6 +46,16 @@ public class StateMiddleware(
         }
 
         await base.InitializeAsync(dispatcher, store);
+    }
+
+    private async Task RefreshRates(IDispatcher dispatcher, CancellationToken token)
+    {
+        while (token.IsCancellationRequested is false)
+        {
+            var storeInfo = accountManager.GetCurrentStore();
+            if (storeInfo != null) dispatcher.Dispatch(new StoreState.FetchRates(storeInfo));
+            await Task.Delay(TimeSpan.FromMinutes(5), token);
+        }
     }
 
     private void ListenIn(IDispatcher dispatcher)
@@ -69,7 +80,6 @@ public class StateMiddleware(
         lightningNodeService.StateChanged += async (sender, args) =>
         {
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
-
             if (lightningNodeService.State == LightningNodeState.Loaded)
             {
                 await TryApplyingAppPaymentMethodsToCurrentStore(false, true);
@@ -109,8 +119,6 @@ public class StateMiddleware(
                 case "notifications-updated":
                     if (currentStoreId != null)
                         dispatcher.Dispatch(new StoreState.FetchNotifications(currentStoreId));
-                    else
-                        dispatcher.Dispatch(new NotificationState.FetchNotifications());
                     break;
                 case "invoice-updated":
                     if (serverEvent.StoreId != null && serverEvent.StoreId == currentStoreId)
@@ -133,6 +141,9 @@ public class StateMiddleware(
                     break;
             }
         };
+
+        _ratesCts = new CancellationTokenSource();
+        _ = RefreshRates(dispatcher, _ratesCts.Token);
     }
 
     private async Task<(GenericPaymentMethodData? onchain, GenericPaymentMethodData? lightning)?> TryApplyingAppPaymentMethodsToCurrentStore(bool applyOnchain, bool applyLighting)
@@ -146,8 +157,8 @@ public class StateMiddleware(
             onChainWalletManager.WalletConfig?.Derivations.TryGetValue(WalletDerivation.NativeSegwit, out var onchainDerivation) is not true || string.IsNullOrEmpty(onchainDerivation.Descriptor)) return null;
         // check the store's payment methods
         var pms = await accountManager.GetClient().GetStorePaymentMethods(storeId, includeConfig: true);
+        // onchain
         var onchain = pms.FirstOrDefault(pm => pm.PaymentMethodId == OnChainWalletManager.PaymentMethodId);
-
         if (applyOnchain)
         {
             if (onchain is null)
@@ -159,6 +170,7 @@ public class StateMiddleware(
             if (onchain?.Config is JObject configObj && configObj.TryGetValue("accountDerivation", out var derivationSchemeToken) && derivationSchemeToken.Value<string>() is {} derivationScheme&& onchainDerivation.Identifier.Contains(derivationScheme))
                 _dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeId));
         }
+        // lightning
         var lightning = pms.FirstOrDefault(pm => pm.PaymentMethodId == LightningNodeManager.PaymentMethodId);
         if (applyLighting)
         {
