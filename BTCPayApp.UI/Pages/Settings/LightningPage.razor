@@ -115,9 +115,6 @@
             else if (State.Value.LightningNodeState is LightningNodeState.Loaded)
             {
                 <button class="btn btn-outline-warning" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
-            }
-            @if (Node is not null && State.Value.LightningNodeState is not LightningNodeState.NotConfigured)
-            {
                 <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
             }
         </div>
