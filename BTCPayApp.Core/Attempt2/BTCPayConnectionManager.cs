@@ -166,14 +166,13 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                     catch (Exception ex)
                     {
                         await Task.Delay(500);
-                        _logger.LogError(ex, "Error while connecting to hub");
                         ConnectionState = BTCPayConnectionState.WaitingForAuth;
+                        if (ex is not TaskCanceledException)
+                            _logger.LogError(ex, "Error while connecting to hub");
                     }
                 }
-
                 break;
             case BTCPayConnectionState.Syncing:
-                
                 await _syncService.StopSync();
                 if (await _syncService.EncryptionKeyRequiresImport())
                 {
@@ -182,7 +181,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                 }
                 else
                 {
-                    
+
                     await _syncService.SyncToLocal();
                     ConnectionState = BTCPayConnectionState.ConnectedFinishedInitialSync;
                 }
@@ -190,8 +189,9 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
             case BTCPayConnectionState.ConnectedFinishedInitialSync:
                 var deviceIdentifier = await GetDeviceIdentifier();
                 var master = await HubProxy.DeviceMasterSignal(deviceIdentifier, true);
-                ConnectionState =
-                    master ? BTCPayConnectionState.ConnectedAsMaster : BTCPayConnectionState.ConnectedAsSlave;
+                ConnectionState = master
+                    ? BTCPayConnectionState.ConnectedAsMaster
+                    : BTCPayConnectionState.ConnectedAsSlave;
                 break;
             case BTCPayConnectionState.ConnectedAsMaster:
                 await _syncService.StartSync(false, await GetDeviceIdentifier());
@@ -204,7 +204,6 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                 break;
         }
     }
-
 
     private async Task OnServerNodeInfo(object? sender, string e)
     {
@@ -262,7 +261,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         await Kill();
         _authStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
         _btcPayAppServerClient.OnNotifyNetwork -= OnNotifyNetwork;
-        
+
         _syncService.EncryptionKeyChanged -= EncryptionKeyChanged;
         ConnectionChanged -= OnConnectionChanged;
     }
