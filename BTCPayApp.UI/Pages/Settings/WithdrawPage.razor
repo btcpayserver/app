@@ -126,7 +126,7 @@
 
     private async void ReceivePayment()
     {
-        if (paymentRequestSend is null) return;
+        if (paymentRequestAmt is null) return;
         await Wrap(async () =>
         {
             try
