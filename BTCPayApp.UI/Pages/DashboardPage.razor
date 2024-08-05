@@ -28,17 +28,7 @@
     }
     <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
         <div class="d-flex flex-column gap-4 wallet">
-            @if (!string.IsNullOrEmpty(BalanceError))
-            {
-                <Alert Type="danger">@BalanceError</Alert>
-            }
-            else if (TotalBalance == null)
-            {
-                <div class="p-3 text-center">
-                    <LoadingIndicator/>
-                </div>
-            }
-            else
+            @if (TotalBalance != null)
             {
                 <div class="amount text-center">
                     <div class="sats fw-bold fs-1">@DisplayFormatter.Currency(TotalBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol)</div>
@@ -46,6 +36,12 @@
                     {
                         <div class="fiat fw-semibold text-muted">@DisplayFormatter.Currency(CurrencyValue.Value, Currency, DisplayFormatter.CurrencyFormat.Symbol)</div>
                     }
+                </div>
+            }
+            else if (!string.IsNullOrEmpty(BalanceError))
+            {
+                <div class="p-3 text-center">
+                    <LoadingIndicator/>
                 </div>
             }
         </div>
