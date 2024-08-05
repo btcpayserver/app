@@ -10,7 +10,6 @@ namespace BTCPayApp.Maui;
 public class AndroidHostedServiceForegreoundService : Service
 {
     private static Func<Activity> _activityResolver;
-    private IEnumerable<IHostedService> _hostedServices;
 
     public static Activity CurrentActivity => GetCurrentActivity();
         
@@ -41,18 +40,21 @@ public class AndroidHostedServiceForegreoundService : Service
     [return: GeneratedEnum]//we catch the actions intents to know the state of the foreground service
     public override StartCommandResult OnStartCommand(Intent intent, [GeneratedEnum] StartCommandFlags flags, int startId)
     {
+        var services = IPlatformApplication.Current.Services.GetServices<IHostedService>();
+        Task task = Task.CompletedTask;
         if (intent.Action == "START_SERVICE")
         {
             RegisterNotification();//Proceed to notify
-            Task.WhenAll(_hostedServices.Select(service => service.StartAsync(CancellationToken.None))).GetAwaiter().GetResult();
+            task = Task.WhenAll(services.ToList().Select(service => service.StartAsync(CancellationToken.None)));
         }
         else if (intent.Action == "STOP_SERVICE")
         {
             StopForeground(StopForegroundFlags.Detach);//Stop the service
             StopSelfResult(startId);
-            
-            Task.WhenAll(_hostedServices.ToList().Select(service => service.StopAsync(CancellationToken.None))).GetAwaiter().GetResult();
+            task = Task.WhenAll(services.ToList().Select(service => service.StopAsync(CancellationToken.None)));
         }
+        
+        task.GetAwaiter().GetResult();
       
         return StartCommandResult.NotSticky;
     }
@@ -60,9 +62,8 @@ public class AndroidHostedServiceForegreoundService : Service
     
     //Start and Stop Intents, set the actions for the MainActivity to get the state of the foreground service
     //Setting one action to start and one action to stop the foreground service
-    public void Start(IEnumerable<IHostedService> services)
+    public void Start()
     {
-        _hostedServices = services;
         Intent startService = new Intent(GetCurrentActivity(), typeof(AndroidHostedServiceForegreoundService));
         startService.SetAction("START_SERVICE");
         GetCurrentActivity().StartService(startService);

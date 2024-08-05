@@ -42,7 +42,7 @@ public static class MauiProgram
                 {
                     LogEvent(nameof(AndroidLifecycle.OnCreate));
                     AndroidHostedServiceForegreoundService.SetCurrentActivityResolver(() => activity);
-                    IPlatformApplication.Current!.Services.GetRequiredService<AndroidHostedServiceForegreoundService>().Start(IPlatformApplication.Current!.Services.GetServices<IHostedService>());
+                    IPlatformApplication.Current!.Services.GetRequiredService<AndroidHostedServiceForegreoundService>().Start();
                 })
                 .OnStop((activity) =>
                 {
