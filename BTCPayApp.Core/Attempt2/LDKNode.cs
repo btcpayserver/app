@@ -144,6 +144,9 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     private TaskCompletionSource? _started;
     private readonly SemaphoreSlim _semaphore = new(1);
 
+    
+    public IServiceProvider GetServiceProvider() => ServiceProvider;
+    
     public Network Network => ServiceProvider.GetRequiredService<Network>();
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -352,8 +355,9 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         }
     }
 
-    public async Task UpdateChannel(List<ChannelAlias> identifiers, byte[] write)
+    public async Task UpdateChannel(List<ChannelAlias> identifiers, byte[] write, long checkpoint)
     {
+        //TODO: convert to upsert and ensure aliases are saved with upsert too
         var ids = identifiers.Select(alias => alias.Id).ToArray();
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var channel = (await context.ChannelAliases.Include(alias => alias.Channel)
@@ -370,6 +374,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             }
 
             channel.Data = write;
+            channel.Checkpoint = checkpoint;
         }
         else
         {
@@ -377,7 +382,9 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             {
                 Id = identifiers.First().ChannelId,
                 Data = write,
-                Aliases = identifiers.ToList()
+                Aliases = identifiers.ToList(),
+                Checkpoint = checkpoint
+                
             });
         }
         await context.SaveChangesAsync();

@@ -352,11 +352,11 @@
     private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
     private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
     private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
-    private decimal? LightningOnchainConfirmedBalance => LightningBalance?.OnchainBalance.Confirmed.ToDecimal(MoneyUnit.Satoshi);
-    private decimal? LightningOnchainUnconfirmedBalance => LightningBalance?.OnchainBalance.Unconfirmed.ToDecimal(MoneyUnit.Satoshi);
-    private decimal? LightningOnchainReservedBalance => LightningBalance?.OnchainBalance.Reserved.ToDecimal(MoneyUnit.Satoshi);
-    private decimal? LightningOffchainOpeningBalance => LightningBalance?.OffchainBalance.Opening.ToDecimal(LightMoneyUnit.Satoshi);
+    private decimal? LightningOnchainConfirmedBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(MoneyUnit.Satoshi);
+    private decimal? LightningOnchainUnconfirmedBalance => LightningBalance?.OnchainBalance?.Unconfirmed.ToDecimal(MoneyUnit.Satoshi);
+    private decimal? LightningOnchainReservedBalance => LightningBalance?.OnchainBalance?.Reserved.ToDecimal(MoneyUnit.Satoshi);
+    private decimal? LightningOffchainOpeningBalance => LightningBalance?.OffchainBalance.Opening?.ToDecimal(LightMoneyUnit.Satoshi);
     private decimal? LightningOffchainLocalBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(LightMoneyUnit.Satoshi);
     private decimal? LightningOffchainRemoteBalance => LightningBalance?.OffchainBalance.Remote.ToDecimal(LightMoneyUnit.Satoshi);
-    private decimal? LightningOffchainClosingBalance => LightningBalance?.OffchainBalance.Closing.ToDecimal(LightMoneyUnit.Satoshi);
+    private decimal? LightningOffchainClosingBalance => LightningBalance?.OffchainBalance.Opening?.ToDecimal(LightMoneyUnit.Satoshi);
 }

@@ -86,7 +86,7 @@
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
     private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
     private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
-    private decimal? LightningOnchainBalance => LightningBalance?.OnchainBalance.Confirmed.ToDecimal(MoneyUnit.Satoshi);
+    private decimal? LightningOnchainBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(MoneyUnit.Satoshi);
     private decimal? LightningOffchainBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(LightMoneyUnit.Satoshi);
     private decimal? TotalBalance => OnchainBalance == null && LightningBalance == null
         ? null

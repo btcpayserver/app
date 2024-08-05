@@ -2,10 +2,12 @@
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 using Plugin.Fingerprint;
 using Plugin.Fingerprint.Abstractions;
+using Shiny;
 
 namespace BTCPayApp.Maui;
 
@@ -17,6 +19,7 @@ public static class MauiProgram
         builder.UseMauiApp<App>()
             .ConfigureFonts(fonts => { fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular"); });
 
+        builder.UseShiny();
         builder.Services.AddMauiBlazorWebView();
         builder.Services.ConfigureBTCPayAppCore();
         builder.Services.AddBTCPayAppUIServices();
@@ -37,6 +40,9 @@ public static class MauiProgram
                 .OnStart((activity) => LogEvent(nameof(AndroidLifecycle.OnStart)))
                 .OnCreate((activity, bundle) => LogEvent(nameof(AndroidLifecycle.OnCreate)))
                 .OnStop((activity) => LogEvent(nameof(AndroidLifecycle.OnStop))));
+            
+            builder.Services.AddSingleton<AndroidHostedServiceForegreoundService>();
+
 #endif
 #if IOS
                 events.AddiOS(ios => ios
@@ -53,5 +59,19 @@ public static class MauiProgram
             }
         });
         return builder.Build();
+    }
+}
+
+public class StartupService:Shiny.IShinyStartupTask
+{
+    private readonly IEnumerable<IHostedService> _hostedServices;
+
+    public StartupService(IEnumerable<IHostedService> hostedServices)
+    {
+        _hostedServices = hostedServices;
+    }
+    public void Start()
+    {
+       Task.WhenAll(_hostedServices.Select(hs => hs.StartAsync(CancellationToken.None))).GetAwaiter().GetResult();
     }
 }

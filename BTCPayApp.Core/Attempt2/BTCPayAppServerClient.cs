@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Crypto;
+using org.ldk.structs;
 
 namespace BTCPayApp.Core.Attempt2;
 
@@ -120,5 +121,41 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
     {
         _logger.LogInformation("MasterUpdated: {deviceIdentifier}", deviceIdentifier);
         OnMasterUpdated?.Invoke(this, deviceIdentifier);
+    }
+
+    public async Task<LightningNodeInformation> GetLightningNodeInfo()
+    {
+        var node = _serviceProvider.GetRequiredService<LightningNodeManager>().Node;
+        var bb = await _serviceProvider.GetRequiredService<OnChainWalletManager>().GetBestBlock();
+        var config = await node.GetConfig();
+        var peers = await node.GetPeers();
+        var channels = await node.GetChannels();
+        return new LightningNodeInformation()
+        {
+            Alias = config.Alias,
+            Color = config.Color,
+            Version = "preprepreprealpha",
+            BlockHeight = bb.BlockHeight,
+            PeersCount = peers.Length,
+            ActiveChannelsCount = channels.Count(channel => channel.get_is_usable()),
+            InactiveChannelsCount =
+                channels.Count(channel => !channel.get_is_usable() && channel.get_is_channel_ready()),
+            PendingChannelsCount =
+                channels.Count(channel => !channel.get_is_usable() && !channel.get_is_channel_ready())
+        };
+    }
+
+    public async Task<LightningNodeBalance> GetLightningBalance()
+    {
+        var channels = await  _serviceProvider.GetRequiredService<LightningNodeManager>().Node.GetChannels();
+        return new LightningNodeBalance()
+        {
+            OffchainBalance = new OffchainBalance()
+            {
+                Local = LightMoney.MilliSatoshis( channels.Sum(channel => channel.get_balance_msat())),
+                Remote = LightMoney.MilliSatoshis( channels.Sum(channel => channel.get_inbound_capacity_msat())),
+                
+            }
+        };
     }
 }
