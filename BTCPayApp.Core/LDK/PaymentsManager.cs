@@ -174,11 +174,9 @@ public class PaymentsManager :
 
         //check if we have a db record with same pay hash but has the preimage set
 
-var payHash = new uint256(invoice.payment_hash());
-var paySecret = new uint256(invoice.payment_secret());
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var inbound = await context.LightningPayments.FirstOrDefaultAsync(lightningPayment =>
-            lightningPayment.PaymentHash == payHash && lightningPayment.Inbound);
+            lightningPayment.PaymentHash == paymentRequest.PaymentHash && lightningPayment.Inbound);
 
         if (inbound is not null)
         {
@@ -186,8 +184,8 @@ var paySecret = new uint256(invoice.payment_secret());
             {
                 Inbound = false,
                 Value = amt,
-                PaymentHash = payHash,
-                Secret = paySecret,
+                PaymentHash = paymentRequest.PaymentHash,
+                Secret = paymentRequest.PaymentSecret,
                 Status = LightningPaymentStatus.Complete,
                 Timestamp = DateTimeOffset.UtcNow,
                 PaymentId = Convert.ToHexString(id).ToLower(),
@@ -214,8 +212,8 @@ var paySecret = new uint256(invoice.payment_secret());
         {
             Inbound = false,
             Value = amt,
-            PaymentHash = payHash,
-            Secret = paySecret,
+            PaymentHash = paymentRequest.PaymentHash,
+            Secret = paymentRequest.PaymentSecret,
             Status = LightningPaymentStatus.Pending,
             Timestamp = DateTimeOffset.UtcNow,
             PaymentId = Convert.ToHexString(id).ToLower(),
