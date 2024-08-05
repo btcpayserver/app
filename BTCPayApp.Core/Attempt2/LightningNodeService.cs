@@ -18,6 +18,7 @@ public class LightningNodeManager : BaseHostedService
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
+    
     private IServiceScope? _nodeScope;
     public LDKNode? Node => _nodeScope?.ServiceProvider.GetService<LDKNode>();
     private LightningNodeState _state = LightningNodeState.Init;

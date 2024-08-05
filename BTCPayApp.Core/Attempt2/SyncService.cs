@@ -22,7 +22,9 @@ public class SyncService : IDisposable
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ISecureConfigProvider _secureConfigProvider;
-    public AsyncEventHandler? EncryptionKeyChanged;
+    public AsyncEventHandler? EncryptionKeyChanged;    
+    public AsyncEventHandler<PutObjectRequest>? RemoteObjectUpdated;
+    private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
 
     public SyncService(
         ILogger<SyncService> logger,
@@ -266,6 +268,8 @@ public class SyncService : IDisposable
         }
     }
 
+    
+    
     private async Task<KeyValue?> GetValue(AppDbContext dbContext, Outbox outbox)
     {
         switch (outbox.Entity)
@@ -359,10 +363,12 @@ public class SyncService : IDisposable
         _logger.LogInformation(
             $"Synced to remote {putObjectRequest.TransactionItems.Count} items and deleted {putObjectRequest.DeleteItems.Count} items" +
             string.Join(", ", putObjectRequest.TransactionItems.Select(kv => kv.Key + " " + kv.Version)));
+        RemoteObjectUpdated?.Invoke(this, new PutObjectRequest()
+        {
+            TransactionItems = {putObjectRequest.TransactionItems},
+            DeleteItems = {putObjectRequest.DeleteItems}
+        });
     }
-
-    private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
-
     public async Task StartSync(bool local, long deviceIdentifier, CancellationToken cancellationToken = default)
     {
         if (_syncTask.HasValue && _syncTask.Value.local == local)
@@ -383,6 +389,7 @@ public class SyncService : IDisposable
             await _syncTask.Value.cts.CancelAsync();
             _syncTask = null;
         }
+        
     }
 
     private async Task ContinuouslySync(long deviceIdentifier, bool local,
@@ -407,6 +414,7 @@ public class SyncService : IDisposable
 
     public void Dispose()
     {
+        RemoteObjectUpdated = null;
         EncryptionKeyChanged = null;
     }
 }
