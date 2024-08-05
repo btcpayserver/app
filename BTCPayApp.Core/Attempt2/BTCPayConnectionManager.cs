@@ -134,6 +134,9 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                         {
                             NBitcoin.JsonConverters.Serializer.RegisterFrontConverters(
                                 options.PayloadSerializerSettings);
+                            options.PayloadSerializerSettings.Converters.Add(new BTCPayServer.Lightning.JsonConverters.LightMoneyJsonConverter());
+                            
+                            
                         })
                         .WithUrl(new Uri(new Uri(account.BaseUri), "hub/btcpayapp").ToString(),
                             options =>

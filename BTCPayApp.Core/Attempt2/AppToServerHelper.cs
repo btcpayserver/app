@@ -14,9 +14,11 @@ public static class AppToServerHelper
             Amount = lightningPayment.Value,
             PaymentHash = lightningPayment.PaymentHash.ToString(),
             Preimage = lightningPayment.Preimage,
+            ExpiresAt = lightningPayment.AdditionalData[PaymentsManager.LightningPaymentExpiryKey].GetDateTimeOffset(),
             PaidAt = lightningPayment.Status == LightningPaymentStatus.Complete? DateTimeOffset.UtcNow: null, //TODO: store these in ln payment
             BOLT11 = lightningPayment.PaymentRequest.ToString(),
-            Status = lightningPayment.Status == LightningPaymentStatus.Complete? LightningInvoiceStatus.Paid: lightningPayment.PaymentRequest.ExpiryDate < DateTimeOffset.UtcNow? LightningInvoiceStatus.Expired: LightningInvoiceStatus.Unpaid
+            Status = lightningPayment.Status == LightningPaymentStatus.Complete? LightningInvoiceStatus.Paid: lightningPayment.PaymentRequest.ExpiryDate < DateTimeOffset.UtcNow? LightningInvoiceStatus.Expired: LightningInvoiceStatus.Unpaid,
+            AmountReceived = lightningPayment.Status == LightningPaymentStatus.Complete? lightningPayment.Value: null
         };
     }
 
@@ -29,7 +31,10 @@ public static class AppToServerHelper
             PaymentHash = lightningPayment.PaymentHash.ToString(),
             Preimage = lightningPayment.Preimage,
             BOLT11 = lightningPayment.PaymentRequest.ToString(),
-            Status = lightningPayment.Status
+            Status = lightningPayment.Status,
+            Fee = lightningPayment.AdditionalData.TryGetValue("feePaid", out var feePaid) ? LightMoney.MilliSatoshis((long)feePaid.GetInt64()) : null,
+            CreatedAt = lightningPayment.Timestamp
+            
         };
     }
     
