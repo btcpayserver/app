@@ -86,7 +86,7 @@ public class PaymentsManager :
          
          generateInvoice:
          JITFeeResponse? jitFeeReponse = null;
-         if (lsp is not null)
+         if (lsp?.Active is true)
          {
              jitFeeReponse = await lsp.CalculateInvoiceAmount(amount);
              if (jitFeeReponse is not null)
@@ -99,6 +99,9 @@ public class PaymentsManager :
              {
                  lsp = null;
              }
+         }else
+         {
+             lsp = null;
          }
          
          var result = await  Task.Run(() =>

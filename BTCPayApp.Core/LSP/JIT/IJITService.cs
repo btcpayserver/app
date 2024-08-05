@@ -10,6 +10,8 @@ public interface IJITService
     public string ProviderName { get; }
     public Task<JITFeeResponse?> CalculateInvoiceAmount(LightMoney expectedAmount);
     public Task<bool> WrapInvoice(AppLightningPayment lightningPayment, JITFeeResponse? feeReponse);
+
+    public bool Active { get; }
 }
 
 public record JITFeeResponse

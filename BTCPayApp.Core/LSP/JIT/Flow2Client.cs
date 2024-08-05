@@ -25,6 +25,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     private readonly LDKNode _node;
     private readonly ChannelManager _channelManager;
     private readonly ILogger<VoltageFlow2Jit> _logger;
+    
 
     public virtual Uri? BaseAddress(Network network)
     {
@@ -42,6 +43,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     {
         var httpClientInstance = httpClientFactory.CreateClient("VoltageFlow2JIT");
         httpClientInstance.BaseAddress = BaseAddress(network);
+        Active = httpClientInstance.BaseAddress is not null;
 
         _httpClient = httpClientInstance;
         _network = network;
@@ -134,6 +136,8 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         return true;
     }
 
+    public bool Active { get; }
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _node.ConfigUpdated += ConfigUpdated;
@@ -141,6 +145,11 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     }
 
     private FlowInfoResponse? _info;
+
+    public VoltageFlow2Jit(bool active)
+    {
+        Active = active;
+    }
 
     private async Task ConfigUpdated(object? sender, LightningConfig e)
     {
