@@ -26,7 +26,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     private readonly ChannelManager _channelManager;
     private readonly ILogger<VoltageFlow2Jit> _logger;
 
-    public static Uri? BaseAddress(Network network)
+    public virtual Uri? BaseAddress(Network network)
     {
         return network switch
         {
@@ -91,7 +91,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         return BOLT11PaymentRequest.Parse(result!.WrappedBolt11, _network);
     }
 
-    public string ProviderName => "Voltage";
+    public virtual string ProviderName => "Voltage";
     public async Task<JITFeeResponse?> CalculateInvoiceAmount(LightMoney expectedAmount)
     {
         try
@@ -200,4 +200,24 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         }
     }
     
+}
+
+public class OlympusFlow2Jit : VoltageFlow2Jit
+{
+    public OlympusFlow2Jit(IHttpClientFactory httpClientFactory, Network network, LDKNode node, ChannelManager channelManager, ILogger<VoltageFlow2Jit> logger) : base(httpClientFactory, network, node, channelManager, logger)
+    {
+    }
+
+    public override Uri? BaseAddress(Network network)
+    {
+        return network switch
+        {
+            not null when network == Network.Main => new Uri("https://0conf.lnolymp.us"),
+            not null when network == Network.TestNet => new Uri("https://testnet-0conf.lnolymp.us"),
+            // not null when network == Network.RegTest => new Uri("https://localhost:5001/jit-lsp"),
+            _ => null
+        };
+    }
+
+    public override string ProviderName => "Olympus";
 }
