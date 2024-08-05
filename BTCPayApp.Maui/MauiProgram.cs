@@ -2,12 +2,9 @@
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 using Plugin.Fingerprint;
-using Plugin.Fingerprint.Abstractions;
-using Shiny;
 
 namespace BTCPayApp.Maui;
 
@@ -19,7 +16,6 @@ public static class MauiProgram
         builder.UseMauiApp<App>()
             .ConfigureFonts(fonts => { fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular"); });
 
-        builder.UseShiny();
         builder.Services.AddMauiBlazorWebView();
         builder.Services.ConfigureBTCPayAppCore();
         builder.Services.AddBTCPayAppUIServices();
@@ -31,7 +27,10 @@ public static class MauiProgram
         builder.Services.AddSingleton<IDataDirectoryProvider, MauiDataDirectoryProvider>();
         builder.Services.AddSingleton<ISecureConfigProvider, MauiEssentialsSecureConfigProvider>();
         builder.Services.AddSingleton<ISystemThemeProvider, MauiSystemThemeProvider>();
-        builder.Services.AddSingleton(typeof(IFingerprint), CrossFingerprint.Current);
+        builder.Services.AddSingleton(CrossFingerprint.Current);
+#if ANDROID
+        builder.Services.AddSingleton<AndroidHostedServiceForegreoundService>();
+#endif
         builder.ConfigureLifecycleEvents(events =>
         {
             // https://learn.microsoft.com/de-de/dotnet/maui/fundamentals/app-lifecycle#platform-lifecycle-events
@@ -41,7 +40,6 @@ public static class MauiProgram
                 .OnCreate((activity, bundle) => LogEvent(nameof(AndroidLifecycle.OnCreate)))
                 .OnStop((activity) => LogEvent(nameof(AndroidLifecycle.OnStop))));
             
-            builder.Services.AddSingleton<AndroidHostedServiceForegreoundService>();
 
 #endif
 #if IOS
@@ -59,19 +57,5 @@ public static class MauiProgram
             }
         });
         return builder.Build();
-    }
-}
-
-public class StartupService:Shiny.IShinyStartupTask
-{
-    private readonly IEnumerable<IHostedService> _hostedServices;
-
-    public StartupService(IEnumerable<IHostedService> hostedServices)
-    {
-        _hostedServices = hostedServices;
-    }
-    public void Start()
-    {
-       Task.WhenAll(_hostedServices.Select(hs => hs.StartAsync(CancellationToken.None))).GetAwaiter().GetResult();
     }
 }
