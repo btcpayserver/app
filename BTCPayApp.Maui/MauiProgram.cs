@@ -2,6 +2,7 @@
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 using Plugin.Fingerprint;
@@ -37,8 +38,18 @@ public static class MauiProgram
 #if ANDROID
             events.AddAndroid(android => android
                 .OnStart((activity) => LogEvent(nameof(AndroidLifecycle.OnStart)))
-                .OnCreate((activity, bundle) => LogEvent(nameof(AndroidLifecycle.OnCreate)))
-                .OnStop((activity) => LogEvent(nameof(AndroidLifecycle.OnStop))));
+                .OnCreate((activity, bundle) =>
+                {
+                    LogEvent(nameof(AndroidLifecycle.OnCreate));
+                    AndroidHostedServiceForegreoundService.SetCurrentActivityResolver(() => activity);
+                    IPlatformApplication.Current!.Services.GetRequiredService<AndroidHostedServiceForegreoundService>().Start(IPlatformApplication.Current!.Services.GetServices<IHostedService>());
+                })
+                .OnStop((activity) =>
+                {
+                    AndroidHostedServiceForegreoundService.SetCurrentActivityResolver(() => activity);
+                    IPlatformApplication.Current!.Services.GetRequiredService<AndroidHostedServiceForegreoundService>().Stop();
+                    LogEvent(nameof(AndroidLifecycle.OnStop));
+                }));
             
 
 #endif
