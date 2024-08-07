@@ -39,7 +39,12 @@ public static class MauiProgram
 #if ANDROID
             events.AddAndroid(android => android
                 .OnStart((activity) => LogEvent(nameof(AndroidLifecycle.OnStart)))
-                .OnCreate((activity, bundle) => { LogEvent(nameof(AndroidLifecycle.OnCreate)); })
+                .OnCreate((activity, bundle) =>
+                {
+                    CrossFingerprint.SetCurrentActivityResolver(() => activity);
+                    
+                    LogEvent(nameof(AndroidLifecycle.OnCreate));
+                })
                 .OnStop((activity) => { LogEvent(nameof(AndroidLifecycle.OnStop)); }).OnDestroy(activity =>
                 {
                     IPlatformApplication.Current.Services.GetRequiredService<HostedServiceInitializer>().Dispose();
@@ -67,6 +72,11 @@ public static class MauiProgram
                 return true;
             }
         });
+
+#if ANDROID && DEBUG
+        BTCPayApp.Maui.Debug.DangerousAndroidMessageHandlerEmitter.Register();
+        BTCPayApp.Maui.Debug.DangerousTrustProvider.Register();
+#endif
         return builder.Build();
     }
 }
