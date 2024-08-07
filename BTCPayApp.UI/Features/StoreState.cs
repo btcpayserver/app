@@ -11,13 +11,16 @@ public record StoreState
     public AppUserStoreInfo? StoreInfo;
     public RemoteData<StoreData>? Store;
     public RemoteData<OnChainWalletOverviewData>? OnchainBalance;
+    public RemoteData<HistogramData>? OnchainHistogram;
     public RemoteData<LightningNodeBalanceData>? LightningBalance;
+    public RemoteData<HistogramData>? LightningHistogram;
     public RemoteData<PointOfSaleAppData>? PointOfSale;
     public RemoteData<IEnumerable<StoreRateResult>>? Rates;
     public RemoteData<IEnumerable<InvoiceData>>? Invoices;
     public RemoteData<IEnumerable<NotificationData>>? Notifications;
     private IDictionary<string,RemoteData<InvoiceData>?> _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>();
     private IDictionary<string,RemoteData<InvoicePaymentMethodDataModel[]>?> _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>();
+    public HistogramData? UnifiedHistogram;
 
     private static string[] RateFetchExcludes = ["BTC", "SATS"];
 
@@ -25,6 +28,8 @@ public record StoreState
     public record FetchStore(string StoreId);
     public record FetchOnchainBalance(string StoreId);
     public record FetchLightningBalance(string StoreId);
+    public record FetchOnchainHistogram(string StoreId, HistogramType? Type = null);
+    public record FetchLightningHistogram(string StoreId, HistogramType? Type = null);
     public record FetchNotifications(string StoreId);
     public record UpdateNotification(string NotificationId, bool Seen);
     public record SetNotification(NotificationData? Notification, string? Error);
@@ -39,6 +44,8 @@ public record StoreState
     public record SetStore(StoreData? Store, string? Error);
     public record SetOnchainBalance(OnChainWalletOverviewData? Overview, string? Error);
     public record SetLightningBalance(LightningNodeBalanceData? Balance, string? Error);
+    public record SetOnchainHistogram(HistogramData? Data, string? Error);
+    public record SetLightningHistogram(HistogramData? Data, string? Error);
     public record SetNotifications(IEnumerable<NotificationData>? Notifications, string? Error);
     public record SetInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
     public record SetInvoice(InvoiceData? Invoice, string? Error, string InvoiceId);
@@ -259,6 +266,42 @@ public record StoreState
         }
     }
 
+    protected class SetOnchainHistogramReducer : Reducer<StoreState, SetOnchainHistogram>
+    {
+        public override StoreState Reduce(StoreState state, SetOnchainHistogram action)
+        {
+            var data = action.Data ?? state.OnchainHistogram?.Data;
+            return state with
+            {
+                OnchainHistogram = (state.OnchainHistogram ?? new RemoteData<HistogramData>()) with {
+                    Data = data,
+                    Error = action.Error,
+                    Loading = false,
+                    Sending = false
+                },
+                UnifiedHistogram = GetUnifiedHistogram(data, state.LightningHistogram?.Data)
+            };
+        }
+    }
+
+    protected class SetLightningHistogramReducer : Reducer<StoreState, SetLightningHistogram>
+    {
+        public override StoreState Reduce(StoreState state, SetLightningHistogram action)
+        {
+            var data = action.Data ?? state.LightningHistogram?.Data;
+            return state with
+            {
+                LightningHistogram = (state.LightningHistogram ?? new RemoteData<HistogramData>()) with {
+                    Data = data,
+                    Error = action.Error,
+                    Loading = false,
+                    Sending = false
+                },
+                UnifiedHistogram = GetUnifiedHistogram(state.OnchainHistogram?.Data, data)
+            };
+        }
+    }
+
     protected class SetNotificationsReducer : Reducer<StoreState, SetNotifications>
     {
         public override StoreState Reduce(StoreState state, SetNotifications action)
@@ -409,6 +452,25 @@ public record StoreState
         return state.GetInvoicePaymentMethods(invoiceId);
     }
 
+    private static HistogramData? GetUnifiedHistogram(HistogramData? onchain, HistogramData? lightning)
+    {
+        if (onchain == null && lightning == null ||
+            onchain?.Type != lightning?.Type ||
+            onchain?.Series?.Count != lightning?.Series?.Count) return null;
+        // if there's only one, return that
+        if (onchain == null || lightning == null) return onchain ?? lightning;
+        // merge the two
+        var histogram = new HistogramData
+        {
+            Type = onchain.Type,
+            Series = onchain.Series,
+            Labels = onchain.Labels,
+            Balance = onchain.Balance + lightning.Balance,
+        };
+        for (var i = 0; i < lightning.Series!.Count; i++) histogram.Series![i] += lightning.Series[i];
+        return histogram;
+    }
+
     public class StoreEffects(IAccountManager accountManager)
     {
         [EffectMethod]
@@ -421,6 +483,8 @@ public record StoreState
                 dispatcher.Dispatch(new FetchStore(storeId));
                 dispatcher.Dispatch(new FetchOnchainBalance(storeId));
                 dispatcher.Dispatch(new FetchLightningBalance(storeId));
+                dispatcher.Dispatch(new FetchOnchainHistogram(storeId));
+                dispatcher.Dispatch(new FetchLightningHistogram(storeId));
                 dispatcher.Dispatch(new FetchNotifications(storeId));
                 dispatcher.Dispatch(new FetchInvoices(storeId));
                 dispatcher.Dispatch(new FetchPointOfSale(store.PosAppId!));
@@ -486,6 +550,36 @@ public record StoreState
             {
                 var error = e.InnerException?.Message ?? e.Message;
                 dispatcher.Dispatch(new SetLightningBalance(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchOnchainHistogramEffect(FetchOnchainHistogram action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var data = await accountManager.GetClient().GetOnChainWalletHistogram(action.StoreId, "BTC", action.Type);
+                dispatcher.Dispatch(new SetOnchainHistogram(data, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetOnchainHistogram(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchLightningHistogramEffect(FetchLightningHistogram action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var data = await accountManager.GetClient().GetLightningNodeHistogram(action.StoreId, "BTC", action.Type);
+                dispatcher.Dispatch(new SetLightningHistogram(data, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetLightningHistogram(null, error));
             }
         }
 

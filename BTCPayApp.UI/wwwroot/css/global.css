@@ -4,6 +4,12 @@
   --navbar-bottom-height: 4rem;
   --sidebar-width: 280px;
   --icon-size: 1.5rem;
+  --chart-main-rgb: 68, 164, 49;
+  --chart-series-a-rgb: var(--chart-main-rgb);
+  --chart-series-b-rgb: 245, 0, 0;
+  --chart-series-c-rgb: 0, 109, 242;
+  --chart-series-d-rgb: 255, 188, 4;
+  --chart-series-e-rgb: 160, 98, 75;
 }
 
 ::-moz-focus-inner {

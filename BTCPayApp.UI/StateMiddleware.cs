@@ -168,8 +168,14 @@ public class StateMiddleware(
                     Enabled = true,
                     Config = onchainDerivation.Descriptor
                 });
-            if (onchain?.Config is JObject configObj && configObj.TryGetValue("accountDerivation", out var derivationSchemeToken) && derivationSchemeToken.Value<string>() is {} derivationScheme&& onchainDerivation?.Identifier.Contains(derivationScheme) is true)
+            if (onchain?.Config is JObject configObj &&
+                configObj.TryGetValue("accountDerivation", out var derivationSchemeToken) &&
+                derivationSchemeToken.Value<string>() is { } derivationScheme &&
+                onchainDerivation?.Identifier.Contains(derivationScheme) is true)
+            {
                 _dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeId));
+                _dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(storeId));
+            }
         }
         // lightning
         var lightning = pms.FirstOrDefault(pm => pm.PaymentMethodId == LightningNodeManager.PaymentMethodId);
@@ -181,8 +187,14 @@ public class StateMiddleware(
                     Enabled = true,
                     Config = new JObject { ["connectionString"] = lightningNodeService.ConnectionString }
                 });
-            if (lightning?.Config is JObject configObj && configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) && configuredConnectionStringToken.Value<string>() is {} configuredConnectionString && configuredConnectionString == lightningNodeService.ConnectionString)
+            if (lightning?.Config is JObject configObj &&
+                configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) &&
+                configuredConnectionStringToken.Value<string>() is { } configuredConnectionString &&
+                configuredConnectionString == lightningNodeService.ConnectionString)
+            {
                 _dispatcher.Dispatch(new StoreState.FetchLightningBalance(storeId));
+                _dispatcher.Dispatch(new StoreState.FetchLightningHistogram(storeId));
+            }
         }
         return (onchain, lightning);
     }

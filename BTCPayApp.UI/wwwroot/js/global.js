@@ -60,6 +60,49 @@ Interop = {
     } else {
       $icon.setAttribute('href', $icon.dataset.original);
     }
+  },
+  // chartist
+  renderLineChart (selector, labels, series, cryptoCode, rate, defaultCurrency, divisibility) {
+    const valueTransform = value => rate ? DashboardUtils.displayCurrency(value, rate, defaultCurrency, divisibility) : value
+    const labelCount = 6
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat
+    const dateFormatter = new Intl.DateTimeFormat('default', { month: 'short', day: 'numeric' })
+    const min = Math.min(...series);
+    const max = Math.max(...series);
+    const low = Math.max(min - ((max - min) / 5), 0);
+    const pointCount = series.length;
+    const labelEvery = pointCount / labelCount;
+    new Chartist.Line(selector, {
+      labels: labels,
+      series: [series]
+    }, {
+      low,
+      fullWidth: true,
+      showArea: true,
+      //lineSmooth: false,
+      axisY: {
+        //labelInterpolationFnc: valueTransform,
+        showLabel: false,
+        offset: 0
+      },
+      axisX: {
+        labelInterpolationFnc(date, i) {
+          return i % labelEvery == 0 ? dateFormatter.format(new Date(date)) : null
+        }
+      },
+      plugins: [
+        Chartist.plugins.tooltip2({
+          template: '<div class="chartist-tooltip-value">{{value}}</div><div class="chartist-tooltip-line"></div>',
+          offset: {
+            x: 0,
+            y: -16
+          },
+          valueTransformFunction(value, label) {
+            return valueTransform(value) + ' ' + (rate ? defaultCurrency : cryptoCode)
+          }
+        })
+      ]
+    });
   }
 }
 
@@ -93,6 +136,20 @@ function formatDateTimes(format) {
     const mode = format || $el.dataset.initial;
     if ($el.dataset[mode]) $el.innerText = $el.dataset[mode];
   });
+}
+
+function toDefaultCurrency(amount, rate) {
+  return Math.round((amount * rate) * 100) / 100;
+}
+
+function displayCurrency(amount, rate, currency, divisibility) {
+  const value = rate ? toDefaultCurrency(amount, rate) : amount;
+  const locale = currency === 'USD' ? 'en-US' : navigator.language;
+  const isSats = currency === 'SATS';
+  if (isSats) currency = 'BTC';
+  const opts = { currency, style: 'decimal', minimumFractionDigits: divisibility };
+  const val = new Intl.NumberFormat(locale, opts).format(value);
+  return isSats ? val.replace(/[\\.,]/g, ' ') : val;
 }
 
 function confirmCopy(el, message) {

@@ -6,7 +6,9 @@
 @using BTCPayServer.Client.Models
 @using BTCPayServer.Lightning
 @using NBitcoin
+@inject IJSRuntime JS
 @inject IState<StoreState> StoreState
+@inject IActionSubscriber ActionSubscriber
 @inject IAccountManager AccountManager
 @inject DisplayFormatter DisplayFormatter
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -44,6 +46,10 @@
                     <LoadingIndicator/>
                 </div>
             }
+            @if (Histogram != null)
+            {
+                <div id="Histogram" class="ct-chart"></div>
+            }
         </div>
     </AuthorizeView>
 
@@ -70,6 +76,25 @@
         {
             _successMessage = Uri.UnescapeDataString(Success);
         }
+
+        ActionSubscriber.SubscribeToAction<StoreState.SetOnchainHistogram>(this, action =>
+        {
+            if (Histogram != null) JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC");
+        });
+
+        ActionSubscriber.SubscribeToAction<StoreState.SetLightningHistogram>(this, action =>
+        {
+            if (Histogram != null) JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC");
+        });
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        ActionSubscriber.UnsubscribeFromAllActions(this);
+
+        return ValueTask.CompletedTask;
     }
 
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data?.Take(5);
@@ -91,4 +116,6 @@
     private decimal? CurrencyValue => TotalBalance != null && Rate.HasValue && !string.IsNullOrEmpty(Currency)
         ? new Money(TotalBalance.Value, MoneyUnit.Satoshi).ToDecimal(MoneyUnit.BTC) * Rate.Value
         : null;
+
+    private HistogramData? Histogram => StoreState.Value.UnifiedHistogram;
 }
