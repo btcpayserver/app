@@ -76,4 +76,11 @@
         <PackageReference Include="SQLitePCLRaw.provider.dynamic_cdecl" Version="2.1.8"/>
         <PackageReference Include="SQLitePCLRaw.provider.sqlite3" Version="2.1.8"/>
     </ItemGroup>
+    <ItemGroup>
+      <None Remove="Platforms\Android\Resources\mipmap-hdpi\ic_launcher.png" />
+      <Resource Include="Platforms\Android\Resources\mipmap-hdpi\ic_launcher.png" />
+    </ItemGroup>
+    <ItemGroup>
+      <Folder Include="Platforms\Android\Resources\drawable\" />
+    </ItemGroup>
 </Project>
