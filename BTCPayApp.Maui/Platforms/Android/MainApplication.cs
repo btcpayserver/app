@@ -4,7 +4,13 @@ using Android.Runtime;
 namespace BTCPayApp.Maui;
 
 #if DEBUG
-[Application(UsesCleartextTraffic = true)]
+[Application(
+    UsesCleartextTraffic = true,
+    Debuggable = true,
+    Icon = "@mipmap/ic_launcher",
+    Label ="BTCPay App",
+    Theme = "@style/Maui.SplashTheme"
+    )]
 #else
 [Application]
 #endif

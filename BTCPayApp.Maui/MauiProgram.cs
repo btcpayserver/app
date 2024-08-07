@@ -2,7 +2,6 @@
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 using Plugin.Fingerprint;
@@ -20,7 +19,9 @@ public static class MauiProgram
         builder.Services.AddMauiBlazorWebView();
         builder.Services.ConfigureBTCPayAppCore();
         builder.Services.AddBTCPayAppUIServices();
-        builder.Services.AddLogging();
+        builder.Services.AddLogging(loggingBuilder => loggingBuilder
+            .AddConsole()
+        );
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Logging.AddDebug();
@@ -29,28 +30,21 @@ public static class MauiProgram
         builder.Services.AddSingleton<ISecureConfigProvider, MauiEssentialsSecureConfigProvider>();
         builder.Services.AddSingleton<ISystemThemeProvider, MauiSystemThemeProvider>();
         builder.Services.AddSingleton(CrossFingerprint.Current);
-#if ANDROID
-        builder.Services.AddSingleton<AndroidHostedServiceForegreoundService>();
-#endif
+        builder.Services.AddSingleton<HostedServiceInitializer>();
+        builder.Services.AddSingleton<IMauiInitializeService, HostedServiceInitializer>();
+
         builder.ConfigureLifecycleEvents(events =>
         {
             // https://learn.microsoft.com/de-de/dotnet/maui/fundamentals/app-lifecycle#platform-lifecycle-events
 #if ANDROID
             events.AddAndroid(android => android
                 .OnStart((activity) => LogEvent(nameof(AndroidLifecycle.OnStart)))
-                .OnCreate((activity, bundle) =>
+                .OnCreate((activity, bundle) => { LogEvent(nameof(AndroidLifecycle.OnCreate)); })
+                .OnStop((activity) => { LogEvent(nameof(AndroidLifecycle.OnStop)); }).OnDestroy(activity =>
                 {
-                    LogEvent(nameof(AndroidLifecycle.OnCreate));
-                    AndroidHostedServiceForegreoundService.SetCurrentActivityResolver(() => activity);
-                    IPlatformApplication.Current!.Services.GetRequiredService<AndroidHostedServiceForegreoundService>().Start();
-                })
-                .OnStop((activity) =>
-                {
-                    AndroidHostedServiceForegreoundService.SetCurrentActivityResolver(() => activity);
-                    IPlatformApplication.Current!.Services.GetRequiredService<AndroidHostedServiceForegreoundService>().Stop();
-                    LogEvent(nameof(AndroidLifecycle.OnStop));
+                    IPlatformApplication.Current.Services.GetRequiredService<HostedServiceInitializer>().Dispose();
                 }));
-            
+
 
 #endif
 #if IOS
@@ -58,7 +52,13 @@ public static class MauiProgram
                     .OnActivated((app) => LogEvent(nameof(iOSLifecycle.OnActivated)))
                     .OnResignActivation((app) => LogEvent(nameof(iOSLifecycle.OnResignActivation)))
                     .DidEnterBackground((app) => LogEvent(nameof(iOSLifecycle.DidEnterBackground)))
-                    .WillTerminate((app) => LogEvent(nameof(iOSLifecycle.WillTerminate))));
+                    .WillTerminate((app) =>{
+ LogEvent(nameof(iOSLifecycle.WillTerminate));
+
+                    IPlatformApplication.Current.Services.GetRequiredService<HostedServiceInitializer>().Dispose();
+
+}
+));
 #endif
             static bool LogEvent(string eventName, string type = null)
             {
