@@ -74,8 +74,8 @@ public static class MauiProgram
         });
 
 #if ANDROID && DEBUG
-        BTCPayApp.Maui.Debug.DangerousAndroidMessageHandlerEmitter.Register();
-        BTCPayApp.Maui.Debug.DangerousTrustProvider.Register();
+        DangerousAndroidMessageHandlerEmitter.Register();
+        DangerousTrustProvider.Register();
 #endif
         return builder.Build();
     }
