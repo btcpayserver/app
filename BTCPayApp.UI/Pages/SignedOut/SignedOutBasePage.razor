@@ -73,7 +73,7 @@
             return;
         }
         var url = uri.Contains(InviteSeparator) ? uri.Split(InviteSeparator).First() : uri;
-        if (url != InstanceInfo?.BaseUrl) Dispatcher.Dispatch(new UIState.FetchInstanceInfo(uri));
+        if (url != InstanceInfo?.BaseUrl) Dispatcher.Dispatch(new UIState.FetchInstanceInfo(url));
     }
 
     protected async Task<bool> HandleInput(string urlOrLoginCode)

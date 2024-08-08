@@ -291,12 +291,12 @@ public class AuthStateProvider(
         {
             var expiryOffset = DateTimeOffset.Now;
             var response = await GetClient(serverUrl).RegisterUser(payload, cancellation.GetValueOrDefault());
-            var account = new BTCPayAccount(serverUrl, email);
+            var account = await GetAccount(serverUrl, email);
             var message = "Account created.";
             if (response.ContainsKey("accessToken"))
             {
                 var access = response.ToObject<AccessTokenResponse>();
-                account.SetAccess(access.AccessToken, access.RefreshToken, access.ExpiresIn, expiryOffset);
+                account.SetAccess(access!.AccessToken, access.RefreshToken, access.ExpiresIn, expiryOffset);
             }
             else
             {
@@ -326,7 +326,16 @@ public class AuthStateProvider(
         try
         {
             var isForgotStep = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword);
-            await GetClient(serverUrl).ResetPassword(payload, cancellation.GetValueOrDefault());
+            var expiryOffset = DateTimeOffset.Now;
+            var response = await GetClient(serverUrl).ResetPassword(payload, cancellation.GetValueOrDefault());
+            if (response?.ContainsKey("accessToken") is true)
+            {
+                var access = response.ToObject<AccessTokenResponse>();
+                var account = await GetAccount(serverUrl, email);
+                account.SetAccess(access!.AccessToken, access.RefreshToken, access.ExpiresIn, expiryOffset);
+                await SetCurrentAccount(account);
+            }
+
             return new FormResult(true, isForgotStep
                 ? "You should have received an email with a password reset code."
                 : "Your password has been reset.");

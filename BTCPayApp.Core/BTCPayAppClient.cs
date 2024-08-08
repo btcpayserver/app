@@ -158,11 +158,10 @@ public class BTCPayAppClient(string baseUri, HttpClient client) : BTCPayServerCl
         return await SendHttpRequest<AcceptInviteResult>("btcpayapp/accept-invite", payload, HttpMethod.Post, cancellation);
     }
 
-    public async Task ResetPassword(ResetPasswordRequest payload, CancellationToken cancellation)
+    public async Task<JObject?> ResetPassword(ResetPasswordRequest payload, CancellationToken cancellation)
     {
         var isForgotStep = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword);
         var path = isForgotStep ? "btcpayapp/forgot-password" : "btcpayapp/reset-password";
-        await SendHttpRequest<EmptyResult>(path, payload, HttpMethod.Post, cancellation);
+        return await SendHttpRequest<JObject?>(path, payload, HttpMethod.Post, cancellation);
     }
 }
-public class EmptyResult { }
