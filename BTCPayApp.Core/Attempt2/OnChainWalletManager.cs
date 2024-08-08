@@ -138,7 +138,11 @@ public class OnChainWalletManager : BaseHostedService
 
             }
 
-            await _syncService.SetEncryptionKey(mnemonic);
+            if (!await _syncService.SetEncryptionKey(mnemonic, await _btcPayConnectionManager.GetDeviceIdentifier()))
+            {
+                _logger.LogError("Failed to set encryption key");
+                return;
+            };
             await _configProvider.Set(WalletConfig.Key, walletConfig, true);
             WalletConfig = walletConfig;
             State = OnChainWalletState.Loaded;

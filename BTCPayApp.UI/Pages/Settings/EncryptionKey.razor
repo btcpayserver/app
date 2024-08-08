@@ -1,0 +1,83 @@
+﻿@attribute [Route(Routes.EncryptionKey)]
+@layout BaseLayout
+@using BTCPayApp.Core.Attempt2
+@using BTCPayApp.UI.Components.Layout
+@inject NavigationManager NavigationManager
+@inject BTCPayConnectionManager ConnectionManager
+@inject SyncService SyncService
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>@GetTitle()</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back Fixed="false">
+        <h1>@GetTitle()</h1>
+        @if(ConnectionManager.ConnectionState != BTCPayConnectionState.WaitingForEncryptionKey){
+        <SectionContent SectionId="Titlebar.End">
+            <NavLink class="btn-icon" href="@Routes.Settings">
+                <Icon Symbol="close"/>
+            </NavLink>
+        </SectionContent>}
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    @if(ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey)
+    {
+        <p>Enter your encryption key to unlock the app.</p>
+        <ValidationEditContext @ref="_validationEditContext" Model="this" OnValidSubmit="HandleValidSubmit">
+            <div class="text-center">
+                <InputText @bind-Value="EncryptionKeyValue"/>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </ValidationEditContext>
+    }
+    else
+    {
+        <p>Your encryption key is:  <pre>@EncryptionKeyValue</pre></p>
+       
+    }
+ 
+</section>
+
+@code {
+
+    private string? EncryptionKeyValue
+    {
+        get => _encryptionKeyValue;
+        set
+        {
+            _encryptionKeyValue = value;
+            _validationEditContext?.EditContext.NotifyValidationStateChanged();
+        }
+    }
+
+    private ValidationEditContext? _validationEditContext;
+    private string? _encryptionKeyValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        EncryptionKeyValue = await SyncService.GetEncryptionKey();
+;
+    }
+
+    public async Task HandleValidSubmit()
+    {
+        if (await SyncService.SetEncryptionKey(EncryptionKeyValue, await ConnectionManager.GetDeviceIdentifier()))
+        {
+            
+            NavigationManager.NavigateTo(Routes.Settings);
+        }
+        else
+        {
+            _validationEditContext!.MessageStore.Add(() => EncryptionKeyValue, "Invalid encryption key");
+            _validationEditContext.EditContext.NotifyValidationStateChanged();
+            
+        }
+        
+    }
+
+
+    private string GetTitle() => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey? "Enter your encryption key" : "View your encryption key";
+}

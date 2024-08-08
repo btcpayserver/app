@@ -63,7 +63,7 @@ public class LightningNodeManager : BaseHostedService
 
     public async Task StartNode()
     {
-        if (_nodeScope is not null || State is LightningNodeState.Loaded)
+        if (_nodeScope is not null || State is LightningNodeState.Loaded or LightningNodeState.NotConfigured || _onChainWalletManager.State is not OnChainWalletState.Loaded)
             return;
         await _controlSemaphore.WaitAsync();
 
@@ -100,8 +100,7 @@ public class LightningNodeManager : BaseHostedService
         {
             var cts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token);
             cts.CancelAfter(5000);
-            await Node.StopAsync(cts.Token);
-
+            if (Node != null) await Node.StopAsync(cts.Token);
         }
         catch (Exception e)
         {

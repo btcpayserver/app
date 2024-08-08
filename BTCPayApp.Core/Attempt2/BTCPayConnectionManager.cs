@@ -201,8 +201,17 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                 }
                 else
                 {
+                    //check if we are the master previosuly to process outbox items
+                    var masterDevice = await HubProxy.GetCurrentMaster();
+                    if (await GetDeviceIdentifier() == masterDevice)
+                    {
+                        await _syncService.SyncToRemote(await GetDeviceIdentifier(), CancellationToken.None);
+                    }
+                    else
+                    {
+                        await _syncService.SyncToLocal();
+                    }
 
-                    await _syncService.SyncToLocal();
                     ConnectionState = BTCPayConnectionState.ConnectedFinishedInitialSync;
                 }
                 break;

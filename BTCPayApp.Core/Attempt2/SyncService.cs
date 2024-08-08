@@ -39,10 +39,15 @@ public class SyncService : IDisposable
         _dbContextFactory = dbContextFactory;
         _secureConfigProvider = secureConfigProvider;
     }
+    
+    public async Task<string?> GetEncryptionKey()
+    {
+       return  await _secureConfigProvider.Get<string>("encryptionKey");
+    }
 
     private async Task<IDataProtector?> GetDataProtector()
     {
-        var key = await _secureConfigProvider.Get<string>("encryptionKey");
+        var key = await GetEncryptionKey();
         return string.IsNullOrEmpty(key) ? null : new SingleKeyDataProtector(Convert.FromHexString(key));
     }
 
@@ -76,13 +81,13 @@ public class SyncService : IDisposable
         return false;
     }
 
-    public async Task<bool> SetEncryptionKey(Mnemonic mnemonic)
+    public async Task<bool> SetEncryptionKey(Mnemonic mnemonic, long deviceIdentifier)
     {
         var key = mnemonic.DeriveExtKey().Derive(1337).PrivateKey.ToBytes();
-        return await SetEncryptionKey(Convert.ToHexString(key));
+        return await SetEncryptionKey(Convert.ToHexString(key), deviceIdentifier);
     }
 
-    public async Task<bool> SetEncryptionKey(string key)
+    public async Task<bool> SetEncryptionKey(string key, long deviceIdentifier)
     {
         var dataProtector = new SingleKeyDataProtector(Convert.FromHexString(key));
         var encrypted = dataProtector.Protect("kukks"u8.ToArray());
@@ -128,7 +133,8 @@ public class SyncService : IDisposable
                     Key = "encryptionKeyTest",
                     Value = ByteString.CopyFrom(encrypted)
                 }
-            }
+            },
+            GlobalVersion = deviceIdentifier
         });
         await _secureConfigProvider.Set("encryptionKey", key);
         EncryptionKeyChanged?.Invoke(this);

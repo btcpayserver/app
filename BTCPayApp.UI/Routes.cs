@@ -38,7 +38,7 @@ public static class Routes
     public const string LightningSettings = "/settings/lightning";
     public const string ChannelsPeers = "/settings/lightning/channels";
     public const string User = "/settings/user";
-
+    public const string EncryptionKey = "/settings/encryption";
     public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);
     public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);
     public static string PosSettingsPath(string appId) => PosSettings.Replace("{AppId}", appId);

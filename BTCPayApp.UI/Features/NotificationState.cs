@@ -1,7 +1,10 @@
-﻿using BTCPayApp.Core.Auth;
+﻿using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Data;
 using BTCPayServer.Client.Models;
 using Fluxor;
+using Fluxor.Blazor.Web.Middlewares.Routing;
+using Microsoft.AspNetCore.Components;
 
 namespace BTCPayApp.UI.Features;
 
@@ -105,6 +108,19 @@ public record NotificationState
                     Sending = false
                 }
             };
+        }
+    }
+
+
+    public class ConnectionEffects()
+    {
+        [EffectMethod]
+        public async  Task HandleConnectionStateUpdatedAction(RootState.ConnectionStateUpdatedAction action, IDispatcher dispatcher)
+        {
+            if(action.State == BTCPayConnectionState.WaitingForEncryptionKey)
+            {
+                dispatcher.Dispatch(new GoAction(Routes.EncryptionKey));
+            }
         }
     }
 
