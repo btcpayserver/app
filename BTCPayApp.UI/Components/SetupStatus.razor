@@ -31,10 +31,10 @@
             BTCPayConnectionState.WaitingForAuth => SetupState.Pending,
             BTCPayConnectionState.Connecting => SetupState.Pending,
             BTCPayConnectionState.Syncing => SetupState.Pending,
-            BTCPayConnectionState.Disconnected => SetupState.Failed,
+            BTCPayConnectionState.ConnectedFinishedInitialSync => SetupState.Pending,
             BTCPayConnectionState.ConnectedAsMaster => SetupState.Completed,
             BTCPayConnectionState.ConnectedAsSlave => SetupState.Completed,
-            BTCPayConnectionState.ConnectedFinishedInitialSync => SetupState.Pending,
+            BTCPayConnectionState.Disconnected => SetupState.Failed,
             _ =>  SetupState.Undetermined
         };
     }
