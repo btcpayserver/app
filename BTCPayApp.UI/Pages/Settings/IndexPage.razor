@@ -72,7 +72,7 @@
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
                 @{ var store = AccountManager.GetCurrentStore(); }
-                @if (_userInfo?.Stores?.Count() > 1 || AccountManager.GetCurrentStore() == null)
+                @if (_userInfo?.Stores?.Count() > 1 || StoreInfo == null)
                 {
                     <li class="list-group-item">
                         <a href="@Routes.SelectStore">
@@ -82,19 +82,19 @@
                         </a>
                     </li>
                 }
-                @if (store != null)
+                @if (StoreInfo != null)
                 {
-                    <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@store.Id">
+                    <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@StoreInfo.Id">
                         <li class="list-group-item">
-                            <a href="@Routes.StorePath(store.Id!)">
+                            <a href="@Routes.StorePath(StoreInfo.Id)">
                                 <Icon Symbol="nav-store"/>
                                 <span>@store.Name</span>
                                 <Icon Symbol="caret-right"/>
                             </a>
                         </li>
                     </AuthorizeView>
-                    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@store.Id">
-                        @if (store.PosAppId != null)
+                    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@StoreInfo.Id">
+                        @if (StoreInfo.PosAppId != null)
                         {
                             <li class="list-group-item">
                                 <a href="@Routes.PosSettingsPath(store.PosAppId)">
@@ -361,6 +361,7 @@
     private static string[] ThemeList => [Themes.System, Themes.Light, Themes.Dark];
     private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
     private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
+    private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
     private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
     private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
