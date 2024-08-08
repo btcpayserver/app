@@ -103,6 +103,8 @@ public class OnChainWalletManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
+            
+            _logger.LogInformation("Generating wallet");
             if (State != OnChainWalletState.NotConfigured || IsConfigured || !IsHubConnected)
             {
                 throw new InvalidOperationException("Cannot generate wallet in current state");

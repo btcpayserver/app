@@ -142,6 +142,7 @@ public class LightningNodeManager : BaseHostedService
     public async Task Generate()
     {
         await _controlSemaphore.WaitAsync();
+        _logger.LogInformation("Generating lightning node");
         try
         {
             if (State != LightningNodeState.NotConfigured) return;
