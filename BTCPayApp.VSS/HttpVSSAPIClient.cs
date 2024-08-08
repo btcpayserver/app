@@ -1,4 +1,5 @@
-﻿using Google.Protobuf;
+﻿using System.Text;
+using Google.Protobuf;
 using VSSProto;
 
 namespace BTCPayApp.VSS;
@@ -59,17 +60,18 @@ public class HttpVSSAPIClient : IVSSAPI
         var response = await _httpClient.PostAsync(url, requestContent, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
+            var rawContent = await response.Content.ReadAsByteArrayAsync(cancellationToken);
             try
             {
-                var error = ErrorResponse.Parser.ParseFrom(await response.Content.ReadAsStreamAsync(cancellationToken));
+                var error = ErrorResponse.Parser.ParseFrom(rawContent);
                 throw new VssClientException( error);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not VssClientException)
             {
                 throw new VssClientException( new ErrorResponse()
                 {
                     ErrorCode = ErrorCode.Unknown,
-                    Message = e.Message,
+                    Message = rawContent.Length > 0 ? Encoding.UTF8.GetString(rawContent) : e.Message,
                 });
             }
             
