@@ -1,4 +1,5 @@
 ﻿@attribute [Route(Routes.Invoices)]
+@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -8,7 +9,7 @@
 
 <section class="container py-4">
     <header class="d-flex align-items-center justify-content-between gap-3 mb-4">
-        @if (Store is not null)
+        @if (StoreInfo is not null)
         {
             <h1>Invoices</h1>
             @if (Loading)
@@ -17,7 +18,7 @@
             }
         }
     </header>
-    @if (Store is null)
+    @if (StoreInfo is null)
     {
         <Alert Type="info">Please configure a store first.</Alert>
     }
@@ -28,7 +29,7 @@
 </section>
 
 @code {
-    private StoreData? Store => StoreState.Value.Store?.Data;
+    private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data;
     private bool Loading => StoreState.Value.Invoices?.Loading is true;
     private string? Error => StoreState.Value.Invoices?.Error;

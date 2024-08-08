@@ -1,5 +1,6 @@
 ﻿@attribute [Route(Routes.Invoice)]
 @using BTCPayApp.CommonServer
+@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
@@ -305,16 +306,16 @@
     {
         await base.OnInitializedAsync();
 
-        if (Store is not null && !string.IsNullOrEmpty(InvoiceId))
+        if (StoreInfo is not null && !string.IsNullOrEmpty(InvoiceId))
         {
             if (Invoice == null)
-                Dispatcher.Dispatch(new StoreState.FetchInvoice(Store.Id!, InvoiceId));
+                Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreInfo.Id!, InvoiceId));
             if (PaymentMethods == null)
-                Dispatcher.Dispatch(new StoreState.FetchInvoicePaymentMethods(Store.Id!, InvoiceId));
+                Dispatcher.Dispatch(new StoreState.FetchInvoicePaymentMethods(StoreInfo.Id!, InvoiceId));
         }
     }
 
-    private StoreData? Store => StoreState.Value.Store?.Data;
+    private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private InvoiceData? Invoice => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoice(InvoiceId!)?.Data : null;
     private bool Loading => !string.IsNullOrEmpty(InvoiceId) && StoreState.Value.GetInvoice(InvoiceId!)?.Loading is true;
     private string? Error => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoice(InvoiceId!)?.Error : null;
