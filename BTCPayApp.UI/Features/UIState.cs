@@ -76,10 +76,12 @@ public record UIState
     public class UIEffects
     {
         private readonly IJSRuntime _jsRuntime;
+        private readonly IHttpClientFactory _httpClientFactory;
 
-        public UIEffects(IJSRuntime jsRuntime)
+        public UIEffects(IJSRuntime jsRuntime, IHttpClientFactory httpClientFactory)
         {
             _jsRuntime = jsRuntime;
+            _httpClientFactory = httpClientFactory;
         }
 
         [EffectMethod]
@@ -97,7 +99,7 @@ public record UIState
             try
             {
                 var instance = !string.IsNullOrEmpty(action.Url)
-                    ? await new BTCPayAppClient(action.Url).GetInstanceInfo()
+                    ? await new BTCPayAppClient(action.Url, _httpClientFactory.CreateClient()).GetInstanceInfo()
                     : null;
 
                 var error = !string.IsNullOrEmpty(action.Url) && instance == null

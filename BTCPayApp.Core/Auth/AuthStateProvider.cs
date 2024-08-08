@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 namespace BTCPayApp.Core.Auth;
 
 public class AuthStateProvider(
+    IHttpClientFactory clientFactory,
     IConfigProvider config,
     IAuthorizationService authService,
     IOptionsMonitor<IdentityOptions> identityOptions)
@@ -62,7 +63,7 @@ public class AuthStateProvider(
     {
         if (string.IsNullOrEmpty(baseUri) && string.IsNullOrEmpty(_account?.BaseUri))
             throw new ArgumentException("No base URI present or provided.", nameof(baseUri));
-        var client = new BTCPayAppClient(baseUri ?? _account!.BaseUri);
+        var client = new BTCPayAppClient(baseUri ?? _account!.BaseUri, clientFactory.CreateClient());
         if (string.IsNullOrEmpty(baseUri) && !string.IsNullOrEmpty(_account?.AccessToken) && !string.IsNullOrEmpty(_account.RefreshToken))
             client.SetAccess(_account.AccessToken, _account.RefreshToken, _account.AccessExpiry.GetValueOrDefault());
         client.AccessRefreshed += OnAccessRefresh;

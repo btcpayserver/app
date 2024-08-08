@@ -55,21 +55,20 @@
     </ItemGroup>
 
     <!-- Both iOS and Mac Catalyst -->
-    <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-ios')) != true AND $(TargetFramework.StartsWith('net8.0-maccatalyst')) != true">
+    <ItemGroup Condition="$(TargetFramework.StartsWith('net8.0-ios')) != true">
         <Compile Remove="**\iOS\**\*.cs"/>
         <None Include="**\iOS\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)"/>
-        <Compile Remove="**\Mac\**\*.cs"/>
-        <None Include="**\Mac\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)"/>
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="org.ldk" Version="0.0.123"  />
         <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1"/>
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.70"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.71"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1"/>
-        <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.70"/>
-        <PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.70"/>
+        <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.71"/>
+        <PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.71"/>
     </ItemGroup>
-    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' or $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) =='maccatalyst' ">
+    <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios' ">
 
         <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.8"/>
         <PackageReference Include="SQLitePCLRaw.core" Version="2.1.8"/>

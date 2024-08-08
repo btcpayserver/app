@@ -1,9 +1,11 @@
 ﻿using System.Net;
+using System.Net.WebSockets;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,6 +18,7 @@ namespace BTCPayApp.Core.Attempt2;
 public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 {
     private const string ConfigDeviceIdentifierKey = "deviceIdentifier";
+    private readonly IServiceProvider _serviceProvider;
     private readonly IAccountManager _accountManager;
     private readonly AuthenticationStateProvider _authStateProvider;
     private readonly ILogger<BTCPayConnectionManager> _logger;
@@ -49,6 +52,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     }
 
     public BTCPayConnectionManager(
+        IServiceProvider serviceProvider,
         IAccountManager accountManager,
         AuthenticationStateProvider authStateProvider,
         ILogger<BTCPayConnectionManager> logger,
@@ -57,6 +61,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         IConfigProvider configProvider,
         SyncService syncService)
     {
+        _serviceProvider = serviceProvider;
         _accountManager = accountManager;
         _authStateProvider = authStateProvider;
         _logger = logger;
@@ -143,6 +148,9 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                             {
                                 options.AccessTokenProvider = () =>
                                     Task.FromResult(_accountManager.GetAccount()?.AccessToken);
+                                options.HttpMessageHandlerFactory = _serviceProvider.GetService<Func<HttpMessageHandler,HttpMessageHandler>>();
+                                options.WebSocketConfiguration = _serviceProvider.GetService<Action<ClientWebSocketOptions>>();
+
                             })
                         .WithAutomaticReconnect()
                         .Build();

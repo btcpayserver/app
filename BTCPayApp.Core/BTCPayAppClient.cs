@@ -13,7 +13,7 @@ using RefreshRequest = BTCPayApp.Core.AspNetRip.RefreshRequest;
 
 namespace BTCPayApp.Core;
 
-public class BTCPayAppClient(string baseUri) : BTCPayServerClient(new Uri(baseUri))
+public class BTCPayAppClient(string baseUri, HttpClient client) : BTCPayServerClient(new Uri(baseUri), client)
 {
     private const string RefreshPath = "btcpayapp/refresh";
     private DateTimeOffset? AccessExpiry { get; set; } // TODO: Incorporate in refresh check

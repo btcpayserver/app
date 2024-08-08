@@ -4,7 +4,7 @@
              xmlns:ui="clr-namespace:BTCPayApp.UI;assembly=BTCPayApp.UI"
              xmlns:web="clr-namespace:Microsoft.AspNetCore.Components.Web;assembly=Microsoft.AspNetCore.Components.Web"
              x:Class="BTCPayApp.Maui.MainPage">
-    <BlazorWebView HostPage="wwwroot/index.html"   x:Name="_blazorWebView">
+    <BlazorWebView HostPage="wwwroot/index.html"   x:Name="BlazorWebView">
         <BlazorWebView.RootComponents>
             <RootComponent Selector="#app" ComponentType="{x:Type ui:App}" />
             <RootComponent Selector="head::after" ComponentType="{x:Type web:HeadOutlet}" />

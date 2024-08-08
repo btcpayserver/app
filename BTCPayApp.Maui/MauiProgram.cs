@@ -73,10 +73,9 @@ public static class MauiProgram
             }
         });
 
-#if ANDROID && DEBUG
-        DangerousAndroidMessageHandlerEmitter.Register();
-        DangerousTrustProvider.Register();
-#endif
+        #if DEBUG
+        builder.Services.AddDangerousSSLSettingsForDev();
+        #endif
         return builder.Build();
     }
 }
