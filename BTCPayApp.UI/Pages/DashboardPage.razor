@@ -46,10 +46,7 @@
                     <LoadingIndicator/>
                 </div>
             }
-            @if (Histogram != null)
-            {
-                <div id="Histogram" class="ct-chart"></div>
-            }
+            <div id="Histogram" class="ct-chart"></div>
         </div>
     </AuthorizeView>
 
@@ -79,13 +76,22 @@
 
         ActionSubscriber.SubscribeToAction<StoreState.SetOnchainHistogram>(this, action =>
         {
-            if (Histogram != null) JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC");
+            if (Histogram != null)
+                JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC");
         });
 
         ActionSubscriber.SubscribeToAction<StoreState.SetLightningHistogram>(this, action =>
         {
-            if (Histogram != null) JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC");
+            if (Histogram != null)
+                JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC");
         });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        if (Histogram != null)
+            await JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC");
     }
 
     protected override ValueTask DisposeAsyncCore(bool disposing)
@@ -101,17 +107,18 @@
     private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;
     private string? InvoicesError => StoreState.Value.Invoices?.Error;
 
-    private string? StoreId => AccountManager.GetCurrentStore()?.Id;
+    private string? StoreId => StoreState.Value.StoreInfo?.Id;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private string? BalanceError => StoreState.Value.OnchainBalance?.Error ?? StoreState.Value.LightningBalance?.Error;
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
     private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
+    private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
     private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
     private decimal? LightningOnchainBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(MoneyUnit.Satoshi);
     private decimal? LightningOffchainBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(LightMoneyUnit.Satoshi);
     private decimal? TotalBalance => OnchainBalance == null && LightningBalance == null
         ? null
-        : (OnchainConfirmedBalance ?? 0) + (LightningOnchainBalance ?? 0) + (LightningOffchainBalance ?? 0);
+        : (OnchainConfirmedBalance ?? 0) + (OnchainUnconfirmedBalance ?? 0) + (LightningOnchainBalance ?? 0) + (LightningOffchainBalance ?? 0);
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
     private decimal? CurrencyValue => TotalBalance != null && Rate.HasValue && !string.IsNullOrEmpty(Currency)
         ? new Money(TotalBalance.Value, MoneyUnit.Satoshi).ToDecimal(MoneyUnit.BTC) * Rate.Value

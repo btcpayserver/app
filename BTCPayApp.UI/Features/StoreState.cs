@@ -21,15 +21,18 @@ public record StoreState
     private IDictionary<string,RemoteData<InvoiceData>?> _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>();
     private IDictionary<string,RemoteData<InvoicePaymentMethodDataModel[]>?> _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>();
     public HistogramData? UnifiedHistogram;
+    public HistogramType? HistogramType;
 
     private static string[] RateFetchExcludes = ["BTC", "SATS"];
 
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
+    public record SetHistogramType(HistogramType? HistogramType);
     public record FetchStore(string StoreId);
     public record FetchOnchainBalance(string StoreId);
     public record FetchLightningBalance(string StoreId);
     public record FetchOnchainHistogram(string StoreId, HistogramType? Type = null);
     public record FetchLightningHistogram(string StoreId, HistogramType? Type = null);
+    public record FetchBalances(string StoreId, HistogramType? Type = null);
     public record FetchNotifications(string StoreId);
     public record UpdateNotification(string NotificationId, bool Seen);
     public record SetNotification(NotificationData? Notification, string? Error);
@@ -68,6 +71,18 @@ public record StoreState
                 Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(),
                 Notifications = new RemoteData<IEnumerable<NotificationData>>()
+            };
+        }
+    }
+
+
+    protected class SetHistogramTypeReducer : Reducer<StoreState, SetHistogramType>
+    {
+        public override StoreState Reduce(StoreState state, SetHistogramType action)
+        {
+            return state with
+            {
+                HistogramType = action.HistogramType,
             };
         }
     }
@@ -481,10 +496,7 @@ public record StoreState
             {
                 var storeId = store.Id!;
                 dispatcher.Dispatch(new FetchStore(storeId));
-                dispatcher.Dispatch(new FetchOnchainBalance(storeId));
-                dispatcher.Dispatch(new FetchLightningBalance(storeId));
-                dispatcher.Dispatch(new FetchOnchainHistogram(storeId));
-                dispatcher.Dispatch(new FetchLightningHistogram(storeId));
+                dispatcher.Dispatch(new FetchBalances(storeId));
                 dispatcher.Dispatch(new FetchNotifications(storeId));
                 dispatcher.Dispatch(new FetchInvoices(storeId));
                 dispatcher.Dispatch(new FetchPointOfSale(store.PosAppId!));
@@ -509,18 +521,13 @@ public record StoreState
         }
 
         [EffectMethod]
-        public async Task FetchStoreEffect(FetchStore action, IDispatcher dispatcher)
+        public Task FetchBalancesEffect(FetchBalances action, IDispatcher dispatcher)
         {
-            try
-            {
-                var store = await accountManager.GetClient().GetStore(action.StoreId);
-                dispatcher.Dispatch(new SetStore(store, null));
-            }
-            catch (Exception e)
-            {
-                var error = e.InnerException?.Message ?? e.Message;
-                dispatcher.Dispatch(new SetStore(null, error));
-            }
+            dispatcher.Dispatch(new FetchOnchainBalance(action.StoreId));
+            dispatcher.Dispatch(new FetchLightningBalance(action.StoreId));
+            dispatcher.Dispatch(new FetchOnchainHistogram(action.StoreId, action.Type));
+            dispatcher.Dispatch(new FetchLightningHistogram(action.StoreId, action.Type));
+            return Task.CompletedTask;
         }
 
         [EffectMethod]

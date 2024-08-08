@@ -102,7 +102,7 @@ public class StateMiddleware(
 
         btcpayAppServerClient.OnNotifyServerEvent += async (sender, serverEvent) =>
         {
-            logger.LogDebug("Received Server Event: {Type} - {Details}", serverEvent.Type, serverEvent.ToString());
+            logger.LogDebug("Received Server Event: {Type} - {Info} ({Detail})", serverEvent.Type, serverEvent.ToString(), serverEvent.Detail ?? "no details");
             var currentUserId = accountManager.GetUserInfo()?.UserId;
             if (string.IsNullOrEmpty(currentUserId)) return;
             var currentStoreId = accountManager.GetCurrentStore()?.Id;
@@ -122,7 +122,11 @@ public class StateMiddleware(
                     break;
                 case "invoice-updated":
                     if (serverEvent.StoreId != null && serverEvent.StoreId == currentStoreId)
+                    {
                         dispatcher.Dispatch(new StoreState.FetchInvoices(serverEvent.StoreId));
+                        if (serverEvent.Detail is "Processing" or "Settled")
+                            dispatcher.Dispatch(new StoreState.FetchBalances(serverEvent.StoreId));
+                    }
                     break;
                 case "store-created":
                 case "store-updated":

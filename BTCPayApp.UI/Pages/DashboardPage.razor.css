@@ -1,18 +1,4 @@
 .wallet {
   margin-top: var(--btcpay-space-m);
-  margin-bottom: var(--btcpay-space-xl);
-}
-
-.wallet a.btn {
-  width: 10rem;
-  flex-grow: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--btcpay-space-s);
-}
-
-.invoices ::deep .container {
-  padding-left: 0;
-  padding-right: 0;
+  margin-bottom: var(--btcpay-space-l);
 }
