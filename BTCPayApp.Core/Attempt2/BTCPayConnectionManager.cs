@@ -264,7 +264,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         {
             await task;
             var authenticated = await _accountManager.CheckAuthenticated();
-            await Kill();
+            
             ConnectionState = !authenticated ? BTCPayConnectionState.WaitingForAuth : BTCPayConnectionState.Connecting;
         }
         catch (Exception e)
