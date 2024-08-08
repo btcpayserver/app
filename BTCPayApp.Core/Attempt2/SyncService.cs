@@ -371,9 +371,9 @@ public class SyncService : IDisposable
     }
     public async Task StartSync(bool local, long deviceIdentifier, CancellationToken cancellationToken = default)
     {
-        if (_syncTask.HasValue && _syncTask.Value.local == local)
+        if (_syncTask.HasValue && _syncTask.Value.local == local && !_syncTask.Value.cts.IsCancellationRequested)
             return;
-        if (_syncTask.HasValue)
+        if (_syncTask.HasValue && _syncTask.Value.local != local)
         {
             await _syncTask.Value.cts.CancelAsync();
         }
@@ -404,6 +404,10 @@ public class SyncService : IDisposable
                 else
                     await SyncToRemote(deviceIdentifier, cancellationToken);
                 await Task.Delay(2000, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                
             }
             catch (Exception e)
             {

@@ -36,21 +36,14 @@ public class LDKBackgroundProcessor : IScopedHostedService
     }
     
     
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        cancellationToken.Register(o =>
-        {
-            _ = StopAsync(CancellationToken.None);
-        }, null);
+        await StopAsync(CancellationToken.None);
         _processor = BackgroundProcessor.start(_persister, _eventHandler, _chainMonitor, _channelManager, _gossipSync, _peerManager, _logger, Option_WriteableScoreZ.some(_scorer));
-        return Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        await Task.Run(() =>
-        {
-            _processor?.stop();
-        }, cancellationToken);
+        _processor?.stop();
     }
 }

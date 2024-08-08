@@ -182,6 +182,10 @@ public class LightningNodeManager : BaseHostedService
         {
             State = LightningNodeState.Loading;
         }
+        else
+        {
+            _ = StopNode();
+        }
     }
 
     private async Task OnStateChanged(object? sender, (LightningNodeState Old, LightningNodeState New) state)
@@ -224,12 +228,14 @@ public class LightningNodeManager : BaseHostedService
 
                     _controlSemaphore.Release();
                     break;
-                // case LightningNodeState.Unloading:
-                //     _nodeScope?.Dispose();
-                //     State = _walletConfig is null
-                //         ? LightningNodeState.NotConfigured
-                //         : LightningNodeState.WaitingForConnection;
-                //     break;
+                case LightningNodeState.Stopped:
+                case LightningNodeState.Error:
+                    if (IsHubConnected)
+                    {
+                        await _btcPayConnectionManager.SwitchToSlave();
+                        
+                    }
+                    break;
             }
         }
         finally

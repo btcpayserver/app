@@ -84,13 +84,20 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         await OnConnectionChanged(this, (BTCPayConnectionState.Init, BTCPayConnectionState.Init));
     }
 
-    private Task OnMasterUpdated(object? sender, long? e)
+    private async Task OnMasterUpdated(object? sender, long? e)
     {
         if (e is null && ConnectionState == BTCPayConnectionState.ConnectedAsSlave)
         {
             ConnectionState = BTCPayConnectionState.Syncing;
+        }else if (await GetDeviceIdentifier() == e)
+        {
+            ConnectionState = BTCPayConnectionState.ConnectedAsMaster;
+            
+        }else if (ConnectionState == BTCPayConnectionState.ConnectedAsMaster && e != await GetDeviceIdentifier())
+        {
+            ConnectionState = BTCPayConnectionState.Syncing;
         }
-        return Task.CompletedTask;
+        
     }
 
     private async Task EncryptionKeyChanged(object? sender)
@@ -101,7 +108,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         }
     }
 
-    private async Task<long> GetDeviceIdentifier()
+    public  async Task<long> GetDeviceIdentifier()
     {
         return await _configProvider.GetOrSet(ConfigDeviceIdentifierKey,
             async () => RandomUtils.GetInt64(), false);
@@ -131,6 +138,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                     ConnectionState = BTCPayConnectionState.WaitingForAuth;
                     break;
                 }
+                
+                await Kill();
 
                 if (Connection is null)
                 {
@@ -199,10 +208,17 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                 break;
             case BTCPayConnectionState.ConnectedFinishedInitialSync:
                 var deviceIdentifier = await GetDeviceIdentifier();
-                var master = await HubProxy.DeviceMasterSignal(deviceIdentifier, true);
-                ConnectionState = master
-                    ? BTCPayConnectionState.ConnectedAsMaster
-                    : BTCPayConnectionState.ConnectedAsSlave;
+                if (ForceSlaveMode)
+                {
+                    await HubProxy.DeviceMasterSignal(deviceIdentifier, false);
+                    ForceSlaveMode = false;
+                    ConnectionState = BTCPayConnectionState.ConnectedAsSlave;
+                }
+
+                else
+                    await HubProxy.DeviceMasterSignal(deviceIdentifier, true);
+            
+               
                 break;
             case BTCPayConnectionState.ConnectedAsMaster:
                 await _syncService.StartSync(false, await GetDeviceIdentifier());
@@ -215,6 +231,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                 break;
         }
     }
+
+    public bool ForceSlaveMode { get; set; }
 
     private async Task OnServerNodeInfo(object? sender, string e)
     {
@@ -266,6 +284,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         {
             _logger.LogInformation("Sending device master signal to turn off");
             var deviceIdentifier = await GetDeviceIdentifier();
+            await _syncService.StopSync();
+            await _syncService.SyncToRemote(await GetDeviceIdentifier(), CancellationToken.None);
             await HubProxy.DeviceMasterSignal(deviceIdentifier, false);
         }
 
@@ -298,5 +318,18 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
     {
         _logger.LogWarning(exception, "Hub connection reconnecting");
         ConnectionState = BTCPayConnectionState.Connecting;
+    }
+
+    public async Task SwitchToSlave()
+    {
+        if (_connectionState == BTCPayConnectionState.ConnectedAsMaster)
+        {
+            ForceSlaveMode = true;
+            _logger.LogInformation("Sending device master signal to turn off");
+            var deviceIdentifier = await GetDeviceIdentifier();
+            await _syncService.StopSync();
+            await _syncService.SyncToRemote(await GetDeviceIdentifier(), CancellationToken.None);
+            await HubProxy.DeviceMasterSignal(deviceIdentifier, false);
+        }
     }
 }
