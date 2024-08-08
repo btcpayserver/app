@@ -59,8 +59,20 @@ public class HttpVSSAPIClient : IVSSAPI
         var response = await _httpClient.PostAsync(url, requestContent, cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
-            var error = ErrorResponse.Parser.ParseFrom(await response.Content.ReadAsStreamAsync(cancellationToken));
-            throw new VssClientException( error);
+            try
+            {
+                var error = ErrorResponse.Parser.ParseFrom(await response.Content.ReadAsStreamAsync(cancellationToken));
+                throw new VssClientException( error);
+            }
+            catch (Exception e)
+            {
+                throw new VssClientException( new ErrorResponse()
+                {
+                    ErrorCode = ErrorCode.Unknown,
+                    Message = e.Message,
+                });
+            }
+            
         }
 
         var responseBytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
