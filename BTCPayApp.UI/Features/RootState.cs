@@ -1,6 +1,7 @@
 ﻿using BTCPayApp.Core.Attempt2;
 using Fluxor;
-using Microsoft.AspNetCore.SignalR.Client;
+using Fluxor.Blazor.Web.Middlewares.Routing;
+using Microsoft.AspNetCore.Components;
 
 namespace BTCPayApp.UI.Features;
 
@@ -14,6 +15,20 @@ public record RootState
     public record ConnectionStateUpdatedAction(BTCPayConnectionState State);
     public record OnChainWalletStateUpdatedAction(OnChainWalletState State);
     public record LightningNodeStateUpdatedAction(LightningNodeState State);
+
+
+    public class ConnectionEffects(NavigationManager navigationManager)
+    {
+        [EffectMethod]
+        public async  Task HandleConnectionStateUpdatedAction(RootState.ConnectionStateUpdatedAction action, IDispatcher dispatcher)
+        {
+            if(action.State == BTCPayConnectionState.WaitingForEncryptionKey)
+            {
+                
+                dispatcher.Dispatch(new GoAction(navigationManager.ToAbsoluteUri(Routes.EncryptionKey).ToString()));
+            }
+        }
+    }
 
     protected class ConnectionUpdatedReducer : Reducer<RootState, ConnectionStateUpdatedAction>
     {
