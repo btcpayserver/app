@@ -68,11 +68,7 @@ public class HttpVSSAPIClient : IVSSAPI
             }
             catch (Exception e) when (e is not VssClientException)
             {
-                throw new VssClientException( new ErrorResponse()
-                {
-                    ErrorCode = ErrorCode.Unknown,
-                    Message = rawContent.Length > 0 ? Encoding.UTF8.GetString(rawContent) : e.Message,
-                });
+                response.EnsureSuccessStatusCode();
             }
             
         }
