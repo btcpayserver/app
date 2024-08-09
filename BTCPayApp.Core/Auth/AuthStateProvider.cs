@@ -378,8 +378,11 @@ public class AuthStateProvider(
             var userData = await GetClient().UpdateCurrentUser(payload, cancellation.GetValueOrDefault());
             _account!.SetInfo(userData.Email!, userData.Name, userData.ImageUrl);
             OnAccountInfoChange?.Invoke(this, _account);
-            _userInfo!.SetInfo(userData.Email!, userData.Name, userData.ImageUrl);
-            OnUserInfoChange?.Invoke(this, _userInfo);
+            if (_userInfo != null)
+            {
+                _userInfo.SetInfo(userData.Email!, userData.Name, userData.ImageUrl);
+                OnUserInfoChange?.Invoke(this, _userInfo);
+            }
             return new FormResult<ApplicationUserData>(true, "Your account info has been changed.", userData);
         }
         catch (Exception e)
