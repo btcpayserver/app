@@ -49,14 +49,15 @@
             <div id="Histogram" class="ct-chart"></div>
         </div>
     </AuthorizeView>
-
-    @if (InvoicesLoading || Invoices is not null)
-    {
-        <div class="invoices">
-            <h2>Recent Invoices</h2>
-            <InvoiceList Invoices="Invoices" Loading="InvoicesLoading" Error="@InvoicesError"/>
-        </div>
-    }
+    <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="StoreId">
+        @if (InvoicesLoading || Invoices is not null)
+        {
+            <div class="invoices">
+                <h2>Recent Invoices</h2>
+                <InvoiceList Invoices="Invoices" Loading="InvoicesLoading" Error="@InvoicesError"/>
+            </div>
+        }
+    </AuthorizeView>
 </section>
 
 @code {

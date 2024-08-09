@@ -1,5 +1,6 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
+@using BTCPayServer.Client
 @inject IState<UIState> UiState
 @inject NavigationManager NavigationManager
 @inject IAccountManager AccountManager
@@ -7,24 +8,28 @@
 <nav id="NavbarBottom">
     <div class="container d-flex align-items-center justify-content-between">
         <ul class="navbar-nav">
-            <li class="nav-item">
-                <NavLink href="@Routes.Dashboard" Match="NavLinkMatch.All" class="@(HasStore ? HomeCssClass() : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
-                    <Icon Symbol="nav-store"/>
-                    <span>Home</span>
-                </NavLink>
-            </li>
+            <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
+                <li class="nav-item">
+                    <NavLink href="@Routes.Dashboard" Match="NavLinkMatch.All" class="@(HasStore ? HomeCssClass() : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
+                        <Icon Symbol="nav-store"/>
+                        <span>Home</span>
+                    </NavLink>
+                </li>
+            </AuthorizeView>
             <li class="nav-item">
                 <NavLink href="@Routes.PointOfSale" Match="NavLinkMatch.All" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
                     <Icon Symbol="nav-keypad"/>
                     <span>Keypad</span>
                 </NavLink>
             </li>
-            <li class="nav-item">
-                <NavLink href="@Routes.Invoices" Match="NavLinkMatch.Prefix" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
-                    <Icon Symbol="nav-invoices"/>
-                    <span>Invoices</span>
-                </NavLink>
-            </li>
+            <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="StoreId">
+                <li class="nav-item">
+                    <NavLink href="@Routes.Invoices" Match="NavLinkMatch.Prefix" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
+                        <Icon Symbol="nav-invoices"/>
+                        <span>Invoices</span>
+                    </NavLink>
+                </li>
+            </AuthorizeView>
             <li class="nav-item">
                 <NavLink href="@Routes.Settings" Match="NavLinkMatch.Prefix" class="nav-link">
                     <Icon Symbol="settings"/>

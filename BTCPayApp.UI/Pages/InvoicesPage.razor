@@ -1,32 +1,30 @@
 ﻿@attribute [Route(Routes.Invoices)]
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.UI.Features
+@using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IState<StoreState> StoreState
 
 <PageTitle>Invoices</PageTitle>
 
-<section class="container py-4">
-    <header class="d-flex align-items-center justify-content-between gap-3 mb-4">
-        @if (StoreInfo is not null)
-        {
+@if (StoreInfo is null)
+{
+    <Alert Type="info">Please configure a store first.</Alert>
+    return;
+}
+<AuthorizeView Policy="@Policies.CanViewInvoices" Resource="@StoreInfo.Id">
+    <section class="container py-4">
+        <header class="d-flex align-items-center justify-content-between gap-3 mb-4">
             <h1>Invoices</h1>
             @if (Loading)
             {
                 <LoadingIndicator/>
             }
-        }
-    </header>
-    @if (StoreInfo is null)
-    {
-        <Alert Type="info">Please configure a store first.</Alert>
-    }
-    else
-    {
+        </header>
         <InvoiceList Invoices="Invoices" Loading="Loading" Error="@Error"/>
-    }
-</section>
+    </section>
+</AuthorizeView>
 
 @code {
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
