@@ -93,14 +93,12 @@ public class LightningNodeManager : BaseHostedService
 
     public async Task StopNode()
     {
-        if (_nodeScope is null || State is not LightningNodeState.Loaded)
+        if (_nodeScope is null)
             return;
         await _controlSemaphore.WaitAsync();
         try
         {
-            var cts = CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token);
-            cts.CancelAfter(5000);
-            if (Node != null) await Node.StopAsync(cts.Token);
+            if (Node != null) await Node.StopAsync(CancellationToken.None);
         }
         catch (Exception e)
         {
@@ -170,7 +168,7 @@ public class LightningNodeManager : BaseHostedService
             case true when State == LightningNodeState.WaitingForConnection:
                 State = LightningNodeState.Loading;
                 break;
-            case true when State is LightningNodeState.Loading or LightningNodeState.Loaded:
+            case false:
                 _ = StopNode();
                 break;
         }
@@ -202,6 +200,7 @@ public class LightningNodeManager : BaseHostedService
                     break;
                 }
                 case LightningNodeState.Loading:
+                    await StopNode();
                     if (!IsHubConnected)
                     {
                         newState = LightningNodeState.WaitingForConnection;
@@ -220,20 +219,6 @@ public class LightningNodeManager : BaseHostedService
                     if (CanConfigureLightningNode)
                     {
                         await Generate();
-                    }
-                    break;
-
-                case LightningNodeState.Loaded:
-                    await _controlSemaphore.WaitAsync();
-
-                    _controlSemaphore.Release();
-                    break;
-                case LightningNodeState.Stopped:
-                case LightningNodeState.Error:
-                    if (IsHubConnected)
-                    {
-                        await _btcPayConnectionManager.SwitchToSlave();
-                        
                     }
                     break;
             }

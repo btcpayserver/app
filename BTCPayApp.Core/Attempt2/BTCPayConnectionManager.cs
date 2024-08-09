@@ -86,7 +86,7 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
     private async Task OnMasterUpdated(object? sender, long? e)
     {
-        if (e is null && ConnectionState == BTCPayConnectionState.ConnectedAsSlave)
+        if (e is null && ConnectionState == BTCPayConnectionState.ConnectedAsSlave && !ForceSlaveMode)
         {
             ConnectionState = BTCPayConnectionState.Syncing;
         }else if (await GetDeviceIdentifier() == e)
@@ -263,9 +263,10 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         try
         {
             await task;
-            var authenticated = await _accountManager.CheckAuthenticated();
-            
-            ConnectionState = !authenticated ? BTCPayConnectionState.WaitingForAuth : BTCPayConnectionState.Connecting;
+            if (ConnectionState == BTCPayConnectionState.WaitingForAuth && await _accountManager.CheckAuthenticated())
+            {
+                ConnectionState = BTCPayConnectionState.Connecting;
+            }
         }
         catch (Exception e)
         {
