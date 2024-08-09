@@ -173,6 +173,7 @@ public class AuthStateProvider(
                     var posConfig = new PointOfSaleAppRequest { AppName = store.Name, DefaultView = PosViewType.Light };
                     await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
                     await CheckAuthenticated(true);
+                    store = GetUserStore(storeId);
                 }
                 catch (Exception e)
                 {
@@ -182,9 +183,9 @@ public class AuthStateProvider(
 
             _account!.CurrentStoreId = storeId;
             await UpdateAccount(_account);
-        }
 
-        OnAfterStoreChange?.Invoke(this, store);
+            OnAfterStoreChange?.Invoke(this, store);
+        }
 
         return new FormResult(true);
     }

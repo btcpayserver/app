@@ -1,4 +1,4 @@
-using BTCPayApp.CommonServer.Models;
+﻿using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.Auth;
 using BTCPayServer.Client.Models;
 using Fluxor;
@@ -72,7 +72,11 @@ public record StoreState
                 PointOfSale = new RemoteData<PointOfSaleAppData>(),
                 Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(),
-                Notifications = new RemoteData<IEnumerable<NotificationData>>()
+                Notifications = new RemoteData<IEnumerable<NotificationData>>(),
+                _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(),
+                _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(),
+                UnifiedHistogram = null,
+                HistogramType = null
             };
         }
     }
@@ -505,6 +509,21 @@ public record StoreState
                 dispatcher.Dispatch(new FetchRates(store));
             }
             return Task.CompletedTask;
+        }
+
+        [EffectMethod]
+        public async Task FetchStoreEffect(FetchStore action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var store = await accountManager.GetClient().GetStore(action.StoreId);
+                dispatcher.Dispatch(new SetStore(store, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetStore(null, error));
+            }
         }
 
         [EffectMethod]

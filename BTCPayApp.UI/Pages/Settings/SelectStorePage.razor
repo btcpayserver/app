@@ -1,4 +1,4 @@
-﻿@attribute [Route(Routes.SelectStore)]
+@attribute [Route(Routes.SelectStore)]
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
@@ -20,7 +20,7 @@
     {
         <Alert Type="danger">@_errorMessage</Alert>
     }
-    @if (_userInfo!.Stores?.Any() is true)
+    @if (_stores?.Any() is true)
     {
         if (string.IsNullOrEmpty(_initialStoreId))
         {
@@ -30,7 +30,7 @@
             <DataAnnotationsValidator />
             <InputRadioGroup Name="StoreIds" @bind-Value="@Model.StoreId">
                 <ul class="list-group list-group-flush mb-3">
-                    @foreach (var store in _userInfo.Stores)
+                    @foreach (var store in _stores)
                     {
                         <li class="list-group-item">
                             <label class="form-check-label stretched-link d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -50,8 +50,8 @@
                     }
                 </ul>
             </InputRadioGroup>
-            <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext.Invalid || Sending)">
-                @if (Sending)
+            <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
+                @if (_sending)
                 {
                     <LoadingIndicator />
                 }
@@ -74,8 +74,9 @@
 @code {
     private string? _errorMessage;
     private string? _initialStoreId;
-    private AppUserInfo? _userInfo;
+    private bool _sending;
     private ValidationEditContext? _validationEditContext;
+    private IEnumerable<AppUserStoreInfo>? _stores;
     SelectStoreModel Model { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
@@ -83,12 +84,9 @@
         await base.OnInitializedAsync();
 
         AccountManager.OnUserInfoChange += OnUserInfoChange;
-
-        _userInfo = AccountManager.GetUserInfo();
-        _initialStoreId = AccountManager.GetCurrentStore()?.Id;
-        Model.StoreId = _initialStoreId;
-
-        if (_userInfo!.Stores?.Any() is not true)
+        _initialStoreId = Model.StoreId = AccountManager.GetCurrentStore()?.Id;
+        _stores = AccountManager.GetUserInfo()!.Stores;
+        if (_stores?.Any() is not true)
         {
             NavigationManager.NavigateTo(Routes.CreateStore);
         }
@@ -100,8 +98,11 @@
 
     private async Task OnUserInfoChange(object? sender, AppUserInfo? userInfo)
     {
-        _userInfo = userInfo;
-        await InvokeAsync(StateHasChanged);
+        _stores = userInfo?.Stores;
+        if (_stores?.Any() is not true)
+            NavigationManager.NavigateTo(Routes.CreateStore);
+        else
+            await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleValidSubmit()
@@ -111,12 +112,18 @@
 
     private async Task SelectStore(string storeId)
     {
+        if (storeId == _initialStoreId)
+        {
+            NavigationManager.NavigateTo(Routes.Dashboard);
+            return;
+        }
+
         _errorMessage = null;
+        _sending = true;
 
         try
         {
             var result = await AccountManager.SetCurrentStoreId(storeId);
-
             if (!result.Succeeded)
             {
                 _errorMessage = result.Messages != null
@@ -128,6 +135,10 @@
         {
             _errorMessage = e.Message;
         }
+        finally
+        {
+            _sending = false;
+        }
     }
 
     private class SelectStoreModel
@@ -136,6 +147,5 @@
         public string? StoreId { get; set; }
     }
 
-    private bool Sending => StoreState.Value.Store?.Loading is true;
     private string GetCreateStoreUrl() => NavigationManager.GetUriWithQueryParameters(Routes.CreateStore, new Dictionary<string, object?> { {"backUrl", Routes.SelectStore } } );
 }
