@@ -1,4 +1,4 @@
-﻿using BTCPayApp.CommonServer.Models;
+using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.Auth;
 using BTCPayServer.Client.Models;
 using Fluxor;
@@ -67,6 +67,8 @@ public record StoreState
                 Store = new RemoteData<StoreData>(),
                 OnchainBalance = new RemoteData<OnChainWalletOverviewData>(),
                 LightningBalance = new RemoteData<LightningNodeBalanceData>(),
+                OnchainHistogram = new RemoteData<HistogramData>(),
+                LightningHistogram = new RemoteData<HistogramData>(),
                 PointOfSale = new RemoteData<PointOfSaleAppData>(),
                 Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(),
@@ -469,11 +471,11 @@ public record StoreState
 
     private static HistogramData? GetUnifiedHistogram(HistogramData? onchain, HistogramData? lightning)
     {
-        if (onchain == null && lightning == null ||
-            onchain?.Type != lightning?.Type ||
-            onchain?.Series?.Count != lightning?.Series?.Count) return null;
+        if (onchain == null && lightning == null) return null;
         // if there's only one, return that
         if (onchain == null || lightning == null) return onchain ?? lightning;
+        // if types or series differ, return null
+        if (onchain.Type != lightning.Type || onchain.Series?.Count != lightning.Series?.Count) return null;
         // merge the two
         var histogram = new HistogramData
         {
