@@ -1,0 +1,8 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="DEV ANDROID" type="CompoundRunConfigurationType">
+    <toRun name="Server" type="LaunchSettings" />
+    <toRun name="BTCPayApp.Maui" type="XamarinAndroidProject" />
+    <toRun name="Docker compose" type="docker-deploy" />
+    <method v="2" />
+  </configuration>
+</component>

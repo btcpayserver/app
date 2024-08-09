@@ -27,11 +27,16 @@
         "RUST_BACKTRACE":"1"
       }
     },
-    "IIS Express": {
-      "commandName": "IISExpress",
+
+    "https-second-instance": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
       "launchBrowser": true,
+      "applicationUrl": "https://localhost:7017;http://localhost:5260",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "RUST_BACKTRACE":"1",
+        "BTCPAYAPP_DIRNAME": "BTCPayApp2"
       }
     }
   }

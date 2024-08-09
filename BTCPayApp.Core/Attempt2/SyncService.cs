@@ -101,8 +101,8 @@ public class SyncService : IDisposable
             });
 
             if (res.Value is {Value.Length: > 0})
-            {
-                var decrypted = dataProtector.Unprotect(res.Value.ToByteArray());
+            { 
+                var decrypted = dataProtector.Unprotect(res.Value.Value.ToByteArray());
                 if ("kukks" == Encoding.UTF8.GetString(decrypted))
                 {
                     await _secureConfigProvider.Set("encryptionKey", key);

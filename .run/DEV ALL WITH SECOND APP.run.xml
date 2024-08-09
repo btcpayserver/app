@@ -1,0 +1,9 @@
+﻿<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="DEV ALL WITH SECOND APP" type="CompoundRunConfigurationType">
+    <toRun name="App-Server" type="LaunchSettings" />
+    <toRun name="BTCPayApp.Server: https-second-instance" type="LaunchSettings" />
+    <toRun name="Server" type="LaunchSettings" />
+    <toRun name="Docker compose" type="docker-deploy" />
+    <method v="2" />
+  </configuration>
+</component>

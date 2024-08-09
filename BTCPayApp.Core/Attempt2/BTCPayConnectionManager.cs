@@ -224,8 +224,10 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                     ConnectionState = BTCPayConnectionState.ConnectedAsSlave;
                 }
 
-                else
-                    await HubProxy.DeviceMasterSignal(deviceIdentifier, true);
+                else if (!await HubProxy.DeviceMasterSignal(deviceIdentifier, true))
+                {
+                    ConnectionState = BTCPayConnectionState.ConnectedAsSlave;
+                }
             
                
                 break;

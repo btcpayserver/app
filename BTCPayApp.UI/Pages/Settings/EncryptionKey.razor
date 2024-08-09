@@ -25,9 +25,10 @@
     @if(ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey)
     {
         <p>Enter your encryption key to unlock the app.</p>
-        <ValidationEditContext @ref="_validationEditContext" Model="this" OnValidSubmit="HandleValidSubmit">
+        <ValidationEditContext @ref="_validationEditContext" Model="@this" OnValidSubmit="HandleValidSubmit">
             <div class="text-center">
                 <InputText @bind-Value="EncryptionKeyValue"/>
+                <ValidationMessage For="@(() => EncryptionKeyValue)" />
             </div>
             <button type="submit" class="btn btn-primary">Submit</button>
         </ValidationEditContext>
