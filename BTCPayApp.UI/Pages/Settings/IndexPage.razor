@@ -72,7 +72,6 @@
         <h2>Store</h2>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
-                @{ var store = AccountManager.GetCurrentStore(); }
                 @if (_userInfo?.Stores?.Count() > 1 || StoreInfo == null)
                 {
                     <li class="list-group-item">
@@ -89,7 +88,7 @@
                         <li class="list-group-item">
                             <a href="@Routes.StorePath(StoreInfo.Id)">
                                 <Icon Symbol="nav-store"/>
-                                <span>@store.Name</span>
+                                <span>@StoreInfo.Name</span>
                                 <Icon Symbol="caret-right"/>
                             </a>
                         </li>
@@ -98,7 +97,7 @@
                         @if (StoreInfo.PosAppId != null)
                         {
                             <li class="list-group-item">
-                                <a href="@Routes.PosSettingsPath(store.PosAppId)">
+                                <a href="@Routes.PosSettingsPath(StoreInfo.PosAppId)">
                                     <Icon Symbol="nav-pointofsale"/>
                                     <span>Point of Sale</span>
                                     <Icon Symbol="caret-right"/>
@@ -196,12 +195,12 @@
                             </button>
                         }
                     </div>
-                   
+
                 </li>
-             
+
                 @if (State.Value.ConnectionState != BTCPayConnectionState.ConnectedAsSlave)
                 {
-             
+
                     <li class="list-group-item">
                     <div class="justify-content-start">
                         <span class="m-2 btcpay-status btcpay-status--@(State.Value.OnchainWalletState switch { OnChainWalletState.Loaded => "enabled", OnChainWalletState.Init => "disabled", _ => "pending" })"></span>
@@ -214,7 +213,7 @@
                             <span>Lightning: @State.Value.LightningNodeState</span>
                         </div>
                     </li>
-                           
+
                 }
                 @if (OnchainConfirmedBalance != null)
                 {
