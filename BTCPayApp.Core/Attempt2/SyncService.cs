@@ -208,7 +208,7 @@ public class SyncService : IDisposable
                     remoteVersion.Key == localVersion.Key && remoteVersion.Version > localVersion.Version)).ToArray();
 
             var toUpsert = remoteVersions.KeyVersions.Where(remoteVersion => localVersions.All(localVersion =>
-                localVersion.Key != remoteVersion.Key || localVersion.Version < remoteVersion.Version));
+                localVersion.Key != remoteVersion.Key || localVersion.Version < remoteVersion.Version)).Where(value => value.Key != "encryptionKeyTest").ToArray();
 
             if (toDelete.Length == 0 && !toUpsert.Any())
                 return;
@@ -242,7 +242,7 @@ public class SyncService : IDisposable
             // upsert the rest when needed
             var settingsToUpsert = toUpsert.Where(key => key.Key.StartsWith("Setting_")).Select(setting => new Setting()
             {
-                Key = setting.Key.Split('_')[1],
+                Key = setting.Key.Replace("Setting_", ""),
                 Value = setting.Value.ToByteArray(),
                 Version = setting.Version,
                 Backup = true
