@@ -23,26 +23,29 @@
 </SectionContent>
 
 <section class="container">
-    <p>Your encryption key is required to unlock the app.</p>
-    @if (ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey)
-    {
-        <ValidationEditContext @ref="_validationEditContext" Model="@this" OnValidSubmit="HandleValidSubmit">
-            <div class="form-group">
-                <label for="EncryptionKey" class="form-label">Your encryption key</label>
-                <InputText @bind-Value="EncryptionKeyValue" id="EncryptionKey" class="form-control"/>
-                <ValidationMessage For="@(() => EncryptionKeyValue)" />
+    <h4>Pairing Device</h4>
+    <div class="box mb-3 w-100">
+        <p>Your encryption key is required to unlock the app.</p>
+        @if (ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey)
+        {
+            <ValidationEditContext @ref="_validationEditContext" Model="@this" OnValidSubmit="HandleValidSubmit">
+                <div class="form-group">
+                    <label for="EncryptionKey" class="form-label">Encryption Key</label>
+                    <InputText @bind-Value="EncryptionKeyValue" id="EncryptionKey" class="form-control"/>
+                    <ValidationMessage For="@(() => EncryptionKeyValue)"/>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </ValidationEditContext>
+        }
+        else
+        {
+            <p>Back up your encryption key, otherwise you won't be able to restore the app and its wallet.</p>
+            <div class="form-floating">
+                <TruncateCenter Text="@EncryptionKeyValue" Padding="15" Copy="true" class="form-control-plaintext"/>
+                <label>Your encryption key</label>
             </div>
-            <button type="submit" class="btn btn-primary">Submit</button>
-        </ValidationEditContext>
-    }
-    else
-    {
-        <p>Back up your encryption key, otherwise you won't be able to restore the app and its wallet.</p>
-        <div class="form-floating">
-            <TruncateCenter Text="@EncryptionKeyValue" Padding="15" Copy="true" class="form-control-plaintext"/>
-            <label>Your encryption key</label>
-        </div>
-    }
+        }
+    </div>
 </section>
 
 @code {
