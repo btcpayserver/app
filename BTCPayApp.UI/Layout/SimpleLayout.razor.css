@@ -1,5 +1,5 @@
 #SimpleLayout {
-  --logo-height: 5rem;
+  --logo-height: 7rem;
   --padding-vertical: 12.5vh;
 
   display: flex;
@@ -16,7 +16,8 @@
 }
 ::deep .logo {
   display: block;
-  height: var(--logo-height);
+  height: var(--logo-height); 
+  border-radius: var(--btcpay-border-radius-xl);
   margin-left: auto;
   margin-right: auto;
   margin-bottom: 1.5rem;
