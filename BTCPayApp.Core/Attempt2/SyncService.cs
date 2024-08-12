@@ -89,6 +89,10 @@ public class SyncService : IDisposable
 
     public async Task<bool> SetEncryptionKey(string key, long deviceIdentifier)
     {
+        if (key.Contains(' '))
+        {
+          return await SetEncryptionKey(new Mnemonic(key), deviceIdentifier);
+        }
         var dataProtector = new SingleKeyDataProtector(Convert.FromHexString(key));
         var encrypted = dataProtector.Protect("kukks"u8.ToArray());
         var api = await GetUnencryptedVSSAPI();
