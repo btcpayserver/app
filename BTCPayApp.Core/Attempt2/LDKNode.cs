@@ -367,6 +367,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         {
             foreach (var alias in identifiers)
             {
+                alias.ChannelId = channel.Id;
                 if (channel.Aliases.All(a => a.Id != alias.Id))
                 {
                     channel.Aliases.Add(alias);
@@ -378,14 +379,20 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         }
         else
         {
-            await context.LightningChannels.AddAsync(new Channel()
+            channel = new Channel()
             {
-                Id = identifiers.First().ChannelId,
+                Id = ids.First(),
                 Data = write,
                 Aliases = identifiers.ToList(),
                 Checkpoint = checkpoint
-                
-            });
+
+            };
+
+            await context.LightningChannels.AddAsync(channel);
+            foreach (var alias in identifiers)
+            {
+                alias.ChannelId = channel.Id;
+            }
         }
         await context.SaveChangesAsync();
     }
