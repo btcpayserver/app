@@ -14,7 +14,7 @@ public record UserState
         TaskCompletionSource<AppUserInfo?> TaskCompletionSource,
         CancellationToken CancellationToken = default);
 
-    public record FetchedInfo(AppUserInfo? Info, string? Error);
+    public record SetInfo(AppUserInfo? Info, string? Error);
     public record UpdateUser(UpdateApplicationUserRequest Request);
     public record UpdatedUser(ApplicationUserData? UserData, string? Error);
 
@@ -32,9 +32,9 @@ public record UserState
         }
     }
 
-    protected class FetchedInfoReducer : Reducer<UserState, FetchedInfo>
+    protected class SetInfoReducer : Reducer<UserState, SetInfo>
     {
-        public override UserState Reduce(UserState state, FetchedInfo action)
+        public override UserState Reduce(UserState state, SetInfo action)
         {
             return state with
             {
@@ -93,13 +93,13 @@ public record UserState
             {
                 var info = await accountManager.GetClient().GetUserInfo(action.CancellationToken);
                 action.TaskCompletionSource.SetResult(info);
-                dispatcher.Dispatch(new FetchedInfo(info, null));
+                dispatcher.Dispatch(new SetInfo(info, null));
             }
             catch (Exception e)
             {
                 var error = e.InnerException?.Message ?? e.Message;
                 action.TaskCompletionSource.SetResult(null);
-                dispatcher.Dispatch(new FetchedInfo(null, error));
+                dispatcher.Dispatch(new SetInfo(null, error));
             }
         }
 

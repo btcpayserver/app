@@ -1,4 +1,5 @@
 ﻿@attribute [Route(Routes.Store)]
+@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Components.Layout
@@ -11,6 +12,7 @@
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 @inject IState<StoreState> StoreState
+@inject IState<UserState> UserState
 @inject IDispatcher Dispatcher
 @inject IActionSubscriber ActionSubscriber
 
@@ -38,11 +40,13 @@
     }
     else if (Model is not null)
     {
-        var storeInfo = AccountManager.GetUserStore(StoreId)!;
         <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
             <h2 class="mb-0">Store</h2>
-            <span class="badge bg-light">@storeInfo.RoleId</span>
-            @if (storeInfo.Archived)
+            @if (StoreInfo is not null)
+            {
+                <span class="badge bg-light">@StoreInfo.RoleId</span>
+            }
+            @if (Store.Archived)
             {
                 <span class="badge bg-info">archived</span>
             }
@@ -218,7 +222,7 @@
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        if (string.IsNullOrEmpty(StoreId) || AccountManager.GetUserStore(StoreId) == null)
+        if (string.IsNullOrEmpty(StoreId))
         {
             NavigationManager.NavigateTo(Routes.NotFound, true, true);
         }
@@ -348,6 +352,7 @@
     }
 
     private StoreData? Store => StoreState.Value.Store?.Data;
+    private AppUserStoreInfo? StoreInfo => string.IsNullOrEmpty(Store?.Id) ? null : UserState.Value.Info?.Data?.Stores?.FirstOrDefault(store => store.Id == Store.Id);
     private bool Loading => StoreState.Value.Store?.Loading is true;
     private bool Sending => StoreState.Value.Store?.Sending is true;
     private string? Error => _errorMessage ?? StoreState.Value.Store?.Error;

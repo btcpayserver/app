@@ -18,6 +18,7 @@
 @inject IAccountManager AccountManager
 @inject IFingerprint Fingerprint
 @inject IState<UIState> UIState
+@inject IState<UserState> UserState
 @inject IState<StoreState> StoreState
 @inject DisplayFormatter DisplayFormatter
 @inject BTCPayConnectionManager ConnectionManager
@@ -72,7 +73,7 @@
         <h2>Store</h2>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
-                @if (_userInfo?.Stores?.Count() > 1 || StoreInfo == null)
+                @if (UserInfo?.Stores?.Count() > 1 || StoreInfo == null)
                 {
                     <li class="list-group-item">
                         <a href="@Routes.SelectStore">
@@ -320,7 +321,6 @@
 }
 
 @code {
-    private AppUserInfo? _userInfo;
     private BTCPayAccount? _account;
     private BTCPayAppConfig? _config;
     private bool? _biometricAuthAvailable;
@@ -330,11 +330,9 @@
     {
         await base.OnInitializedAsync();
 
-        AccountManager.OnUserInfoChange += OnUserInfoChange;
         AccountManager.OnAccountInfoChange += OnAccountInfoChange;
 
         Model.Theme = UiState.Value.SelectedTheme;
-        _userInfo = AccountManager.GetUserInfo();
         _account = AccountManager.GetAccount();
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
         _biometricAuthAvailable = await Fingerprint.IsAvailableAsync();
@@ -343,12 +341,6 @@
     private async Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
     {
         _account = account;
-        await InvokeAsync(StateHasChanged);
-    }
-
-    private async Task OnUserInfoChange(object? sender, AppUserInfo? userInfo)
-    {
-        _userInfo = userInfo;
         await InvokeAsync(StateHasChanged);
     }
 
@@ -377,6 +369,7 @@
     private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
     private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
+    private AppUserInfo? UserInfo => UserState.Value.Info?.Data;
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
     private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
     private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);

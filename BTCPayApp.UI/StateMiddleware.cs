@@ -63,6 +63,7 @@ public class StateMiddleware(
         dispatcher.Dispatch(new RootState.ConnectionStateUpdatedAction(btcPayConnectionManager.ConnectionState));
         dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
         dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
+        dispatcher.Dispatch(new UserState.SetInfo(accountManager.GetUserInfo(), null));
 
         btcPayConnectionManager.ConnectionChanged += (sender, args) =>
         {
@@ -98,6 +99,11 @@ public class StateMiddleware(
             {
                 navigationManager.NavigateTo(Routes.SelectStore, true, true);
             }
+        };
+
+        accountManager.OnUserInfoChange += async (sender, userInfo) =>
+        {
+            dispatcher.Dispatch(new UserState.SetInfo(userInfo, null));
         };
 
         btcpayAppServerClient.OnNotifyServerEvent += async (sender, serverEvent) =>

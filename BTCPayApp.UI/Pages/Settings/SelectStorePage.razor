@@ -6,7 +6,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
-@inject IState<StoreState> StoreState
+@inject IState<UserState> UserState
 <PageTitle>Select your store</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
@@ -20,7 +20,7 @@
     {
         <Alert Type="danger">@_errorMessage</Alert>
     }
-    @if (_stores?.Any() is true)
+    @if (Stores?.Any() is true)
     {
         if (string.IsNullOrEmpty(_initialStoreId))
         {
@@ -30,7 +30,7 @@
             <DataAnnotationsValidator />
             <InputRadioGroup Name="StoreIds" @bind-Value="@Model.StoreId">
                 <ul class="list-group list-group-flush mb-3">
-                    @foreach (var store in _stores)
+                    @foreach (var store in Stores)
                     {
                         <li class="list-group-item">
                             <label class="form-check-label stretched-link d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -76,33 +76,21 @@
     private string? _initialStoreId;
     private bool _sending;
     private ValidationEditContext? _validationEditContext;
-    private IEnumerable<AppUserStoreInfo>? _stores;
     SelectStoreModel Model { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        AccountManager.OnUserInfoChange += OnUserInfoChange;
         _initialStoreId = Model.StoreId = AccountManager.GetCurrentStore()?.Id;
-        _stores = AccountManager.GetUserInfo()!.Stores;
-        if (_stores?.Any() is not true)
+        if (Stores?.Any() is not true)
         {
             NavigationManager.NavigateTo(Routes.CreateStore);
         }
-        /*else if (_userInfo!.Stores?.Count() == 1)
+        /*else if (Stores?.Count() == 1)
         {
             await SelectStore(_userInfo!.Stores!.First().Id!);
         }*/
-    }
-
-    private async Task OnUserInfoChange(object? sender, AppUserInfo? userInfo)
-    {
-        _stores = userInfo?.Stores;
-        if (_stores?.Any() is not true)
-            NavigationManager.NavigateTo(Routes.CreateStore);
-        else
-            await InvokeAsync(StateHasChanged);
     }
 
     private async Task HandleValidSubmit()
@@ -147,5 +135,7 @@
         public string? StoreId { get; set; }
     }
 
+    private AppUserInfo? UserInfo => UserState.Value.Info?.Data;
+    private IEnumerable<AppUserStoreInfo>? Stores => UserInfo?.Stores;
     private string GetCreateStoreUrl() => NavigationManager.GetUriWithQueryParameters(Routes.CreateStore, new Dictionary<string, object?> { {"backUrl", Routes.SelectStore } } );
 }

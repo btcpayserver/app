@@ -16,12 +16,14 @@
                     </NavLink>
                 </li>
             </AuthorizeView>
-            <li class="nav-item">
-                <NavLink href="@Routes.PointOfSale" Match="NavLinkMatch.All" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
-                    <Icon Symbol="nav-keypad"/>
-                    <span>Keypad</span>
-                </NavLink>
-            </li>
+            <AuthorizeView Policy="@Policies.CanCreateInvoice" Resource="StoreId">
+                <li class="nav-item">
+                    <NavLink href="@Routes.PointOfSale" Match="NavLinkMatch.All" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
+                        <Icon Symbol="nav-keypad"/>
+                        <span>Keypad</span>
+                    </NavLink>
+                </li>
+            </AuthorizeView>
             <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="StoreId">
                 <li class="nav-item">
                     <NavLink href="@Routes.Invoices" Match="NavLinkMatch.Prefix" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">

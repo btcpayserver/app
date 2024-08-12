@@ -114,6 +114,7 @@ public class AuthStateProvider(
 
             if (_userInfo != null)
             {
+                OnUserInfoChange?.Invoke(this, _userInfo);
                 // update account user info
                 _account!.SetInfo(_userInfo.Email!, _userInfo.Name, _userInfo.ImageUrl);
                 OnAccountInfoChange?.Invoke(this, _account);
