@@ -154,39 +154,41 @@
             }
             @if (_peers?.Any() is true)
             {
-                <h5 class="mt-4 mb-3">Open channel</h5>
-                <ValidationEditContext @ref="_openChannelEditContext"  Model="OCModel" OnValidSubmit="OpenChannel" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage" class="mb-5">
-                    <DataAnnotationsValidator/>
-                    <div class="form-group">
-                        <label for="PeerId" class="form-label" data-required>Peer</label>
-                        <InputSelect @bind-Value="OCModel.PeerId" id="PeerId" class="form-select">
-                            <option>Select peer</option>
-                            @foreach (var peer in _peers)
-                            {
-                                <option value="@peer.nodeId">@peer.nodeId</option>
-                            }
-                        </InputSelect>
-                        <ValidationMessage For="@(() => OCModel.PeerId)"/>
-                    </div>
-                    <div class="form-group">
-                        <label for="Amount" class="form-label" data-required>Amount</label>
-                        <div class="input-group">
-                            <InputNumber @bind-Value="OCModel.Amount" id="Amount" class="form-control" inputmode="numeric" />
-                            <span class="input-group-text">sats</span>
+                <div class="box mb-3">
+                    <h4 class="mb-4">Open Channel</h4>
+                    <ValidationEditContext @ref="_openChannelEditContext"  Model="OCModel" OnValidSubmit="OpenChannel" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage">
+                        <DataAnnotationsValidator/>
+                        <div class="form-group">
+                            <label for="PeerId" class="form-label" data-required>Peer</label>
+                            <InputSelect @bind-Value="OCModel.PeerId" id="PeerId" class="form-select">
+                                <option>Select peer</option>
+                                @foreach (var peer in _peers)
+                                {
+                                    <option value="@peer.nodeId">@peer.nodeId</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => OCModel.PeerId)"/>
                         </div>
-                        <ValidationMessage For="@(() => OCModel.Amount)"/>
-                    </div>
-                    <button type="submit" class="btn btn-primary"disabled="@(_openChannelEditContext!.Invalid || _channelOpening)">
-                        @if (_channelOpening)
-                        {
-                            <LoadingIndicator/>
-                        }
-                        else
-                        {
-                            <span>Open channel</span>
-                        }
-                    </button>
-                </ValidationEditContext>
+                        <div class="form-group">
+                            <label for="Amount" class="form-label" data-required>Amount</label>
+                            <div class="input-group">
+                                <InputNumber @bind-Value="OCModel.Amount" id="Amount" class="form-control" inputmode="numeric" />
+                                <span class="input-group-text">sats</span>
+                            </div>
+                            <ValidationMessage For="@(() => OCModel.Amount)"/>
+                        </div>
+                        <button type="submit" class="btn btn-primary"disabled="@(_openChannelEditContext!.Invalid || _channelOpening)">
+                            @if (_channelOpening)
+                            {
+                                <LoadingIndicator/>
+                            }
+                            else
+                            {
+                                <span>Open Channel</span>
+                            }
+                        </button>
+                    </ValidationEditContext>
+                </div>
             }
         </article>
     }
