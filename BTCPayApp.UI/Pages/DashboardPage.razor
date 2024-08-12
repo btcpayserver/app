@@ -1,5 +1,4 @@
 ﻿@attribute [Route(Routes.Dashboard)]
-@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client
@@ -7,9 +6,10 @@
 @using BTCPayServer.Lightning
 @using NBitcoin
 @inject IJSRuntime JS
+@inject IDispatcher Dispatcher
+@inject IState<UIState> UIState
 @inject IState<StoreState> StoreState
 @inject IActionSubscriber ActionSubscriber
-@inject IAccountManager AccountManager
 @inject DisplayFormatter DisplayFormatter
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -33,10 +33,10 @@
             @if (TotalBalance != null)
             {
                 <div class="amount text-center">
-                    <div class="sats fw-bold fs-1">@DisplayFormatter.Currency(TotalBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol)</div>
+                    <div class="sats fw-bold fs-1" @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(TotalBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</div>
                     @if (CurrencyValue.HasValue)
                     {
-                        <div class="fiat fw-semibold text-muted">@DisplayFormatter.Currency(CurrencyValue.Value, Currency, DisplayFormatter.CurrencyFormat.Symbol)</div>
+                        <div class="fiat fw-semibold text-muted">~ @DisplayFormatter.Currency(CurrencyValue.Value, Currency, DisplayFormatter.CurrencyFormat.Symbol)</div>
                     }
                 </div>
             }
@@ -65,6 +65,7 @@
     public string? Success { get; set; }
 
     private string? _successMessage;
+    private Action? _updateChart;
 
     protected override async Task OnInitializedAsync()
     {
@@ -75,24 +76,20 @@
             _successMessage = Uri.UnescapeDataString(Success);
         }
 
-        ActionSubscriber.SubscribeToAction<StoreState.SetOnchainHistogram>(this, action =>
-        {
-            if (Histogram != null)
-                JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC");
-        });
-
-        ActionSubscriber.SubscribeToAction<StoreState.SetLightningHistogram>(this, action =>
-        {
-            if (Histogram != null)
-                JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC");
-        });
+        ActionSubscriber.SubscribeToAction<UIState.ToggleBitcoinUnit>(this, action => _updateChart?.Invoke());
+        ActionSubscriber.SubscribeToAction<StoreState.SetOnchainHistogram>(this, action => _updateChart?.Invoke());
+        ActionSubscriber.SubscribeToAction<StoreState.SetLightningHistogram>(this, action => _updateChart?.Invoke());
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
-        if (Histogram != null)
-            await JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC");
+        _updateChart = () =>
+        {
+            if (Histogram != null)
+                JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC", BitcoinUnit, null, Currency);
+        };
+        _updateChart?.Invoke();
     }
 
     protected override ValueTask DisposeAsyncCore(bool disposing)
@@ -104,26 +101,33 @@
         return ValueTask.CompletedTask;
     }
 
+    private void ToggleDisplayCurrency()
+    {
+        Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
+    }
+
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data?.Take(5);
     private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;
     private string? InvoicesError => StoreState.Value.Invoices?.Error;
-
     private string? StoreId => StoreState.Value.StoreInfo?.Id;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private string? BalanceError => StoreState.Value.OnchainBalance?.Error ?? StoreState.Value.LightningBalance?.Error;
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
-    private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
-    private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
+    private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
+    private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
     private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
-    private decimal? LightningOnchainBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(MoneyUnit.Satoshi);
-    private decimal? LightningOffchainBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(LightMoneyUnit.Satoshi);
+    private decimal? LightningOnchainBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(UnitMoney);
+    private decimal? LightningOffchainBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(UnitLightMoney);
     private decimal? TotalBalance => OnchainBalance == null && LightningBalance == null
         ? null
         : (OnchainConfirmedBalance ?? 0) + (OnchainUnconfirmedBalance ?? 0) + (LightningOnchainBalance ?? 0) + (LightningOffchainBalance ?? 0);
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
     private decimal? CurrencyValue => TotalBalance != null && Rate.HasValue && !string.IsNullOrEmpty(Currency)
-        ? new Money(TotalBalance.Value, MoneyUnit.Satoshi).ToDecimal(MoneyUnit.BTC) * Rate.Value
+        ? new Money(TotalBalance.Value, UnitMoney).ToDecimal(MoneyUnit.BTC) * Rate.Value
         : null;
 
     private HistogramData? Histogram => StoreState.Value.UnifiedHistogram;
+    private string BitcoinUnit => UIState.Value.BitcoinUnit;
+    private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
+    private LightMoneyUnit UnitLightMoney => BitcoinUnit == CurrencyUnit.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
 }

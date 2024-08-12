@@ -53,6 +53,7 @@ public class DisplayFormatter
             provider.CurrencyDecimalDigits = divisibility;
         }
         var formatted = value.ToString("C", provider);
+        if (currencyData.Code == "SATS") formatted = formatted.Replace(',', ' ');
 
         // Ensure we are not using the symbol for BTC — we made that design choice consciously.
         if (format == CurrencyFormat.Symbol && currencyData.Code == "BTC")

@@ -1,4 +1,5 @@
 Interop = {
+  bitcoinUnit: 'SATS',
   eventListeners: {},
   getWidth(el) {
     return el.clientWidth;
@@ -35,11 +36,14 @@ Interop = {
   removeEventListeners(...args) {
     for (arg of args) Interop.removeEventListener(...arg)
   },
+  setBitcoinUnit(u) {
+    Interop.bitcoinUnit = u === 'BTC' ? 'BTC' : 'SATS';
+  },
   // theme
   setColorMode: window.setColorMode,
   setInstanceInfo(customThemeExtension, customThemeCssUrl, logoUrl) {
     const $tag = document.getElementById('CustomThemeLinkTag')
-    if (customThemeExtension && customThemeCssUrl) {rel="icon"
+    if (customThemeExtension && customThemeCssUrl) {
       $tag.setAttribute('rel', 'stylesheet');
       $tag.setAttribute('href', customThemeCssUrl);
       document.documentElement.setAttribute(window.THEME_ATTR, customThemeExtension.toLowerCase());
@@ -62,8 +66,13 @@ Interop = {
     }
   },
   // chartist
-  renderLineChart (selector, labels, series, cryptoCode, rate, defaultCurrency, divisibility) {
-    const valueTransform = value => rate ? DashboardUtils.displayCurrency(value, rate, defaultCurrency, divisibility) : value
+  renderLineChart (selector, labels, series, seriesUnit, displayUnit, rate, defaultCurrency, divisibility) {
+    function valueTransform(value, fromUnit, toUnit) {
+      if (fromUnit === toUnit) return value;
+      if (fromUnit === 'BTC' && toUnit === 'SATS') return value * 100000000;
+      if (fromUnit === 'SATS' && toUnit === '') return value / 100000000;
+      else return value;
+    }
     const labelCount = 6
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat
     const dateFormatter = new Intl.DateTimeFormat('default', { month: 'short', day: 'numeric' })
@@ -98,7 +107,8 @@ Interop = {
             y: -16
           },
           valueTransformFunction(value, label) {
-            return valueTransform(value) + ' ' + (rate ? defaultCurrency : cryptoCode)
+            const val = valueTransform(value, seriesUnit, displayUnit)
+            return displayCurrency(val, rate, displayUnit, divisibility) + ' ' + (displayUnit === 'SATS' ? 'sats' : displayUnit)
           }
         })
       ]
@@ -144,8 +154,10 @@ function toDefaultCurrency(amount, rate) {
 
 function displayCurrency(amount, rate, currency, divisibility) {
   const value = rate ? toDefaultCurrency(amount, rate) : amount;
-  const locale = currency === 'USD' ? 'en-US' : navigator.language;
+  const locale = ['USD', 'BTC', 'SATS'].includes(currency) ? 'en-US' : navigator.language;
   const isSats = currency === 'SATS';
+  if (currency === 'BTC')  divisibility = 8;
+  if (isSats) divisibility = 0;
   if (isSats) currency = 'BTC';
   const opts = { currency, style: 'decimal', minimumFractionDigits: divisibility };
   const val = new Intl.NumberFormat(locale, opts).format(value);

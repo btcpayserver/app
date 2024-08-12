@@ -222,7 +222,7 @@
                         <div class="justify-content-start">
                             <Icon Symbol="wallet-wallet"/>
                             <span>
-                                @DisplayFormatter.Currency(OnchainConfirmedBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) onchain confirmed
+                                @DisplayFormatter.Currency(OnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) onchain confirmed
                             </span>
                         </div>
                     </li>
@@ -233,7 +233,7 @@
                         <div class="justify-content-start">
                             <Icon Symbol="wallet-wallet"/>
                             <span>
-                                @DisplayFormatter.Currency(OnchainUnconfirmedBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) onchain unconfirmed
+                                @DisplayFormatter.Currency(OnchainUnconfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) onchain unconfirmed
                             </span>
                         </div>
                     </li>
@@ -244,7 +244,7 @@
                         <div class="justify-content-start">
                             <Icon Symbol="lightning-node"/>
                             <span>
-                                @DisplayFormatter.Currency(LightningOnchainConfirmedBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN onchain confirmed
+                                @DisplayFormatter.Currency(LightningOnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) LN onchain confirmed
                             </span>
                         </div>
                     </li>
@@ -255,7 +255,7 @@
                         <div class="justify-content-start">
                             <Icon Symbol="lightning-node"/>
                             <span>
-                                    @DisplayFormatter.Currency(LightningOnchainUnconfirmedBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN onchain unconfirmed
+                                    @DisplayFormatter.Currency(LightningOnchainUnconfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) LN onchain unconfirmed
                                 </span>
                         </div>
                     </li>
@@ -266,7 +266,7 @@
                         <div class="justify-content-start">
                             <Icon Symbol="lightning-node"/>
                             <span>
-                                @DisplayFormatter.Currency(LightningOnchainReservedBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN onchain reserved
+                                @DisplayFormatter.Currency(LightningOnchainReservedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) LN onchain reserved
                             </span>
                         </div>
                     </li>
@@ -277,7 +277,7 @@
                         <div class="justify-content-start">
                             <Icon Symbol="lightning-node"/>
                             <span>
-                                @DisplayFormatter.Currency(LightningOffchainOpeningBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN channels opening
+                                @DisplayFormatter.Currency(LightningOffchainOpeningBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) LN channels opening
                             </span>
                         </div>
                     </li>
@@ -288,7 +288,7 @@
                         <div class="justify-content-start">
                             <Icon Symbol="lightning-node"/>
                             <span>
-                                @DisplayFormatter.Currency(LightningOffchainLocalBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN channels local
+                                @DisplayFormatter.Currency(LightningOffchainLocalBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) LN channels local
                             </span>
                         </div>
                     </li>
@@ -299,7 +299,7 @@
                         <div class="justify-content-start">
                             <Icon Symbol="lightning-node"/>
                             <span>
-                                @DisplayFormatter.Currency(LightningOffchainRemoteBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN channels remote
+                                @DisplayFormatter.Currency(LightningOffchainRemoteBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) LN channels remote
                             </span>
                         </div>
                     </li>
@@ -310,7 +310,7 @@
                         <div class="justify-content-start">
                             <Icon Symbol="lightning-node"/>
                             <span>
-                                @DisplayFormatter.Currency(LightningOffchainClosingBalance.Value, "SATS", DisplayFormatter.CurrencyFormat.Symbol) LN channels closing
+                                @DisplayFormatter.Currency(LightningOffchainClosingBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) LN channels closing
                             </span>
                         </div>
                     </li>
@@ -371,16 +371,19 @@
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private AppUserInfo? UserInfo => UserState.Value.Info?.Data;
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
-    private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
-    private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(MoneyUnit.Satoshi);
+    private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
+    private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
     private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
-    private decimal? LightningOnchainConfirmedBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(MoneyUnit.Satoshi);
-    private decimal? LightningOnchainUnconfirmedBalance => LightningBalance?.OnchainBalance?.Unconfirmed.ToDecimal(MoneyUnit.Satoshi);
-    private decimal? LightningOnchainReservedBalance => LightningBalance?.OnchainBalance?.Reserved.ToDecimal(MoneyUnit.Satoshi);
-    private decimal? LightningOffchainOpeningBalance => LightningBalance?.OffchainBalance.Opening?.ToDecimal(LightMoneyUnit.Satoshi);
-    private decimal? LightningOffchainLocalBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(LightMoneyUnit.Satoshi);
-    private decimal? LightningOffchainRemoteBalance => LightningBalance?.OffchainBalance.Remote.ToDecimal(LightMoneyUnit.Satoshi);
-    private decimal? LightningOffchainClosingBalance => LightningBalance?.OffchainBalance.Opening?.ToDecimal(LightMoneyUnit.Satoshi);
+    private decimal? LightningOnchainConfirmedBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(UnitMoney);
+    private decimal? LightningOnchainUnconfirmedBalance => LightningBalance?.OnchainBalance?.Unconfirmed.ToDecimal(UnitMoney);
+    private decimal? LightningOnchainReservedBalance => LightningBalance?.OnchainBalance?.Reserved.ToDecimal(UnitMoney);
+    private decimal? LightningOffchainOpeningBalance => LightningBalance?.OffchainBalance.Opening?.ToDecimal(UnitLightMoney);
+    private decimal? LightningOffchainLocalBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(UnitLightMoney);
+    private decimal? LightningOffchainRemoteBalance => LightningBalance?.OffchainBalance.Remote.ToDecimal(UnitLightMoney);
+    private decimal? LightningOffchainClosingBalance => LightningBalance?.OffchainBalance.Opening?.ToDecimal(UnitLightMoney);
+    private string BitcoinUnit => UIState.Value.BitcoinUnit;
+    private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
+    private LightMoneyUnit UnitLightMoney => BitcoinUnit == CurrencyUnit.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
 
     private void SwitchToSlave()
     {
