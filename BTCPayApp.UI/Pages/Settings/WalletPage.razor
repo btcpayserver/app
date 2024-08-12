@@ -38,31 +38,34 @@
     @if (OnChainWalletManager.IsConfigured)
     {
         var config = OnChainWalletManager.WalletConfig!;
-        <div class="form-floating">
-            <TruncateCenter Text="@config.Fingerprint" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
-            <label>Fingerprint</label>
-        </div>
-        <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#seed" aria-expanded="false" aria-controls="seed">
-            Show seed
-        </button>
-        <div id="seed" class="collapse">
-            <div class="box p-4 mt-3">
-                <ol class="m-0">
-                    @foreach (var word in config.Mnemonic.Split(' '))
-                    {
-                        <li class="font-monospace">@word</li>
-                    }
-                </ol>
+        <h4>Wallet</h4>
+        <div class="box mb-3">
+            <div class="form-floating">
+                <TruncateCenter Text="@config.Fingerprint" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                <label>Fingerprint</label>
+            </div>
+            <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#seed" aria-expanded="false" aria-controls="seed">
+                Show seed
+            </button>
+            <div id="seed" class="collapse">
+                <div class="box p-4 mt-3">
+                    <ol class="m-0">
+                        @foreach (var word in config.Mnemonic.Split(' '))
+                        {
+                            <li class="font-monospace">@word</li>
+                        }
+                    </ol>
+                </div>
             </div>
         </div>
-
-        <h3 class="mt-4">Derivations</h3>
+        <h4>Derivations</h4>
         @foreach (var d in config.Derivations)
         {
             var identifier = d.Value.Identifier;
             var descriptor = d.Value.Descriptor;
             var isStorePM = IsStorePaymentMethodId(identifier);
             <div class="box mb-3">
+
                 <h4 class="d-flex flex-wrap align-items-center gap-2">
                     @(d.Value.Name)
                     @if (isStorePM is true)
@@ -75,14 +78,14 @@
                 @if (!string.IsNullOrEmpty(identifier))
                 {
                     <div class="form-floating">
-                        <TruncateCenter Text="@identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                        <TruncateCenter Text="@identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                         <label>Identifier</label>
                     </div>
                 }
                 @if (!string.IsNullOrEmpty(descriptor))
                 {
                     <div class="form-floating">
-                        <TruncateCenter Text="@descriptor" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext" />
+                        <TruncateCenter Text="@descriptor" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                         <label>Descriptor</label>
                     </div>
                     @if (isStorePM is false && !string.IsNullOrEmpty(StoreId))

@@ -56,44 +56,44 @@
     }
     else
     {
-        <h4 class="d-flex flex-wrap align-items-center gap-2">
-            <span>@(_config?.Alias ?? "Lightning Node")</span>
-            @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier) && _storePaymentMethodIdentifier == ConnectionString)
+        <div class="box mb-3">
+            <h4 class="d-flex flex-wrap align-items-center gap-2">
+                <span>@(_config?.Alias ?? "Lightning Node")</span>
+                @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier) && _storePaymentMethodIdentifier == ConnectionString)
+                {
+                    <span class="badge bg-info">
+                        Current lightning payment method for store
+                    </span>
+                }
+            </h4>
+            @if (Node is not null)
             {
-                <span class="badge bg-info">
-                    Current lightning payment method for store
-                </span>
+                <div class="form-floating">
+                    <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <label>Node ID</label>
+                </div>
             }
-        </h4>
-        @if (Node is not null)
-        {
-            <div class="form-floating">
-                <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                <label>Node ID</label>
-            </div>
-        }
 
-        @if (!string.IsNullOrEmpty(_config?.LightningDerivationPath))
-        {
-            <div class="form-floating">
-                <TruncateCenter Text="@_config.LightningDerivationPath" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                <label>Derivation Path</label>
-            </div>
-        }
-
-        @if (!string.IsNullOrEmpty(ConnectionString))
-        {
-            <div class="form-floating">
-                <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                <label>Connection String</label>
-            </div>
-
-            @if (!string.IsNullOrEmpty(StoreId) && _storePaymentMethodIdentifier != ConnectionString)
+            @if (!string.IsNullOrEmpty(_config?.LightningDerivationPath))
             {
-                <button class="btn btn-primary my-3" @onclick="SetStorePaymentMethod">Set as lightning payment method for store</button>
+                <div class="form-floating">
+                    <TruncateCenter Text="@_config.LightningDerivationPath" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <label>Derivation Path</label>
+                </div>
             }
-        }
-
+            @if (!string.IsNullOrEmpty(ConnectionString))
+            {
+                <div class="form-floating">
+                    <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <label>Connection String</label>
+                </div>
+    
+                @if (!string.IsNullOrEmpty(StoreId) && _storePaymentMethodIdentifier != ConnectionString)
+                {
+                    <button class="btn btn-primary my-3" @onclick="SetStorePaymentMethod">Set as lightning payment method for store</button>
+                }
+            }
+        </div>
         @if (Node is not null && JITOptions?.Any() is true)
         {
             <div class="form-group mt-4">
