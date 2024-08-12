@@ -9,6 +9,8 @@ public class LightningConfig
     public string ScriptDerivationKey { get; set; } = WalletDerivation.NativeSegwit; //when ldk asks for an address, where do we get it from?
     public string LightningDerivationPath { get; set; } = "m/666'";// your lightning node derivation path
     public string Color { get; set; } = "#51B13E";
+    public Uri? RapidGossipSyncUrl { get; set; }
+    public long RapidGossipSyncTimestamp { get; set; } = 0;
 
     public string? JITLSP { get; set; } // Just In Time Lightning Service Provider
 

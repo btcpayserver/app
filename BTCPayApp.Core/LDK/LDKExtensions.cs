@@ -184,6 +184,8 @@ public static class LDKExtensions
             FeeEstimator.new_impl(provider.GetRequiredService<LDKFeeEstimator>()));
         services.AddScoped<LDKPersistInterface>();
         services.AddScoped<Persist>(provider => Persist.new_impl(provider.GetRequiredService<LDKPersistInterface>()));
+        services.AddScoped<RapidGossipSync>(provider => RapidGossipSync.of(provider.GetRequiredService<NetworkGraph>(),
+            provider.GetRequiredService<Logger>()));
         services.AddScoped<LDKSignerProvider>();
         services.AddScoped<SignerProvider>(provider =>
             SignerProvider.new_impl(provider.GetRequiredService<LDKSignerProvider>()));
@@ -212,6 +214,7 @@ public static class LDKExtensions
         services.AddScoped<PaymentsManager>();
         services.AddScoped<BTCPayPaymentsNotifier>();
         services.AddScoped<BTCPayPaymentsNotifier>();
+        services.AddScoped<LDKRapidGossipSyncer>();
         // services.AddScoped<IScopedHostedService>(provider =>
         //     provider.GetRequiredService<LDKSpendableOutputEventHandler>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKChannelSync>());
@@ -221,6 +224,7 @@ public static class LDKExtensions
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKAnnouncementBroadcaster>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<BTCPayPaymentsNotifier>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKPendingHTLCsForwardableEventHandler>());
+        services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<LDKRapidGossipSyncer>());
 
         services.AddScoped<OutputSweeper>(provider =>
         {
