@@ -56,16 +56,14 @@
     }
     else
     {
+        <h2 class="d-flex flex-wrap align-items-center gap-2">
+            <span>@(_config?.Alias ?? "Lightning Node")</span>
+            @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier) && _storePaymentMethodIdentifier == ConnectionString)
+            {
+                <span class="badge bg-info">Lightning Payment Method</span>
+            }
+        </h2>
         <div class="box mb-3">
-            <h4 class="d-flex flex-wrap align-items-center gap-2">
-                <span>@(_config?.Alias ?? "Lightning Node")</span>
-                @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier) && _storePaymentMethodIdentifier == ConnectionString)
-                {
-                    <span class="badge bg-info">
-                        Current lightning payment method for store
-                    </span>
-                }
-            </h4>
             @if (Node is not null)
             {
                 <div class="form-floating">
@@ -96,15 +94,18 @@
         </div>
         @if (Node is not null && JITOptions?.Any() is true)
         {
-            <div class="form-group mt-4">
-                <label for="JITLSP" class="form-label">JIT LSP</label>
-                <select class="form-select" @onchange="OnSelectLSP" value="@_config?.JITLSP" id="JITLSP">
-                    <option value="">None</option>
-                    @foreach (var jit in JITOptions)
-                    {
-                        <option value="@jit">@jit</option>
-                    }
-                </select>
+            <h2>Lightning Service Provider</h2>
+            <div class="box mb-3">
+                <div class="form-group">
+                    <label for="JITLSP" class="form-label">JIT LSP</label>
+                    <select class="form-select" @onchange="OnSelectLSP" value="@_config?.JITLSP" id="JITLSP">
+                        <option value="">None</option>
+                        @foreach (var jit in JITOptions)
+                        {
+                            <option value="@jit">@jit</option>
+                        }
+                    </select>
+                </div>
             </div>
         }    
         @if (Node is not null)
