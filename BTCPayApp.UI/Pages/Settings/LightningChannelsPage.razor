@@ -154,37 +154,66 @@
             }
             @if (_peers?.Any() is true)
             {
-                <div> Open channel to
-                    <select @bind="selectedPeer">
-                        <option >Select peer</option>
-                        @foreach (var peer in _peers)
-                        {
-                            <option value="@peer.nodeId">@peer.nodeId</option>
-                        }
-                    </select>
-                    <input type="number" min="0" @bind="channelOpenAmount" />
-                    <button type="button" @onclick="OpenChannel">Open channel</button>
-                    @if (channelResponse is not null)
-                    {
-                        <p>@channelResponse</p>
-                    }
+                <h5 class="mt-4 mb-3">Open channel</h5>
+                <ValidationEditContext @ref="_openChannelEditContext"  Model="OCModel" OnValidSubmit="OpenChannel" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage" class="mb-5">
+                    <DataAnnotationsValidator/>
+                    <div class="form-group">
+                        <label for="PeerId" class="form-label" data-required>Peer</label>
+                        <InputSelect @bind-Value="OCModel.PeerId" id="PeerId" class="form-select">
+                            <option>Select peer</option>
+                            @foreach (var peer in _peers)
+                            {
+                                <option value="@peer.nodeId">@peer.nodeId</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => OCModel.PeerId)"/>
                     </div>
+                    <div class="form-group">
+                        <label for="Amount" class="form-label" data-required>Amount</label>
+                        <div class="input-group">
+                            <InputNumber @bind-Value="OCModel.Amount" id="Amount" class="form-control" inputmode="numeric" />
+                            <span class="input-group-text">sats</span>
+                        </div>
+                        <ValidationMessage For="@(() => OCModel.Amount)"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary"disabled="@(_openChannelEditContext!.Invalid || _channelOpening)">
+                        @if (_channelOpening)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Open channel</span>
+                        }
+                    </button>
+                </ValidationEditContext>
             }
         </article>
     }
 </section>
 
 @code {
+    private readonly SemaphoreSlim _semaphore = new (1, 1);
     private LightningConfig? _config;
     private (string id, string userId, string counterparty, long? shortChannelId, int? confirmations, int? confirmationsRequired, string fundingTransactionHash, bool usable, bool ready, LightMoney Balance, LightMoney Inbound, LightMoney Outbound, string? State)[]? _channels;
     private (string nodeId, string? socket)[]? _peers;
     private LDKNode? Node => LightningNodeManager.Node;
     private bool Loading { get; set; }
-    private string? selectedPeer { get; set; }
-    private SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-    private decimal? channelOpenAmount { get; set; }
-    private string? channelResponse { get; set; }
+    private bool _channelOpening { get; set; }
     private string NewPeer { get; set; }
+    private OpenChannelModel? OCModel { get; set; } = new ();
+    private string? _channelSuccessMessage { get; set; }
+    private string? _channelErrorMessage { get; set; }
+    private ValidationEditContext? _openChannelEditContext;
+
+    private class OpenChannelModel
+    {
+        [Required]
+        public string? PeerId { get; set; }
+        [Required]
+        [Range(100_000, 10_000_000)]
+        public decimal? Amount { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -211,7 +240,6 @@
             _semaphore.Release();
         }
     }
-
 
     private async Task ConnectToNewPeer()
     {
@@ -292,29 +320,33 @@
 
     private async void OpenChannel()
     {
-        if (Loading || channelOpenAmount is null || selectedPeer is null) return;
+        if (Loading || OCModel?.Amount is null || string.IsNullOrEmpty(OCModel.PeerId)) return;
         try
         {
-            Loading = true;
+            _channelSuccessMessage = _channelErrorMessage = null;
+            _channelOpening = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            var result = await Node.OpenChannel(Money.Coins(channelOpenAmount.Value), new PubKey(selectedPeer) );
+            var result = await Node.OpenChannel(Money.Coins(OCModel.Amount.Value), new PubKey(OCModel.PeerId));
             if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
             {
-                channelResponse = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
-                channelOpenAmount = null;
-                selectedPeer = null;
+                _channelSuccessMessage = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
+                OCModel = new OpenChannelModel();
             }
-            else if(result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
+            else if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
             {
-                channelResponse = $"Error: {err.err.GetError()}";
+                _channelErrorMessage = $"Error: {err.err.GetError()}";
             }
+        }
+        catch (Exception e)
+        {
+            _channelErrorMessage = e.Message;
         }
         finally
         {
-            Loading = false;
-            await InvokeAsync(StateHasChanged);
             _semaphore.Release();
+            _channelOpening = false;
+            await InvokeAsync(StateHasChanged);
         }
     }
 }
