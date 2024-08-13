@@ -3,11 +3,11 @@
 public enum BTCPayConnectionState
 {
     Init,
+    Disconnected,
     WaitingForAuth,
     Connecting,
     Syncing,
     WaitingForEncryptionKey,
-    Disconnected,
     ConnectedAsMaster,
     ConnectedAsSlave,
     ConnectedFinishedInitialSync
