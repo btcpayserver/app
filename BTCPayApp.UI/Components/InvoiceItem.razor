@@ -2,21 +2,15 @@
 @using BTCPayServer.Client.Models
 @inject DisplayFormatter DisplayFormatter
 
-<a href="@Routes.InvoicePath(Invoice.Id)" class="list-group-item">
-    <div class="container d-flex align-items-center justify-content-between gap-3 px-1">
-        <div class="d-flex flex-column flex-grow-1 gap-2">
-            <div class="d-flex align-items-center justify-content-between">
-                <span class="text-end fw-semibold">
-                    @DisplayFormatter.Currency(Invoice.Amount, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)
-                </span>
-                <TruncateCenter Text="@Invoice.Id" class="truncate-center-id"/>
-                <span class="text-muted">
-                    <DateDisplay DateTimeOffset="@Invoice.CreatedTime"/>
-                </span>
-                <InvoiceStatusDisplay Invoice="@Invoice" />
-            </div>
-        </div>
-    </div>
+<a href="@Routes.InvoicePath(Invoice.Id)" class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <span class="text-end fw-semibold">
+        @DisplayFormatter.Currency(Invoice.Amount, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)
+    </span>
+    <TruncateCenter Text="@Invoice.Id" class="truncate-center-id"/>
+    <span class="text-muted">
+        <DateDisplay DateTimeOffset="@Invoice.CreatedTime"/>
+    </span>
+    <InvoiceStatusDisplay Invoice="@Invoice" />
 </a>
 
 @code {
