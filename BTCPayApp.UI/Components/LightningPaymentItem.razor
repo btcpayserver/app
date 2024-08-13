@@ -1,0 +1,41 @@
+@using BTCPayApp.Core.Data
+@using BTCPayApp.UI.Util
+@using BTCPayServer.Lightning
+@inject DisplayFormatter DisplayFormatter
+
+<div>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2" @onclick="() => _showDetails = !_showDetails">
+        <span class="text-end fw-semibold">
+            @DisplayFormatter.Currency(Payment.Value.ToUnit(LightMoneyUnit.Satoshi), "SATS", DisplayFormatter.CurrencyFormat.Symbol)
+        </span>
+        <span class="text-muted">
+            <DateDisplay DateTimeOffset="@Payment.Timestamp"/>
+        </span>
+        <LightningPaymentStatusDisplay Payment="@Payment" OnCancelClick="OnCancelClick" />
+    </div>
+    <div class="collapse @(_showDetails ? "show" : null)">
+        <div class="py-3">
+            <div class="form-floating">
+                <TruncateCenter Text="@Payment.PaymentRequest.ToString()" Padding="15" Copy="true" class="form-control-plaintext"/>
+                <label>Payment Request</label>
+            </div>
+            @if (Payment.Preimage != null)
+            {
+            <div class="form-floating">
+                <TruncateCenter Text="@Payment.Preimage" Padding="15" Copy="true" class="form-control-plaintext"/>
+                <label>Preimage</label>
+            </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public AppLightningPayment Payment { get; set; }
+
+    [Parameter]
+    public EventCallback<AppLightningPayment> OnCancelClick { get; set; }
+
+    private bool _showDetails;
+}

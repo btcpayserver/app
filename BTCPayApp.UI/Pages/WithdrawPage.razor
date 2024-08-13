@@ -88,7 +88,7 @@
     private string? paymentRequestSend;
     private string? paymentResponse;
     private bool Loading { get; set; }
-    private SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+    public SemaphoreSlim _semaphore = new(1, 1);
 
     protected override void OnInitialized()
     {

@@ -9,13 +9,13 @@
     <span class="truncate-center-text">@Text</span>
     @if (Copy)
     {
-        <button type="button" class="btn btn-link p-0" data-clipboard="@Text">
+        <button type="button" class="btn btn-link p-0" data-clipboard="@Text" @onclick:stopPropagation>
             <Icon Symbol="actions-copy" />
         </button>
     }
     @if (!string.IsNullOrEmpty(Link))
     {
-        <a href="@Link" rel="noreferrer noopener" target="@(Link.StartsWith("http") ? "_blank" : null)">
+        <a href="@Link" rel="noreferrer noopener" target="@(Link.StartsWith("http") ? "_blank" : null)" @onclick:stopPropagation>
             <Icon Symbol="info" />
         </a>
     }

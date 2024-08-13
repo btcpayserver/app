@@ -1,0 +1,30 @@
+@using BTCPayApp.Core.Data
+@using BTCPayServer.Lightning
+<div @attributes="InputAttributes" class="@CssClass">
+    @if (Payment.Status == LightningPaymentStatus.Pending && OnCancelClick.HasDelegate)
+    {
+        <button type="button" class="btn btn-sm btn-secondary px-2 py-1" @onclick="() => Cancel(Payment)" @onclick:stopPropagation>Cancel</button>
+    }
+    <span class="badge badge-@Payment.Status.ToString().ToLower()">
+        @Payment.Status.ToString()
+    </span>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public AppLightningPayment Payment { get; set; }
+
+    [Parameter]
+    public EventCallback<AppLightningPayment> OnCancelClick { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    private string CssClass => $"d-inline-flex align-items-center gap-2 {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
+
+    private async Task Cancel(AppLightningPayment payment)
+    {
+        if (OnCancelClick.HasDelegate)
+            await OnCancelClick.InvokeAsync(payment);
+    }
+}

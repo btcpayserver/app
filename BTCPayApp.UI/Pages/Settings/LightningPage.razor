@@ -28,34 +28,20 @@
     </Titlebar>
 </SectionContent>
 <section class="container">
-    @if (State.Value.LightningNodeState is LightningNodeState.Error)
-    {
-        <div class="alert alert-danger" role="alert">
-            <h4 class="alert-heading">Error</h4>
-            <p>There was an error with the lightning node. Please try again later.</p>
-        </div>
-    }
-    else if (State.Value.LightningNodeState is LightningNodeState.Inactive)
-    {
-        <div class="alert alert-info" role="alert">
-            <h4 class="alert-heading">Instance inactive</h4>
-            <p>There seems to be another instance of this lightning node running. This instance is inactive.</p>
-        </div>
-    }
-    @if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <Alert Type="danger" Dismissible>@_errorMessage</Alert>
-    }
-    else if (!string.IsNullOrEmpty(_successMessage))
-    {
-        <Alert Type="success" Dismissible>@_successMessage</Alert>
-    }
     @if (LightningNodeManager.CanConfigureLightningNode)
     {
         <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
     }
-    else
+    else if (State.Value.LightningNodeState is not LightningNodeState.Error or LightningNodeState.Inactive)
     {
+        @if (!string.IsNullOrEmpty(_errorMessage))
+        {
+            <Alert Type="danger" Dismissible>@_errorMessage</Alert>
+        }
+        else if (!string.IsNullOrEmpty(_successMessage))
+        {
+            <Alert Type="success" Dismissible>@_successMessage</Alert>
+        }
         <h2 class="d-flex flex-wrap align-items-center gap-2">
             <span>@(_config?.Alias ?? "Lightning Node")</span>
             @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier) && _storePaymentMethodIdentifier == ConnectionString)
@@ -85,7 +71,7 @@
                     <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                     <label>Connection String</label>
                 </div>
-    
+
                 @if (!string.IsNullOrEmpty(StoreId) && _storePaymentMethodIdentifier != ConnectionString)
                 {
                     <button class="btn btn-primary my-3" @onclick="SetStorePaymentMethod">Set as lightning payment method for store</button>
@@ -107,7 +93,7 @@
                     </select>
                 </div>
             </div>
-        }    
+        }
         @if (Node is not null)
         {
             <div class="form-group mt-4">
@@ -127,6 +113,10 @@
                 <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
             }
         </div>
+    }
+    else
+    {
+        <LightningNodeStateAlert State="State.Value.LightningNodeState" />
     }
 </section>
 
@@ -148,7 +138,7 @@
         if (LightningNodeManager?.Node is not null)
         {
             _config = await LightningNodeManager.Node.GetConfig();
-            
+
 
             LightningNodeManager.Node.ConfigUpdated += ConfigUpdated;
             JITOptions = await LightningNodeManager.Node.GetJITLSPs();
@@ -233,7 +223,7 @@
             ? connectionString
             : null;
     }
-    
+
     public void Dispose()
     {
         if (LightningNodeManager?.Node is not null)

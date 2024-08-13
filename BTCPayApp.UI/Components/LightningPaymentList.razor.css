@@ -1,0 +1,7 @@
+.lightning-payment-list .box {
+  margin-bottom: 0 !important;
+}
+
+.lightning-payment-list .box + .box {
+  margin-top: var(--btcpay-space-xs);
+}

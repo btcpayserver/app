@@ -1,10 +1,13 @@
 ﻿@attribute [AllowAnonymous]
 @attribute [Route(Routes.WalletReceive)]
 @using BTCPayApp.Core.Attempt2
+@using BTCPayApp.Core.Data
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
 @using BTCPayServer.Lightning
 @using NBitcoin
 @using NBitcoin.Crypto
+@inject IState<RootState> State
 @inject LightningNodeManager LightningNodeManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -15,55 +18,65 @@
         <h1>Receive</h1>
     </Titlebar>
 </SectionContent>
+
 <section class="container">
-    <h4 class="mb-4">Request payment</h4>
-    <ValidationEditContext @ref="_validationEditContext"  Model="Model" OnValidSubmit="GenerateInvoice" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
-        <DataAnnotationsValidator/>
+    @if (State.Value.LightningNodeState is LightningNodeState.Loaded)
+    {
+        <h4 class="mb-4">Request payment</h4>
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="GenerateInvoice" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
+            <DataAnnotationsValidator/>
 
-        @if (!string.IsNullOrEmpty(_paymentRequest))
-        {
-            <div class="form-group form-floating">
-                <TruncateCenter Text="@_paymentRequest" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                <label>Payment Request</label>
-            </div>
-        }
+            @if (!string.IsNullOrEmpty(_paymentRequest))
+            {
+                <div class="form-group form-floating">
+                    <TruncateCenter Text="@_paymentRequest" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <label>Payment Request</label>
+                </div>
+            }
 
-        <div class="form-group">
-            <label for="Amount" class="form-label" data-required>Amount</label>
-            <div class="input-group">
-                <InputNumber @bind-Value="Model.Amount" id="Amount" class="form-control" inputmode="numeric" min="0" />
-                <span class="input-group-text">sats</span>
+            <div class="form-group">
+                <label for="Amount" class="form-label" data-required>Amount</label>
+                <div class="input-group">
+                    <InputNumber @bind-Value="Model.Amount" id="Amount" class="form-control" inputmode="numeric" min="0"/>
+                    <span class="input-group-text">sats</span>
+                </div>
+                <ValidationMessage For="@(() => Model.Amount)"/>
             </div>
-            <ValidationMessage For="@(() => Model.Amount)"/>
-        </div>
-        <button type="submit" class="btn btn-primary" disabled="@(_validationEditContext!.Invalid || _invoiceGenerating)">
-            @if (_invoiceGenerating)
-            {
-                <LoadingIndicator/>
-            }
-            else
-            {
-                <span>Generate Invoice</span>
-            }
-        </button>
-    </ValidationEditContext>
+            <button type="submit" class="btn btn-primary" disabled="@(_validationEditContext!.Invalid || _invoiceGenerating)">
+                @if (_invoiceGenerating)
+                {
+                    <LoadingIndicator/>
+                }
+                else
+                {
+                    <span>Generate Invoice</span>
+                }
+            </button>
+        </ValidationEditContext>
+
+        <article class="my-5">
+            <h4 class="mb-4">Invoices</h4>
+            <LightningPaymentList Payments="_invoices" Loading="@(PaymentsManager == null)" OnCancelClick="payment => Cancel(payment)"/>
+        </article>
+        <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
+    }
+    else
+    {
+        <LightningNodeStateAlert State="State.Value.LightningNodeState" />
+    }
 </section>
 
 @code {
     private ReceiveModel Model { get; set; } = new();
 
     private ValidationEditContext? _validationEditContext;
+    private List<AppLightningPayment>? _invoices;
     private string? _successMessage;
     private string? _errorMessage;
     private string? _paymentRequest;
     private bool _invoiceGenerating;
-    private LDKNode? Node => LightningNodeManager.Node;
+    private PaymentsManager? PaymentsManager => LightningNodeManager.Node?.PaymentsManager;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-
-    protected override async Task OnInitializedAsync()
-    {
-        await base.OnInitializedAsync();
-    }
 
     private class ReceiveModel
     {
@@ -71,15 +84,31 @@
         public decimal? Amount { get; set; }
     }
 
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await FetchData();
+    }
+
+    private async Task FetchData()
+    {
+        await Wrap(async () =>
+        {
+            var list = await PaymentsManager.List(payments => payments.Where(p => p.Inbound));
+            _invoices = list.OrderByDescending(p => p.Timestamp).ToList();
+        });
+    }
+
     private async void GenerateInvoice()
     {
-        if (Model.Amount is null) return;
+        _paymentRequest = _successMessage = _errorMessage = null;
+        _invoiceGenerating = true;
         await Wrap(async () =>
         {
             try
             {
                 var hash = new uint256(Hashes.SHA256(RandomUtils.GetBytes(32)));
-                var result = await Node.PaymentsManager.RequestPayment(LightMoney.Satoshis(Model.Amount ?? 0), TimeSpan.FromDays(1), hash);
+                var result = await PaymentsManager.RequestPayment(LightMoney.Satoshis(Model.Amount ?? 0), TimeSpan.FromDays(1), hash);
 
                 _successMessage = "Payment request created";
                 _paymentRequest = result.PaymentRequest.ToString();
@@ -90,22 +119,30 @@
                 _errorMessage = $"Error: {e.Message}";
             }
         });
+        _invoiceGenerating = false;
+        await FetchData();
+    }
+
+    private async Task Cancel(AppLightningPayment payment)
+    {
+        await Wrap(async () =>
+        {
+            await PaymentsManager.Cancel(payment);
+        });
+        await FetchData();
     }
 
     private async Task Wrap(Func<Task> action)
     {
-        if (_invoiceGenerating) return;
+        if (PaymentsManager is null) return;
         try
         {
-            _paymentRequest = _successMessage = _errorMessage = null;
-            _invoiceGenerating = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
             await action();
         }
         finally
         {
-            _invoiceGenerating = false;
             await InvokeAsync(StateHasChanged);
             _semaphore.Release();
         }

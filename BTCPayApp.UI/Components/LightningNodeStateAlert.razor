@@ -1,0 +1,47 @@
+@using BTCPayApp.Core.Attempt2
+@if (State is LightningNodeState.Error)
+{
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Lightning Node failure</h4>
+        <p class="mb-0">There was an error with the lightning node. Please try again later.</p>
+    </div>
+}
+else if (State is LightningNodeState.Stopped)
+{
+    <div class="alert alert-warning" role="alert">
+        <h4 class="alert-heading">Lightning Node stopped</h4>
+        <p class="mb-0">This instance of the lightning node is not running currently.</p>
+    </div>
+}
+else if (State is LightningNodeState.Inactive)
+{
+    <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">Lightning Node inactive</h4>
+        <p class="mb-0">There seems to be another instance of this lightning node running. This instance is inactive.</p>
+    </div>
+}
+else if (State is not LightningNodeState.Loaded)
+{
+    <div class="alert alert-info" role="alert">
+        <h4 class="alert-heading">Lightning Node loading</h4>
+        <p class="mb-0">The lightning node is currently @Status.</p>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public LightningNodeState? State { get; set; }
+
+    private string Status =>
+        State switch
+        {
+            LightningNodeState.Init => "initializing",
+            LightningNodeState.NotConfigured => "not configured",
+            LightningNodeState.WaitingForConnection => "waiting for connection",
+            LightningNodeState.Loaded => "loaded",
+            LightningNodeState.Stopped => "stopped",
+            LightningNodeState.Error => "in failure mode",
+            LightningNodeState.Inactive => "inactive",
+            _ => "loading"
+        };
+}
