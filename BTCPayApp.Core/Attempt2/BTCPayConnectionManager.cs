@@ -83,7 +83,7 @@ private CancellationTokenSource _cts = new();
         _btcPayAppServerClient.OnMasterUpdated += OnMasterUpdated;
         _syncService.EncryptionKeyChanged += EncryptionKeyChanged;
         await OnConnectionChanged(this, (BTCPayConnectionState.Init, BTCPayConnectionState.Init));
-        await MonitorHubConnection(_cts.Token);
+        _ = MonitorHubConnection(_cts.Token);
         
         
     }
