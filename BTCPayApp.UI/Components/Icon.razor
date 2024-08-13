@@ -9,5 +9,5 @@
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? InputAttributes { get; set; }
 
-    private string CssClass => $"icon icon-{Symbol} {InputAttributes?["class"]}".Trim();
+    private string CssClass => $"icon icon-{Symbol} {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
 }

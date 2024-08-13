@@ -1,5 +1,5 @@
 @using BTCPayServer.Client.Models
-<div @attributes="InputAttributes" class="invoice-list @InputAttributes?["class"]">
+<div @attributes="InputAttributes" class="@CssClass">
     @if (Loading)
     {
         <div class="p-3 text-center">
@@ -42,4 +42,6 @@
 
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? InputAttributes { get; set; }
+
+    private string CssClass => $"invoice-list {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
 }

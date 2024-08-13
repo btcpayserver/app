@@ -1,13 +1,12 @@
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
-@using Microsoft.AspNetCore.SignalR.Client
 @inject IState<RootState> State
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
-<div class="@CssClass">
+<div @attributes="InputAttributes" class="@CssClass">
     @if (SetupStateOverall() == SetupState.Undetermined)
     {
         <LoadingIndicator />
@@ -64,5 +63,5 @@
         return State.Value.LightningNodeState == LightningNodeState.Loaded ? SetupState.Completed : SetupState.Pending;
     }
 
-    private string CssClass => $"status {InputAttributes?["class"]}".Trim();
+    private string CssClass => $"status {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
 }

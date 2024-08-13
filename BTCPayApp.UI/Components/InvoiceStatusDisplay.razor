@@ -1,6 +1,6 @@
 @using BTCPayServer.Client.Models
 
-<div @attributes="InputAttributes" class="d-inline-flex align-items-center gap-2 @InputAttributes?["class"]">
+<div @attributes="InputAttributes" class="@CssClass">
     @if (Invoice.Archived)
     {
         <span class="badge bg-warning">Archived</span>
@@ -28,4 +28,6 @@
             _ => ""
         };
     }
+
+    private string CssClass => $"d-inline-flex align-items-center gap-2 {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
 }
