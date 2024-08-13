@@ -26,6 +26,8 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     private readonly ChannelManager _channelManager;
     private readonly ILogger<VoltageFlow2Jit> _logger;
     private readonly LDKOpenChannelRequestEventHandler _openChannelRequestEventHandler;
+    private CancellationTokenSource _cts = new();
+    
 
 
     public virtual Uri? BaseAddress(Network network)
@@ -201,9 +203,20 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _node.ConfigUpdated += ConfigUpdated;
         _openChannelRequestEventHandler.AcceptedChannel += AcceptedChannel;
-        _ = ConfigUpdated(this, await _node.GetConfig()).WithCancellation(cancellationToken);
+        _ = ConfigUpdated(this, await _node.GetConfig()).WithCancellation(_cts.Token);
+
+        _ = Task.Run(async () =>
+        {
+            while (_cts.Token.IsCancellationRequested == false)
+            {
+                await ConfigUpdated(this, await _node.GetConfig()).WithCancellation(_cts.Token);
+                await Task.Delay(10000, _cts.Token);
+            }
+        }, _cts.Token);
+
     }
 
     private ConcurrentDictionary<long, Event.Event_OpenChannelRequest> _acceptedChannels = new();
@@ -226,60 +239,71 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         Active = active;
     }
 
+    private SemaphoreSlim _semaphore = new(1, 1);
     private async Task ConfigUpdated(object? sender, LightningConfig e)
     {
-        if (e.JITLSP == ProviderName)
+        try
         {
-            _info = await GetInfo();
-
-
-            var ni = _info.ToNodeInfo();
-            var configPeers = await _node.GetConfig();
-            var pubkey = new PubKey(_info.PubKey);
-            if (configPeers.Peers.TryGetValue(_info.PubKey, out var peer))
+            await _semaphore.WaitAsync();
+            if (e.JITLSP == ProviderName)
             {
-                //check if the endpoint matches any of the info ones 
-                if (!_info.ConnectionMethods.Any(a =>
-                        a.ToEndpoint().ToEndpointString().Equals(peer.Endpoint, StringComparison.OrdinalIgnoreCase)))
+                _info = await GetInfo();
+
+
+                var ni = _info.ToNodeInfo();
+                var configPeers = await _node.GetConfig();
+                var pubkey = new PubKey(_info.PubKey);
+                if (configPeers.Peers.TryGetValue(_info.PubKey, out var peer))
+                {
+                    //check if the endpoint matches any of the info ones 
+                    if (!_info.ConnectionMethods.Any(a =>
+                            a.ToEndpoint().ToEndpointString().Equals(peer.Endpoint, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        peer = new PeerInfo
+                        {
+                            Label = ProviderName,
+                            Endpoint = _info.ConnectionMethods.First().ToEndpoint().ToEndpointString(), Persistent = true,
+                            Trusted = true
+                        };
+                    }
+                    else if (peer is {Persistent: true, Trusted: true})
+                        return;
+                    else
+                    {
+                        peer = peer with
+                        {
+                            Label = ProviderName,
+                            Persistent = true,
+                            Trusted = true
+                        };
+                    }
+                }
+                else
                 {
                     peer = new PeerInfo
                     {
                         Label = ProviderName,
-                        Endpoint = _info.ConnectionMethods.First().ToEndpoint().ToEndpointString(), Persistent = true,
-                        Trusted = true
-                    };
-                }
-                else if (peer is {Persistent: true, Trusted: true})
-                    return;
-                else
-                {
-                    peer = peer with
-                    {
-                        Label = ProviderName,
+                        Endpoint = _info.ConnectionMethods.First().ToEndpoint().ToEndpointString(),
                         Persistent = true,
                         Trusted = true
                     };
                 }
-            }
-            else
-            {
-                peer = new PeerInfo
-                {
-                    Label = ProviderName,
-                    Endpoint = _info.ConnectionMethods.First().ToEndpoint().ToEndpointString(),
-                    Persistent = true,
-                    Trusted = true
-                };
-            }
 
-            _ = _node.Peer(pubkey, peer);
+                _ = _node.Peer(pubkey, peer);
+            }
         }
+        finally
+        {
+            _semaphore.Release();
+        }
+      
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _node.ConfigUpdated -= ConfigUpdated;
         _openChannelRequestEventHandler.AcceptedChannel -= AcceptedChannel;
+        await _cts.CancelAsync();
     }
 
     public async Task Handle(Event.Event_ChannelPending @event)

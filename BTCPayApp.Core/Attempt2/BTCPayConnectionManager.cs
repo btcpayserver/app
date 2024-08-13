@@ -71,9 +71,10 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         _syncService = syncService;
     }
 
-
+private CancellationTokenSource _cts = new();
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         ConnectionChanged += OnConnectionChanged;
         _authStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
         _btcPayAppServerClient.OnNotifyNetwork += OnNotifyNetwork;
@@ -82,6 +83,24 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
         _btcPayAppServerClient.OnMasterUpdated += OnMasterUpdated;
         _syncService.EncryptionKeyChanged += EncryptionKeyChanged;
         await OnConnectionChanged(this, (BTCPayConnectionState.Init, BTCPayConnectionState.Init));
+        await MonitorHubConnection(_cts.Token);
+        
+        
+    }
+
+    private async Task MonitorHubConnection(CancellationToken cancellationToken)
+    {
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            if(Connection?.State is HubConnectionState.Disconnected)
+            {
+                ConnectionState = BTCPayConnectionState.Disconnected;
+            }
+            
+            await Task.Delay(500, cancellationToken);
+            
+            
+        }
     }
 
     private async Task OnMasterUpdated(object? sender, long? e)
@@ -161,7 +180,6 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
                                 options.WebSocketConfiguration = _serviceProvider.GetService<Action<ClientWebSocketOptions>>();
 
                             })
-                        .WithAutomaticReconnect()
                         .Build();
 
                     _subscription = Connection.Register(_btcPayAppServerClientInterface);
@@ -296,6 +314,8 @@ public class BTCPayConnectionManager : IHostedService, IHubConnectionObserver
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        
+        await _cts.CancelAsync();
         if (_connectionState == BTCPayConnectionState.ConnectedAsMaster)
         {
             _logger.LogInformation("Sending device master signal to turn off");
