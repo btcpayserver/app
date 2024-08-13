@@ -175,7 +175,7 @@
                         <div class="form-group">
                             <label for="Amount" class="form-label" data-required>Amount</label>
                             <div class="input-group">
-                                <InputNumber @bind-Value="OCModel.Amount" id="Amount" class="form-control" inputmode="numeric" />
+                                <InputNumber @bind-Value="OCModel.Amount" id="Amount" class="form-control" inputmode="numeric" min="0" />
                                 <span class="input-group-text">sats</span>
                             </div>
                             <ValidationMessage For="@(() => OCModel.Amount)"/>

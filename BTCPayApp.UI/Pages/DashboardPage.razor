@@ -28,9 +28,12 @@
         <WalletOverview BitcoinBalance="@TotalBalance" BitcoinUnit="@BitcoinUnit" MoneyUnit="@UnitMoney" Histogram="@Histogram"
                         Currency="@Currency" Rate="@Rate" Error="@BalanceError" OnBalanceClick="ToggleDisplayCurrency"
                         class="my-3"/>
-        <div class="text-center my-4">
-            <NavLink href="@Routes.Withdraw" class="bg-light rounded-pill px-5 py-2 fw-semibold">Send</NavLink>
-        </div>
+        @if (TotalBalance != null)
+        {
+            <div class="text-center mt-4 mb-5">
+                <NavLink href="@Routes.Withdraw" class="bg-light rounded-pill px-5 py-2 fw-semibold">Send</NavLink>
+            </div>
+        }
     </AuthorizeView>
     <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="StoreId">
         @if (InvoicesLoading || Invoices is not null)

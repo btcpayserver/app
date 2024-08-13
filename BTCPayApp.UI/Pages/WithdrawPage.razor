@@ -7,7 +7,6 @@
 @using BTCPayApp.Core.Data
 @using BTCPayServer.Client.Models
 @using BTCPayServer.Lightning
-@using NBitcoin.Crypto
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
 @inject IState<UIState> UIState
@@ -73,27 +72,6 @@
             {
                 <p class="text-muted">There are no payments, yet.</p>
             }
-
-            <div>
-
-                <div class="input-group">
-                    <input type="number" class="form-control" min="0" @bind="paymentRequestAmt" placeholder="sats"/>
-                    <button type="button" class=" btn btn-primary" @onclick="ReceivePayment">Receive payment</button>
-                </div>
-
-
-                <div class="input-group">
-                    <input type="number" class="form-control" placeholder="explicit amount in sats, optional" min="0" @bind="paymentRequestAmt"/>
-                    <input type="text"class="form-control" placeholder="bolt11" @bind="paymentRequestSend"/>
-                    <button type="button" class=" btn btn-primary" @onclick="SendPayment">Send payment</button>
-                </div>
-
-
-                @if (paymentResponse is not null)
-                {
-                    <p>@paymentResponse</p>
-                }
-            </div>
         </article>
         <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
     }
@@ -124,26 +102,6 @@
         {
             if (Node is null) return;
             _payments = await Node.PaymentsManager.List(payments => payments);
-        });
-    }
-
-    private async void ReceivePayment()
-    {
-        if (paymentRequestAmt is null) return;
-        await Wrap(async () =>
-        {
-            try
-            {
-                var hash = new uint256(Hashes.SHA256(RandomUtils.GetBytes(32)));
-                var result = await Node.PaymentsManager.RequestPayment(LightMoney.Satoshis(paymentRequestAmt ?? 0), TimeSpan.FromDays(1), hash);
-
-                paymentResponse = $"Payment request created: {result.PaymentRequest}";
-                paymentRequestAmt = null;
-            }
-            catch (Exception e)
-            {
-                paymentResponse = $"Error: {e.Message}";
-            }
         });
     }
 
