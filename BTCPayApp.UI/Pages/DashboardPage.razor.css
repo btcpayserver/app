@@ -1,4 +1,4 @@
-.wallet {
+::deep #WalletOverview {
   margin-top: var(--btcpay-space-m);
   margin-bottom: var(--btcpay-space-l);
 }

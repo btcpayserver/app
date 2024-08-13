@@ -1,5 +1,72 @@
-<h3>WalletOverview</h3>
+@using BTCPayApp.UI.Util
+@using BTCPayServer.Client.Models
+@using NBitcoin
+@inject IJSRuntime JS
+@inject DisplayFormatter DisplayFormatter
+
+<div @attributes="InputAttributes" class="@CssClass">
+    @if (BitcoinBalance != null)
+    {
+        <div class="amount text-center">
+            <div class="sats fw-bold fs-1" @onclick="HandleBalanceClick">@DisplayFormatter.Currency(BitcoinBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</div>
+            @if (CurrencyValue.HasValue)
+            {
+                <div class="fiat fw-semibold text-muted">~ @DisplayFormatter.Currency(CurrencyValue.Value, Currency!, DisplayFormatter.CurrencyFormat.Symbol)</div>
+            }
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(Error))
+    {
+        <div class="p-3 text-center">
+            <LoadingIndicator/>
+        </div>
+    }
+    <div id="Histogram" class="ct-chart"></div>
+</div>
 
 @code {
-    
+    [Parameter]
+    public decimal? BitcoinBalance { get; set; }
+
+    [Parameter]
+    public string? BitcoinUnit { get; set; }
+
+    [Parameter]
+    public MoneyUnit MoneyUnit { get; set; }
+
+    [Parameter]
+    public HistogramData? Histogram { get; set; }
+
+    [Parameter]
+    public string? Currency { get; set; }
+
+    [Parameter]
+    public decimal? Rate { get; set; }
+
+    [Parameter]
+    public string? Error { get; set; }
+
+    [Parameter]
+    public EventCallback<NotificationData> OnBalanceClick { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    private decimal? CurrencyValue => BitcoinBalance != null && Rate.HasValue && !string.IsNullOrEmpty(Currency)
+        ? new Money(BitcoinBalance.Value, MoneyUnit).ToDecimal(MoneyUnit.BTC) * Rate.Value
+        : null;
+
+    private async Task HandleBalanceClick(MouseEventArgs e)
+    {
+        if (OnBalanceClick.HasDelegate)
+            await OnBalanceClick.InvokeAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Histogram != null)
+            await JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC", BitcoinUnit, null, Currency);
+    }
+
+    private string CssClass => $"d-flex flex-column gap-4 wallet-overview {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
 }
