@@ -19,6 +19,7 @@ public static class Routes
     public const string EnterPasscode = "/passcode";
     public const string Pair = "/pair";
     public const string Wallet = "/wallet";
+    public const string WalletWithdraw = "/wallet/withdraw";
     public const string WalletSend = "/wallet/send";
     public const string WalletReceive = "/wallet/receive";
     public const string Lightning = "/lightning";
@@ -33,7 +34,6 @@ public static class Routes
     public const string Store = "/settings/store/{StoreId}";
     public const string PosSettings = "/settings/pos/{AppId}";
     public const string NotificationSettings = "/settings/notifications";
-    public const string Withdraw = "/withdraw";
     public const string WalletSettings = "/settings/wallet";
     public const string LightningSettings = "/settings/lightning";
     public const string ChannelsPeers = "/settings/lightning/channels";

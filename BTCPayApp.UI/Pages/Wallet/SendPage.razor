@@ -1,6 +1,14 @@
 ﻿@attribute [AllowAnonymous]
 @attribute [Route(Routes.WalletSend)]
+@using BTCPayApp.Core.Attempt2
+@using BTCPayApp.Core.Data
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
+@using BTCPayServer.Lightning
+@using NBitcoin
+@using NBitcoin.Crypto
+@inject IState<RootState> State
+@inject LightningNodeManager LightningNodeManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Send</PageTitle>
@@ -11,18 +19,126 @@
     </Titlebar>
 </SectionContent>
 <section class="container">
+    @if (State.Value.LightningNodeState is LightningNodeState.Loaded)
+    {
+        <h4 class="mb-4">Send payment</h4>
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="SendPayment" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
+            <DataAnnotationsValidator/>
+            <div class="form-group">
+                <label for="PaymentRequest" class="form-label" data-required>Payment Request</label>
+                <InputText @bind-Value="Model.PaymentRequest" id="PaymentRequest" class="form-control" />
+                <ValidationMessage For="@(() => Model.PaymentRequest)"/>
+            </div>
+            <div class="form-group">
+                <label for="Amount" class="form-label" data-required>Amount</label>
+                <div class="input-group">
+                    <InputNumber @bind-Value="Model.Amount" id="Amount" class="form-control" inputmode="numeric"/>
+                    <span class="input-group-text">sats</span>
+                </div>
+                <ValidationMessage For="@(() => Model.Amount)"/>
+            </div>
+            <button type="submit" class="btn btn-primary" disabled="@(_validationEditContext!.Invalid || _paymentSending)">
+                @if (_paymentSending)
+                {
+                    <LoadingIndicator/>
+                }
+                else
+                {
+                    <span>Send payment</span>
+                }
+            </button>
+        </ValidationEditContext>
 
+        <article class="my-5">
+            <h4 class="mb-4">Payments</h4>
+            <LightningPaymentList Payments="_payments" Loading="@(PaymentsManager == null)" OnCancelClick="payment => Cancel(payment)"/>
+        </article>
+        <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
+    }
+    else
+    {
+        <LightningNodeStateAlert State="State.Value.LightningNodeState" />
+    }
 </section>
 
 @code {
-    private WalletSendModel Model { get; set; } = new();
+    private SendModel Model { get; set; } = new();
+
+    private ValidationEditContext? _validationEditContext;
+    private List<AppLightningPayment>? _payments;
+    private string? _successMessage;
+    private string? _errorMessage;
+    private bool _paymentSending;
+    private LDKNode? Node => LightningNodeManager.Node;
+    private PaymentsManager? PaymentsManager => LightningNodeManager.Node?.PaymentsManager;
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
+
+    private class SendModel
+    {
+        [Required]
+        public string? PaymentRequest { get; set; }
+        public decimal? Amount { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+        await FetchData();
     }
 
-    private class WalletSendModel
+    private async Task FetchData()
     {
+        await Wrap(async () =>
+        {
+            var list = await PaymentsManager.List(payments => payments.Where(p => !p.Inbound));
+            _payments = list.OrderByDescending(p => p.Timestamp).ToList();
+        });
+    }
+
+    private async void SendPayment()
+    {
+        _successMessage = _errorMessage = null;
+        _paymentSending = true;
+        await Wrap(async () =>
+        {
+            try
+            {
+                var invoice = BOLT11PaymentRequest.Parse(Model.PaymentRequest, Node.Network);
+                var result = await Node.PaymentsManager.PayInvoice(invoice, Model.Amount is null ? null : LightMoney.Satoshis((long)Model.Amount.Value));
+                _successMessage = $"Payment {result.PaymentId} sent with status {result.Status}";
+                Model = new SendModel();
+            }
+            catch (Exception e)
+            {
+                _errorMessage = $"Error: {e.Message}";
+            }
+        });
+        _paymentSending = false;
+        await FetchData();
+    }
+
+    private async Task Cancel(AppLightningPayment payment)
+    {
+        await Wrap(async () =>
+        {
+            await PaymentsManager.Cancel(payment);
+        });
+        await FetchData();
+    }
+
+    private async Task Wrap(Func<Task> action)
+    {
+        if (PaymentsManager is null) return;
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+            await _semaphore.WaitAsync();
+            await action();
+        }
+        finally
+        {
+            await InvokeAsync(StateHasChanged);
+            _semaphore.Release();
+        }
     }
 }
