@@ -5,10 +5,13 @@
 @using BTCPayApp.UI.Components.Layout
 @using NBitcoin
 @using BTCPayApp.Core.Data
+@using BTCPayServer.Client.Models
 @using BTCPayServer.Lightning
 @using NBitcoin.Crypto
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
+@inject IState<UIState> UIState
+@inject IState<StoreState> StoreState
 
 <PageTitle>Withdraw</PageTitle>
 
@@ -189,5 +192,22 @@
             await Node.PaymentsManager.Cancel(payment);
         });
     }
+
+    private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
+    private string? BalanceError => StoreState.Value.OnchainBalance?.Error ?? StoreState.Value.LightningBalance?.Error;
+    private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
+    private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
+    private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
+    private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
+    private decimal? LightningOnchainBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(UnitMoney);
+    private decimal? LightningOffchainBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(UnitLightMoney);
+    private decimal? TotalBalance => OnchainBalance == null && LightningBalance == null
+        ? null
+        : (OnchainConfirmedBalance ?? 0) + (OnchainUnconfirmedBalance ?? 0) + (LightningOnchainBalance ?? 0) + (LightningOffchainBalance ?? 0);
+    private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
+    private string BitcoinUnit => UIState.Value.BitcoinUnit;
+    private HistogramData? Histogram => StoreState.Value.UnifiedHistogram;
+    private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
+    private LightMoneyUnit UnitLightMoney => BitcoinUnit == CurrencyUnit.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
 
 }

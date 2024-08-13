@@ -134,32 +134,20 @@
                         <Icon Symbol="caret-right"/>
                     </a>
                 </li>
-                <li class="list-group-item">
-                    <a href="@Routes.Withdraw">
-                        <Icon Symbol="payment-send"/>
-                        <span>Withdraw</span>
-                        <Icon Symbol="caret-right"/>
-                    </a>
-                </li>
             </ul>
         </div>
 
-    <h2>Security</h2>
-    <div class="box">
-        <ul class="list-group list-group-flush list-group-links">
-            <li class="list-group-item">
-                <a href="@Routes.EncryptionKey">
-                    <Icon Symbol="key"/>
-                    <span> Encryption key</span>
-                    <Icon Symbol="caret-right"/>
-                </a>
-            </li>
-        </ul>
-    </div>
-        @*
         <h2>Security</h2>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
+                <li class="list-group-item">
+                    <a href="@Routes.EncryptionKey">
+                        <Icon Symbol="key"/>
+                        <span> Encryption key</span>
+                        <Icon Symbol="caret-right"/>
+                    </a>
+                </li>
+                @*
                 <li class="list-group-item">
                     <a href="@Routes.ChangePasscode">
                         <Icon Symbol="key"/>
@@ -176,27 +164,24 @@
                         </button>
                     </li>
                 }
+                *@
             </ul>
         </div>
-        *@
 
         <h2>Debug</h2>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
                 <li class="list-group-item">
-                    <div>
-                        <div class="justify-content-start">
-                            <span class="m-2 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster or BTCPayConnectionState.ConnectedAsSlave => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
-                            <span>Hub: @State.Value.ConnectionState</span>
-                        </div>
+                    <div class="justify-content-start">
+                        <span class="m-2 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster or BTCPayConnectionState.ConnectedAsSlave => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                        <span>Hub: @State.Value.ConnectionState</span>
                         @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
                         {
-                            <button type="button" class="btn btn-link px-0" @onclick="SwitchToSlave" >
+                            <button type="button" class="btn btn-sm btn-secondary px-2 py-1 ms-auto" @onclick="SwitchToSlave">
                                 <span>Switch to Slave</span>
                             </button>
                         }
                     </div>
-
                 </li>
 
                 @if (State.Value.ConnectionState != BTCPayConnectionState.ConnectedAsSlave)
