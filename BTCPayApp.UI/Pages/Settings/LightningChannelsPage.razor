@@ -47,6 +47,9 @@
                     var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
                     <div class="box">
                         <div class="form-floating">
+                            <TruncateCenter Text="@peerConfig.Label" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                            <label>Peer label</label>
+                        </div> <div class="form-floating">
                             <TruncateCenter Text="@peer.nodeId" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                             <label>Node ID</label>
                         </div>

@@ -2,6 +2,7 @@
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.JsonConverters;
 using BTCPayServer.Lightning;
+using org.ldk.structs;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
@@ -11,6 +12,7 @@ public interface IJITService
     public Task<JITFeeResponse?> CalculateInvoiceAmount(LightMoney expectedAmount);
     public Task<bool> WrapInvoice(AppLightningPayment lightningPayment, JITFeeResponse? feeReponse);
 
+    public Task<bool> IsAcceptable(AppLightningPayment lightningPayment, Event.Event_PaymentClaimable paymentClaimable);
     public bool Active { get; }
 }
 

@@ -13,7 +13,6 @@ using org.ldk.structs;
 
 
 public class PaymentsManager :
-    IScopedHostedService,
     ILDKEventHandler<Event.Event_PaymentClaimable>,
     ILDKEventHandler<Event.Event_PaymentClaimed>,
     ILDKEventHandler<Event.Event_PaymentFailed>,
@@ -21,11 +20,10 @@ public class PaymentsManager :
 {
     public const string LightningPaymentDescriptionKey = "DescriptionHash";
     public const string LightningPaymentExpiryKey = "Expiry";
-    
+
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
 
     private readonly ChannelManager _channelManager;
-    private readonly LDKOpenChannelRequestEventHandler _openChannelRequestEventHandler;
     private readonly Logger _logger;
     private readonly NodeSigner _nodeSigner;
     private readonly Network _network;
@@ -34,7 +32,6 @@ public class PaymentsManager :
     public PaymentsManager(
         IDbContextFactory<AppDbContext> dbContextFactory,
         ChannelManager channelManager,
-        LDKOpenChannelRequestEventHandler openChannelRequestEventHandler,
         Logger logger,
         NodeSigner nodeSigner,
         Network network,
@@ -42,7 +39,6 @@ public class PaymentsManager :
     {
         _dbContextFactory = dbContextFactory;
         _channelManager = channelManager;
-        _openChannelRequestEventHandler = openChannelRequestEventHandler;
         _logger = logger;
         _nodeSigner = nodeSigner;
         _network = network;
@@ -82,52 +78,54 @@ public class PaymentsManager :
         var epoch = now.ToUnixTimeSeconds();
 
         var descHashBytes = Sha256.from_bytes(descriptionHash.ToBytes());
-         var lsp = await _ldkNode.GetJITLSPService();
-         
-         generateInvoice:
-         JITFeeResponse? jitFeeReponse = null;
-         if (lsp?.Active is true)
-         {
-             jitFeeReponse = await lsp.CalculateInvoiceAmount(amount);
-             if (jitFeeReponse is not null)
-             {
-                 
-                 amt = Option_u64Z.some(jitFeeReponse.AmountToGenerateOurInvoice);
-                
-             }
-             else
-             {
-                 lsp = null;
-             }
-         }else
-         {
-             lsp = null;
-         }
-         
-         var result = await  Task.Run(() =>
-             org.ldk.util.UtilMethods.create_invoice_from_channelmanager_with_description_hash_and_duration_since_epoch(
-                 _channelManager, _nodeSigner, _logger,
-                 _network.GetLdkCurrency(), amt, descHashBytes, epoch, (int) Math.Ceiling(expiry.TotalSeconds),
-                 Option_u16Z.none()));
-         if (result is Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_Err err)
-         {
-             throw new Exception(err.err.to_str());
-         }
-         var originalInvoice = ((Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_OK) result)
-             .res;
-                 
-         
-         var preimageResult = _channelManager.get_payment_preimage(originalInvoice.payment_hash(), originalInvoice.payment_secret());
-         var preimage = preimageResult switch
-         {
-             Result_ThirtyTwoBytesAPIErrorZ.Result_ThirtyTwoBytesAPIErrorZ_Err errx => throw new Exception(
-                 errx.err.GetError()),
-             Result_ThirtyTwoBytesAPIErrorZ.Result_ThirtyTwoBytesAPIErrorZ_OK ok => ok.res,
-             _ => throw new Exception("Unknown error retrieving preimage")
-         };
+        var lsp = await _ldkNode.GetJITLSPService();
 
-         var parsedOriginalInvoice= BOLT11PaymentRequest.Parse(originalInvoice.to_str(), _network);
-         var lp = new AppLightningPayment()
+        generateInvoice:
+        JITFeeResponse? jitFeeReponse = null;
+        if (lsp?.Active is true)
+        {
+            jitFeeReponse = await lsp.CalculateInvoiceAmount(amount);
+            if (jitFeeReponse is not null)
+            {
+                amt = Option_u64Z.some(jitFeeReponse.AmountToGenerateOurInvoice);
+            }
+            else
+            {
+                lsp = null;
+            }
+        }
+        else
+        {
+            lsp = null;
+        }
+
+        var result = await Task.Run(() =>
+            org.ldk.util.UtilMethods.create_invoice_from_channelmanager_with_description_hash_and_duration_since_epoch(
+                _channelManager, _nodeSigner, _logger,
+                _network.GetLdkCurrency(), amt, descHashBytes, epoch, (int) Math.Ceiling(expiry.TotalSeconds),
+                Option_u16Z.none()));
+        if (result is Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_Err err)
+        {
+            throw new Exception(err.err.to_str());
+        }
+
+        var originalInvoice =
+            ((Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_OK) result)
+            .res;
+
+
+        var preimageResult =
+            _channelManager.get_payment_preimage(originalInvoice.payment_hash(), originalInvoice.payment_secret());
+        var preimage = preimageResult switch
+        {
+            Result_ThirtyTwoBytesAPIErrorZ.Result_ThirtyTwoBytesAPIErrorZ_Err errx => throw new Exception(
+                errx.err.GetError()),
+            Result_ThirtyTwoBytesAPIErrorZ.Result_ThirtyTwoBytesAPIErrorZ_OK ok => ok.res,
+            _ => throw new Exception("Unknown error retrieving preimage")
+        };
+
+        var parsedOriginalInvoice = BOLT11PaymentRequest.Parse(originalInvoice.to_str(), _network);
+        var lp = new AppLightningPayment()
         {
             Inbound = true,
             PaymentId = "default",
@@ -144,23 +142,22 @@ public class PaymentsManager :
                 [LightningPaymentExpiryKey] = JsonSerializer.SerializeToElement(now.Add(expiry))
             }
         };
-         
+
         if (lsp is not null)
         {
-           if(!await lsp.WrapInvoice(lp,jitFeeReponse ))
-           {
-               
-               amt = amount == LightMoney.Zero ? Option_u64Z.none() : Option_u64Z.some(amount.MilliSatoshi);
-               lsp = null;
-               goto generateInvoice;
-           }
+            if (!await lsp.WrapInvoice(lp, jitFeeReponse))
+            {
+                amt = amount == LightMoney.Zero ? Option_u64Z.none() : Option_u64Z.some(amount.MilliSatoshi);
+                lsp = null;
+                goto generateInvoice;
+            }
         }
-        
+
         await Payment(lp);
 
         return lp;
     }
-    
+
     public async Task<AppLightningPayment> PayInvoice(BOLT11PaymentRequest paymentRequest,
         LightMoney? explicitAmount = null)
     {
@@ -230,7 +227,7 @@ public class PaymentsManager :
             payParams.set_expiry_time(Option_u64Z.some(paymentRequest.ExpiryDate.ToUnixTimeSeconds()));
 
             var lastHops = invoice.route_hints();
-            var payee = Payee.clear(pubkey, lastHops, invoice.features(),paymentRequest.MinFinalCLTVExpiry);
+            var payee = Payee.clear(pubkey, lastHops, invoice.features(), paymentRequest.MinFinalCLTVExpiry);
             payParams.set_payee(payee);
             var routeParams = RouteParameters.from_payment_params_and_value(payParams, amt);
 
@@ -245,7 +242,6 @@ public class PaymentsManager :
         }
         catch (Exception e)
         {
-            
             outbound.Status = LightningPaymentStatus.Failed;
             await context.SaveChangesAsync();
             throw;
@@ -265,28 +261,28 @@ public class PaymentsManager :
             await CancelOutbound(lightningPayment.PaymentId);
         }
     }
-    
+
     public async Task CancelInbound(uint256 paymentHash)
     {
-        
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var payment = await context.LightningPayments.FirstOrDefaultAsync(lightningPayment =>
-            lightningPayment.Status == LightningPaymentStatus.Pending && lightningPayment.Inbound && lightningPayment.PaymentHash == paymentHash);
+            lightningPayment.Status == LightningPaymentStatus.Pending && lightningPayment.Inbound &&
+            lightningPayment.PaymentHash == paymentHash);
         if (payment is not null)
         {
             payment.Status = LightningPaymentStatus.Failed;
             await context.SaveChangesAsync();
         }
-    } 
+    }
+
     public async Task CancelOutbound(string paymentId)
     {
-      
-        await  Task.Run(() => _channelManager.abandon_payment(Convert.FromHexString(paymentId)) );
-        
+        await Task.Run(() => _channelManager.abandon_payment(Convert.FromHexString(paymentId)));
+
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var payment = await context.LightningPayments.FirstOrDefaultAsync(lightningPayment =>
             lightningPayment.Status == LightningPaymentStatus.Pending &&
-             !lightningPayment.Inbound && lightningPayment.PaymentId == paymentId);
+            !lightningPayment.Inbound && lightningPayment.PaymentId == paymentId);
         if (payment is not null)
         {
             payment.Status = LightningPaymentStatus.Failed;
@@ -299,7 +295,7 @@ public class PaymentsManager :
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
         var x = await context.Upsert(lightningPayment, cancellationToken);
-        if (x > 1)//we have triggers that create an outbox record everytime so we need to check for more than 1 record
+        if (x > 1) //we have triggers that create an outbox record everytime so we need to check for more than 1 record
         {
             OnPaymentUpdate?.Invoke(this, lightningPayment);
         }
@@ -345,41 +341,26 @@ public class PaymentsManager :
             payment.Inbound && payment.Status == LightningPaymentStatus.Pending);
 
 
-
         var preimage = eventPaymentClaimable.purpose.GetPreimage(out _) ??
                        (accept?.Preimage is not null ? Convert.FromHexString(accept.Preimage) : null);
 
         if (accept is null || preimage is null)
         {
-
             _channelManager.fail_htlc_backwards(eventPaymentClaimable.payment_hash);
             return;
         }
 
         if (accept.Value == eventPaymentClaimable.amount_msat)
         {
-
             _channelManager.claim_funds(preimage);
             return;
         }
-        //this discrepancy could have been used to pay for a JIT channel opening
-        else if(_acceptedChannels.TryGetValue(eventPaymentClaimable.via_channel_id.hash(), out var channelRequest) && 
-                accept.AdditionalData.TryGetValue(VoltageFlow2Jit.LightningPaymentLSPKey, out var lspDoc ) && 
-                lspDoc.Deserialize<string>() is { } lsp && 
-                await _ldkNode.GetJITLSPService() is { } lspService && 
-                lspService.ProviderName == lsp &&
-                accept.AdditionalData.TryGetValue(VoltageFlow2Jit.LightningPaymentJITFeeKey, out var lspFee ) &&  lspFee.Deserialize<JITFeeResponse>() is { } fee)
+        if (accept.AdditionalData.TryGetValue(VoltageFlow2Jit.LightningPaymentLSPKey, out var lspDoc) &&
+            lspDoc.Deserialize<string>() is { } lsp &&
+            await _ldkNode.GetJITLSPService() is { } lspService && lspService.ProviderName == lsp &&
+            await lspService.IsAcceptable(accept!, eventPaymentClaimable))
         {
-            if (fee.AmountToGenerateOurInvoice == eventPaymentClaimable.amount_msat)
-            {
-                _acceptedChannels.Remove(eventPaymentClaimable.via_channel_id.hash(), out _);
-                _channelManager.claim_funds(preimage);
-                return;
-            }
-        }
-        else
-        {
-            _channelManager.fail_htlc_backwards(eventPaymentClaimable.payment_hash);
+            _channelManager.claim_funds(preimage);
         }
 
 
@@ -389,8 +370,9 @@ public class PaymentsManager :
     public async Task Handle(Event.Event_PaymentClaimed eventPaymentClaimed)
     {
         var preimage = eventPaymentClaimed.purpose.GetPreimage(out var secret);
-        
-        await PaymentUpdate( new uint256(eventPaymentClaimed.payment_hash), true, "default", false, preimage is null ? null : Convert.ToHexString(preimage).ToLower());
+
+        await PaymentUpdate(new uint256(eventPaymentClaimed.payment_hash), true, "default", false,
+            preimage is null ? null : Convert.ToHexString(preimage).ToLower());
     }
 
     public async Task Handle(Event.Event_PaymentFailed @eventPaymentFailed)
@@ -403,24 +385,10 @@ public class PaymentsManager :
     {
         await PaymentUpdate(new uint256(eventPaymentSent.payment_hash), false,
             Convert.ToHexString(
-                ((Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some) eventPaymentSent.payment_id).some).ToLower(), false,
+                ((Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some) eventPaymentSent.payment_id).some).ToLower(),
+            false,
             Convert.ToHexString(eventPaymentSent.payment_preimage).ToLower());
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        _openChannelRequestEventHandler.AcceptedChannel += AcceptedChannel;
-    }
 
-    private ConcurrentDictionary<long, Event.Event_OpenChannelRequest> _acceptedChannels = new();
-    private Task AcceptedChannel(object? sender, Event.Event_OpenChannelRequest e)
-    {
-        _acceptedChannels.TryAdd(e.temporary_channel_id.hash(), e);
-        return Task.CompletedTask;
-    }
-
-    public async Task StopAsync(CancellationToken cancellationToken)
-    {
-        _openChannelRequestEventHandler.AcceptedChannel -= AcceptedChannel;
-    }
 }

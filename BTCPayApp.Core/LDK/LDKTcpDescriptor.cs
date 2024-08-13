@@ -129,7 +129,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
             }
            
             var data = buffer[..read];
-            _logger.LogInformation($"Read {read} bytes of data from peer" );
+            _logger.LogTrace($"Read {read} bytes of data from peer" );
             switch ( _peerManager.read_event(SocketDescriptor, data) )
             {
                 case Result_boolPeerHandleErrorZ.Result_boolPeerHandleErrorZ_OK ok:
@@ -168,10 +168,10 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
     {
         try
         {
-            _logger.LogInformation("sending {Bytes} bytes of data to peer", data.Length);
+            _logger.LogTrace("sending {Bytes} bytes of data to peer", data.Length);
 
             var result = _tcpClient.Client.Send(data);
-            _logger.LogInformation("Sent {Bytes} bytes of data to peer", result);
+            _logger.LogTrace("Sent {Bytes} bytes of data to peer", result);
             if (resume_read)
             {
                 Resume();

@@ -1,18 +1,21 @@
-﻿using Newtonsoft.Json;
+﻿using System.Text.Json.Serialization;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
 public class FlowProposalRequest
 {
-    [JsonProperty("bolt11")] public required string Bolt11 { get; set; }
+    [JsonPropertyName("bolt11")] public required string Bolt11 { get; set; }
 
-    [JsonProperty("host", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonPropertyName("host")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? Host { get; set; }
 
 
-    [JsonProperty("port", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonPropertyName("port")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? Port { get; set; }
 
-    [JsonProperty("fee_id", NullValueHandling = NullValueHandling.Ignore)]
+    [JsonPropertyName("fee_id")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? FeeId { get; set; }
 }

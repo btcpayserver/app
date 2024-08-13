@@ -1,6 +1,6 @@
-﻿using BTCPayServer.Lightning;
+﻿using System.Text.Json.Serialization;
+using BTCPayServer.Lightning;
 using NBitcoin;
-using Newtonsoft.Json;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
@@ -16,6 +16,6 @@ public class FlowFeeRequest
         PubKey = pubkey.ToHex();
     }
 
-    [JsonProperty("amount_msat")] public long Amount { get; set; }
-    [JsonProperty("pubkey")] public string PubKey { get; set; }
+    [JsonPropertyName("amount_msat")] public long Amount { get; set; }
+    [JsonPropertyName("pubkey")] public string PubKey { get; set; }
 }

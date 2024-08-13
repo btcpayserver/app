@@ -67,6 +67,7 @@ public class LDKPeerHandler : IScopedHostedService
         var endpoint = new IPEndPoint(IPAddress.Parse(nodeInfo.Host), nodeInfo.Port);
         await _node.Peer(nodeInfo.NodeId, new PeerInfo()
         {
+            Label = "BTCPay Server Node",
             Endpoint = endpoint.ToString(),
             Persistent = true,
             Trusted = true

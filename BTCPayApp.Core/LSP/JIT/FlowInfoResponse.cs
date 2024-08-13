@@ -1,15 +1,15 @@
 ﻿using System.Net;
+using System.Text.Json.Serialization;
 using BTCPayApp.Core.Helpers;
 using BTCPayServer.Lightning;
 using NBitcoin;
-using Newtonsoft.Json;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
 public class FlowInfoResponse
 {
-    [JsonProperty("connection_methods")] public ConnectionMethod[] ConnectionMethods { get; set; }
-    [JsonProperty("pubkey")] public required string PubKey { get; set; }
+    [JsonPropertyName("connection_methods")] public ConnectionMethod[] ConnectionMethods { get; set; }
+    [JsonPropertyName("pubkey")] public required string PubKey { get; set; }
 
     public NodeInfo[] ToNodeInfo()
     {
@@ -19,9 +19,9 @@ public class FlowInfoResponse
 
     public class ConnectionMethod
     {
-        [JsonProperty("address")] public string Address { get; set; }
-        [JsonProperty("port")] public int Port { get; set; }
-        [JsonProperty("type")] public string Type { get; set; }
+        [JsonPropertyName("address")] public string Address { get; set; }
+        [JsonPropertyName("port")] public int Port { get; set; }
+        [JsonPropertyName("type")] public string Type { get; set; }
 
         public EndPoint? ToEndpoint()
         {
