@@ -105,6 +105,8 @@ private CancellationTokenSource _cts = new();
 
     private async Task OnMasterUpdated(object? sender, long? e)
     {
+        if(_cts.IsCancellationRequested)
+            return;
         if (e is null && ConnectionState == BTCPayConnectionState.ConnectedAsSlave && !ForceSlaveMode)
         {
             ConnectionState = BTCPayConnectionState.Syncing;
