@@ -500,14 +500,12 @@ public class OnChainWalletManager : BaseHostedService
                 _logger.LogInformation("Getting fee rate for block target {BlockTarget}", blockTarget);
 
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-                try
-                {
-                    return new FeeRate(await _btcPayConnectionManager.HubProxy.GetFeeRate(blockTarget).RunSync());
-                }
-                finally
-                {
-                    _logger.LogInformation("Got fee rate for block target {BlockTarget}", blockTarget);
-                }
+           
+                    var result = new FeeRate(await _btcPayConnectionManager.HubProxy.GetFeeRate(blockTarget).RunSync());
+                    
+                    _logger.LogInformation($"Got fee rate for block target {blockTarget} {result}" );
+                    return result;
+          
             });
         }
         catch (Exception e)

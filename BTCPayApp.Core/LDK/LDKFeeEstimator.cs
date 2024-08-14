@@ -2,6 +2,7 @@
 using NBitcoin;
 using org.ldk.enums;
 using org.ldk.structs;
+using Network = NBitcoin.Network;
 
 namespace BTCPayApp.Core.LDK;
 
@@ -34,6 +35,10 @@ public class LDKFeeEstimator : FeeEstimatorInterface
             ConfirmationTarget.LDKConfirmationTarget_ChannelCloseMinimum => 144, // Within a day or so (144-250 blocks)
             _ => throw new ArgumentOutOfRangeException(nameof(confirmation_target), confirmation_target, null)
         };
+
+        if (_onChainWalletManager.Network == Network.TestNet  && targetBlocks >= 12)
+                targetBlocks = 144;
+        
         return (int) _onChainWalletManager.GetFeeRate(targetBlocks).ConfigureAwait(false).GetAwaiter().GetResult().FeePerK.Satoshi;
     }
 }
