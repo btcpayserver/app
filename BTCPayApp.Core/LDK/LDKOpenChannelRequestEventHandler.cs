@@ -29,12 +29,13 @@ public class LDKOpenChannelRequestEventHandler: ILDKEventHandler<Event.Event_Ope
             var config = await _node.GetConfig();
             if(config.Peers.TryGetValue(nodeId, out var peer) && peer.Trusted)
             {
-                _channelManager.accept_inbound_channel_from_trusted_peer_0conf(
+               var result =  _channelManager.accept_inbound_channel_from_trusted_peer_0conf(
                     eventOpenChannelRequest.temporary_channel_id,
                     eventOpenChannelRequest.counterparty_node_id,
                     userChannelId
                 );
-                AcceptedChannel?.Invoke(this, eventOpenChannelRequest);
+               if(result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_OK)
+                    AcceptedChannel?.Invoke(this, eventOpenChannelRequest);
                 return;
             }
         }
