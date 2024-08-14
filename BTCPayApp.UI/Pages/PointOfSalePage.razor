@@ -3,13 +3,14 @@
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject NavigationManager NavigationManager
 @inject IAccountManager AccountManager
 @inject IState<StoreState> StoreState
 @inject IDispatcher Dispatcher
 
 <PageTitle>Point Of Sale</PageTitle>
 
-@if (Loading || !string.IsNullOrEmpty(AppId) && !_iframeLoaded)
+@if (Loading || !string.IsNullOrEmpty(AppId) && string.IsNullOrEmpty(_iframeGuid))
 {
     <section class="loading-container">
         <LoadingIndicator Size="lg"/>
@@ -41,22 +42,43 @@ else if (!string.IsNullOrEmpty(Error))
             </form>
         }
     </section>*@
-    <iframe name="pos" src="@PosUrl" allow="clipboard-read;clipboard-write" allowfullscreen @onload="() => { _iframeLoaded = true; }"></iframe>
+    <iframe name="pos" src="@IframeSrc" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>
 }
 
 @code {
+    private string? _iframeGuid;
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
+        NavigationManager.LocationChanged += OnLocationChanged;
 
         if (AppData == null && !string.IsNullOrEmpty(AppId))
             Dispatcher.Dispatch(new StoreState.FetchPointOfSale(AppId));
     }
 
+    private void OnLocationChanged(object sender, LocationChangedEventArgs args)
+    {
+        if (args.Location.EndsWith(Routes.PointOfSale))
+        {
+            _iframeGuid = Guid.NewGuid().ToString();
+            StateHasChanged();
+        }
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        NavigationManager.LocationChanged -= OnLocationChanged;
+
+        return ValueTask.CompletedTask;
+    }
+
     private string? AppId => AccountManager.GetCurrentStore()?.PosAppId ?? AppData?.Id;
     private string? PosUrl => string.IsNullOrEmpty(AppId) ? null : $"{AccountManager.GetAccount()!.BaseUri}apps/{AppId}/pos";
+    private string? IframeSrc => string.IsNullOrEmpty(PosUrl) ? null : $"{PosUrl}?guid={_iframeGuid}";
     private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;
     private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
     private string? Error => StoreState.Value.PointOfSale?.Error;
-    private bool _iframeLoaded = false;
 }
