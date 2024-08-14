@@ -126,7 +126,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         try
         {
             var fee = await GetFee(expectedAmount, _node.NodeId);
-            return new JITFeeResponse(expectedAmount, expectedAmount + fee.Amount, fee.Amount, fee.Id, ProviderName);
+            return new JITFeeResponse(expectedAmount, expectedAmount - fee.Amount, fee.Amount, fee.Id, ProviderName);
         }
         catch (Exception e)
         {
@@ -160,7 +160,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
             lightningPayment.PaymentRequest = proposal;
             lightningPayment.AdditionalData ??= new Dictionary<string, JsonElement>();
             lightningPayment.AdditionalData[LightningPaymentOriginalPaymentRequest] =
-                JsonSerializer.SerializeToElement(invoice);
+                JsonSerializer.SerializeToElement(invoice.ToString());
             lightningPayment.AdditionalData[LightningPaymentLSPKey] = JsonSerializer.SerializeToElement(ProviderName);
             lightningPayment.AdditionalData[LightningPaymentJITFeeKey] = JsonSerializer.SerializeToElement(fee);
             return true;
