@@ -9,10 +9,10 @@ namespace BTCPayApp.Core.LSP.JIT;
 public interface IJITService
 {
     public string ProviderName { get; }
-    public Task<JITFeeResponse?> CalculateInvoiceAmount(LightMoney expectedAmount);
-    public Task<bool> WrapInvoice(AppLightningPayment lightningPayment, JITFeeResponse? feeReponse);
+    public Task<JITFeeResponse?> CalculateInvoiceAmount(LightMoney expectedAmount, CancellationToken cancellationToken = default);
+    public Task<bool> WrapInvoice(AppLightningPayment lightningPayment, JITFeeResponse? feeReponse, CancellationToken cancellationToken = default);
 
-    public Task<bool> IsAcceptable(AppLightningPayment lightningPayment, Event.Event_PaymentClaimable paymentClaimable);
+    public Task<bool> IsAcceptable(AppLightningPayment lightningPayment, Event.Event_PaymentClaimable paymentClaimable, CancellationToken cancellationToken = default);
     public bool Active { get; }
 }
 

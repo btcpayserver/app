@@ -121,11 +121,11 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
 
     public virtual string ProviderName => "Voltage";
 
-    public async Task<JITFeeResponse?> CalculateInvoiceAmount(LightMoney expectedAmount)
+    public async Task<JITFeeResponse?> CalculateInvoiceAmount(LightMoney expectedAmount, CancellationToken cancellationToken = default)
     {
         try
         {
-            var fee = await GetFee(expectedAmount, _node.NodeId);
+            var fee = await GetFee(expectedAmount, _node.NodeId, cancellationToken);
             return new JITFeeResponse(expectedAmount, expectedAmount - fee.Amount, fee.Amount, fee.Id, ProviderName);
         }
         catch (Exception e)
@@ -139,7 +139,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     public const string LightningPaymentLSPKey = "LSP";
     public const string LightningPaymentOriginalPaymentRequest = "OriginalPaymentRequest";
 
-    public async Task<bool> WrapInvoice(AppLightningPayment lightningPayment, JITFeeResponse? fee)
+    public async Task<bool> WrapInvoice(AppLightningPayment lightningPayment, JITFeeResponse? fee, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -147,14 +147,14 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
                 return false;
 
 
-            fee ??= await CalculateInvoiceAmount(new LightMoney(lightningPayment.Value));
+            fee ??= await CalculateInvoiceAmount(new LightMoney(lightningPayment.Value), cancellationToken);
 
             if (fee is null)
                 return false;
             var invoice = lightningPayment.PaymentRequest;
 
 
-            var proposal = await GetProposal(invoice, null, fee!.FeeIdentifier);
+            var proposal = await GetProposal(invoice, null, fee!.FeeIdentifier, cancellationToken);
             if (proposal.MinimumAmount != fee.AmountToRequestPayer || proposal.PaymentHash != invoice.PaymentHash)
                 return false;
             lightningPayment.PaymentRequest = proposal;
@@ -174,7 +174,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     }
 
     public virtual async Task<bool> IsAcceptable(AppLightningPayment lightningPayment,
-        Event.Event_PaymentClaimable paymentClaimable)
+        Event.Event_PaymentClaimable paymentClaimable, CancellationToken cancellationToken = default)
     {
         if (!lightningPayment.AdditionalData.TryGetValue(LightningPaymentLSPKey, out var lsp) ||
             lsp.GetString() != ProviderName)
@@ -239,7 +239,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         Active = active;
     }
 
-    private SemaphoreSlim _semaphore = new(1, 1);
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
     private async Task ConfigUpdated(object? sender, LightningConfig e)
     {
         try

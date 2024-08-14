@@ -84,7 +84,7 @@ public class PaymentsManager :
         JITFeeResponse? jitFeeReponse = null;
         if (lsp?.Active is true)
         {
-            jitFeeReponse = await lsp.CalculateInvoiceAmount(amount);
+            jitFeeReponse = await lsp.CalculateInvoiceAmount(amount, new CancellationTokenSource(5000).Token);
             if (jitFeeReponse is not null)
             {
                 amt = Option_u64Z.some(jitFeeReponse.AmountToGenerateOurInvoice);
