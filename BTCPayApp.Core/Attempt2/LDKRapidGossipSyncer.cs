@@ -10,6 +10,7 @@ public class LDKRapidGossipSyncer : IScopedHostedService
 {
     private readonly LDKNode _ldkNode;
     private readonly RapidGossipSync _rapidGossipSync;
+    private readonly NetworkGraph _networkGraph;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<LDKRapidGossipSyncer> _logger;
     private CancellationTokenSource? _cts;
@@ -17,10 +18,12 @@ public class LDKRapidGossipSyncer : IScopedHostedService
 
     public LDKRapidGossipSyncer(LDKNode ldkNode,
         RapidGossipSync rapidGossipSync,
+        NetworkGraph networkGraph,
         IHttpClientFactory httpClientFactory, ILogger<LDKRapidGossipSyncer> logger)
     {
         _ldkNode = ldkNode;
         _rapidGossipSync = rapidGossipSync;
+        _networkGraph = networkGraph;
         _httpClientFactory = httpClientFactory;
         _logger = logger;
     }
@@ -60,14 +63,16 @@ public class LDKRapidGossipSyncer : IScopedHostedService
                     // wait until config is updated or _cts is cancelled
                 }
 
-                var uri = new Uri(config.RapidGossipSyncUrl, $"/snapshot/{config.RapidGossipSyncTimestamp}");
+                var timestamp  = _networkGraph.get_last_rapid_gossip_sync_timestamp() is Option_u32Z.Option_u32Z_Some some 
+                    ? some.some : 0;
+                var uri = new Uri(config.RapidGossipSyncUrl, $"/snapshot/{timestamp}");
                 var response = await _httpClientFactory.CreateClient("rgs").GetAsync(uri, _cts.Token);
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogError("Failed to download snapshot from {uri}", uri);
                     continue;
                 }
-
+                
                 var snapshot = await response.Content.ReadAsByteArrayAsync();
                 var result =
                     _rapidGossipSync.update_network_graph_no_std(snapshot,
@@ -84,18 +89,11 @@ public class LDKRapidGossipSyncer : IScopedHostedService
                             _logger.LogError(
                                 $"Failed to update network graph with error {graphSyncErrorLightningError.lightning_error.get_err()}");
                             config = await _ldkNode.GetConfig();
-                            config.RapidGossipSyncTimestamp = 0;
                             await _ldkNode.UpdateConfig(config);
                             continue;
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
-                }
-                else if (result is Result_u32GraphSyncErrorZ.Result_u32GraphSyncErrorZ_OK ok)
-                {
-                    config = await _ldkNode.GetConfig();
-                    config.RapidGossipSyncTimestamp = ok.res;
-                    await _ldkNode.UpdateConfig(config);
                 }
 
 
