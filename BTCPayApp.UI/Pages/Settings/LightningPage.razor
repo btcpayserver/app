@@ -7,12 +7,11 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayServer.Client.Models
 @using Newtonsoft.Json.Linq
-@inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@implements IDisposable
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
 @inject ILogger<IndexPage> Logger
 @inject IAccountManager AccountManager
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Lightning Node</PageTitle>
 
@@ -32,16 +31,8 @@
     {
         <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
     }
-    else if (State.Value.LightningNodeState is not LightningNodeState.Error or LightningNodeState.Inactive)
+    else if (State.Value.LightningNodeState is not LightningNodeState.Error)
     {
-        @if (!string.IsNullOrEmpty(_errorMessage))
-        {
-            <Alert Type="danger" Dismissible>@_errorMessage</Alert>
-        }
-        else if (!string.IsNullOrEmpty(_successMessage))
-        {
-            <Alert Type="success" Dismissible>@_successMessage</Alert>
-        }
         <h2 class="d-flex flex-wrap align-items-center gap-2">
             <span>@(_config?.Alias ?? "Lightning Node")</span>
             @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier) && _storePaymentMethodIdentifier == ConnectionString)
@@ -49,7 +40,7 @@
                 <span class="badge bg-info">Lightning Payment Method</span>
             }
         </h2>
-        <div class="box mb-3">
+        <div class="box mb-5">
             @if (Node is not null)
             {
                 <div class="form-floating">
@@ -78,31 +69,45 @@
                 }
             }
         </div>
-        @if (Node is not null && JITOptions?.Any() is true)
-        {
-            <h2>Lightning Service Provider</h2>
-            <div class="box mb-3">
-                <div class="form-group">
-                    <label for="JITLSP" class="form-label">JIT LSP</label>
-                    <select class="form-select" @onchange="OnSelectLSP" value="@_config?.JITLSP" id="JITLSP">
-                        <option value="">None</option>
-                        @foreach (var jit in JITOptions)
-                        {
-                            <option value="@jit">@jit</option>
-                        }
-                    </select>
-                </div>
-            </div>
-        }
         @if (Node is not null)
         {
-            <div class="form-group mt-4">
-                <label for="JITLSP" class="form-label">Rapid Gossip Sync Server</label>
-                <input type="url" class="form-control" value="@_config?.RapidGossipSyncUrl" @onchange="OnUpdateRGS" />
-            </div>
+            <h2>Lightning Settings</h2>
+            <ValidationEditContext @ref="_validationEditContext"  Model="Model" OnValidSubmit="UpdateConfig" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
+                <DataAnnotationsValidator/>
+                <fieldset class="box">
+                    @if (JITOptions.Any())
+                    {
+                        <div class="form-group">
+                            <label for="JITLSP" class="form-label">Lightning Service Provider</label>
+                            <InputSelect id="JITLSP" @bind-Value="Model.JitLsp" class="form-select">
+                                <option value="">None</option>
+                                @foreach (var jit in JITOptions)
+                                {
+                                    <option value="@jit">@jit</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => Model.JitLsp)"/>
+                        </div>
+                    }
+                    <div class="form-group">
+                        <label for="RgsUrl" class="form-label">Rapid Gossip Sync Server URL</label>
+                        <InputText @bind-Value="Model.RgsUrl" type="url" class="form-control" id="RgsUrl"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" disabled="@_validationEditContext!.Invalid">
+                        <span>Update Configuration</span>
+                    </button>
+                </fieldset>
+            </ValidationEditContext>
         }
-
-        <div class="d-grid d-sm-flex flex-wrap gap-3 buttons my-4">
+    }
+    else
+    {
+        <LightningNodeStateAlert State="State.Value.LightningNodeState" />
+    }
+    @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loaded or LightningNodeState.Stopped or LightningNodeState.Error)
+    {
+        <h2>Lightning Control</h2>
+        <div class="box d-grid d-sm-flex flex-wrap gap-3 buttons">
             @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
             {
                 <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
@@ -114,10 +119,6 @@
             }
         </div>
     }
-    else
-    {
-        <LightningNodeStateAlert State="State.Value.LightningNodeState" />
-    }
 </section>
 
 @code {
@@ -125,34 +126,68 @@
     private LDKNode? Node => LightningNodeManager.Node;
     private string? StoreId => AccountManager.GetCurrentStore()?.Id;
     private string PaymentMethodId => LightningNodeManager.PaymentMethodId;
-    private string? _errorMessage;
-    private string? _successMessage;
     private string? _storePaymentMethodIdentifier;
-
     private string? ConnectionString => LightningNodeManager.ConnectionString;
     private string[] JITOptions;
+    private SettingsModel Model { get; set; } = new();
+    private string? _successMessage { get; set; }
+    private string? _errorMessage { get; set; }
+    private ValidationEditContext? _validationEditContext;
+
+    private class SettingsModel
+    {
+        public string? JitLsp { get; set; }
+        public string? RgsUrl { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        if (LightningNodeManager?.Node is not null)
+        if (Node is not null)
         {
-            _config = await LightningNodeManager.Node.GetConfig();
-
-
-            LightningNodeManager.Node.ConfigUpdated += ConfigUpdated;
-            JITOptions = await LightningNodeManager.Node.GetJITLSPs();
+            Node.ConfigUpdated += RefreshConfig;
+            JITOptions = await Node.GetJITLSPs();
+            await RefreshConfig(this, await Node.GetConfig());
         }
 
         if (!string.IsNullOrEmpty(StoreId))
             await GetStorePaymentMethod();
     }
 
-    private Task ConfigUpdated(object? sender, LightningConfig e)
+    protected override ValueTask DisposeAsyncCore(bool disposing)
     {
-        _config = e;
-        StateHasChanged();
-        return Task.CompletedTask;
+        base.DisposeAsyncCore(disposing);
+
+        if (Node is not null)
+            Node.ConfigUpdated -= RefreshConfig;
+
+        return ValueTask.CompletedTask;
+    }
+
+    private async Task UpdateConfig()
+    {
+        _successMessage = _errorMessage = null;
+        try
+        {
+            _config = await Node.GetConfig();
+            _config.JITLSP = Model.JitLsp;
+            _config.RapidGossipSyncUrl = string.IsNullOrEmpty(Model.RgsUrl) ? null : Uri.TryCreate(Model.RgsUrl, UriKind.Absolute, out var uri) ? uri: null;
+            await Node.UpdateConfig(_config);
+            _successMessage = "Lightning configuration updated.";
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+    }
+
+    private async Task RefreshConfig(object? sender, LightningConfig config)
+    {
+        if (Node is null) return;
+        _config = config;
+        Model.JitLsp = _config?.JITLSP;
+        Model.RgsUrl = _config?.RapidGossipSyncUrl?.ToString();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task GetStorePaymentMethod()
@@ -208,13 +243,6 @@
         }
     }
 
-    private async Task OnSelectLSP(ChangeEventArgs obj)
-    {
-        _config = await LightningNodeManager.Node.GetConfig();
-        _config.JITLSP = obj.Value?.ToString();
-        await LightningNodeManager.Node.UpdateConfig(_config);
-    }
-
     private string? GetConnectionString(GenericPaymentMethodData? pm)
     {
         return pm?.Config is JObject configObj &&
@@ -223,18 +251,4 @@
             ? connectionString
             : null;
     }
-
-    public void Dispose()
-    {
-        if (LightningNodeManager?.Node is not null)
-            LightningNodeManager.Node.ConfigUpdated -= ConfigUpdated;
-    }
-
-    private  async Task  OnUpdateRGS(ChangeEventArgs obj)
-    {
-        _config = await LightningNodeManager.Node.GetConfig();
-        _config.RapidGossipSyncUrl = string.IsNullOrEmpty(obj.Value?.ToString()) ? null : Uri.TryCreate(obj.Value?.ToString(), UriKind.Absolute, out var uri) ? uri: null;
-        await LightningNodeManager.Node.UpdateConfig(_config);
-    }
-
 }
