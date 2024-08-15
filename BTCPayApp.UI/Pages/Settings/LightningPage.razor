@@ -75,7 +75,7 @@
             <ValidationEditContext @ref="_validationEditContext"  Model="Model" OnValidSubmit="UpdateConfig" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
                 <DataAnnotationsValidator/>
                 <fieldset class="box">
-                    @if (JITOptions.Any())
+                    @if (JITOptions?.Any() is true)
                     {
                         <div class="form-group">
                             <label for="JITLSP" class="form-label">Lightning Service Provider</label>
