@@ -9,6 +9,7 @@
 @using BTCPayServer.Client.Models
 @using Newtonsoft.Json.Linq
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
 @inject IDispatcher Dispatcher
 @inject IState<StoreState> StoreState
 @inject DisplayFormatter DisplayFormatter
@@ -23,7 +24,9 @@
 
 @if (StoreInfo is null)
 {
-    <Alert Type="info">Please configure a store first.</Alert>
+    <section class="container">
+        <Alert Type="info">Please configure a store first.</Alert>
+    </section>
     return;
 }
 <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="@StoreInfo.Id">
@@ -228,7 +231,13 @@
 
                     if (parsedReceiptData != null)
                     {
-                        <h4 class="mt-5">Receipt Information</h4>
+                        <header class="d-flex flex-wrap align-items-center justify-content-between mt-5 mb-2">
+                            <h4 class="mb-0">Receipt Information</h4>
+                            @if (!string.IsNullOrEmpty(ReceiptUrl))
+                            {
+                                <a href="@ReceiptUrl" rel="noreferrer noopener" target="_blank">Receipt</a>
+                            }
+                        </header>
                         <div class="box">
                             <DataDisplay Data="@parsedReceiptData"/>
                         </div>
@@ -317,9 +326,9 @@
         if (StoreInfo is not null && !string.IsNullOrEmpty(InvoiceId))
         {
             if (Invoice == null)
-                Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreInfo.Id!, InvoiceId));
+                Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreInfo.Id, InvoiceId));
             if (PaymentMethods == null)
-                Dispatcher.Dispatch(new StoreState.FetchInvoicePaymentMethods(StoreInfo.Id!, InvoiceId));
+                Dispatcher.Dispatch(new StoreState.FetchInvoicePaymentMethods(StoreInfo.Id, InvoiceId));
         }
     }
 
@@ -330,6 +339,7 @@
     private InvoicePaymentMethodDataModel[]? PaymentMethods => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoicePaymentMethods(InvoiceId!)?.Data : null;
     private bool PaymentMethodsLoading => !string.IsNullOrEmpty(InvoiceId) && StoreState.Value.GetInvoicePaymentMethods(InvoiceId!)?.Loading is true;
     private string? PaymentMethodsError => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoicePaymentMethods(InvoiceId!)?.Error : null;
+    private string? ReceiptUrl => Invoice is { Status: InvoiceStatus.Settled, Receipt.Enabled: true } ? $"{AccountManager.GetAccount()!.BaseUri}i/{InvoiceId}/receipt" : null;
 
     private string GetTitle() => $"Invoice {Invoice?.Id}".Trim();
 }
