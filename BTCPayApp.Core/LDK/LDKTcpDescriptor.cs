@@ -140,7 +140,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
                     }
                     break;
                 case Result_boolPeerHandleErrorZ.Result_boolPeerHandleErrorZ_Err err:
-                    _logger.LogWarning("Failed to read event from peer: {Error}", err.err);
+                    _logger.LogWarning("Failed to read event from peer: {Error}", err.err.GetType());
                     disconnect_socket();
                     break;
             }

@@ -40,7 +40,7 @@ public class OnChainWalletManager : BaseHostedService
                 return;
             var old = _state;
             _state = value;
-            _logger.LogInformation("Wallet state changed: {State}", _state);
+            _logger.LogInformation($"Wallet state changed: {_state} from {old}" );
             StateChanged?.Invoke(this, (old, value));
         }
     }
@@ -236,7 +236,7 @@ public class OnChainWalletManager : BaseHostedService
         State = OnChainWalletState.Init;
     }
 
-    private async Task OnTransactionDetected(object? sender, TransactionDetectedRequest transactionDetectedRequest)
+    private async Task  OnTransactionDetected(object? sender, TransactionDetectedRequest transactionDetectedRequest)
     {
     }
 

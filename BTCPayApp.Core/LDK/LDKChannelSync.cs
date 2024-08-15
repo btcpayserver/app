@@ -1,5 +1,6 @@
 ﻿using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -15,8 +16,10 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     private readonly LDKNode _node;
     private readonly Network _network;
     private readonly Watch _watch;
+    private readonly LDKFilter _ldkFilter;
     private readonly BTCPayAppServerClient _appHubClient;
     private readonly ILogger<LDKChannelSync> _logger;
+    private readonly IConfigProvider _configProvider;
     private readonly List<IDisposable> _disposables = new();
     
 
@@ -27,8 +30,9 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         LDKNode node,
         Network network,
         Watch watch,
+        LDKFilter ldkFilter,
         BTCPayAppServerClient appHubClient,
-        ILogger<LDKChannelSync> logger)
+        ILogger<LDKChannelSync> logger, IConfigProvider configProvider)
     {
         _confirms = confirms.ToArray();
         _connectionManager = connectionManager;
@@ -36,20 +40,26 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         _node = node;
         _network = network;
         _watch = watch;
+        _ldkFilter = ldkFilter;
         _appHubClient = appHubClient;
         _logger = logger;
-        
+        _configProvider = configProvider;
     }
 
     private async Task PollForTransactionUpdates(uint256[]? txIds = null)
     {
-        Dictionary<uint256, (uint256 TransactionId, int Height, uint256? Block)> txs1;
+        Dictionary<uint256, (uint256 TransactionId, int Height, uint256? Block)> relevantTransactionsFromConfirms;
+        List<LDKWatchedOutput> watchedOutputs= new();
+        List<LDKWatchedOutput> spentWatchedOutputs= new();
+        
+        
         if (txIds is null)
         {
-            
-            var channels = await _node.GetChannels();
-            txIds = channels.Select(zz => new uint256(zz.get_funding_txo().get_txid())).ToArray();
-            txs1 = _confirms.SelectMany(confirm => confirm.get_relevant_txids().Select(zz =>
+            txIds = [];
+
+            watchedOutputs = await _ldkFilter.GetWatchedOutputs();
+
+            relevantTransactionsFromConfirms = _confirms.SelectMany(confirm => confirm.get_relevant_txids().Select(zz =>
                 (TransactionId: new uint256(zz.get_a()),
                     Height: zz.get_b(),
                     Block: zz.get_c() is Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some some
@@ -58,61 +68,81 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
 
             foreach (var txid in txIds)
             {
-                txs1.TryAdd(txid, (txid, 0, null));
+                relevantTransactionsFromConfirms.TryAdd(txid, (txid, 0, null));
 
             }
         }
         else
         {
-            txs1 = txIds.ToDictionary(zz => zz, (uint256 TransactionId, int Height, uint256? Block) (uint256) => (uint256, 0, null));
+            relevantTransactionsFromConfirms = txIds.ToDictionary(zz => zz, (uint256 TransactionId, int Height, uint256? Block) (uint256) => (uint256, 0, null));
 
         }
        
-        _logger.LogInformation($"Fetching {txs1.Count} transactions");
-        var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(txs1.Select(zz => zz.Key.ToString()).ToArray()).RunSync();
-        _logger.LogInformation($"Fetched {result.Txs.Count} transactions");
+        _logger.LogInformation($"Fetching {relevantTransactionsFromConfirms.Count} transactions");
+        var txIdsToQuery = relevantTransactionsFromConfirms.Select(zz => zz.Key.ToString()).ToArray();
+        var outpoints = watchedOutputs.Select(zz => zz.Outpoint.ToString()).ToArray();
+        var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(_node.Identifier, txIdsToQuery, outpoints).RunSync();
+         var blockHeaders = result.BlockHeaders.ToDictionary(zz => new uint256(zz.Key), zz => BlockHeader.Parse(zz.Value, _network));
+        var txs = result.Txs.ToDictionary(zz => new uint256(zz.Key), zz => Transaction.Parse(zz.Value.Transaction, _network));
         
-        Dictionary<uint256, List<TwoTuple_usizeTransactionZ>> confirmedTxList = new();
+        
+        _logger.LogInformation($"Fetched {result.Txs.Count} transactions");
+        Dictionary<uint256, List<TwoTuple_usizeTransactionZ>> blockToTxList = new();
+        
+        
+        // Dictionary<uint256, List<TwoTuple_usizeTransactionZ>> confirmedTxList = new();
         foreach (var transactionResult in result.Txs)
         {
-
-            var tx1 = txs1[new uint256(transactionResult.Key)];
-
-            if (tx1.Block is null && transactionResult.Value.BlockHash is null)
-                continue;
-            else if (tx1.Block is null && transactionResult.Value.BlockHash is not null)
+            var tx = txs[new uint256(transactionResult.Key)];
+            if(relevantTransactionsFromConfirms.TryGetValue(new uint256(transactionResult.Key), out var tx1))
             {
-                var bh = new uint256(transactionResult.Value.BlockHash);
-                confirmedTxList.TryAdd(bh, new List<TwoTuple_usizeTransactionZ>());
-
-                var txList = confirmedTxList[bh];
-
-                txList.Add(TwoTuple_usizeTransactionZ.of(1,
-                    Transaction.Parse(transactionResult.Value.Transaction, _network).ToBytes()));
-                continue;
-            }
-            else if (tx1.Block is not null && transactionResult.Value.BlockHash is null)
-            {
-                foreach (var confirm in _confirms)
+                switch (tx1.Block)
                 {
-                    confirm.transaction_unconfirmed(tx1.TransactionId.ToBytes());
+                    case null when transactionResult.Value.BlockHash is null:
+                        continue;
+                    case null when transactionResult.Value.BlockHash is not null:
+                    {
+                        blockToTxList.TryAdd(new uint256(transactionResult.Value.BlockHash), new List<TwoTuple_usizeTransactionZ>());
+              
+                        var list = blockToTxList[new uint256(transactionResult.Value.BlockHash)];
+                        list.Add(TwoTuple_usizeTransactionZ.of(0,tx.ToBytes()));
+                        break;
+                    }
+                    case { } when transactionResult.Value.BlockHash is not null:
+                    {
+                        foreach (var confirm in _confirms)
+                        {
+                            confirm.transaction_unconfirmed(tx1.TransactionId.ToBytes());
+                        }
+                        break;
+                    }
                 }
-
-                continue;
             }
-        }
-
-        foreach (var confirmedTxListItem in confirmedTxList)
-        {
+            else if (tx.Inputs.Any(zz => watchedOutputs.Any(zzz => zzz.Outpoint == zz.PrevOut)) && transactionResult.Value.BlockHash is not null)
+            {
+                var watchedOutput = watchedOutputs.First(zz => tx.Inputs.Any(zzz => zzz.PrevOut == zz.Outpoint));
+                blockToTxList.TryAdd(new uint256(transactionResult.Value.BlockHash), new List<TwoTuple_usizeTransactionZ>());
+                var list = blockToTxList[new uint256(transactionResult.Value.BlockHash)];
+                list.Add(TwoTuple_usizeTransactionZ.of(0,tx.ToBytes()));
+                
+                spentWatchedOutputs.Add(watchedOutput);
+            }
             
-            var header = result.Blocks[confirmedTxListItem.Key.ToString()];
-            var height = result.BlockHeghts[confirmedTxListItem.Key.ToString()];
-            var headerBytes = BlockHeader.Parse(header, _network).ToBytes();
+        }
+        foreach (var block in blockToTxList)
+        {
+            var header = blockHeaders[block.Key];
+            var height = result.BlockHeghts[block.Key.ToString()];
+            var headerBytes = header.ToBytes();
+            // if(block.Key.ToString() == "00000000000000086130942075335f4937cd89cb183d69cce612eb780c838f7c")
+            //     continue;
             foreach (var confirm in _confirms)
             {
-                confirm.transactions_confirmed(headerBytes, confirmedTxListItem.Value.ToArray(),  height);
+                confirm.transactions_confirmed(headerBytes, block.Value.ToArray(),height);
             }
         }
+
+        await _ldkFilter.OutputsSpent(spentWatchedOutputs);
     }
     
     public async Task StartAsync(CancellationToken cancellationToken)

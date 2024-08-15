@@ -185,7 +185,7 @@ private CancellationTokenSource _cts = new();
                         .Build();
 
                     _subscription = Connection.Register(_btcPayAppServerClientInterface);
-                    HubProxy = Connection.CreateHubProxy<IBTCPayAppHubServer>();
+                    HubProxy = new ExceptionWrappedHubProxy(Connection.CreateHubProxy<IBTCPayAppHubServer>(), _logger);
                 }
 
                 if (Connection.State == HubConnectionState.Disconnected)

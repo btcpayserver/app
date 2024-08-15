@@ -38,7 +38,7 @@ public class LightningNodeManager : BaseHostedService
                 return;
             var old = _state;
             _state = value;
-            _logger.LogInformation("Lightning node state changed: {State}", _state);
+            _logger.LogInformation($"Lightning node state changed: {_state} from {old}");
             StateChanged?.Invoke(this, (old, value));
         }
     }
@@ -98,6 +98,7 @@ public class LightningNodeManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
+            _logger.LogInformation("Stopping lightning node");
             if (Node != null) await Node.StopAsync(CancellationToken.None);
         }
         catch (Exception e)

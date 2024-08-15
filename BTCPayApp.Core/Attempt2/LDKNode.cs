@@ -64,8 +64,7 @@ public partial class LDKNode :
         _memoryCache.Remove(nameof(GetChannels));
     }
 
-    public async Task<Result_ChannelIdAPIErrorZ> OpenChannel(Money amount, PubKey nodeId,
-        CancellationToken cancellationToken = default)
+    public async Task<Result_ChannelIdAPIErrorZ> OpenChannel(Money amount, PubKey nodeId)
     {
         _logger.LogInformation("Opening channel with {nodeId} for {amount}", nodeId, amount);
 
@@ -80,15 +79,42 @@ public partial class LDKNode :
         var userChannelId = new UInt128(temporaryChannelId.get_a().Take(16).ToArray());
         try
         {
-            return await Task.Run(() => channelManager.create_channel(nodeId.ToBytes(), amount.Satoshi, 0,
+            return channelManager.create_channel(nodeId.ToBytes(), amount.Satoshi, 0,
                 userChannelId,
-                temporaryChannelId, userConfig), cancellationToken);
+                temporaryChannelId, userConfig);
         }
         finally
         {
             _logger.LogInformation("finished (trying to) opening channel with {nodeId} for {amount}", nodeId, amount);
         }
     }
+
+
+    public async Task CloseChannel(ChannelId channelId, PubKey counterparty, bool force)
+    {
+        var channelManager = ServiceProvider.GetRequiredService<ChannelManager>();
+        Result_NoneAPIErrorZ? result = null;
+        if (force)
+        {
+            result = channelManager.force_close_broadcasting_latest_txn(channelId, counterparty.ToBytes());
+        }
+        else
+        {
+            result =  channelManager.close_channel(channelId, counterparty.ToBytes());
+            
+        }
+        if(result.is_ok())
+        {
+            _logger.LogInformation($"Channel {Convert.ToHexString(channelId.get_a()).ToLowerInvariant()} closed");
+            return;
+        }
+        if(result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_Err e && e.err.GetError() is  var message)
+        {
+            _logger.LogError($"Error closing channel {Convert.ToHexString(channelId.get_a()).ToLowerInvariant()}: {message}");
+        }
+        
+    }
+    
 
     public async Task<IJITService?> GetJITLSPService()
     {
@@ -321,6 +347,9 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         return await _onChainWalletManager.DeriveScript(derivationKey);
     }
 
+    public string? Identifier => _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts]
+        .Identifier;
+    
 
     public async Task TrackScripts(Script[] scripts, string derivation = WalletDerivation.LightningScripts)
     {

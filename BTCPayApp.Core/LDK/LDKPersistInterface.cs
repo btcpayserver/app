@@ -214,6 +214,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
     public void archive_persisted_channel(OutPoint channel_funding_outpoint)
     {
+        _logger.LogInformation($"Archiving channel, outpoint: {channel_funding_outpoint.Outpoint()}");
         //TODO: add archive column to channels table
     }
     //
