@@ -1,10 +1,10 @@
-@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Models
 @inject IJSRuntime JS
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
+@implements IDisposable
 
 @if (_account != null)
 {
@@ -100,6 +100,11 @@
         _accounts = await AccountManager.GetAccounts();
     }
 
+    public void Dispose()
+    {
+        AccountManager.OnAccountInfoChange -= OnAccountInfoChange;
+    }
+
     private async Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
     {
         _account = account;
@@ -127,6 +132,7 @@
         _sending = false;
         if (result.Succeeded)
         {
+            AccountManager.OnBeforeAccountChange -= OnBeforeAccountChange;
             NavigationManager.NavigateTo(Routes.Index);
         }
         else

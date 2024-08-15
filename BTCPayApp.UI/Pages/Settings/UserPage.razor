@@ -142,6 +142,15 @@
         };
     }
 
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        AccountManager.OnAccountInfoChange -= OnAccountInfoChange;
+
+        return ValueTask.CompletedTask;
+    }
+
     private async Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
     {
         Account = new AccountModel

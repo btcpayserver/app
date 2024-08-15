@@ -4,6 +4,7 @@
 @inject IState<UIState> UiState
 @inject NavigationManager NavigationManager
 @inject IAccountManager AccountManager
+@implements IDisposable
 
 <nav id="NavbarBottom">
     <div class="container d-flex align-items-center justify-content-between">
@@ -47,6 +48,11 @@
     {
         base.OnInitialized();
         NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
     }
 
     private string HomeCssClass()
