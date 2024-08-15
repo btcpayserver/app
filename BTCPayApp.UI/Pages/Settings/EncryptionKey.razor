@@ -1,5 +1,4 @@
 ﻿@attribute [Route(Routes.EncryptionKey)]
-@layout BaseLayout
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.UI.Components.Layout
 @inject NavigationManager NavigationManager
@@ -10,9 +9,9 @@
 <PageTitle>@GetTitle()</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
-    <Titlebar Back Fixed="false">
+    <Titlebar Back="!NeedsEncryptionKey">
         <h1>@GetTitle()</h1>
-        @if (ConnectionManager.ConnectionState != BTCPayConnectionState.WaitingForEncryptionKey) {
+        @if (NeedsEncryptionKey) {
             <SectionContent SectionId="Titlebar.End">
                 <a class="btn-icon" href="@Routes.Settings">
                     <Icon Symbol="cross"/>
@@ -24,8 +23,9 @@
 
 <section class="container">
     <h4 class="my-4">Pairing Device</h4>
-    @if (ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey)
+    @if (NeedsEncryptionKey)
     {
+        <style>#NavbarBottom { display: none; }</style>
         <p>Your encryption key is required to unlock the app.</p>
         <div class="box my-4 mx-auto">
             <ValidationEditContext @ref="_validationEditContext" Model="@this" OnValidSubmit="HandleValidSubmit">
@@ -84,5 +84,6 @@
         }
     }
 
-    private string GetTitle() => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey ? "Enter your encryption key" : "View your encryption key";
+    private string GetTitle() => NeedsEncryptionKey ? "Enter your encryption key" : "View your encryption key";
+    private bool NeedsEncryptionKey => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey;
 }
