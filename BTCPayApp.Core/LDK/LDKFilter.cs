@@ -66,7 +66,7 @@ public class LDKFilter : FilterInterface
 
     private void Track(Script script)
     {
-        _ldkNode.TrackScripts(new[] {script}).RunInOtherThread();
+        _ = _ldkNode.TrackScripts([script]);
     }
 
     public async Task OutputsSpent(List<LDKWatchedOutput> spentWatchedOutputs)

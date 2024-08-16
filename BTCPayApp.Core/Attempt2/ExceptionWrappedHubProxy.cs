@@ -1,4 +1,5 @@
 ﻿using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Helpers;
 using BTCPayServer.Lightning;
 using Microsoft.Extensions.Logging;
 
@@ -18,20 +19,19 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
     private async Task<T> Wrap<T>(Func<Task<T>> func)
     {
 
-        return await Task.Factory.StartNew(async () =>
+        return await AsyncExtensions.RunInOtherThread(async () =>
+        {
+            //executes in thread pool.
+            try
             {
-                //executes in thread pool.
-                try
-                {
-                    return await func();
-                }
-                catch (Exception e)
-                {
-                    _logger.LogError(e, "Error while calling hub method");
-                    return default!;
-                }
-            }) // returns a Task<Task>.
-            .Unwrap();
+                return await func();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Error while calling hub method");
+                return default!;
+            }
+        }).Unwrap();
     }
 
 

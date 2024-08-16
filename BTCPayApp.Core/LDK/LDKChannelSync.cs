@@ -81,7 +81,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         _logger.LogInformation($"Fetching {relevantTransactionsFromConfirms.Count} transactions");
         var txIdsToQuery = relevantTransactionsFromConfirms.Select(zz => zz.Key.ToString()).ToArray();
         var outpoints = watchedOutputs.Select(zz => zz.Outpoint.ToString()).ToArray();
-        var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(_node.Identifier, txIdsToQuery, outpoints).RunInOtherThread();
+        var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(_node.Identifier, txIdsToQuery, outpoints);
          var blockHeaders = result.BlockHeaders.ToDictionary(zz => new uint256(zz.Key), zz => BlockHeader.Parse(zz.Value, _network));
         var txs = result.Txs.ToDictionary(zz => new uint256(zz.Key), zz => Transaction.Parse(zz.Value.Transaction, _network));
         

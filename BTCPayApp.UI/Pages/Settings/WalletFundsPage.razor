@@ -71,8 +71,10 @@
     @if (_txs?.Any() is true)
     {
         <div class="transactions-list mb-l">
-            @foreach (var tx in _txs)
+            @foreach (var txGroup in _txs)
             {
+                <h3>@txGroup.Key</h3>
+                @foreach(var tx in txGroup.Value){
                 <div class="box">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <span class="text-end fw-semibold" @onclick="ToggleDisplayCurrency">
@@ -87,7 +89,7 @@
                         </span>
                     </div>
                 </div>
-            }
+            }}
         </div>
     }
     else
@@ -192,7 +194,7 @@
     private bool _gettingAddress;
     private Money? _totalBalance;
     private string? _address;
-    private TxResp[]? _txs;
+    private Dictionary<string, TxResp[]> _txs;
     private IEnumerable<ICoin>? _utxos;
     private string? _txResponse { get; set; }
 
@@ -238,7 +240,7 @@
         await InvokeAsync(StateHasChanged);
         try
         {
-            _utxos = await OnChainWalletManager.GetUTXOS();
+            _utxos = (await OnChainWalletManager.GetUTXOS()).OfType<OnChainWalletManager.CoinWithKey>();
             _totalBalance = _utxos.Sum(utxo => utxo.TxOut.Value);
             _txs = await OnChainWalletManager.GetTransactions();
         }

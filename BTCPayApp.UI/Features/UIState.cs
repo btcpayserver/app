@@ -22,10 +22,9 @@ public static class CurrencyUnit
 [FeatureState]
 public record UIState
 {
-    public string SelectedTheme = Themes.System;
-    public string SystemTheme = Themes.Light;
-    public bool IsDarkMode;
-    public string BitcoinUnit = CurrencyUnit.SATS;
+    public string SelectedTheme { get; set; } = Themes.System;
+    public string SystemTheme { get; set; } = Themes.Light;
+    public string BitcoinUnit{ get; set; }  = CurrencyUnit.SATS;
     [JsonIgnore]
     public RemoteData<AppInstanceInfo>? Instance;
 
