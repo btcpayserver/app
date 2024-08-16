@@ -9,13 +9,13 @@ public static class AsyncExtensions
     
     public static async Task RunSync(this Task task)
     {
-        
-        task.GetAwaiter().GetResult();
+        await Task.Factory.StartNew(async () => await task).Unwrap();
     }
 
     public static async Task<T> RunSync<T>(this Task<T> task)
     {
-        return task.GetAwaiter().GetResult();
+        
+     return    await Task.Factory.StartNew(async () => await task).Unwrap();
     }
     /// <summary>
     /// Allows a cancellation token to be awaited.

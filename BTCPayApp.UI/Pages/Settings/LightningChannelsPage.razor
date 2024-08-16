@@ -88,7 +88,7 @@
         }
 
         <h2>Connect Peer</h2>
-        <ValidationEditContext @ref="_connectEditContext" Model="CPModel" OnValidSubmit="ConnectToNewPeer" SuccessMessage="@_connectSuccessMessage" ErrorMessage="@_connectErrorMessage">
+        <ValidationEditContext @ref="_connectEditContext" Model="CPModel" OnValidSubmit="() => ConnectToNewPeer()" SuccessMessage="@_connectSuccessMessage" ErrorMessage="@_connectErrorMessage">
             <DataAnnotationsValidator/>
             <fieldset class="box">
                 <div class="form-group">
@@ -370,7 +370,8 @@
 
     private async Task ConnectToNewPeer()
     {
-        _ =Task.Run(async () =>
+        _connectSuccessMessage = _connectErrorMessage = null;
+        try
         {
             Loading = true;
             await InvokeAsync(StateHasChanged);
@@ -386,42 +387,24 @@
             {
                 _peers = (await Node.GetPeers()).Select(peer => (nodeId: Convert.ToHexString(peer.get_counterparty_node_id()), socket: peer.get_socket_address() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null)).ToArray();
 
-            _connectSuccessMessage = _connectErrorMessage = null;
-            try
-            {
-                Loading = true;
-                await InvokeAsync(StateHasChanged);
-                await _semaphore.WaitAsync();
-                if (!NodeInfo.TryParse(CPModel.PeerUrl, out var nodeInfo))
-                {
-                    _connectErrorMessage = $"Invalid peer URL: {CPModel.PeerUrl}";
-                    return;
-                }
-
-                var result = await Node.PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
-                if (result is not null)
-                {
-                    _peers = (await Node.GetPeers()).Select(peer => (nodeId: Convert.ToHexString(peer.get_counterparty_node_id()), socket: peer.get_socket_address() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null)).ToArray();
-
-                    _connectSuccessMessage = $"Connection to {CPModel.PeerUrl} initiated";
-                    CPModel = new ConnectPeerModel();
-                }
-                else
-                {
-                    _connectErrorMessage = "Error establishing connection";
-                }
+                _connectSuccessMessage = $"Connection to {CPModel.PeerUrl} initiated";
+                CPModel = new ConnectPeerModel();
             }
-            catch (Exception e)
+            else
             {
-                _connectErrorMessage = e.Message;
+                _connectErrorMessage = "Error establishing connection";
             }
-            finally
-            {
-                Loading = false;
-                _semaphore.Release();
-                await InvokeAsync(StateHasChanged);
-            }
-        });
+        }
+        catch (Exception e)
+        {
+            _connectErrorMessage = e.Message;
+        }
+        finally
+        {
+            Loading = false;
+            _semaphore.Release();
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async void DisconnectPeer(string nodeId)

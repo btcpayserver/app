@@ -250,7 +250,7 @@ public class OnChainWalletManager : BaseHostedService
     public async Task<Script> DeriveScript(string derivation)
     {
         var identifier = WalletConfig?.Derivations[derivation].Identifier;
-        var addr = await _btcPayConnectionManager.HubProxy.DeriveScript(identifier).RunSync();
+        var addr = await _btcPayConnectionManager.HubProxy.DeriveScript(identifier);
         return Script.FromHex(addr);
     }
 

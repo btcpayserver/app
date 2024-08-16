@@ -17,16 +17,23 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
 
     private async Task<T> Wrap<T>(Func<Task<T>> func)
     {
-        try
-        {
-            return await func();
-        }
-        catch (Exception e)
-        {
-            _logger.LogError(e, "Error while calling hub method");
-            return default!;
-        }
+
+        return await Task.Factory.StartNew(async () =>
+            {
+                //executes in thread pool.
+                try
+                {
+                    return await func();
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Error while calling hub method");
+                    return default!;
+                }
+            }) // returns a Task<Task>.
+            .Unwrap();
     }
+
 
     public async Task<bool> DeviceMasterSignal(long deviceIdentifier, bool active)
     {
