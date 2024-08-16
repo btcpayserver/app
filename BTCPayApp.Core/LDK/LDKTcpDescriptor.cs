@@ -52,6 +52,8 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
             descriptor.disconnect_socket();
             return null;
         }
+        
+        logger.LogInformation($"Connected to {pubKey} at {((Option_SocketAddressZ.Option_SocketAddressZ_Some)saSocketAddress).some.to_str()}");
         descriptor.Start();
         var result = peerManager.new_outbound_connection(pubKey.ToBytes(), descriptor.SocketDescriptor,saSocketAddress);
         if (result is Result_CVec_u8ZPeerHandleErrorZ.Result_CVec_u8ZPeerHandleErrorZ_OK ok)
@@ -179,9 +181,9 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
 
             return result;
         }
-        catch (Exception)
+        catch (Exception e)
         {
-            _logger.LogWarning("Failed to send data");
+            _logger.LogError(e,"Failed to send data");
             disconnect_socket();
             return 0;
         }

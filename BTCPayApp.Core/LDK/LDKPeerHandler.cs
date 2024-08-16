@@ -86,6 +86,9 @@ public class LDKPeerHandler : IScopedHostedService
     {
         while (!ctsToken.IsCancellationRequested)
         {
+            try
+            {
+            
             var connected = _peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()).ToLower());
             var channels = await _node.GetChannels(ctsToken);
             var channelPeers = channels
@@ -110,6 +113,11 @@ public class LDKPeerHandler : IScopedHostedService
 
             await Task.WhenAll(tasks);
             await Task.Delay(5000, ctsToken);
+            }
+            catch (Exception e) when (e is not OperationCanceledException)
+            {
+                _logger.LogError(e, "Error while attempting to connect to persistent peers");
+            }
         }
     }
 
@@ -181,6 +189,20 @@ public class LDKPeerHandler : IScopedHostedService
 
     private readonly ConcurrentDictionary<string, Task<LDKTcpDescriptor?>> _connectionTasks = new();
 
+    public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey peerNodeId,PeerInfo peerInfo, CancellationToken cancellationToken = default)
+    {
+        if (peerInfo.Endpoint is null)
+            return null;
+        if (EndPointParser.TryParse(peerInfo.Endpoint, 9735, out var endpoint))
+        {
+            if(peerInfo.Label is not null)
+                _logger.LogInformation($"Attempting to connect to {peerNodeId} at {endpoint} ({peerInfo.Label})");
+            return await ConnectAsync(peerNodeId, endpoint, cancellationToken);
+        }
+
+        return null;
+    }
+
     public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey theirNodeId, EndPoint remote,
         CancellationToken cancellationToken = default)
     {
@@ -203,13 +225,10 @@ public class LDKPeerHandler : IScopedHostedService
             if (_channelManager.get_our_node_id().SequenceEqual(theirNodeId.ToBytes()))
                 return null;
 
-            _logger.LogInformation($"Connecting to {theirNodeId} at {remote}");
             var client = new TcpClient();
             await client.ConnectAsync(remote.IPEndPoint(), cancellationToken);
 
 
-            _logger.LogInformation(
-                $"{remote} {client.Connected} {client.Client.Connected} {client.Client.RemoteEndPoint} {client.Client.LocalEndPoint}");
             var result = LDKTcpDescriptor.Outbound(_peerManager, client, _logger, theirNodeId, _descriptors);
             if (result is not null)
             {

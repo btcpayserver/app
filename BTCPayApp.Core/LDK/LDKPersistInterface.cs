@@ -21,6 +21,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
     private readonly SyncService _syncService;
     private readonly ConcurrentDictionary<long, Task> updateTasks = new();
     private readonly ConcurrentDictionary<long, TaskCompletionSource> _updateTaskCompletionSources = new();
+    private Dictionary<long,long> _updateIds = new();
     // private readonly ChainMonitor _chainMonitor;
 
     public LDKPersistInterface(LDKNode node, ILogger<LDKPersistInterface> logger, IServiceProvider serviceProvider, SyncService syncService  )
@@ -29,16 +30,17 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
         _logger = logger;
         _serviceProvider = serviceProvider;
         _syncService = syncService;
-        _syncService.RemoteObjectUpdated += SyncServiceOnRemoteObjectUpdated;
+        _syncService.RemoteObjectUpdated += RemoteObjectUpdated;
     }
 
-    private Task SyncServiceOnRemoteObjectUpdated(object? sender, PutObjectRequest e)
+    private Task RemoteObjectUpdated(object? sender, (List<Outbox> OutboxItemsProcesed, PutObjectRequest RemoteRequest) e)
     {
-        var channelUpdates = e.TransactionItems.Where(x => x.Key.StartsWith("Channel_")).Select(value => JsonSerializer.Deserialize<Channel>(value.Value.ToStringUtf8())!).ToArray();
+
+        var channelUpdates = e.RemoteRequest.TransactionItems.Where(x => x.Key.StartsWith("Channel_")).Select(value => JsonSerializer.Deserialize<Channel>(value.Value.ToStringUtf8())!).ToArray();
         foreach (var channelUpdate in channelUpdates)
         {
            var tcs =  _updateTaskCompletionSources.GetOrAdd(channelUpdate.Checkpoint, new TaskCompletionSource());
-           tcs.SetResult();
+           tcs.TrySetResult();
         }
         return Task.CompletedTask;
     }
@@ -89,9 +91,9 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
                 // var trackTask = _node.TrackScripts(outs).ContinueWith(task => _logger.LogDebug($"Tracking scripts finished for  updateid: {update_id.hash()}"));;
                 var updateTask = _node.UpdateChannel(identifiers, data.write(), updateId).ContinueWith(task => _logger.LogDebug($"Updating channel finished for  updateid: {update_id.hash()}"));;
                 await updateTask;
-                _logger.LogDebug("channel updated to local, waiting for remote sync to finish");
-                await _updateTaskCompletionSources[updateId].Task;
-                _updateTaskCompletionSources.TryRemove(updateId, out _);
+                // _logger.LogDebug("channel updated to local, waiting for remote sync to finish");
+                // await _updateTaskCompletionSources[updateId].Task;
+                // _updateTaskCompletionSources.TryRemove(updateId, out _);
                 await Task.Run(() =>
                 {
                     try
@@ -233,6 +235,6 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _syncService.RemoteObjectUpdated -= SyncServiceOnRemoteObjectUpdated;
+        _syncService.RemoteObjectUpdated -= RemoteObjectUpdated;
     }
 }

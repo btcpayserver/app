@@ -23,7 +23,7 @@ public class SyncService : IDisposable
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ISecureConfigProvider _secureConfigProvider;
     public AsyncEventHandler? EncryptionKeyChanged;    
-    public AsyncEventHandler<PutObjectRequest>? RemoteObjectUpdated;
+    public AsyncEventHandler<(List<Outbox> OutboxItemsProcesed, PutObjectRequest RemoteRequest)>? RemoteObjectUpdated;
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
 
     public SyncService(
@@ -339,6 +339,7 @@ public class SyncService : IDisposable
         if (outbox.Count == 0)
             return;
         _logger.LogInformation($"Syncing to remote {outbox.Count} outbox items");
+        var removedOutboxItems = new List<Outbox>();
         foreach (var outboxItemSet in outbox)
         {
             var orderedEnumerable = outboxItemSet.OrderByDescending(outbox1 => outbox1.Version)
@@ -364,6 +365,7 @@ public class SyncService : IDisposable
             }
 
             db.OutboxItems.RemoveRange(orderedEnumerable);
+            removedOutboxItems.AddRange(orderedEnumerable);
             // Process outbox item
         }
 
@@ -373,11 +375,7 @@ public class SyncService : IDisposable
         _logger.LogInformation(
             $"Synced to remote {putObjectRequest.TransactionItems.Count} items and deleted {putObjectRequest.DeleteItems.Count} items" +
             string.Join(", ", putObjectRequest.TransactionItems.Select(kv => kv.Key + " " + kv.Version)));
-        RemoteObjectUpdated?.Invoke(this, new PutObjectRequest()
-        {
-            TransactionItems = {putObjectRequest.TransactionItems},
-            DeleteItems = {putObjectRequest.DeleteItems}
-        });
+        RemoteObjectUpdated?.Invoke(this, (removedOutboxItems, putObjectRequest.Clone()));
     }
     public async Task StartSync(bool local, long deviceIdentifier, CancellationToken cancellationToken = default)
     {

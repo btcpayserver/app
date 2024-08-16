@@ -1,4 +1,5 @@
-﻿using BTCPayApp.Core.Contracts;
+﻿using AsyncKeyedLock;
+using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
@@ -368,9 +369,11 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
                 string.Join(",", scripts.Select(script => script.ToHex())));
         }
     }
-
+    AsyncKeyedLocker<string> channelLocker = new();
+    
     public async Task UpdateChannel(List<ChannelAlias> identifiers, byte[] write, long checkpoint)
     {
+        using var releaser = await channelLocker.LockAsync(identifiers.First().Id);
         //TODO: convert to upsert and ensure aliases are saved with upsert too
         var ids = identifiers.Select(alias => alias.Id).ToArray();
         await using var context = await _dbContextFactory.CreateDbContextAsync();
@@ -408,6 +411,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             }
         }
 
+        _logger.LogDebug($"Updating channel {channel.Id} with checkpoint {checkpoint}");
         await context.SaveChangesAsync();
     }
 
