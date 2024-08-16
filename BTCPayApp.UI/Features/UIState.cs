@@ -38,15 +38,15 @@ public record UIState
     {
         public override UIState Reduce(UIState state, SetUserTheme action)
         {
-            var effectiveTheme = action.Theme == Themes.System ? state.SystemTheme : action.Theme;
             return state with
             {
                 SystemTheme = state.SystemTheme,
-                SelectedTheme = action.Theme,
-                IsDarkMode = effectiveTheme == Themes.Dark
+                SelectedTheme = action.Theme
             };
         }
     }
+
+    public bool IsDarkMode => SelectedTheme == Themes.System? SystemTheme == Themes.Dark : SelectedTheme == Themes.Dark;
 
     protected class FetchInstanceInfoReducer : Reducer<UIState, FetchInstanceInfo>
     {
