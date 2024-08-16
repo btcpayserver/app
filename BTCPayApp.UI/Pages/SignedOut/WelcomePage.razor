@@ -2,9 +2,9 @@
 @attribute [AllowAnonymous]
 @inherits SignedOutBasePage
 
+<PageTitle>@GetTitle()</PageTitle>
 <AuthorizeView>
     <NotAuthorized>
-        <PageTitle>@GetTitle()</PageTitle>
         <div class="text-center">
             <InstanceLogo/>
             <h1>@GetTitle()</h1>
