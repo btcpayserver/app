@@ -5,14 +5,25 @@ using NBitcoin;
 namespace BTCPayApp.Core.Helpers;
 
 public static class AsyncExtensions
-{
+{  
+    public static async Task RunInOtherThread(Action action)
+    {
+        await Task.Factory.StartNew(action);
+    }
+
+    public static async Task<T> RunInOtherThread<T>(Func<T> action)
+    {
+       return await Task.Factory.StartNew(action);
+    }
+
     
-    public static async Task RunSync(this Task task)
+    
+    public static async Task RunInOtherThread(this Task task)
     {
         await Task.Factory.StartNew(async () => await task).Unwrap();
     }
 
-    public static async Task<T> RunSync<T>(this Task<T> task)
+    public static async Task<T> RunInOtherThread<T>(this Task<T> task)
     {
         
      return    await Task.Factory.StartNew(async () => await task).Unwrap();

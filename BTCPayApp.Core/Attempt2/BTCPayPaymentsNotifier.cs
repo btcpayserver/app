@@ -30,7 +30,7 @@ public class BTCPayPaymentsNotifier : IScopedHostedService
         await _connectionManager.HubProxy
             .SendInvoiceUpdate(
                 _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier, e.ToInvoice())
-            .RunSync();
+            .RunInOtherThread();
     }
 
    

@@ -134,7 +134,7 @@ public class OnChainWalletManager : BaseHostedService
             var result = await _btcPayConnectionManager.HubProxy.Pair(new PairRequest()
             {
                 Derivations = walletConfig.Derivations.ToDictionary(pair => pair.Key, pair => pair.Value.Descriptor)
-            }).RunSync();
+            }).RunInOtherThread();
             foreach (var keyValuePair in result)
             {
                 walletConfig.Derivations[keyValuePair.Key].Identifier = keyValuePair.Value;
@@ -174,7 +174,7 @@ public class OnChainWalletManager : BaseHostedService
                 {
                     [key] = descriptor
                 }
-            }).RunSync();
+            }).RunInOtherThread();
             WalletConfig.Derivations[key] = new WalletDerivation()
             {
                 Name = name,
@@ -217,7 +217,7 @@ public class OnChainWalletManager : BaseHostedService
         var response = await _btcPayConnectionManager.HubProxy.Handshake(new AppHandshake
         {
             Identifiers = identifiers
-        }).RunSync();
+        }).RunInOtherThread();
 
         var missing =
             WalletConfig.Derivations.Where(pair => !response.IdentifiersAcknowledged.Contains(pair.Value.Identifier));
@@ -263,7 +263,7 @@ public class OnChainWalletManager : BaseHostedService
     public async Task<PSBT?> SignTransaction(PSBT psbt)
     {
         var identifiers = WalletConfig.Derivations.Select(derivation => derivation.Value.Identifier).ToArray();
-        var updated = await _btcPayConnectionManager.HubProxy.UpdatePsbt(identifiers, psbt.ToHex()).RunSync();
+        var updated = await _btcPayConnectionManager.HubProxy.UpdatePsbt(identifiers, psbt.ToHex()).RunInOtherThread();
         psbt = PSBT.Parse(updated, Network);
         var rootKey =new Mnemonic(WalletConfig.Mnemonic).DeriveExtKey();
         foreach (var deriv in WalletConfig.Derivations.Values.Where(derivation => derivation.Descriptor is not null))
@@ -343,7 +343,7 @@ public class OnChainWalletManager : BaseHostedService
     {
         var identifiersWhichWeCanDeriveKeysFor = WalletConfig.Derivations.Values
             .Where(derivation => derivation.Descriptor is not null).Select(derivation => derivation.Identifier).ToArray();
-        var res= await _btcPayConnectionManager.HubProxy.GetTransactions(identifiersWhichWeCanDeriveKeysFor).RunSync();
+        var res= await _btcPayConnectionManager.HubProxy.GetTransactions(identifiersWhichWeCanDeriveKeysFor).RunInOtherThread();
         return res.SelectMany(pair => pair.Value).OrderByDescending(resp => resp.Timestamp).ToArray();
     }
 
@@ -351,7 +351,7 @@ public class OnChainWalletManager : BaseHostedService
     public async Task<IEnumerable<ICoin>> GetUTXOS()
     {
         var identifiers = WalletConfig.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
-        var utxos = await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers).RunSync();
+        var utxos = await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers).RunInOtherThread();
         var identifiersWhichWeCanDeriveKeysFor = WalletConfig.Derivations.Values
             .Where(derivation => derivation.Descriptor is not null).Select(derivation => derivation.Identifier).ToArray();
         var result = new List<ICoin>();
@@ -468,7 +468,7 @@ public class OnChainWalletManager : BaseHostedService
             try
             {
 
-                return await _btcPayConnectionManager.HubProxy.GetBestBlock().RunSync();
+                return await _btcPayConnectionManager.HubProxy.GetBestBlock().RunInOtherThread();
             }
             catch(Exception e)
             {
@@ -489,7 +489,7 @@ public class OnChainWalletManager : BaseHostedService
 
     public async Task BroadcastTransaction(Transaction valueTx, CancellationToken cancellationToken = default)
     {
-        await _btcPayConnectionManager.HubProxy.BroadcastTransaction(valueTx.ToHex()).RunSync();
+        await _btcPayConnectionManager.HubProxy.BroadcastTransaction(valueTx.ToHex()).RunInOtherThread();
     }
 
     public async Task<FeeRate> GetFeeRate(int blockTarget)
@@ -502,7 +502,7 @@ public class OnChainWalletManager : BaseHostedService
 
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
 
-                    var result = new FeeRate(await _btcPayConnectionManager.HubProxy.GetFeeRate(blockTarget).RunSync());
+                    var result = new FeeRate(await _btcPayConnectionManager.HubProxy.GetFeeRate(blockTarget).RunInOtherThread());
 
                     _logger.LogInformation($"Got fee rate for block target {blockTarget} {result}" );
                     return result;

@@ -80,9 +80,10 @@ public partial class LDKNode :
         var userChannelId = new UInt128(temporaryChannelId.get_a().Take(16).ToArray());
         try
         {
-            return channelManager.create_channel(nodeId.ToBytes(), amount.Satoshi, 0,
+            return await AsyncExtensions.RunInOtherThread(() => channelManager.create_channel(nodeId.ToBytes(),
+                amount.Satoshi, 0,
                 userChannelId,
-                temporaryChannelId, userConfig);
+                temporaryChannelId, userConfig));
         }
         finally
         {
@@ -360,7 +361,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             var identifier = _onChainWalletManager.WalletConfig.Derivations[derivation].Identifier;
 
             await _connectionManager.HubProxy.TrackScripts(identifier,
-                scripts.Select(script => script.ToHex()).ToArray()).RunSync();
+                scripts.Select(script => script.ToHex()).ToArray()).RunInOtherThread();
             _logger.LogDebug("Tracked scripts {scripts}", string.Join(",", scripts.Select(script => script.ToHex())));
         }
         catch (Exception e)

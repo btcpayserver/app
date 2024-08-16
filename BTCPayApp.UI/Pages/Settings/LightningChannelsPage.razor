@@ -239,7 +239,7 @@
     private class OpenChannelModel
     {
         [Required] public string? PeerId { get; set; }
-        [Required] [Range(10000, 10_000_000)] public decimal? Amount { get; set; }
+        [Required] public decimal? Amount { get; set; }
     }
 
     private class ConnectPeerModel
