@@ -71,6 +71,11 @@ public class DisplayFormatter
         };
     }
 
+    public string Currency(Money value, MoneyUnit unit, string currency, CurrencyFormat format = CurrencyFormat.Code)
+    {
+        return Currency(value.ToDecimal(unit), currency, format);
+    }
+
     public string Currency(string value, string currency, CurrencyFormat format = CurrencyFormat.Code)
     {
         return Currency(decimal.Parse(value, CultureInfo.InvariantCulture), currency, format);

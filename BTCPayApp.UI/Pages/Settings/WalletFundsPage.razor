@@ -36,33 +36,36 @@
         @if (_totalBalance != null)
         {
             <span class="badge bg-info ms-2">
-                <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(_totalBalance.ToDecimal(MoneyUnit.BTC), BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> total
+                <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(_totalBalance, UnitMoney, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> total
             </span>
         }
     </header>
-    <div class="box">
-        @if (_utxos?.Any() is true)
-        {
+    @if (_utxos?.Any() is true)
+    {
+        <div class="box">
             <ul class="list-group list-group-flush">
                 @foreach (var utxo in _utxos)
                 {
                     <li class="list-group-item py-2">
-                        <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(utxo.TxOut.Value.ToDecimal(MoneyUnit.BTC), BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span>
+                        <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(utxo.TxOut.Value, UnitMoney, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span>
                     </li>
                 }
             </ul>
-        }
-        else if (_loading)
-        {
-            <div class="p-3 text-center">
+        </div>
+    }
+    else
+    {
+        <div class="box py-4 text-center">
+            @if (_loading)
+            {
                 <LoadingIndicator/>
-            </div>
-        }
-        else
-        {
-            <p class="text-muted text-center py-4">There are no UTXOs, yet.</p>
-        }
-    </div>
+            }
+            else
+            {
+                <p class="text-muted">There are no UTXOs, yet.</p>
+            }
+        </div>
+    }
 
     <h2>Transactions</h2>
     @if (_txs?.Any() is true)
@@ -73,7 +76,7 @@
                 <div class="box">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <span class="text-end fw-semibold" @onclick="ToggleDisplayCurrency">
-                            @DisplayFormatter.Currency(tx.BalanceChange, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)
+                            @DisplayFormatter.Currency(new Money(tx.BalanceChange, MoneyUnit.BTC), UnitMoney, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)
                         </span>
                         <TruncateCenter Text="@tx.TransactionId" class="truncate-center-id" Copy/>
                         <span class="text-muted">
@@ -87,16 +90,17 @@
             }
         </div>
     }
-    else if (_loading)
-    {
-        <div class="p-3 text-center">
-            <LoadingIndicator/>
-        </div>
-    }
     else
     {
-        <div class="box">
-            <p class="text-muted text-center py-4">There are no transactions, yet.</p>
+        <div class="box py-4 text-center">
+            @if (_loading)
+            {
+                <LoadingIndicator/>
+            }
+            else
+            {
+                <p class="text-muted">There are no transactions, yet.</p>
+            }
         </div>
     }
 
@@ -199,6 +203,7 @@
     private SendModel? Model { get; set; } = new();
 
     private string GetTitle() => $"{OnChainWalletManager.Network?.Name ?? ""} Onchain Wallet".Trim();
+    private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private string BitcoinUnit => UIState.Value.BitcoinUnit;
 
     private class SendModel
