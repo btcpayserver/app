@@ -13,7 +13,7 @@
             @foreach (var p in Payments)
             {
                 <div class="box">
-                    <LightningPaymentItem Payment="@p" OnCancelClick="OnCancelClick"/>
+                    <LightningPaymentItem Payment="@p" OnCancelClick="OnCancelClick" OnToggleDisplayCurrency="OnToggleDisplayCurrency"/>
                 </div>
             }
         }
@@ -36,6 +36,9 @@
 
     [Parameter]
     public EventCallback<AppLightningPayment> OnCancelClick { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleDisplayCurrency { get; set; }
 
     [Parameter]
     public bool Loading { get; set; }

@@ -5,7 +5,7 @@
 
 <div>
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2" @onclick="() => _showDetails = !_showDetails">
-        <span class="text-end fw-semibold">
+        <span class="text-end fw-semibold" @onclick="ToggleDisplayCurrency">
             @DisplayFormatter.Currency(Payment.Value.ToUnit(LightMoneyUnit.Satoshi), "SATS", DisplayFormatter.CurrencyFormat.Symbol)
         </span>
         <span class="text-muted">
@@ -21,10 +21,10 @@
             </div>
             @if (Payment.Preimage != null)
             {
-            <div class="form-floating">
-                <TruncateCenter Text="@Payment.Preimage" Padding="15" Copy="true" class="form-control-plaintext"/>
-                <label>Preimage</label>
-            </div>
+                <div class="form-floating">
+                    <TruncateCenter Text="@Payment.Preimage" Padding="15" Copy="true" class="form-control-plaintext"/>
+                    <label>Preimage</label>
+                </div>
             }
         </div>
     </div>
@@ -37,5 +37,14 @@
     [Parameter]
     public EventCallback<AppLightningPayment> OnCancelClick { get; set; }
 
+    [Parameter]
+    public EventCallback OnToggleDisplayCurrency { get; set; }
+
     private bool _showDetails;
+
+    private async Task ToggleDisplayCurrency()
+    {
+        if (OnToggleDisplayCurrency.HasDelegate)
+            await OnToggleDisplayCurrency.InvokeAsync();
+    }
 }
