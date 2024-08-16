@@ -9,21 +9,14 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject OnChainWalletManager OnChainWalletManager
 @inject IState<RootState> State
-@inject IState<StoreState> StoreState
 @inject ILogger<IndexPage> Logger
 @inject IAccountManager AccountManager
 
-<PageTitle>Onchain Wallet</PageTitle>
+<PageTitle>@GetTitle()</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>
-            @if (!string.IsNullOrEmpty(OnChainWalletManager.Network?.Name))
-            {
-                @OnChainWalletManager.Network.Name
-            }
-            Onchain Wallet
-        </h1>
+        <h1>@GetTitle()</h1>
     </Titlebar>
 </SectionContent>
 <section class="container">
@@ -180,4 +173,7 @@
             ? derivationScheme
             : null;
     }
+
+    private string GetTitle() => $"{OnChainWalletManager.Network?.Name ?? ""} Onchain Wallet".Trim();
 }
+

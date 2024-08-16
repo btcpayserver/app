@@ -31,7 +31,7 @@
                 </NavLink>
             </li>
             <li class="list-group-item @(SetupStateOnchain == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateOnchain == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateOnchain.ToString().ToLowerInvariant()" data-onchain-state="@State.Value.OnchainWalletState.GetValueOrDefault()">
-                <NavLink class="nav-link" href="@(SetupStateOnchain == SetupState.Completed ? Routes.Wallet : Routes.WalletSettings)" Match="NavLinkMatch.All">
+                <NavLink class="nav-link" href="@Routes.WalletSettings" Match="NavLinkMatch.All">
                     <span>Set up wallet</span>
                     @switch (SetupStateOnchain)
                     {
@@ -48,7 +48,7 @@
                 </NavLink>
             </li>
             <li class="list-group-item @(SetupStateLightning == SetupState.Undetermined ? "disabled" : null)" aria-disabled="@(SetupStateLightning == SetupState.Undetermined ? "true" : null)" data-state="@SetupStateLightning.ToString().ToLowerInvariant()" data-lightning-state="@State.Value.LightningNodeState.GetValueOrDefault()">
-                <NavLink class="nav-link" href="@(SetupStateLightning == SetupState.Completed ? Routes.Lightning : Routes.LightningSettings)" Match="NavLinkMatch.All">
+                <NavLink class="nav-link" href="@Routes.LightningSettings" Match="NavLinkMatch.All">
                     <span>Configure node</span>
                     @switch (SetupStateLightning)
                     {

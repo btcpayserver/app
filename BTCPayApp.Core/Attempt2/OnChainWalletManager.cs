@@ -30,6 +30,7 @@ public class OnChainWalletManager : BaseHostedService
     public bool IsConfigured => !string.IsNullOrEmpty(Derivation?.Descriptor);
     public bool CanConfigureWallet => IsHubConnected && !IsConfigured;
     private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
+    public bool IsActive => State == OnChainWalletState.Loaded;
 
     public OnChainWalletState State
     {
@@ -103,7 +104,7 @@ public class OnChainWalletManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-            
+
             _logger.LogInformation("Generating wallet");
             if (State != OnChainWalletState.NotConfigured || IsConfigured || !IsHubConnected)
             {
@@ -500,12 +501,12 @@ public class OnChainWalletManager : BaseHostedService
                 _logger.LogInformation("Getting fee rate for block target {BlockTarget}", blockTarget);
 
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-           
+
                     var result = new FeeRate(await _btcPayConnectionManager.HubProxy.GetFeeRate(blockTarget).RunSync());
-                    
+
                     _logger.LogInformation($"Got fee rate for block target {blockTarget} {result}" );
                     return result;
-          
+
             });
         }
         catch (Exception e)

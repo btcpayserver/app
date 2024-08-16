@@ -11,6 +11,7 @@
 @using org.ldk.structs
 @using NodeInfo = BTCPayServer.Lightning.NodeInfo
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject NavigationManager NavigationManager
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
 
@@ -22,21 +23,7 @@
     </Titlebar>
 </SectionContent>
 <section class="container">
-    @if (State.Value.LightningNodeState is LightningNodeState.Error)
-    {
-        <div class="alert alert-danger" role="alert">
-            <h4 class="alert-heading">Error</h4>
-            <p>There was an error with the lightning node. Please try again later.</p>
-        </div>
-    }
-    else if (State.Value.LightningNodeState is LightningNodeState.Inactive)
-    {
-        <div class="alert alert-info" role="alert">
-            <h4 class="alert-heading">Instance inactive</h4>
-            <p>There seems to be another instance of this lightning node running. This instance is inactive.</p>
-        </div>
-    }
-    else
+    @if (LightningNodeManager.IsActive)
     {
         <h2>Peers</h2>
         @if (_peers?.Any() is true || _config?.Peers.Any() is true)
@@ -49,7 +36,8 @@
                     <div class="form-floating">
                         <TruncateCenter Text="@peerConfig.Label" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                         <label>Peer label</label>
-                    </div> <div class="form-floating">
+                    </div>
+                    <div class="form-floating">
                         <TruncateCenter Text="@peer.nodeId" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                         <label>Node ID</label>
                     </div>
@@ -58,22 +46,23 @@
                         <label>Socket</label>
                     </div>
                     <div class="d-grid d-sm-flex flex-wrap gap-3 buttons mt-3">
-                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
-                            @if (peerRemembered)
-                            {
-                                <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
-                                <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Persistent = !peerConfig.Persistent})">
-                                    Constant conn = @peerConfig.Persistent Toggle
-                                </button>
-                                <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with {Trusted = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
-                            }
-                            else if (peer.socket is not null)
-                            {
-                                <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo() {Endpoint = peer.socket})">Remember peer</button>
-                            }
-                        </div>
+                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
+                        @if (peerRemembered)
+                        {
+                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with { Persistent = !peerConfig.Persistent })">
+                                Constant conn = @peerConfig.Persistent Toggle
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with { Trusted = !peerConfig.Trusted })">Trusted = @peerConfig.Trusted Toggle</button>
+                        }
+                        else if (peer.socket is not null)
+                        {
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo() { Endpoint = peer.socket })">Remember peer</button>
+                        }
+                    </div>
                 </div>
             }
+
             @foreach (var peer in rememberedButUnconnected)
             {
                 var peerConfig = _config.Peers[peer];
@@ -83,10 +72,10 @@
                     <td>
                         <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
                         <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Persistent = !peerConfig.Persistent})">
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { Persistent = !peerConfig.Persistent })">
                             Constant conn = @peerConfig.Persistent Toggle
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with {Trusted = !peerConfig.Trusted})">Trusted = @peerConfig.Trusted Toggle</button>
+                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { Trusted = !peerConfig.Trusted })">Trusted = @peerConfig.Trusted Toggle</button>
                     </td>
                 </div>
             }
@@ -99,12 +88,12 @@
         }
 
         <h2>Connect Peer</h2>
-        <ValidationEditContext @ref="_connectEditContext"  Model="CPModel" OnValidSubmit="ConnectToNewPeer" SuccessMessage="@_connectSuccessMessage" ErrorMessage="@_connectErrorMessage">
+        <ValidationEditContext @ref="_connectEditContext" Model="CPModel" OnValidSubmit="ConnectToNewPeer" SuccessMessage="@_connectSuccessMessage" ErrorMessage="@_connectErrorMessage">
             <DataAnnotationsValidator/>
             <fieldset class="box">
                 <div class="form-group">
                     <label for="PeerUrl" class="form-label" data-required>Peer URL</label>
-                    <InputText @bind-Value="CPModel.PeerUrl" id="PeerUrl" class="form-control" />
+                    <InputText @bind-Value="CPModel.PeerUrl" id="PeerUrl" class="form-control"/>
                     <ValidationMessage For="@(() => CPModel.PeerUrl)"/>
                 </div>
                 <button type="submit" class="btn btn-primary w-100" disabled="@(_connectEditContext!.Invalid || _peerConnecting)">
@@ -124,45 +113,45 @@
         @if (_channels?.Any() is true)
         {
             <div class="table-responsive">
-            <table class="table">
-                <thead>
-                <tr>
-                    <th>Channel ID</th>
-                    <th>User Channel ID</th>
-                    <th>Counterparty</th>
-                    <th>Short Channel ID</th>
-                    <th>Confirmations</th>
-                    <th>Confirmations Required</th>
-                    <th>Funding Transaction Hash</th>
-                    <th>Usable</th>
-                    <th>Ready</th>
-                    <th>Balance</th>
-                    <th>Inbound</th>
-                    <th>Outbound</th>
-                    <th>State</th>
-                </tr>
-                </thead>
-                <tbody>
-                @foreach (var channel in _channels)
-                {
+                <table class="table">
+                    <thead>
                     <tr>
-                        <td>@channel.id</td>
-                        <td>@channel.userId</td>
-                        <td>@channel.counterparty</td>
-                        <td>@channel.shortChannelId</td>
-                        <td>@channel.confirmations</td>
-                        <td>@channel.confirmationsRequired</td>
-                        <td>@channel.fundingTransactionHash</td>
-                        <td>@channel.usable</td>
-                        <td>@channel.ready</td>
-                        <td>@channel.Balance</td>
-                        <td>@channel.Inbound</td>
-                        <td>@channel.Outbound</td>
-                        <td>@channel.State</td>
+                        <th>Channel ID</th>
+                        <th>User Channel ID</th>
+                        <th>Counterparty</th>
+                        <th>Short Channel ID</th>
+                        <th>Confirmations</th>
+                        <th>Confirmations Required</th>
+                        <th>Funding Transaction Hash</th>
+                        <th>Usable</th>
+                        <th>Ready</th>
+                        <th>Balance</th>
+                        <th>Inbound</th>
+                        <th>Outbound</th>
+                        <th>State</th>
                     </tr>
-                }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                    @foreach (var channel in _channels)
+                    {
+                        <tr>
+                            <td>@channel.id</td>
+                            <td>@channel.userId</td>
+                            <td>@channel.counterparty</td>
+                            <td>@channel.shortChannelId</td>
+                            <td>@channel.confirmations</td>
+                            <td>@channel.confirmationsRequired</td>
+                            <td>@channel.fundingTransactionHash</td>
+                            <td>@channel.usable</td>
+                            <td>@channel.ready</td>
+                            <td>@channel.Balance</td>
+                            <td>@channel.Inbound</td>
+                            <td>@channel.Outbound</td>
+                            <td>@channel.State</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
             </div>
         }
         else
@@ -171,10 +160,11 @@
                 <p class="text-muted text-center py-4">There are no channels, yet.</p>
             </div>
         }
+
         @if (_peers?.Any() is true)
         {
             <h2>Open Channel</h2>
-            <ValidationEditContext @ref="_openChannelEditContext"  Model="OCModel" OnValidSubmit="OpenChannel" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage">
+            <ValidationEditContext @ref="_openChannelEditContext" Model="OCModel" OnValidSubmit="OpenChannel" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage">
                 <DataAnnotationsValidator/>
                 <fieldset class="box">
                     <div class="form-group">
@@ -191,7 +181,7 @@
                     <div class="form-group">
                         <label for="Amount" class="form-label" data-required>Amount</label>
                         <div class="input-group">
-                            <InputNumber @bind-Value="OCModel.Amount" id="Amount" class="form-control" inputmode="numeric" min="0" />
+                            <InputNumber @bind-Value="OCModel.Amount" id="Amount" class="form-control" inputmode="numeric" min="0"/>
                             <span class="input-group-text">sats</span>
                         </div>
                         <ValidationMessage For="@(() => OCModel.Amount)"/>
@@ -213,51 +203,51 @@
             @if (_channels?.Any() is true)
             {
                 <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                    <tr>
-                        <th>Channel ID</th>
-                        <th>User Channel ID</th>
-                        <th>Counterparty</th>
-                        <th>Short Channel ID</th>
-                        <th>Confirmations</th>
-                        <th>Confirmations Required</th>
-                        <th>Funding Transaction Hash</th>
-                        <th>Usable / Ready</th>
-                        <th>Balance</th>
-                        <th>Liquifity</th>
-                        <th>State</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    @foreach (var channel in _channels)
-                    {
-                        var isPeerOnline = _peers.Any(p =>
-                            string.Equals(p.nodeId, channel.counterparty, StringComparison.InvariantCultureIgnoreCase) && p.socket is not null);
-                        var channelId = ChannelId.from_bytes(Convert.FromHexString(channel.id));
-                        var counterparty = new PubKey(channel.counterparty);
+                    <table class="table">
+                        <thead>
                         <tr>
-                            <td>@channel.id</td>
-                            <td>@channel.userId</td>
-                            <td>@channel.counterparty</td>
-                            <td>@channel.shortChannelId</td>
-                            <td>@channel.confirmations</td>
-                            <td>@channel.confirmationsRequired</td>
-                            <td>@channel.fundingTransactionHash</td>
-                            <td>@(channel.usable? "Usable": "Not Usable") / @(channel.ready? "Ready": "Not ready")</td>
-                            <td>@channel.Balance</td>
-                            <td>@channel.Inbound in / @channel.Outbound out</td>
-                            <td>@channel.State</td>
-                            <td>
-                                @if (channel.State is ChannelShutdownState.LDKChannelShutdownState_NotShuttingDown or null)
-                                {
-                                    <button type="button" class="btn btn-primary btn-sm" @onclick="() => Node.CloseChannel(channelId, counterparty, !isPeerOnline)">@(isPeerOnline ? "" : "Force") Close</button>
-                                }
-                            </td>
+                            <th>Channel ID</th>
+                            <th>User Channel ID</th>
+                            <th>Counterparty</th>
+                            <th>Short Channel ID</th>
+                            <th>Confirmations</th>
+                            <th>Confirmations Required</th>
+                            <th>Funding Transaction Hash</th>
+                            <th>Usable / Ready</th>
+                            <th>Balance</th>
+                            <th>Liquifity</th>
+                            <th>State</th>
                         </tr>
-                    }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                        @foreach (var channel in _channels)
+                        {
+                            var isPeerOnline = _peers.Any(p =>
+                                string.Equals(p.nodeId, channel.counterparty, StringComparison.InvariantCultureIgnoreCase) && p.socket is not null);
+                            var channelId = ChannelId.from_bytes(Convert.FromHexString(channel.id));
+                            var counterparty = new PubKey(channel.counterparty);
+                            <tr>
+                                <td>@channel.id</td>
+                                <td>@channel.userId</td>
+                                <td>@channel.counterparty</td>
+                                <td>@channel.shortChannelId</td>
+                                <td>@channel.confirmations</td>
+                                <td>@channel.confirmationsRequired</td>
+                                <td>@channel.fundingTransactionHash</td>
+                                <td>@(channel.usable ? "Usable" : "Not Usable") / @(channel.ready ? "Ready" : "Not ready")</td>
+                                <td>@channel.Balance</td>
+                                <td>@channel.Inbound in / @channel.Outbound out</td>
+                                <td>@channel.State</td>
+                                <td>
+                                    @if (channel.State is ChannelShutdownState.LDKChannelShutdownState_NotShuttingDown or null)
+                                    {
+                                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => Node.CloseChannel(channelId, counterparty, !isPeerOnline)">@(isPeerOnline ? "" : "Force") Close</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
                 </div>
             }
             else
@@ -266,10 +256,11 @@
                     <p class="text-muted text-center py-4">There are no channels, yet.</p>
                 </div>
             }
+
             @if (_peers?.Any() is true)
             {
                 <h2>Open Channel</h2>
-                <ValidationEditContext @ref="_openChannelEditContext"  Model="OCModel" OnValidSubmit="OpenChannel" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage">
+                <ValidationEditContext @ref="_openChannelEditContext" Model="OCModel" OnValidSubmit="OpenChannel" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage">
                     <DataAnnotationsValidator/>
                     <fieldset class="box">
                         <div class="form-group">
@@ -286,7 +277,7 @@
                         <div class="form-group">
                             <label for="Amount" class="form-label" data-required>Amount</label>
                             <div class="input-group">
-                                <InputNumber @bind-Value="OCModel.Amount" id="Amount" class="form-control" inputmode="numeric" min="0" />
+                                <InputNumber @bind-Value="OCModel.Amount" id="Amount" class="form-control" inputmode="numeric" min="0"/>
                                 <span class="input-group-text">sats</span>
                             </div>
                             <ValidationMessage For="@(() => OCModel.Amount)"/>
@@ -306,10 +297,14 @@
             }
         }
     }
+    else
+    {
+        <LightningNodeStateAlert State="State.Value.LightningNodeState"/>
+    }
 </section>
 
 @code {
-    private readonly SemaphoreSlim _semaphore = new (1, 1);
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
     private LightningConfig? _config;
     private (string id, string userId, string counterparty, long? shortChannelId, int? confirmations, int? confirmationsRequired, string fundingTransactionHash, bool usable, bool ready, LightMoney Balance, LightMoney Inbound, LightMoney Outbound, ChannelShutdownState? State)[]? _channels;
     private (string nodeId, string? socket)[]? _peers;
@@ -320,33 +315,37 @@
     private string? _channelSuccessMessage { get; set; }
     private string? _channelErrorMessage { get; set; }
     private ValidationEditContext? _openChannelEditContext;
-    private OpenChannelModel? OCModel { get; set; } = new ();
+    private OpenChannelModel? OCModel { get; set; } = new();
 
     private bool _peerConnecting { get; set; }
     private string? _connectSuccessMessage { get; set; }
     private string? _connectErrorMessage { get; set; }
     private ValidationEditContext? _connectEditContext;
-    private ConnectPeerModel? CPModel { get; set; } = new ();
+    private ConnectPeerModel? CPModel { get; set; } = new();
 
     private class OpenChannelModel
     {
-        [Required]
-        public string? PeerId { get; set; }
-        [Required]
-        [Range(10000, 10_000_000)]
-        public decimal? Amount { get; set; }
+        [Required] public string? PeerId { get; set; }
+        [Required] [Range(10000, 10_000_000)] public decimal? Amount { get; set; }
     }
 
     private class ConnectPeerModel
     {
-        [Required]
-        public string? PeerUrl { get; set; }
+        [Required] public string? PeerUrl { get; set; }
     }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        _ = FetchData();
+
+        if (LightningNodeManager.CanConfigureLightningNode)
+        {
+            NavigationManager.NavigateTo(Routes.LightningSettings);
+        }
+        else
+        {
+            _ = FetchData();
+        }
     }
 
     private async Task FetchData()
@@ -358,7 +357,7 @@
         {
             await _semaphore.WaitAsync();
             _config = await Node.GetConfig();
-            _channels = (await Node.GetChannels()).Select(details => (id: Convert.ToHexString(details.get_channel_id().get_a()), userId: Convert.ToHexString(details.get_user_channel_id().getLEBytes()), counterparty: Convert.ToHexString(details.get_counterparty().get_node_id()), shortChannelId: details.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some1 ? some1.some : (long?) null, confirmations: details.get_confirmations() is Option_u32Z.Option_u32Z_Some some2 ? some2.some : (int?) null, confirmationsRequired: details.get_confirmations_required() is Option_u32Z.Option_u32Z_Some some3 ? some3.some : (int?) null, fundingTransactionHash: new uint256(details.get_funding_txo().get_txid()).ToString(), usable: details.get_is_usable(), ready: details.get_is_channel_ready(), Balance: LightMoney.MilliSatoshis(details.get_balance_msat()), Inbound: LightMoney.MilliSatoshis(details.get_inbound_capacity_msat()), Outbound: LightMoney.MilliSatoshis(details.get_outbound_capacity_msat()), State: details.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some4 ? some4.some : (ChannelShutdownState?) null)).ToArray();
+            _channels = (await Node.GetChannels()).Select(details => (id: Convert.ToHexString(details.get_channel_id().get_a()), userId: Convert.ToHexString(details.get_user_channel_id().getLEBytes()), counterparty: Convert.ToHexString(details.get_counterparty().get_node_id()), shortChannelId: details.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some1 ? some1.some : (long?)null, confirmations: details.get_confirmations() is Option_u32Z.Option_u32Z_Some some2 ? some2.some : (int?)null, confirmationsRequired: details.get_confirmations_required() is Option_u32Z.Option_u32Z_Some some3 ? some3.some : (int?)null, fundingTransactionHash: new uint256(details.get_funding_txo().get_txid()).ToString(), usable: details.get_is_usable(), ready: details.get_is_channel_ready(), Balance: LightMoney.MilliSatoshis(details.get_balance_msat()), Inbound: LightMoney.MilliSatoshis(details.get_inbound_capacity_msat()), Outbound: LightMoney.MilliSatoshis(details.get_outbound_capacity_msat()), State: details.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some4 ? some4.some : (ChannelShutdownState?)null)).ToArray();
             _peers = (await Node.GetPeers()).Select(peer => (nodeId: Convert.ToHexString(peer.get_counterparty_node_id()), socket: peer.get_socket_address() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null)).ToArray();
         }
         finally
@@ -382,6 +381,7 @@
                 _connectErrorMessage = $"Invalid peer URL: {CPModel.PeerUrl}";
                 return;
             }
+
             var result = await Node.PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
             if (result is not null)
             {
@@ -493,4 +493,5 @@
             await InvokeAsync(StateHasChanged);
         }
     }
+
 }

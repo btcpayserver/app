@@ -1,7 +1,5 @@
-﻿@attribute [Route(Routes.Wallet)]
+﻿@attribute [Route(Routes.WalletFunds)]
 @layout BaseLayout
-@using BTCPayApp.UI.Features
-@using Microsoft.AspNetCore.SignalR.Client
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.Core.Data
 @using BTCPayApp.UI.Components.Layout
@@ -10,13 +8,12 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject NavigationManager NavigationManager
 @inject OnChainWalletManager OnChainWalletManager
-@inject IState<RootState> State
 
-<PageTitle>Wallet</PageTitle>
+<PageTitle>@GetTitle()</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>Wallet</h1>
+        <h1>@GetTitle()</h1>
         <SectionContent SectionId="Titlebar.End">
             <NavLink class="btn-icon" href="@Routes.WalletSettings">
                 <Icon Symbol="settings"/>
@@ -24,6 +21,7 @@
         </SectionContent>
     </Titlebar>
 </SectionContent>
+
 <section class="container">
     @if (loading)
     {
@@ -98,29 +96,29 @@
 </section>
 
 @code {
-
-    private bool CanConfigureWallet =>
-        State.Value.OnchainWalletState == OnChainWalletState.NotConfigured &&
-        State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster;
+    private bool loading;
+    private string? _balanceResponse;
+    private decimal? _balanceResponseAmt;
+    private string? _addressResponse;
+    private TxResp[] _txs;
+    private decimal? SendAmount { get; set; }
+    private string? SendDest { get; set; }
+    private string? _txResponse { get; set; }
+    private (Transaction Tx, ICoin[] SpentCoins, Script Change)? transaction { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        if (CanConfigureWallet)
+        if (OnChainWalletManager.CanConfigureWallet)
         {
             NavigationManager.NavigateTo(Routes.WalletSettings);
         }
     }
 
-    private string? _balanceResponse = null;
-    private decimal? _balanceResponseAmt = null;
-    private bool loading = false;
-
     private async Task GetBalance()
     {
-        if (loading)
-            return;
+        if (loading) return;
         loading = true;
         await InvokeAsync(StateHasChanged);
         try
@@ -143,13 +141,9 @@
         }
     }
 
-    private string? _addressResponse = null;
-    private TxResp[] _txs;
-
     private async Task GetAddress()
     {
-        if (loading)
-            return;
+        if (loading) return;
         loading = true;
         await InvokeAsync(StateHasChanged);
         try
@@ -168,15 +162,9 @@
         }
     }
 
-    private decimal? SendAmount { get; set; }
-    private string? SendDest { get; set; }
-    private string? _txResponse { get; set; }
-    private (Transaction Tx, ICoin[] SpentCoins, Script Change)? transaction { get; set; }
-
     private async Task CreateTx()
     {
-        if (loading || _balanceResponseAmt is null || SendAmount is null || SendAmount <= 0 || string.IsNullOrWhiteSpace(SendDest))
-            return;
+        if (loading || _balanceResponseAmt is null || SendAmount is null || SendAmount <= 0 || string.IsNullOrWhiteSpace(SendDest)) return;
         loading = true;
         await InvokeAsync(StateHasChanged);
         try
@@ -203,8 +191,7 @@
 
     private async Task BroadcastTx()
     {
-        if (loading || transaction is null)
-            return;
+        if (loading || transaction is null) return;
         loading = true;
         await InvokeAsync(StateHasChanged);
         try
@@ -225,10 +212,9 @@
     }
 
 
-    private async Task  GetTxs()
+    private async Task GetTxs()
     {
-        if (loading)
-            return;
+        if (loading) return;
         loading = true;
         await InvokeAsync(StateHasChanged);
         try
@@ -247,4 +233,5 @@
         }
     }
 
+    private string GetTitle() => $"{OnChainWalletManager.Network?.Name ?? ""} Onchain Wallet".Trim();
 }

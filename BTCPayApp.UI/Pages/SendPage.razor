@@ -1,12 +1,9 @@
-﻿@attribute [AllowAnonymous]
-@attribute [Route(Routes.WalletSend)]
+﻿@attribute [Route(Routes.Send)]
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.Core.Data
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Lightning
-@using NBitcoin
-@using NBitcoin.Crypto
 @inject IState<RootState> State
 @inject LightningNodeManager LightningNodeManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent

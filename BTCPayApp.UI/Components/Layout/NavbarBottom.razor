@@ -60,8 +60,9 @@
         var rel = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         var c = "nav-link";
         if (rel.StartsWith(Routes.Notifications)) c += " active";
-        if (rel.StartsWith(Routes.WalletSend)) c += " active";
-        if (rel.StartsWith(Routes.WalletReceive)) c += " active";
+        if (rel.StartsWith(Routes.Funds)) c += " active";
+        if (rel.StartsWith(Routes.Send)) c += " active";
+        if (rel.StartsWith(Routes.Receive)) c += " active";
         return c;
     }
 

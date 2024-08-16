@@ -18,7 +18,7 @@ public class LightningNodeManager : BaseHostedService
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
-    
+
     private IServiceScope? _nodeScope;
     public LDKNode? Node => _nodeScope?.ServiceProvider.GetService<LDKNode>();
     private LightningNodeState _state = LightningNodeState.Init;
@@ -28,6 +28,8 @@ public class LightningNodeManager : BaseHostedService
     public bool CanConfigureLightningNode => IsHubConnected && IsOnchainConfigured && !IsOnchainLightningDerivationConfigured && State == LightningNodeState.NotConfigured;
     public string? ConnectionString => IsOnchainLightningDerivationConfigured && _accountManager.GetUserInfo() is {} acc
         ? $"type=app;user={acc.UserId}": null;
+
+    public bool IsActive => State == LightningNodeState.Loaded;
 
     public LightningNodeState State
     {
