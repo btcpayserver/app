@@ -5,13 +5,11 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Components.Layout
 @using NBitcoin
-@using BTCPayApp.UI.Util
 @using BTCPayServer.Client.Models
 @using BTCPayServer.Lightning
 @inject IDispatcher Dispatcher
 @inject IState<UIState> UIState
 @inject IState<StoreState> StoreState
-@inject DisplayFormatter DisplayFormatter
 @inject OnChainWalletManager OnChainWalletManager
 @inject LightningNodeManager LightningNodeManager
 
@@ -33,7 +31,7 @@
             <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
                 <h2 class="mb-0">Onchain</h2>
                 <span class="badge bg-info ms-2">
-                    <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(OnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> available
+                    <AmountDisplay Value="OnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> available
                 </span>
             </header>
             <div class="box">
@@ -41,13 +39,13 @@
                     @if (OnchainConfirmedBalance != null)
                     {
                         <li class="list-group-item py-2">
-                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(OnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> confirmed
+                            <AmountDisplay Value="OnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                         </li>
                     }
                     @if (OnchainUnconfirmedBalance != null)
                     {
                         <li class="list-group-item py-2 disabled">
-                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(OnchainUnconfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> unconfirmed
+                            <AmountDisplay Value="OnchainUnconfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                         </li>
                     }
                 </ul>
@@ -59,7 +57,7 @@
             <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
                 <h2 class="mb-0">Lightning Onchain</h2>
                 <span class="badge bg-info ms-2">
-                    <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> available
+                    <AmountDisplay Value="OnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> available
                 </span>
             </header>
             <div class="box">
@@ -67,19 +65,19 @@
                     @if (LightningOnchainConfirmedBalance != null)
                     {
                         <li class="list-group-item py-2">
-                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> confirmed
+                            <AmountDisplay Value="LightningOnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />confirmed
                         </li>
                     }
                     @if (LightningOnchainUnconfirmedBalance != null)
                     {
                         <li class="list-group-item py-2 disabled">
-                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOnchainUnconfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> unconfirmed
+                            <AmountDisplay Value="LightningOnchainUnconfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> unconfirmed
                         </li>
                     }
                     @if (LightningOnchainReservedBalance != null)
                     {
                         <li class="list-group-item py-2 disabled">
-                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOnchainReservedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> reserved
+                            <AmountDisplay Value="LightningOnchainReservedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> reserved
                         </li>
                     }
                 </ul>
@@ -91,7 +89,7 @@
             <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
                 <h2 class="mb-0">Lightning Channels</h2>
                 <span class="badge bg-info ms-2">
-                    <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOffchainLocalBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> available
+                    <AmountDisplay Value="LightningOffchainLocalBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> available
                 </span>
             </header>
             <div class="box">
@@ -99,19 +97,19 @@
                     @if (LightningOffchainOpeningBalance != null)
                     {
                         <li class="list-group-item py-2 disabled">
-                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOffchainOpeningBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> opening channels
+                            <AmountDisplay Value="LightningOffchainOpeningBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> opening channels
                         </li>
                     }
                     @if (LightningOffchainLocalBalance != null)
                     {
                         <li class="list-group-item py-2">
-                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOffchainLocalBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> local / outbound capacity
+                            <AmountDisplay Value="LightningOffchainLocalBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> local / outbound capacity
                         </li>
                     }
                     @if (LightningOffchainClosingBalance != null)
                     {
                         <li class="list-group-item py-2 disabled">
-                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOffchainClosingBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> closing channels
+                            <AmountDisplay Value="LightningOffchainClosingBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> closing channels
                         </li>
                     }
                 </ul>
@@ -140,7 +138,8 @@
                         {
                             <div class="form-text">
                                 Sending @(Model.Bolt11 != null ? "via Lightning" : "onchain"):
-                                <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(available, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> available.
+                                <AmountDisplay Value="available" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
+                                available.
                             </div>
                         }
                     </div>

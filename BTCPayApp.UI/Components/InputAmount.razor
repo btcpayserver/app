@@ -4,7 +4,7 @@
 
 <div class="input-group">
     <InputNumber @bind-Value="@CurrentValue" id="@Id" class="form-control" inputmode="@(IsSats ? "numeric" : "decimal")" max="@MaxAttr" step="any" min="0"/>
-    <span class="input-group-text" @onclick="ToggleDisplayCurrency">@(IsSats ? "sats" : Unit)</span>
+    <span class="input-group-text" @onclick="ToggleDisplayCurrency" @onclick:stopPropagation>@(IsSats ? "sats" : Unit)</span>
 </div>
 
 @code {

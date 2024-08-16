@@ -8,7 +8,7 @@
     @if (BitcoinBalance != null)
     {
         <div class="amount text-center">
-            <div class="sats fw-bold fs-1" @onclick="HandleBalanceClick">@DisplayFormatter.Currency(BitcoinBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</div>
+            <AmountDisplay Value="BitcoinBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="HandleBalanceClick" class="sats fw-bold fs-1" />
             @if (CurrencyValue.HasValue)
             {
                 <div class="fiat fw-semibold text-muted">~ @DisplayFormatter.Currency(CurrencyValue.Value, Currency!, DisplayFormatter.CurrencyFormat.Symbol)</div>
@@ -56,7 +56,7 @@
         ? new Money(BitcoinBalance.Value, MoneyUnit).ToDecimal(MoneyUnit.BTC) * Rate.Value
         : null;
 
-    private async Task HandleBalanceClick(MouseEventArgs e)
+    private async Task HandleBalanceClick()
     {
         if (OnBalanceClick.HasDelegate)
             await OnBalanceClick.InvokeAsync();

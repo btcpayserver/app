@@ -5,12 +5,10 @@
 @using NBitcoin
 @using BTCPayApp.CommonServer
 @using BTCPayApp.UI.Features
-@using BTCPayApp.UI.Util
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject NavigationManager NavigationManager
 @inject OnChainWalletManager OnChainWalletManager
 @inject IDispatcher Dispatcher
-@inject DisplayFormatter DisplayFormatter
 @inject IState<UIState> UIState
 
 <PageTitle>@GetTitle()</PageTitle>
@@ -36,7 +34,7 @@
         @if (_totalBalance != null)
         {
             <span class="badge bg-info ms-2">
-                <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(_totalBalance, UnitMoney, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> total
+                <AmountDisplay Value="_totalBalance.ToDecimal(UnitMoney)" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> total
             </span>
         }
     </header>
@@ -47,7 +45,7 @@
                 @foreach (var utxo in _utxos)
                 {
                     <li class="list-group-item py-2">
-                        <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(utxo.TxOut.Value, UnitMoney, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span>
+                        <AmountDisplay Value="utxo.TxOut.Value.ToDecimal(UnitMoney)" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                     </li>
                 }
             </ul>
@@ -78,7 +76,7 @@
                 <div class="box">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                         <span class="text-end fw-semibold" @onclick="ToggleDisplayCurrency">
-                            @DisplayFormatter.Currency(new Money(tx.BalanceChange, MoneyUnit.BTC), UnitMoney, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)
+                            <AmountDisplay Value="new Money(tx.BalanceChange, MoneyUnit.BTC).ToDecimal(UnitMoney)" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                         </span>
                         <TruncateCenter Text="@tx.TransactionId" class="truncate-center-id" Copy/>
                         <span class="text-muted">

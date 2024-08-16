@@ -1,0 +1,27 @@
+@using BTCPayApp.UI.Util
+
+@inject DisplayFormatter DisplayFormatter
+
+<span @onclick="ToggleDisplayCurrency" @onclick:stopPropagation class="@CssClass">@DisplayFormatter.Currency(Value!.Value, Unit!, DisplayFormatter.CurrencyFormat.Symbol)</span>
+
+@code {
+    [Parameter, EditorRequired]
+    public decimal? Value { get; set; }
+
+    [Parameter, EditorRequired]
+    public string? Unit { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleDisplayCurrency { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    private string? CssClass => InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"].ToString() : null;
+
+    private async Task ToggleDisplayCurrency()
+    {
+        if (OnToggleDisplayCurrency.HasDelegate)
+            await OnToggleDisplayCurrency.InvokeAsync();
+    }
+}

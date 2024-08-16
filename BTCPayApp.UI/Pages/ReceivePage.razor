@@ -7,6 +7,7 @@
 @using NBitcoin
 @using NBitcoin.Crypto
 @inject IState<RootState> State
+@inject IState<UIState> UIState
 @inject LightningNodeManager LightningNodeManager
 @inject IDispatcher Dispatcher
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -56,7 +57,7 @@
 
         <article class="my-5">
             <h4 class="mb-4">Invoices</h4>
-            <LightningPaymentList Payments="_invoices" Loading="@(PaymentsManager == null)" OnCancelClick="payment => Cancel(payment)" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+            <LightningPaymentList Payments="_invoices" Unit="@BitcoinUnit" Loading="@(PaymentsManager == null)" OnCancelClick="payment => Cancel(payment)" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
         </article>
         <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
     }
@@ -77,6 +78,7 @@
     private bool _invoiceGenerating;
     private PaymentsManager? PaymentsManager => LightningNodeManager.Node?.PaymentsManager;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private string BitcoinUnit => UIState.Value.BitcoinUnit;
 
     private class ReceiveModel
     {
