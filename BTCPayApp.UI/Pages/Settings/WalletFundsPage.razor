@@ -119,10 +119,7 @@
                 </div>
                 <div class="form-group">
                     <label for="Amount" class="form-label" data-required>Amount</label>
-                    <div class="input-group">
-                        <InputNumber @bind-Value="Model.Amount" id="Amount" class="form-control" inputmode="numeric" max="@_totalBalance.ToUnit(MoneyUnit.Satoshi)" step="any" min="0"/>
-                        <span class="input-group-text">sats</span>
-                    </div>
+                    <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" Max="@_totalBalance.ToDecimal(UnitMoney)" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                     <ValidationMessage For="@(() => Model.Amount)"/>
                 </div>
                 @if (Model.Transaction is null)
@@ -348,6 +345,10 @@
 
     private void ToggleDisplayCurrency()
     {
+        if (Model.Amount.HasValue)
+            Model.Amount = new Money(Model.Amount.Value, UnitMoney).ToDecimal(UnitMoney == MoneyUnit.Satoshi
+                ? MoneyUnit.BTC
+                : MoneyUnit.Satoshi);
         Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
     }
 }

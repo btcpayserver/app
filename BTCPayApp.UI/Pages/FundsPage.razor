@@ -134,11 +134,7 @@
                     </div>
                     <div class="form-group">
                         <label for="Amount" class="form-label" data-required>Amount</label>
-                        <div class="input-group">
-                            <InputNumber @bind-Value="Model.Amount" id="Amount" class="form-control" inputmode="@(UnitMoney == MoneyUnit.Satoshi ? "numeric" : "decimal")"
-                                         max="@(new Money(available, UnitMoney).ToDecimal(UnitMoney))" step="any" min="0"/>
-                            <span class="input-group-text" @onclick="ToggleDisplayCurrency">@(UnitMoney == MoneyUnit.Satoshi ? "sats" : UnitMoney)</span>
-                        </div>
+                        <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" Max="@available" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                         <ValidationMessage For="@(() => Model.Amount)"/>
                         @if (Model.Address != null || Model.Bolt11 != null)
                         {
@@ -198,6 +194,10 @@
 
     private void ToggleDisplayCurrency()
     {
+        if (Model.Amount.HasValue)
+            Model.Amount = new Money(Model.Amount.Value, UnitMoney).ToDecimal(UnitMoney == MoneyUnit.Satoshi
+                ? MoneyUnit.BTC
+                : MoneyUnit.Satoshi);
         Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
     }
 
@@ -249,7 +249,7 @@
 
     private async Task SendFunds()
     {
-        if (_sending || Model?.Amount is null || string.IsNullOrEmpty(Model.Destination)) return;
+        if (_sending || Model.Amount is null || string.IsNullOrEmpty(Model.Destination)) return;
         try
         {
             _successMessage = _errorMessage = null;

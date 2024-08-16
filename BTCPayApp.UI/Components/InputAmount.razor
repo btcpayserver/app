@@ -1,0 +1,31 @@
+@using NBitcoin
+
+@inherits InputNumber<decimal?>
+
+<div class="input-group">
+    <InputNumber @bind-Value="@CurrentValue" id="@Id" class="form-control" inputmode="@(IsSats ? "numeric" : "decimal")" max="@MaxAttr" step="any" min="0"/>
+    <span class="input-group-text" @onclick="ToggleDisplayCurrency">@(IsSats ? "sats" : Unit)</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string? Id { get; set; }
+
+    [Parameter, EditorRequired]
+    public MoneyUnit? Unit { get; set; }
+
+    [Parameter]
+    public decimal? Max { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleDisplayCurrency { get; set; }
+
+    private async Task ToggleDisplayCurrency()
+    {
+        if (OnToggleDisplayCurrency.HasDelegate)
+            await OnToggleDisplayCurrency.InvokeAsync();
+    }
+
+    private bool IsSats => Unit == MoneyUnit.Satoshi;
+    private decimal? MaxAttr => Max.HasValue && Unit.HasValue ? new Money(Max.Value, Unit.Value).ToDecimal(Unit.Value) : null;
+}
