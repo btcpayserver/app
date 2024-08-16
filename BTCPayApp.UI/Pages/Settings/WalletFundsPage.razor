@@ -1,13 +1,17 @@
 ﻿@attribute [Route(Routes.WalletFunds)]
-@layout BaseLayout
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.Core.Data
 @using BTCPayApp.UI.Components.Layout
 @using NBitcoin
 @using BTCPayApp.CommonServer
+@using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Util
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject NavigationManager NavigationManager
 @inject OnChainWalletManager OnChainWalletManager
+@inject IDispatcher Dispatcher
+@inject DisplayFormatter DisplayFormatter
+@inject IState<UIState> UIState
 
 <PageTitle>@GetTitle()</PageTitle>
 
@@ -23,88 +27,189 @@
 </SectionContent>
 
 <section class="container">
-    @if (loading)
+    @if (!string.IsNullOrEmpty(_errorMessage))
     {
-        <p>Loading...</p>
+        <Alert Type="danger" Dismissible>@_errorMessage</Alert>
+    }
+    <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+        <h2 class="mb-0">Coins</h2>
+        @if (_totalBalance != null)
+        {
+            <span class="badge bg-info ms-2">
+                <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(_totalBalance.ToDecimal(MoneyUnit.BTC), BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> total
+            </span>
+        }
+    </header>
+    <div class="box">
+        @if (_utxos?.Any() is true)
+        {
+            <ul class="list-group list-group-flush">
+                @foreach (var utxo in _utxos)
+                {
+                    <li class="list-group-item py-2">
+                        <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(utxo.TxOut.Value.ToDecimal(MoneyUnit.BTC), BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span>
+                    </li>
+                }
+            </ul>
+        }
+        else if (_loading)
+        {
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted text-center py-4">There are no UTXOs, yet.</p>
+        }
+    </div>
+
+    <h2>Transactions</h2>
+    @if (_txs?.Any() is true)
+    {
+        <div class="transactions-list mb-l">
+            @foreach (var tx in _txs)
+            {
+                <div class="box">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        <span class="text-end fw-semibold" @onclick="ToggleDisplayCurrency">
+                            @DisplayFormatter.Currency(tx.BalanceChange, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)
+                        </span>
+                        <TruncateCenter Text="@tx.TransactionId" class="truncate-center-id" Copy/>
+                        <span class="text-muted">
+                            <DateDisplay DateTimeOffset="@tx.Timestamp"/>
+                        </span>
+                        <span class="badge bg-info">
+                            @tx.Confirmations confs
+                        </span>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (_loading)
+    {
+        <div class="p-3 text-center">
+            <LoadingIndicator/>
+        </div>
     }
     else
     {
-        <button type="button" @onclick="GetBalance">Get current balance</button>
-        @if (_balanceResponse is not null)
-        {
-            <p>@_balanceResponse</p>
-        }
-
-        <button type="button" @onclick="GetAddress">Get onchain address</button>
-        @if (_addressResponse is not null)
-        {
-            <p>@_addressResponse</p>
-        }
-
-        @if (_balanceResponseAmt is not null && _balanceResponseAmt > 0)
-        {
-            <div>
-                <label for="sendAmount">Amount to send</label>
-                <input max="@_balanceResponseAmt" step="any" min="0" type="number" id="sendAmount" @bind="SendAmount"/>
-                <label for="sendDest">Destination address</label>
-                <input type="text" id="sendDest" @bind="SendDest"/>
-                <button type="button" @onclick="CreateTx">Create transaction</button>
-                @if (_txResponse is not null)
-                {
-                    <p>@_txResponse</p>
-                }
-
-                <pre>
-            @if (transaction is not null)
-            {
-                @transaction.Value.Tx.ToString()
-            }
-            </pre>
-                @if (transaction is not null)
-                {
-                    <button type="button" @onclick="BroadcastTx">Broadcast transaction</button>
-                }
-
-
-            </div>
-        }
-        <button type="button" @onclick="GetTxs">Get transactions</button>
-
-        @if(_txs is not null)
-        {
-            <table>
-                <tr>
-                    <th>Hash</th>
-                    <th>Amount</th>
-                    <th>Confirmations</th>
-                    <th>Time</th>
-
-                </tr>
-                @foreach (var tx in _txs)
-                {
-                    <tr>
-                        <td>@tx.TransactionId</td>
-                        <td>@tx.BalanceChange</td>
-                        <td>@tx.Confirmations</td>
-                        <td>@tx.Timestamp</td>
-                    </tr>
-                }
-            </table>
-        }
-
+        <div class="box">
+            <p class="text-muted text-center py-4">There are no transactions, yet.</p>
+        </div>
     }
+
+    @if (_totalBalance?.ToDecimal(MoneyUnit.Satoshi) is > 0)
+    {
+        <h2>Send Bitcoin</h2>
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="Transact" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
+            <DataAnnotationsValidator/>
+            <fieldset class="box">
+                <div class="form-group">
+                    <label for="Destination" class="form-label" data-required>Destination</label>
+                    <InputText @bind-Value="Model.Destination" id="Destination" class="form-control" />
+                    <ValidationMessage For="@(() => Model.Destination)"/>
+                </div>
+                <div class="form-group">
+                    <label for="Amount" class="form-label" data-required>Amount</label>
+                    <div class="input-group">
+                        <InputNumber @bind-Value="Model.Amount" id="Amount" class="form-control" inputmode="numeric" max="@_totalBalance.ToUnit(MoneyUnit.Satoshi)" step="any" min="0"/>
+                        <span class="input-group-text">sats</span>
+                    </div>
+                    <ValidationMessage For="@(() => Model.Amount)"/>
+                </div>
+                @if (Model.Transaction is null)
+                {
+                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
+                        @if (_sending)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Create transaction</span>
+                        }
+                    </button>
+                }
+                else
+                {
+                    <pre>@Model.Transaction.Value.Tx.ToString()</pre>
+                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
+                        @if (_sending)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Broadcast transaction</span>
+                        }
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary w-100 mt-2" disabled="@(_sending)" @onclick="CancelTx">
+                        @if (_sending)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Cancel transaction</span>
+                        }
+                    </button>
+                }
+            </fieldset>
+        </ValidationEditContext>
+    }
+
+    <h2>Receive Bitcoin</h2>
+    <div class="box">
+        @if (!string.IsNullOrEmpty(_address))
+        {
+            <div class="form-floating form-group">
+                <TruncateCenter Text="@_address" Padding="15" Copy="true" class="form-control-plaintext"/>
+                <label>Bitcoin Address</label>
+            </div>
+            <QrCode Data="@_address" class="mb-3" />
+        }
+        <button type="button" class="btn btn-primary w-100" @onclick="GetAddress" disabled="@_gettingAddress">
+            @if (_gettingAddress)
+            {
+                <LoadingIndicator/>
+            }
+            else
+            {
+                <span>Get onchain address</span>
+            }
+        </button>
+    </div>
 </section>
 
 @code {
-    private bool loading;
-    private string? _balanceResponse;
-    private decimal? _balanceResponseAmt;
-    private string? _addressResponse;
-    private TxResp[] _txs;
-    private decimal? SendAmount { get; set; }
-    private string? SendDest { get; set; }
+    private bool _loading;
+    private bool _gettingAddress;
+    private Money? _totalBalance;
+    private string? _address;
+    private TxResp[]? _txs;
+    private IEnumerable<ICoin>? _utxos;
     private string? _txResponse { get; set; }
-    private (Transaction Tx, ICoin[] SpentCoins, Script Change)? transaction { get; set; }
+
+    private bool _sending { get; set; }
+    private string? _successMessage { get; set; }
+    private string? _errorMessage { get; set; }
+    private ValidationEditContext? _validationEditContext;
+    private SendModel? Model { get; set; } = new();
+
+    private string GetTitle() => $"{OnChainWalletManager.Network?.Name ?? ""} Onchain Wallet".Trim();
+    private string BitcoinUnit => UIState.Value.BitcoinUnit;
+
+    private class SendModel
+    {
+        [Required]
+        public string? Destination { get; set; }
+        [Required]
+        public decimal? Amount { get; set; }
+
+        public (Transaction Tx, ICoin[] SpentCoins, Script Change)? Transaction { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -114,124 +219,129 @@
         {
             NavigationManager.NavigateTo(Routes.WalletSettings);
         }
+        else
+        {
+            _ = FetchData();
+        }
     }
 
-    private async Task GetBalance()
+    private async Task FetchData()
     {
-        if (loading) return;
-        loading = true;
+        if (_loading || _sending) return;
+        _loading = true;
+        _errorMessage = null;
         await InvokeAsync(StateHasChanged);
         try
         {
-            var resp = await OnChainWalletManager.GetUTXOS();
-
-            var totalValue = resp.Sum(r => r.TxOut.Value.ToDecimal(MoneyUnit.BTC));
-            _balanceResponse = $"Total balance: {totalValue} BTC ({resp.Count()} UTXOs) ";
-            _balanceResponseAmt = totalValue;
+            _utxos = await OnChainWalletManager.GetUTXOS();
+            _totalBalance = _utxos.Sum(utxo => utxo.TxOut.Value);
+            _txs = await OnChainWalletManager.GetTransactions();
         }
         catch (Exception ex)
         {
-            _balanceResponse = $"Error: {ex.Message}";
-            _balanceResponseAmt = null;
+            _errorMessage = ex.Message;
         }
         finally
         {
-            loading = false;
+            _loading = false;
             await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task GetAddress()
     {
-        if (loading) return;
-        loading = true;
+        if (_gettingAddress) return;
+        _gettingAddress = true;
         await InvokeAsync(StateHasChanged);
         try
         {
-            var address = await OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);
-            _addressResponse = $"Address: {address.GetDestinationAddress(OnChainWalletManager.Network)}";
+            var script = await OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);
+            _address = script.GetDestinationAddress(OnChainWalletManager.Network!)?.ToString();
         }
         catch (Exception ex)
         {
-            _addressResponse = $"Error: {ex.Message}";
+            _errorMessage = ex.Message;
         }
         finally
         {
-            loading = false;
+            _gettingAddress = false;
             await InvokeAsync(StateHasChanged);
         }
     }
 
+    private async Task Transact()
+    {
+        if (_loading || _sending) return;
+        if (Model.Transaction == null)
+            await CreateTx();
+        else
+            await BroadcastTx();
+    }
+
+    private async Task CancelTx()
+    {
+        if (Model.Transaction is null) return;
+
+        Model.Transaction = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task CreateTx()
     {
-        if (loading || _balanceResponseAmt is null || SendAmount is null || SendAmount <= 0 || string.IsNullOrWhiteSpace(SendDest)) return;
-        loading = true;
+        if (_totalBalance is null || Model.Amount is <= 0 || string.IsNullOrWhiteSpace(Model.Destination)) return;
+        _sending = true;
         await InvokeAsync(StateHasChanged);
         try
         {
-            var txout = new TxOut(Money.Coins(SendAmount.Value), BitcoinAddress.Create(SendDest, OnChainWalletManager.Network));
-            transaction = await OnChainWalletManager.CreateTransaction(new List<TxOut>() {txout}, null, null);
-            if (transaction is null)
+            var amount = new Money(Model.Amount!.Value, MoneyUnit.Satoshi).ToUnit(MoneyUnit.BTC);
+            var txout = new TxOut(Money.Coins(amount), BitcoinAddress.Create(Model.Destination, OnChainWalletManager.Network));
+            Model.Transaction = await OnChainWalletManager.CreateTransaction([txout], null, null);
+            if (Model.Transaction is null)
                 throw new Exception("Transaction creation failed");
-            var changeAmt = transaction.Value.Tx.Outputs.Where(o => o.IsTo(transaction.Value.Change.GetDestinationAddress(OnChainWalletManager.Network))).Sum(o => o.Value.ToDecimal(MoneyUnit.BTC));
-            var feeaMT = transaction.Value.Tx.GetFee(transaction.Value.SpentCoins).ToDecimal(MoneyUnit.BTC);
-            _txResponse = $"Created transaction {transaction.Value.Tx.GetHash()} spending {transaction.Value.SpentCoins.Sum(c => c.TxOut.Value.ToDecimal(MoneyUnit.BTC))} BTC, with change of {changeAmt} BTC and fee of {feeaMT} BTC";
+            var changeAmt = Model.Transaction.Value.Tx.Outputs
+                .Where(o => o.IsTo(Model.Transaction.Value.Change.GetDestinationAddress(OnChainWalletManager.Network)))
+                .Sum(o => o.Value.ToDecimal(MoneyUnit.BTC));
+            var feeaMT = Model.Transaction.Value.Tx.GetFee(Model.Transaction.Value.SpentCoins).ToDecimal(MoneyUnit.BTC);
+            _successMessage = $"Created transaction {Model.Transaction.Value.Tx.GetHash()} spending {Model.Transaction.Value.SpentCoins.Sum(c => c.TxOut.Value.ToDecimal(MoneyUnit.BTC))} BTC, with change of {changeAmt} BTC and fee of {feeaMT} BTC";
         }
         catch (Exception ex)
         {
-            _txResponse = $"Error: {ex.Message}";
-            transaction = null;
+            _errorMessage = ex.Message;
+            Model.Transaction = null;
         }
         finally
         {
-            loading = false;
+            _sending = false;
             await InvokeAsync(StateHasChanged);
         }
     }
 
     private async Task BroadcastTx()
     {
-        if (loading || transaction is null) return;
-        loading = true;
+        if (Model.Transaction is null) return;
+        _sending = true;
         await InvokeAsync(StateHasChanged);
         try
         {
-            await OnChainWalletManager.BroadcastTransaction(transaction.Value.Tx);
-            _txResponse = $"Transaction {transaction.Value.Tx.GetHash()} broadcasted";
-            transaction = null;
+            await OnChainWalletManager.BroadcastTransaction(Model.Transaction.Value.Tx);
+            _successMessage = $"Transaction {Model.Transaction.Value.Tx.GetHash()} broadcasted";
+            Model = new SendModel();
         }
         catch (Exception ex)
         {
-            _txResponse = $"Error: {ex.Message}";
+            _errorMessage = ex.Message;
         }
         finally
         {
-            loading = false;
+            _sending = false;
             await InvokeAsync(StateHasChanged);
         }
+        _ = FetchData();
     }
 
 
-    private async Task GetTxs()
+    private void ToggleDisplayCurrency()
     {
-        if (loading) return;
-        loading = true;
-        await InvokeAsync(StateHasChanged);
-        try
-        {
-
-            _txs  =  await OnChainWalletManager.GetTransactions();;
-        }
-        catch (Exception ex)
-        {
-            _txResponse = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            loading = false;
-            await InvokeAsync(StateHasChanged);
-        }
+        Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
     }
-
-    private string GetTitle() => $"{OnChainWalletManager.Network?.Name ?? ""} Onchain Wallet".Trim();
 }

@@ -23,106 +23,136 @@
     <AuthorizeView Resource="StoreId">
         <WalletOverview BitcoinBalance="@TotalBalance" BitcoinUnit="@BitcoinUnit" MoneyUnit="@UnitMoney" Histogram="@Histogram"
                         Currency="@Currency" Rate="@Rate" Error="@BalanceError" OnBalanceClick="ToggleDisplayCurrency"
-                        class="my-3"/>
+                        class="mt-3 mb-5"/>
 
         @if (OnchainConfirmedBalance != null || OnchainUnconfirmedBalance != null)
         {
-            <header class="mt-5 mb-0 d-flex align-items-center justify-content-between">
-                <h4 class="mb-0">Onchain</h4>
-                @if (OnchainTotalBalance is > 0)
-                {
-                    <a href="@Routes.Send" class="bg-light rounded-pill px-4 py-2 fw-semibold" disabled>Send onchain</a>
-                }
+            <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                <h2 class="mb-0">Onchain</h2>
+                <span class="badge bg-info ms-2">
+                    <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(OnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> available
+                </span>
             </header>
-            <ul class="list-group list-group-flush list-group-links">
-                @if (OnchainConfirmedBalance != null)
-                {
-                    <li class="list-group-item py-2">
-                        @DisplayFormatter.Currency(OnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) confirmed
-                    </li>
-                }
-                @if (OnchainUnconfirmedBalance != null)
-                {
-                    <li class="list-group-item py-2">
-                        @DisplayFormatter.Currency(OnchainUnconfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) unconfirmed
-                    </li>
-                }
-            </ul>
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
+                    @if (OnchainConfirmedBalance != null)
+                    {
+                        <li class="list-group-item py-2">
+                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(OnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> confirmed
+                        </li>
+                    }
+                    @if (OnchainUnconfirmedBalance != null)
+                    {
+                        <li class="list-group-item py-2 disabled">
+                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(OnchainUnconfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> unconfirmed
+                        </li>
+                    }
+                </ul>
+            </div>
         }
 
         @if (LightningOnchainConfirmedBalance != null || LightningOnchainUnconfirmedBalance != null || LightningOnchainReservedBalance != null)
         {
-            <header class="mt-5 mb-2 d-flex align-items-center justify-content-between">
-                <h4 class="mb-0">Lightning Onchain</h4>
+            <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                <h2 class="mb-0">Lightning Onchain</h2>
+                <span class="badge bg-info ms-2">
+                    <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> available
+                </span>
             </header>
-            <ul class="list-group list-group-flush list-group-links">
-                @if (LightningOnchainConfirmedBalance != null)
-                {
-                    <li class="list-group-item py-2">
-                        @DisplayFormatter.Currency(LightningOnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) confirmed
-                    </li>
-                }
-                @if (LightningOnchainUnconfirmedBalance != null)
-                {
-                    <li class="list-group-item py-2">
-                        @DisplayFormatter.Currency(LightningOnchainUnconfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) unconfirmed
-                    </li>
-                }
-                @if (LightningOnchainReservedBalance != null)
-                {
-                    <li class="list-group-item py-2">
-                        @DisplayFormatter.Currency(LightningOnchainReservedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) reserved
-                    </li>
-                }
-            </ul>
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
+                    @if (LightningOnchainConfirmedBalance != null)
+                    {
+                        <li class="list-group-item py-2">
+                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOnchainConfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> confirmed
+                        </li>
+                    }
+                    @if (LightningOnchainUnconfirmedBalance != null)
+                    {
+                        <li class="list-group-item py-2 disabled">
+                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOnchainUnconfirmedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> unconfirmed
+                        </li>
+                    }
+                    @if (LightningOnchainReservedBalance != null)
+                    {
+                        <li class="list-group-item py-2 disabled">
+                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOnchainReservedBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> reserved
+                        </li>
+                    }
+                </ul>
+            </div>
         }
 
         @if (LightningOffchainOpeningBalance != null || LightningOffchainLocalBalance != null || LightningOffchainRemoteBalance != null || LightningOffchainClosingBalance != null)
         {
-            <header class="mt-5 mb-2 d-flex align-items-center justify-content-between">
-                <h4 class="mb-0">Lightning Channels</h4>
-                @if (LightningOffchainLocalBalance is > 0)
-                {
-                    <NavLink href="@Routes.Send" class="bg-light rounded-pill px-5 py-2 fw-semibold">Send via Lightning</NavLink>
-                }
+            <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                <h2 class="mb-0">Lightning Channels</h2>
+                <span class="badge bg-info ms-2">
+                    <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOffchainLocalBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> available
+                </span>
             </header>
-            <ul class="list-group list-group-flush list-group-links">
-                @if (LightningOffchainOpeningBalance != null)
-                {
-                    <li class="list-group-item py-2">
-                        @DisplayFormatter.Currency(LightningOffchainOpeningBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) opening channels
-                    </li>
-                }
-                @if (LightningOffchainLocalBalance != null)
-                {
-                    <li class="list-group-item py-2">
-                        @DisplayFormatter.Currency(LightningOffchainLocalBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) local / outbound capacity
-                    </li>
-                }
-                @if (LightningOffchainRemoteBalance != null)
-                {
-                    <li class="list-group-item py-2">
-                        @DisplayFormatter.Currency(LightningOffchainRemoteBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) remote / inbound capacity
-                    </li>
-                }
-                @if (LightningOffchainClosingBalance != null)
-                {
-                    <li class="list-group-item py-2">
-                        @DisplayFormatter.Currency(LightningOffchainClosingBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol) closing channels
-                    </li>
-                }
-            </ul>
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
+                    @if (LightningOffchainOpeningBalance != null)
+                    {
+                        <li class="list-group-item py-2 disabled">
+                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOffchainOpeningBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> opening channels
+                        </li>
+                    }
+                    @if (LightningOffchainLocalBalance != null)
+                    {
+                        <li class="list-group-item py-2">
+                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOffchainLocalBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> local / outbound capacity
+                        </li>
+                    }
+                    @if (LightningOffchainClosingBalance != null)
+                    {
+                        <li class="list-group-item py-2 disabled">
+                            <span @onclick="ToggleDisplayCurrency">@DisplayFormatter.Currency(LightningOffchainClosingBalance.Value, BitcoinUnit, DisplayFormatter.CurrencyFormat.Symbol)</span> closing channels
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+
+        @if (TotalBalance > 0)
+        {
+            <h2>Send Bitcoin</h2>
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="SendFunds" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
+                <DataAnnotationsValidator/>
+                <fieldset class="box">
+                    <div class="form-group">
+                        <label for="Destination" class="form-label" data-required>Destination</label>
+                        <InputText @bind-Value="Model.Destination" id="Destination" class="form-control" />
+                        <ValidationMessage For="@(() => Model.Destination)"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="Amount" class="form-label" data-required>Amount</label>
+                        <div class="input-group">
+                            <InputNumber @bind-Value="Model.Amount" id="Amount" class="form-control" inputmode="numeric" min="0"/>
+                            <span class="input-group-text">sats</span>
+                        </div>
+                        <ValidationMessage For="@(() => Model.Amount)"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
+                        @if (_sending)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Send Funds</span>
+                        }
+                    </button>
+                </fieldset>
+            </ValidationEditContext>
         }
     </AuthorizeView>
 
 </section>
 
 @code {
-
-    private void ToggleDisplayCurrency()
-    {
-        Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
-    }
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private string? StoreId => StoreState.Value.StoreInfo?.Id;
@@ -131,7 +161,6 @@
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
     private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
     private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
-    private decimal? OnchainTotalBalance => OnchainBalance == null ? null : (OnchainConfirmedBalance ?? 0) + (OnchainUnconfirmedBalance ?? 0);
     private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
     private decimal? LightningOnchainBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(UnitMoney);
     private decimal? LightningOffchainBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(UnitLightMoney);
@@ -152,4 +181,46 @@
     private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private LightMoneyUnit UnitLightMoney => BitcoinUnit == CurrencyUnit.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
     private string GetTitle() => $"{StoreInfo?.Name ?? "Store"} Funds";
+
+    private void ToggleDisplayCurrency()
+    {
+        Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
+    }
+
+    private bool _sending { get; set; }
+    private string? _successMessage { get; set; }
+    private string? _errorMessage { get; set; }
+    private ValidationEditContext? _validationEditContext;
+    private SendModel? Model { get; set; } = new();
+
+    private class SendModel
+    {
+        [Required]
+        public string? Destination { get; set; }
+        [Required]
+        public decimal? Amount { get; set; }
+    }
+
+    private async Task SendFunds()
+    {
+        if (_sending || Model?.Amount is null || string.IsNullOrEmpty(Model.Destination)) return;
+        try
+        {
+            _successMessage = _errorMessage = null;
+            _sending = true;
+            await InvokeAsync(StateHasChanged);
+            await _semaphore.WaitAsync();
+
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        finally
+        {
+            _semaphore.Release();
+            _sending = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
 }

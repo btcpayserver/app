@@ -1,0 +1,7 @@
+.transactions-list .box {
+  margin-bottom: 0 !important;
+}
+
+.transactions-list .box + .box {
+  margin-top: var(--btcpay-space-xs);
+}
