@@ -167,7 +167,7 @@
         @if (_peers?.Any() is true)
         {
             <h2>Open Channel</h2>
-            <ValidationEditContext @ref="_openChannelEditContext" Model="ChannelModel" OnValidSubmit="OpenChannel" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage">
+            <ValidationEditContext @ref="_openChannelEditContext" Model="ChannelModel" OnValidSubmit="() => OpenChannel()" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage">
                 <DataAnnotationsValidator/>
                 <fieldset class="box">
                     <div class="form-group">
@@ -318,6 +318,9 @@
             _semaphore.Release();
             await InvokeAsync(StateHasChanged);
         }
+
+        if (string.IsNullOrEmpty(_connectErrorMessage))
+            _ = FetchData();
     }
 
     private async void DisconnectPeer(string nodeId)
@@ -336,6 +339,7 @@
             _semaphore.Release();
             await InvokeAsync(StateHasChanged);
         }
+        _ = FetchData();
     }
 
     private async void UpdatePeer(string pubKeyHex, PeerInfo? value)
@@ -345,7 +349,6 @@
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-
             await Node.Peer(new PubKey(pubKeyHex), value);
         }
         finally
@@ -354,6 +357,7 @@
             await InvokeAsync(StateHasChanged);
             _semaphore.Release();
         }
+        _ = FetchData();
     }
 
     private async Task ConnectPeer(string peer, PeerInfo peerConfig)
@@ -373,6 +377,7 @@
             await InvokeAsync(StateHasChanged);
             _semaphore.Release();
         }
+        _ = FetchData();
     }
 
     private async Task OpenChannel()
@@ -384,7 +389,8 @@
             _channelOpening = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            var result = await Node.OpenChannel(Money.Coins(ChannelModel.Amount.Value), new PubKey(ChannelModel.PeerId));
+            var amount = new Money(ChannelModel.Amount.Value, MoneyUnit.Satoshi);
+            var result = await Node.OpenChannel(amount, new PubKey(ChannelModel.PeerId));
             if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
             {
                 _channelSuccessMessage = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
@@ -405,6 +411,9 @@
             _channelOpening = false;
             await InvokeAsync(StateHasChanged);
         }
+
+        if (string.IsNullOrEmpty(_channelErrorMessage))
+            _ = FetchData();
     }
 
 }
