@@ -267,24 +267,30 @@
 
     private async Task HandleValidSubmit()
     {
-        _successMessage = null;
+        _successMessage = _errorMessage = null;
 
         var store = Store!;
-
-        if (!string.IsNullOrEmpty(Model!.LogoPath))
-        {
-            var path = Model.LogoPath;
-            var mimeType = FileHelper.GetContentType(path);
-            var upload = await AccountManager.GetClient().UploadStoreLogo(store.Id, path, mimeType);
-            Model.LogoUrl = upload.LogoUrl;
-            // cleanup
-            File.Delete(path);
-            Model.LogoPath = null;
-            _inputFileId = Guid.NewGuid();
+        try {
+            if (!string.IsNullOrEmpty(Model!.LogoPath))
+            {
+                var path = Model.LogoPath;
+                var mimeType = FileHelper.GetContentType(path);
+                var upload = await AccountManager.GetClient().UploadStoreLogo(store.Id, path, mimeType);
+                Model.LogoUrl = upload.LogoUrl;
+                // cleanup
+                File.Delete(path);
+                Model.LogoPath = null;
+                _inputFileId = Guid.NewGuid();
+            }
+            else if (string.IsNullOrEmpty(Model!.LogoUrl))
+            {
+                await AccountManager.GetClient().DeleteStoreLogo(store.Id);
+            }
         }
-        else if (string.IsNullOrEmpty(Model!.LogoUrl))
+        catch (Exception e)
         {
-            await AccountManager.GetClient().DeleteStoreLogo(store.Id);
+            _errorMessage = e.Message;
+            return;
         }
 
         Dispatcher.Dispatch(new StoreState.UpdateStore(StoreId!, new UpdateStoreRequest

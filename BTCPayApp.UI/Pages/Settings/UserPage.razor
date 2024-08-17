@@ -179,20 +179,29 @@
         _accountErrorMessage = _accountSuccessMessage = null;
         _accountSending = true;
 
-        if (!string.IsNullOrEmpty(Account!.ImagePath))
+        try
         {
-            var path = Account.ImagePath;
-            var mimeType = FileHelper.GetContentType(path);
-            var upload = await AccountManager.GetClient().UploadCurrentUserProfilePicture(path, mimeType);
-            Account.ImageUrl = upload.ImageUrl;
-            // cleanup
-            File.Delete(path);
-            Account.ImagePath = null;
-            _inputFileId = Guid.NewGuid();
+            if (!string.IsNullOrEmpty(Account!.ImagePath))
+            {
+                var path = Account.ImagePath;
+                var mimeType = FileHelper.GetContentType(path);
+                var upload = await AccountManager.GetClient().UploadCurrentUserProfilePicture(path, mimeType);
+                Account.ImageUrl = upload.ImageUrl;
+                // cleanup
+                File.Delete(path);
+                Account.ImagePath = null;
+                _inputFileId = Guid.NewGuid();
+            }
+            else if (string.IsNullOrEmpty(Account!.ImageUrl))
+            {
+                await AccountManager.GetClient().DeleteCurrentUserProfilePicture();
+            }
         }
-        else if (string.IsNullOrEmpty(Account!.ImageUrl))
+        catch (Exception e)
         {
-            await AccountManager.GetClient().DeleteCurrentUserProfilePicture();
+            _accountErrorMessage = e.Message;
+            _accountSending = false;
+            return;
         }
 
         var result = await AccountManager.ChangeAccountInfo(Account.Email!, Account.Name, Account.ImageUrl);
