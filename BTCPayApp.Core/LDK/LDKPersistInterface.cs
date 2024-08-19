@@ -180,8 +180,8 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
             
             await _node.UpdateChannel(identifiers, data.write(), updateId);
             _logger.LogDebug("channel updated to local, waiting for remote sync to finish");
-            await _updateTaskCompletionSources[updateId].Task;
-            _updateTaskCompletionSources.TryRemove(updateId, out _);
+            // await _updateTaskCompletionSources[updateId].Task;
+            // _updateTaskCompletionSources.TryRemove(updateId, out _);
             await Task.Run(() =>
             {
                 _logger.LogDebug(

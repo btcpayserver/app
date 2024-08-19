@@ -33,6 +33,8 @@ public class LDKFeeEstimator : FeeEstimatorInterface
             ConfirmationTarget
                 .LDKConfirmationTarget_NonAnchorChannelFee => 20, // Moderate to high priority (high-priority feerate)
             ConfirmationTarget.LDKConfirmationTarget_ChannelCloseMinimum => 144, // Within a day or so (144-250 blocks)
+
+            ConfirmationTarget.LDKConfirmationTarget_OutputSpendingFee => 144,
             _ => throw new ArgumentOutOfRangeException(nameof(confirmation_target), confirmation_target, null)
         };
 

@@ -26,7 +26,7 @@ public class LDKLogger : LoggerInterface, ILogger
             Level.LDKLevel_Error => LogLevel.Error,
             Level.LDKLevel_Gossip => LogLevel.Trace,
         };
-        _loggerFactory.CreateLogger(record.get_module_path()).Log(level, "{Args}", record.get_args());
+         _loggerFactory.CreateLogger(record.get_module_path()).Log(level, "{Args}", record.get_args());
     }
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
