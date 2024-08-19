@@ -4,8 +4,10 @@
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Lightning
+@using NBitcoin
 @inject IState<RootState> State
 @inject IState<UIState> UIState
+@inject IState<StoreState> StoreState
 @inject LightningNodeManager LightningNodeManager
 @inject IDispatcher Dispatcher
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -30,10 +32,7 @@
             </div>
             <div class="form-group">
                 <label for="Amount" class="form-label" data-required>Amount</label>
-                <div class="input-group">
-                    <InputNumber @bind-Value="Model.Amount" id="Amount" class="form-control" inputmode="numeric"/>
-                    <span class="input-group-text">sats</span>
-                </div>
+                <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                 <ValidationMessage For="@(() => Model.Amount)"/>
             </div>
             <button type="submit" class="btn btn-primary" disabled="@(_validationEditContext!.Invalid || _paymentSending)">
@@ -72,6 +71,7 @@
     private PaymentsManager? PaymentsManager => LightningNodeManager.Node?.PaymentsManager;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private string BitcoinUnit => UIState.Value.BitcoinUnit;
+    private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
 
     private class SendModel
     {

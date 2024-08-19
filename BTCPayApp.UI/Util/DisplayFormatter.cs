@@ -81,6 +81,13 @@ public class DisplayFormatter
         return Currency(decimal.Parse(value, CultureInfo.InvariantCulture), currency, format);
     }
 
+    public decimal Rounded(decimal value, string currency)
+    {
+        var currencyData = GetCurrencyData(currency, true);
+        var divisibility = currencyData.Divisibility;
+        return value.RoundToSignificant(ref divisibility);
+    }
+
     private NumberFormatInfo GetNumberFormatInfo(string currency, bool useFallback)
     {
         var data = GetCurrencyProvider(currency);

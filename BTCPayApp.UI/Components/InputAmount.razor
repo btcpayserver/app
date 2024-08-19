@@ -1,10 +1,21 @@
+@using BTCPayApp.UI.Util
 @using NBitcoin
-
+@inject DisplayFormatter DisplayFormatter
 @inherits InputNumber<decimal?>
 
-<div class="input-group">
-    <InputNumber @bind-Value="@CurrentValue" id="@Id" class="form-control" inputmode="@(IsSats ? "numeric" : "decimal")" max="@MaxAttr" step="any" min="0"/>
-    <span class="input-group-text" @onclick="ToggleDisplayCurrency" @onclick:stopPropagation>@(IsSats ? "sats" : Unit)</span>
+<div class="d-flex flex-wrap gap-2">
+    <div class="input-group flex-nowrap" style="flex: 1 0 150px">
+        <InputNumber @bind-Value="@CurrentValue" @bind-Value:after="() => UpdateFiatValue(CurrentValue)" id="@Id" class="form-control flex-grow-1 hide-number-spin text-end" inputmode="@(IsSats ? "numeric" : "decimal")" max="@MaxAttr" step="any" min="0"/>
+        <span class="input-group-text" @onclick="ToggleDisplayCurrency" @onclick:stopPropagation>@(IsSats ? "sats" : Unit)</span>
+    </div>
+    @if (Rate is > 0 && !string.IsNullOrEmpty(Currency))
+    {
+        <div class="input-group flex-nowrap" style="flex:1 0 140px">
+            <span class="input-group-text px-2">~</span>
+            <InputNumber @bind-Value="@FiatValue" @bind-Value:after="() => UpdateValue(FiatValue)" inputmode="decimal" class="input-group-text w-100 hide-number-spin text-end" step="any" min="0"/>
+            <span class="input-group-text">@Currency</span>
+        </div>
+    }
 </div>
 
 @code {
@@ -18,7 +29,24 @@
     public decimal? Max { get; set; }
 
     [Parameter]
+    public decimal? Rate { get; set; }
+
+    [Parameter]
+    public string? Currency { get; set; }
+
+    [Parameter]
     public EventCallback OnToggleDisplayCurrency { get; set; }
+
+    private decimal? FiatValue { get; set; }
+
+    private bool IsSats => Unit == MoneyUnit.Satoshi;
+    private decimal? MaxAttr => Max.HasValue && Unit.HasValue ? new Money(Max.Value, Unit.Value).ToDecimal(Unit.Value) : null;
+    private decimal? EffectiveRate => Rate is null ? null : IsSats ? Rate / 100_000_000 : Rate;
+
+    protected override void OnParametersSet()
+    {
+        UpdateFiatValue(CurrentValue);
+    }
 
     private async Task ToggleDisplayCurrency()
     {
@@ -26,6 +54,17 @@
             await OnToggleDisplayCurrency.InvokeAsync();
     }
 
-    private bool IsSats => Unit == MoneyUnit.Satoshi;
-    private decimal? MaxAttr => Max.HasValue && Unit.HasValue ? new Money(Max.Value, Unit.Value).ToDecimal(Unit.Value) : null;
+    private void UpdateFiatValue(decimal? val)
+    {
+        if (val is null || EffectiveRate is null || string.IsNullOrEmpty(Currency)) return;
+        var value = (val * EffectiveRate).Value;
+        FiatValue = DisplayFormatter.Rounded(value, Currency);
+    }
+
+    private void UpdateValue(decimal? fiat)
+    {
+        if (fiat is null || EffectiveRate is null || string.IsNullOrEmpty(Currency)) return;
+        var value = (fiat / EffectiveRate).Value;
+        CurrentValue = DisplayFormatter.Rounded(value, IsSats ? "SATS" : "BTC");
+    }
 }

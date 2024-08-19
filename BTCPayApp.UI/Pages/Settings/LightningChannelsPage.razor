@@ -14,6 +14,7 @@
 @inject NavigationManager NavigationManager
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
+@inject IState<StoreState> StoreState
 @inject IState<UIState> UIState
 @inject IDispatcher Dispatcher
 
@@ -192,7 +193,7 @@
                     </div>
                     <div class="form-group">
                         <label for="Amount" class="form-label" data-required>Amount</label>
-                        <InputAmount Id="Amount" @bind-Value="ChannelModel.Amount" Unit="@UnitMoney" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
+                        <InputAmount Id="Amount" @bind-Value="ChannelModel.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                         <ValidationMessage For="@(() => ChannelModel.Amount)"/>
                     </div>
                     <button type="submit" class="btn btn-primary w-100" disabled="@(_openChannelEditContext!.Invalid || _channelOpening)">
@@ -221,6 +222,8 @@
     private (string id, string userId, string counterparty, long? shortChannelId, int? confirmations, int? confirmationsRequired, string fundingTransactionHash, bool usable, bool ready, LightMoney Balance, LightMoney Inbound, LightMoney Outbound, ChannelShutdownState? State)[]? _channels;
     private (string nodeId, string? socket)[]? _peers;
     private LDKNode? Node => LightningNodeManager.Node;
+    private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
+    private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
     private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private string BitcoinUnit => UIState.Value.BitcoinUnit;
     private bool Loading { get; set; }

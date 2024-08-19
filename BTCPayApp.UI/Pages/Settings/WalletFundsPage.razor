@@ -10,6 +10,7 @@
 @inject OnChainWalletManager OnChainWalletManager
 @inject IDispatcher Dispatcher
 @inject IState<UIState> UIState
+@inject IState<StoreState> StoreState
 
 <PageTitle>@GetTitle()</PageTitle>
 
@@ -117,7 +118,7 @@
                 </div>
                 <div class="form-group">
                     <label for="Amount" class="form-label" data-required>Amount</label>
-                    <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" Max="@_totalBalance.ToDecimal(UnitMoney)" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
+                    <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" Max="@_totalBalance.ToDecimal(UnitMoney)" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                     <ValidationMessage For="@(() => Model.Amount)"/>
                 </div>
                 @if (Model.Transaction is null)
@@ -201,6 +202,8 @@
 
     private string GetTitle() => $"{OnChainWalletManager.Network?.Name ?? ""} Onchain Wallet".Trim();
     private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
+    private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
+    private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
     private string BitcoinUnit => UIState.Value.BitcoinUnit;
 
     private class SendModel
