@@ -136,10 +136,13 @@
                         <ValidationMessage For="@(() => Model.Amount)"/>
                         @if (Model.Address != null || Model.Bolt11 != null)
                         {
-                            <div class="form-text">
-                                Sending @(Model.Bolt11 != null ? "via Lightning" : "onchain"):
-                                <AmountDisplay Value="available" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
-                                available.
+                            <div class="form-text d-flex flex-wrap gap-1 align-items-center">
+                                <span>
+                                    Sending @(Model.Bolt11 != null ? "via Lightning" : "onchain"):
+                                    <AmountDisplay Value="available" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
+                                    available.
+                                </span>
+                                <button type="button" class="btn btn-link p-0" @onclick="() => Model.Amount = available">Send maximum</button>
                             </div>
                         }
                     </div>
