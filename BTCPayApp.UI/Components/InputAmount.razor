@@ -5,14 +5,14 @@
 
 <div class="d-flex flex-wrap gap-2">
     <div class="input-group flex-nowrap" style="flex: 1 0 150px">
-        <InputNumber @bind-Value="@CurrentValue" @bind-Value:after="() => UpdateFiatValue(CurrentValue)" id="@Id" class="form-control flex-grow-1 hide-number-spin text-end" inputmode="@(IsSats ? "numeric" : "decimal")" max="@MaxAttr" step="any" min="0"/>
+        <InputNumber @bind-Value="@CurrentValue" @bind-Value:after="() => UpdateFiatValue(CurrentValue)" readonly="@Readonly" id="@Id" class="form-control flex-grow-1 hide-number-spin text-end" inputmode="@(IsSats ? "numeric" : "decimal")" max="@MaxAttr" step="any" min="0"/>
         <span class="input-group-text" @onclick="ToggleDisplayCurrency" @onclick:stopPropagation>@(IsSats ? "sats" : Unit)</span>
     </div>
     @if (Rate is > 0 && !string.IsNullOrEmpty(Currency))
     {
         <div class="input-group flex-nowrap" style="flex:1 0 140px">
             <span class="input-group-text px-2">~</span>
-            <InputNumber @bind-Value="@FiatValue" @bind-Value:after="() => UpdateValue(FiatValue)" inputmode="decimal" class="input-group-text w-100 hide-number-spin text-end" step="any" min="0"/>
+            <InputNumber @bind-Value="@FiatValue" @bind-Value:after="() => UpdateValue(FiatValue)" readonly="@Readonly" inputmode="decimal" class="input-group-text w-100 hide-number-spin text-end" step="any" min="0"/>
             <span class="input-group-text">@Currency</span>
         </div>
     }
@@ -33,6 +33,9 @@
 
     [Parameter]
     public string? Currency { get; set; }
+
+    [Parameter]
+    public bool? Readonly { get; set; }
 
     [Parameter]
     public EventCallback OnToggleDisplayCurrency { get; set; }
@@ -56,15 +59,15 @@
 
     private void UpdateFiatValue(decimal? val)
     {
-        if (val is null || EffectiveRate is null || string.IsNullOrEmpty(Currency)) return;
-        var value = (val * EffectiveRate).Value;
-        FiatValue = DisplayFormatter.Rounded(value, Currency);
+        FiatValue = val is null || EffectiveRate is null || string.IsNullOrEmpty(Currency)
+            ? null
+            : DisplayFormatter.Rounded((val * EffectiveRate).Value, Currency);
     }
 
     private void UpdateValue(decimal? fiat)
     {
-        if (fiat is null || EffectiveRate is null || string.IsNullOrEmpty(Currency)) return;
-        var value = (fiat / EffectiveRate).Value;
-        CurrentValue = DisplayFormatter.Rounded(value, IsSats ? "SATS" : "BTC");
+        CurrentValue = fiat is null || EffectiveRate is null || string.IsNullOrEmpty(Currency)
+            ? null
+            : DisplayFormatter.Rounded((fiat / EffectiveRate).Value, IsSats ? "SATS" : "BTC");
     }
 }

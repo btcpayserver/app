@@ -26,7 +26,7 @@
     }
     <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
         <WalletOverview BitcoinBalance="@TotalBalance" BitcoinUnit="@BitcoinUnit" MoneyUnit="@UnitMoney" Histogram="@Histogram"
-                        Currency="@Currency" Rate="@Rate" Error="@BalanceError" OnBalanceClick="ToggleDisplayCurrency"
+                        Currency="@Currency" Rate="@Rate" Error="@BalanceError" Loading="@BalanceLoading" OnBalanceClick="ToggleDisplayCurrency"
                         class="my-3"/>
         @if (TotalBalance != null)
         {
@@ -73,6 +73,7 @@
     private string? InvoicesError => StoreState.Value.Invoices?.Error;
     private string? StoreId => StoreState.Value.StoreInfo?.Id;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
+    private bool? BalanceLoading => StoreState.Value.OnchainBalance?.Loading is true || StoreState.Value.LightningBalance?.Loading is true;
     private string? BalanceError => StoreState.Value.OnchainBalance?.Error ?? StoreState.Value.LightningBalance?.Error;
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
     private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);

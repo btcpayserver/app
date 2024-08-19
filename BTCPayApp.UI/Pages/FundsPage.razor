@@ -2,6 +2,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Attempt2
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Components.Layout
 @using NBitcoin
@@ -10,8 +11,8 @@
 @inject IDispatcher Dispatcher
 @inject IState<UIState> UIState
 @inject IState<StoreState> StoreState
+@inject IAccountManager AccountManager
 @inject OnChainWalletManager OnChainWalletManager
-@inject LightningNodeManager LightningNodeManager
 
 <PageTitle>@GetTitle()</PageTitle>
 
@@ -23,7 +24,7 @@
 <section class="container">
     <AuthorizeView Resource="StoreId">
         <WalletOverview BitcoinBalance="@TotalBalance" BitcoinUnit="@BitcoinUnit" MoneyUnit="@UnitMoney" Histogram="@Histogram"
-                        Currency="@Currency" Rate="@Rate" Error="@BalanceError" OnBalanceClick="ToggleDisplayCurrency"
+                        Currency="@Currency" Rate="@Rate" Error="@BalanceError" Loading="@BalanceLoading" OnBalanceClick="ToggleDisplayCurrency"
                         class="mt-3 mb-5"/>
 
         @if (OnchainConfirmedBalance != null || OnchainUnconfirmedBalance != null)
@@ -57,7 +58,7 @@
             <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
                 <h2 class="mb-0">Lightning Onchain</h2>
                 <span class="badge bg-info ms-2">
-                    <AmountDisplay Value="OnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> available
+                    <AmountDisplay Value="LightningOnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> available
                 </span>
             </header>
             <div class="box">
@@ -65,7 +66,7 @@
                     @if (LightningOnchainConfirmedBalance != null)
                     {
                         <li class="list-group-item py-2">
-                            <AmountDisplay Value="LightningOnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />confirmed
+                            <AmountDisplay Value="LightningOnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" /> confirmed
                         </li>
                     }
                     @if (LightningOnchainUnconfirmedBalance != null)
@@ -118,9 +119,6 @@
 
         @if (TotalBalance > 0 && (LightningOffchainLocalBalance is > 0 || OnchainConfirmedBalance is > 0))
         {
-            decimal available = Model.Bolt11 != null
-                ? (LightningOffchainLocalBalance ?? 0)
-                : (OnchainConfirmedBalance ?? 0);
             <h2>Send Bitcoin</h2>
             <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="SendFunds" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
                 <DataAnnotationsValidator/>
@@ -132,21 +130,24 @@
                     </div>
                     <div class="form-group">
                         <label for="Amount" class="form-label" data-required>Amount</label>
-                        <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" Max="@available" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
+                        <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" Max="@MaxAvailable" Readonly="@(!CanAdjustAmount)" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                         <ValidationMessage For="@(() => Model.Amount)"/>
                         @if (Model.Address != null || Model.Bolt11 != null)
                         {
                             <div class="form-text d-flex flex-wrap gap-1 align-items-center">
                                 <span>
                                     Sending @(Model.Bolt11 != null ? "via Lightning" : "onchain"):
-                                    <AmountDisplay Value="available" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
+                                    <AmountDisplay Value="MaxAvailable" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                                     available.
                                 </span>
-                                <button type="button" class="btn btn-link p-0" @onclick="() => Model.Amount = available">Send maximum</button>
+                                @if (CanAdjustAmount)
+                                {
+                                    <button type="button" class="btn btn-link p-0" @onclick="() => Model.Amount = MaxAvailable">Send maximum</button>
+                                }
                             </div>
                         }
                     </div>
-                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending || available == 0)">
+                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending || MaxAvailable is <= 0)">
                         @if (_sending)
                         {
                             <LoadingIndicator/>
@@ -168,6 +169,7 @@
 
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private string? StoreId => StoreState.Value.StoreInfo?.Id;
+    private bool? BalanceLoading => StoreState.Value.OnchainBalance?.Loading is true || StoreState.Value.LightningBalance?.Loading is true;
     private string? BalanceError => StoreState.Value.OnchainBalance?.Error ?? StoreState.Value.LightningBalance?.Error;
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
     private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
@@ -193,6 +195,10 @@
     private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private LightMoneyUnit UnitLightMoney => BitcoinUnit == CurrencyUnit.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
     private string GetTitle() => $"{StoreInfo?.Name ?? "Store"} Funds";
+    private bool CanAdjustAmount => Model.Bolt11?.MinimumAmount == null && MaxAvailable > 0;
+    private decimal? MaxAvailable => Model.Bolt11 != null
+        ? (LightningOffchainLocalBalance ?? 0)
+        : (OnchainConfirmedBalance ?? 0);
 
     private void ToggleDisplayCurrency()
     {
@@ -233,6 +239,7 @@
         try
         {
             Model.Bolt11 = BOLT11PaymentRequest.Parse(destination, network);
+            Model.Amount = Model.Bolt11.MinimumAmount.ToDecimal(UnitLightMoney);
         }
         catch
         {
@@ -251,13 +258,42 @@
 
     private async Task SendFunds()
     {
-        if (_sending || Model.Amount is null || string.IsNullOrEmpty(Model.Destination)) return;
+        if (_sending || Model.Amount is null || string.IsNullOrEmpty(Model.Destination) ||
+            (Model.Bolt11 == null && Model.Address == null)) return;
         try
         {
             _successMessage = _errorMessage = null;
             _sending = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
+
+            if (Model.Bolt11 != null)
+            {
+                var lnRequest = new PayLightningInvoiceRequest
+                {
+                    BOLT11 = Model.Bolt11.ToString(),
+                    Amount = new LightMoney(Model.Amount.Value, UnitLightMoney)
+                };
+                var payData = await AccountManager.GetClient().PayLightningInvoice(StoreId, "BTC", lnRequest);
+                _successMessage = $"Created transaction {payData.PaymentHash} spending {payData.TotalAmount} BTC";
+            }
+            else if (Model.Address != null)
+            {
+                var dest = new CreateOnChainTransactionRequest.CreateOnChainTransactionRequestDestination
+                {
+                    Destination = Model.Address.ToString(),
+                    Amount = new Money(Model.Amount.Value, UnitMoney).ToDecimal(MoneyUnit.BTC),
+                    SubtractFromAmount = Model.Amount.Value == MaxAvailable
+                };
+                var txRequest = new CreateOnChainTransactionRequest
+                {
+                    Destinations = [dest]
+                };
+                var txData = await AccountManager.GetClient().CreateOnChainTransaction(StoreId, "BTC", txRequest);
+                _successMessage = $"Created transaction {txData.TransactionHash} spending {new Money(txData.Amount, MoneyUnit.BTC)} BTC";
+            }
+
+            Dispatcher.Dispatch(new StoreState.FetchBalances(StoreId));
             Model = new SendModel();
         }
         catch (Exception e)
