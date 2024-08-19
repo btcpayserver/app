@@ -335,7 +335,7 @@ public class PaymentsManager :
     public async Task Handle(Event.Event_PaymentClaimable eventPaymentClaimable)
     {
         await using var context = await _dbContextFactory.CreateDbContextAsync();
-        var paymentHash = new uint256(eventPaymentClaimable.payment_hash);
+        var paymentHash =  uint256.Parse(Convert.ToHexString(eventPaymentClaimable.payment_hash).ToLower());
         var accept = await context.LightningPayments.FirstOrDefaultAsync(payment =>
             payment.PaymentHash == paymentHash &&
             payment.Inbound && payment.Status == LightningPaymentStatus.Pending);
@@ -370,8 +370,13 @@ public class PaymentsManager :
     public async Task Handle(Event.Event_PaymentClaimed eventPaymentClaimed)
     {
         var preimage = eventPaymentClaimed.purpose.GetPreimage(out var secret);
-
-        await PaymentUpdate(new uint256(eventPaymentClaimed.payment_hash), true, "default", false,
+        if (preimage is null)
+        {
+            return;
+        }
+        
+        var paymentHash =  uint256.Parse(Convert.ToHexString(eventPaymentClaimed.payment_hash).ToLower());
+        await PaymentUpdate(paymentHash, true, "default", false,
             preimage is null ? null : Convert.ToHexString(preimage).ToLower());
     }
 

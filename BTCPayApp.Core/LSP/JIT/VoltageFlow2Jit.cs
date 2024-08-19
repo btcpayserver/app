@@ -194,7 +194,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
             return true;
         }
 
-        return paymentClaimable.counterparty_skimmed_fee_msat == NonChannelOpenFee.MilliSatoshi;
+        return paymentClaimable.counterparty_skimmed_fee_msat == NonChannelOpenFee.MilliSatoshi || paymentClaimable.amount_msat ==  (lightningPayment.Value - NonChannelOpenFee );
     }
 
     protected virtual LightMoney NonChannelOpenFee => LightMoney.Zero;

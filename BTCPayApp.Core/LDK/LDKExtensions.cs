@@ -379,6 +379,22 @@ public static class LDKExtensions
         return new org.ldk.structs.TxOut(txOut.Value.Satoshi, txOut.ScriptPubKey.ToBytes());
     }
 
+    public static string GetReason(this Event.Event_ChannelClosed evt)
+    {
+        var reason = evt.reason.GetType().Name;
+        switch (evt.reason)
+        {
+
+            case ClosureReason.ClosureReason_CounterpartyForceClosed closureReasonCounterpartyForceClosed:
+                reason += " with msg from peer: " +closureReasonCounterpartyForceClosed.peer_msg.get_a();
+                break;
+            case ClosureReason.ClosureReason_ProcessingError closureReasonProcessingError:
+                reason += " " + closureReasonProcessingError.err;
+                break;
+        }
+        return reason;
+    }
+    
 
     public static byte[]? GetPreimage(this PaymentPurpose purpose, out byte[]? secret)
     {

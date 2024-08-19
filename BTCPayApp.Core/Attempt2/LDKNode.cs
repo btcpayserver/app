@@ -32,6 +32,8 @@ public partial class LDKNode :
 
     public async Task Handle(Event.Event_ChannelClosed evt)
     {
+        
+        _logger.LogInformation($"Channel {Convert.ToHexString(evt.channel_id.get_a()).ToLowerInvariant()} closed: {evt.GetReason()}");
         _memoryCache.Remove(nameof(GetChannels));
     }
 
