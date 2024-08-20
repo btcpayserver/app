@@ -205,7 +205,14 @@
                                 <span>Archived</span>
                             }else if (channel.Value.channelDetails is null)
                             {
-                                <span>Unknown but probably closed</span>
+                                @if (channel.Value.channel.AdditionalData.TryGetValue("CloseReasonHuman", out var reasonHuman))
+                                {
+                                    <span>@reasonHuman.GetString()</span>
+                                }
+                                else
+                                {
+                                    <span>Unknown but probably closed</span>
+                                }
                             }
                             else if(channel.Value.channelDetails.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some && some.some != ChannelShutdownState.LDKChannelShutdownState_NotShuttingDown  )
                             {
