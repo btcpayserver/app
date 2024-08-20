@@ -8,6 +8,7 @@
 @using NBitcoin
 @using BTCPayServer.Client.Models
 @using BTCPayServer.Lightning
+@inject IJSRuntime JS
 @inject IDispatcher Dispatcher
 @inject IState<UIState> UIState
 @inject IState<StoreState> StoreState
@@ -125,7 +126,12 @@
                 <fieldset class="box">
                     <div class="form-group">
                         <label for="Destination" class="form-label" data-required>Destination</label>
-                        <InputText @bind-Value="Model.Destination" @bind-Value:after="() => UpdateForDestination(Model.Destination)" id="Destination" class="form-control" />
+                        <div class="d-flex gap-2">
+                            <InputText @bind-Value="Model.Destination" @bind-Value:after="() => UpdateForDestination(Model.Destination)" id="Destination" class="form-control flex-grow-1" placeholder="Bitcoin address or BOLT11" />
+                            <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
+                                <Icon Symbol="scan-qr"/>
+                            </button>
+                        </div>
                         <ValidationMessage For="@(() => Model.Destination)"/>
                     </div>
                     <div class="form-group">
@@ -159,6 +165,7 @@
                     </button>
                 </fieldset>
             </ValidationEditContext>
+            <QrScanModal OnScan="@OnQrCodeScan"/>
         }
     </AuthorizeView>
 
@@ -210,6 +217,7 @@
     }
 
     private bool _sending { get; set; }
+    private string? _qrInput;
     private string? _successMessage { get; set; }
     private string? _errorMessage { get; set; }
     private ValidationEditContext? _validationEditContext;
@@ -306,5 +314,17 @@
             _sending = false;
             await InvokeAsync(StateHasChanged);
         }
+    }
+
+    private async void OnQrCodeScan(string code)
+    {
+        // prevent duplicate submission due to quirk in QR reader lib
+        if (code == _qrInput) return;
+        _qrInput = code;
+        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
+
+        Model.Destination = code;
+        UpdateForDestination(Model.Destination);
+        StateHasChanged();
     }
 }
