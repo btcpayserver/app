@@ -1,4 +1,5 @@
-﻿using AsyncKeyedLock;
+﻿using System.Text.Json;
+using AsyncKeyedLock;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
@@ -20,13 +21,27 @@ public partial class LDKNode :
     ILDKEventHandler<Event.Event_ChannelPending>,
     ILDKEventHandler<Event.Event_ChannelReady>
 {
-    public async Task<ChannelDetails[]> GetChannels(CancellationToken cancellationToken = default)
+    public async Task<Dictionary<string, (Channel channel, ChannelDetails? channelDetails)>> GetChannels(CancellationToken cancellationToken = default)
     {
-        return await _memoryCache.GetOrCreateAsync(nameof(GetChannels), async entry =>
+        return (await _memoryCache.GetOrCreateAsync(nameof(GetChannels), async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            return ServiceProvider.GetRequiredService<ChannelManager>().list_channels();
-        }).WithCancellation(cancellationToken);
+            var dbContext =  await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var dbChannels = dbContext.LightningChannels.AsNoTracking().Include(channel => channel.Aliases).AsAsyncEnumerable();
+            var channels = ServiceProvider.GetRequiredService<ChannelManager>().list_channels();
+            
+            var result = new Dictionary<string, (Channel channel, ChannelDetails? channelDetails)>();
+            await foreach (var dbChannel in dbChannels)
+            {
+                var channel = channels.FirstOrDefault(channel =>
+                {
+                    var id = Convert.ToHexString(channel.get_channel_id().get_a()).ToLowerInvariant();
+                    return id == dbChannel.Id || dbChannel.Aliases.Any(alias => alias.Id == id);
+                });
+                result.Add(dbChannel.Id, (dbChannel, channel));
+            }
+            return result;
+        }).WithCancellation(cancellationToken))!;
     }
 
 
@@ -34,16 +49,31 @@ public partial class LDKNode :
     {
         
         _logger.LogInformation($"Channel {Convert.ToHexString(evt.channel_id.get_a()).ToLowerInvariant()} closed: {evt.GetReason()}");
+        await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>()
+        {
+            {"CloseReason", JsonSerializer.SerializeToElement(evt.reason.write())},
+            {"CloseReasonHuman", JsonSerializer.SerializeToElement(evt.GetReason())},
+            {"CloseTimestamp", JsonSerializer.SerializeToElement(DateTimeOffset.UtcNow.ToUnixTimeSeconds())}
+        });
         _memoryCache.Remove(nameof(GetChannels));
     }
 
-    public async Task Handle(Event.Event_ChannelPending @event)
+    public async Task Handle(Event.Event_ChannelPending evt)
     {
+        await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>()
+        {
+            {"PendingTimestamp", JsonSerializer.SerializeToElement(DateTimeOffset.UtcNow.ToUnixTimeSeconds())}
+        });
+        
         _memoryCache.Remove(nameof(GetChannels));
     }
 
-    public async Task Handle(Event.Event_ChannelReady @event)
+    public async Task Handle(Event.Event_ChannelReady evt)
     {
+        await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>()
+        {
+            {"ReadyTimestamp", JsonSerializer.SerializeToElement(DateTimeOffset.UtcNow.ToUnixTimeSeconds())}
+        });
         _memoryCache.Remove(nameof(GetChannels));
     }
 
@@ -300,7 +330,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
-        var data = await db.LightningChannels.Select(channel => channel.Data)
+        var data = await db.LightningChannels.Where(channel => !channel.Archived).Select(channel => channel.Data)
             .ToArrayAsync();
 
         var channels = ChannelManagerHelper.GetInitialMonitors(data, entropySource, signerProvider);
@@ -337,7 +367,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         var data = await GetRawChannelManager();
         if (data is null)
         {
-            icm.SetResult(Array.Empty<ChannelMonitor>());
+            icm.SetResult([]);
             return null;
         }
 
@@ -435,4 +465,49 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         config.Peers.AddOrReplace(toString, value);
         await UpdateConfig(config);
     }
+
+    public async Task ArchiveChannel(ChannelId id)
+    {
+        var channelId = Convert.ToHexString(id.get_a()).ToLowerInvariant();
+        using var releaser = await channelLocker.LockAsync(channelId);
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var channel = await context.LightningChannels.Include(channel => channel.Aliases)
+            .FirstOrDefaultAsync(channel => !channel.Archived && (channel.Id == channelId || channel.Aliases.Any(alias => alias.Id == channelId)));
+        if (channel is null)
+        {
+            return;
+        }
+
+        channel.Archived = true;
+        await context.SaveChangesAsync();
+    }
+
+    public async Task AddChannelData(ChannelId id, Dictionary<string, JsonElement> data)
+    {
+        var channelId = Convert.ToHexString(id.get_a()).ToLowerInvariant();
+        using var releaser = await channelLocker.LockAsync(channelId);
+        await using var context = await _dbContextFactory.CreateDbContextAsync();
+        var channel = await context.LightningChannels.Include(channel => channel.Aliases)
+            .FirstOrDefaultAsync(channel => !channel.Archived && (channel.Id == channelId || channel.Aliases.Any(alias => alias.Id == channelId)));
+        if (channel is null)
+        {
+            channel = new Channel()
+            {
+                Id = channelId,
+                Archived = false,
+                Data = [],
+                Checkpoint = 0
+            };
+
+            
+            await context.LightningChannels.AddAsync(channel);
+        }
+        
+        
+        channel.AdditionalData =  JsonSerializer.SerializeToNode(channel.AdditionalData)!.MergeDictionary(data).Deserialize<Dictionary<string, JsonElement>>();
+        await context.SaveChangesAsync();
+
+
+    }
+    
 }

@@ -90,7 +90,9 @@ public class LDKPeerHandler : IScopedHostedService
             {
             
             var connected = _peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()).ToLower());
-            var channels = await _node.GetChannels(ctsToken);
+            var channels = (await _node.GetChannels(ctsToken)).Where(pair => pair.Value.channelDetails is not null)
+                .Select(pair => pair.Value.channelDetails!).ToList();
+            
             var channelPeers = channels
                 .Select(details => Convert.ToHexString(details.get_counterparty().get_node_id()).ToLower()).Distinct();
             var config = await _node.GetConfig();

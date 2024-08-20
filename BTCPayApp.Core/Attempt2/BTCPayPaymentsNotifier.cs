@@ -9,15 +9,12 @@ public class BTCPayPaymentsNotifier : IScopedHostedService
 {
     private readonly PaymentsManager _paymentsManager;
     private readonly BTCPayConnectionManager _connectionManager;
-    private readonly OnChainWalletManager _onChainWalletManager;
 
     public BTCPayPaymentsNotifier(
-        PaymentsManager paymentsManager, BTCPayConnectionManager connectionManager,
-        OnChainWalletManager onChainWalletManager)
+        PaymentsManager paymentsManager, BTCPayConnectionManager connectionManager)
     {
         _paymentsManager = paymentsManager;
         _connectionManager = connectionManager;
-        _onChainWalletManager = onChainWalletManager;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -28,9 +25,7 @@ public class BTCPayPaymentsNotifier : IScopedHostedService
     private async Task OnPaymentUpdate(object? sender, AppLightningPayment e)
     {
         await _connectionManager.HubProxy
-            .SendInvoiceUpdate(
-                _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier,
-                e.ToInvoice());
+            .SendInvoiceUpdate(e.ToInvoice());
     }
 
    

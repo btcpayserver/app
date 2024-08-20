@@ -126,7 +126,10 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         try
         {
             var fee = await GetFee(expectedAmount, _node.NodeId, cancellationToken);
-            return new JITFeeResponse(expectedAmount, expectedAmount - fee.Amount, fee.Amount, fee.Id, ProviderName);
+            var amtToGenerate = expectedAmount - fee.Amount;
+            if(amtToGenerate.MilliSatoshi <= 0)
+                return null;
+            return new JITFeeResponse(expectedAmount, amtToGenerate, fee.Amount, fee.Id, ProviderName);
         }
         catch (Exception e)
         {

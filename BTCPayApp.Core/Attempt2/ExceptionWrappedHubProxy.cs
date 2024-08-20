@@ -95,9 +95,9 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
         return await Wrap(async ()=>  await _hubProxy.GetTransactions(identifiers));
     }
 
-    public async Task SendInvoiceUpdate(string identifier, LightningInvoice lightningInvoice)
+    public async Task SendInvoiceUpdate(LightningInvoice lightningInvoice)
     {
-        await Wrap(() => Task.FromResult(_hubProxy.SendInvoiceUpdate(identifier, lightningInvoice)));
+        await Wrap(() => Task.FromResult(_hubProxy.SendInvoiceUpdate(lightningInvoice)));
     }
 
     public async Task<long?> GetCurrentMaster()

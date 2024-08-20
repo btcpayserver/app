@@ -11,7 +11,8 @@ using org.ldk.structs;
 
 namespace BTCPayApp.Core.Attempt2;
 
-public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServiceProvider _serviceProvider) : IBTCPayAppHubClient
+public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServiceProvider _serviceProvider)
+    : IBTCPayAppHubClient
 {
     public event AsyncEventHandler<string>? OnNewBlock;
     public event AsyncEventHandler<TransactionDetectedRequest>? OnTransactionDetected;
@@ -77,7 +78,8 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
 
     public async Task<List<LightningPayment>> GetLightningPayments(ListPaymentsParams request)
     {
-        return await PaymentsManager.List(payments => payments.Where(payment => !payment.Inbound), default).ToPayments();
+        return await PaymentsManager.List(payments => payments.Where(payment => !payment.Inbound), default)
+            .ToPayments();
     }
 
     public async Task<List<LightningInvoice>> GetLightningInvoices(ListInvoicesParams request)
@@ -129,7 +131,8 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
         var bb = await _serviceProvider.GetRequiredService<OnChainWalletManager>().GetBestBlock();
         var config = await node.GetConfig();
         var peers = await node.GetPeers();
-        var channels = await node.GetChannels();
+        var channels = (await node.GetChannels()).Where(channel => channel.Value.channelDetails is not null)
+            .Select(channel => channel.Value.channelDetails).ToArray();
         return new LightningNodeInformation()
         {
             Alias = config.Alias,
@@ -147,14 +150,16 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
 
     public async Task<LightningNodeBalance> GetLightningBalance()
     {
-        var channels = await  _serviceProvider.GetRequiredService<LightningNodeManager>().Node.GetChannels();
+        var channels = (await _serviceProvider.GetRequiredService<LightningNodeManager>().Node.GetChannels())
+            .Where(channel => channel.Value.channelDetails is not null).Select(channel => channel.Value.channelDetails)
+            .ToArray();
+
         return new LightningNodeBalance()
         {
             OffchainBalance = new OffchainBalance()
             {
-                Local = LightMoney.MilliSatoshis( channels.Sum(channel => channel.get_balance_msat())),
-                Remote = LightMoney.MilliSatoshis( channels.Sum(channel => channel.get_inbound_capacity_msat())),
-                
+                Local = LightMoney.MilliSatoshis(channels.Sum(channel => channel.get_balance_msat())),
+                Remote = LightMoney.MilliSatoshis(channels.Sum(channel => channel.get_inbound_capacity_msat())),
             }
         };
     }

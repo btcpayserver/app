@@ -123,9 +123,8 @@
                     <thead>
                     <tr>
                         <th>Channel ID</th>
-                        <th>User Channel ID</th>
+                        <th>Alternate IDs</th>
                         <th>Counterparty</th>
-                        <th>Short Channel ID</th>
                         <th>Confirmations</th>
                         <th>Confirmations Required</th>
                         <th>Funding Transaction Hash</th>
@@ -135,27 +134,83 @@
                         <th>Inbound</th>
                         <th>Outbound</th>
                         <th>State</th>
+                        <th>Actions</th>
                     </tr>
                     </thead>
                     <tbody>
                     @foreach (var channel in _channels)
                     {
+                      
+                        var connected = _peers.Any(p => string.Equals(p.nodeId, channel.Value.channelDetails?.get_counterparty().get_node_id().ToString(), StringComparison.InvariantCultureIgnoreCase));
+                        var active = false;
+                        var alternates = channel.Value.channel.Aliases.Select(alias => alias.Id).ToHashSet();
+                        
+                        if(channel.Value.channelDetails is not null)
+                        {
+                            if(channel.Value.channelDetails.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some)
+                            {
+                                alternates.Add(some.some.ToString());
+                            }
+                            alternates.Add(Convert.ToHexString(channel.Value.channelDetails.get_channel_id().get_a()).ToLowerInvariant());
+                        }
+                        alternates.Remove(channel.Key);
                         <tr>
-                            <td>@channel.id</td>
-                            <td>@channel.userId</td>
-                            <td>@channel.counterparty</td>
-                            <td>@channel.shortChannelId</td>
-                            <td>@channel.confirmations</td>
-                            <td>@channel.confirmationsRequired</td>
-                            <td>@channel.fundingTransactionHash</td>
-                            <td>@channel.usable</td>
-                            <td>@channel.ready</td>
-                            <td>@channel.Balance</td>
-                            <td>@channel.Inbound</td>
-                            <td>@channel.Outbound</td>
-                            <td>@channel.State</td>
+                        <td>@channel.Key</td>
+                        <td>
+                            @foreach (var alternateId in alternates)
+                            {
+                                <span>@alternateId</span>
+                            }
+                        </td>
+                        <td>
+                            @if (channel.Value.channelDetails is not null && channel.Value.channelDetails.get_counterparty() is ChannelCounterparty counterparty)
+                            {
+                                var counterpartyNodeId = Convert.ToHexString(counterparty.get_node_id()).ToLowerInvariant();
+                                if(_config.Peers.TryGetValue(counterpartyNodeId, out var peerConfig) && !string.IsNullOrEmpty(peerConfig.Label))
+                                {
+                                    <span>@peerConfig.Label</span>
+                                }else
+                                {
+                                    <span>@counterpartyNodeId</span>
+                                }
+                            }
+                        </td>
+                        <td>@(channel.Value.channelDetails?.get_confirmations() is Option_u32Z.Option_u32Z_Some x1? x1.some: "")   </td>
+                        <td>@(channel.Value.channelDetails?.get_confirmations_required()is Option_u32Z.Option_u32Z_Some x2? x2.some: "") </td>
+                        <td>@(channel.Value.channelDetails is null? "": Convert.ToHexString(channel.Value.channelDetails?.get_funding_txo().get_txid()).ToLowerInvariant())</td>
+                        <td>@channel.Value.channelDetails?.get_is_usable()</td>
+                        <td>@channel.Value.channelDetails?.get_is_channel_ready()</td>
+                        <td>@channel.Value.channelDetails?.get_balance_msat()</td>
+                        <td>@channel.Value.channelDetails?.get_inbound_capacity_msat()</td>
+                        <td>@channel.Value.channelDetails?.get_outbound_capacity_msat()</td>
+                        <td>
+                            @if (channel.Value.channel.Archived)
+                            {
+                                <span>Archived</span>
+                            }else if (channel.Value.channelDetails is null)
+                            {
+                                <span>Unknown but probably closed</span>
+                            }
+                            else if(channel.Value.channelDetails.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some && some.some != ChannelShutdownState.LDKChannelShutdownState_NotShuttingDown  )
+                            {
+                                <span>@some.some.ToString()</span>
+                            }
+                            else
+                            {
+                                active = true;
+                                <span>Active</span>
+                            }
+                        </td>
+                        <td>
+                            @if (active)
+                            {
+                                <button type="button" class="btn btn-primary btn-sm" @onclick="() => Node.CloseChannel(channel.Value.channelDetails.get_channel_id(), new PubKey(channel.Value.channelDetails.get_counterparty().get_node_id()), !connected) ">Close</button>
+                            }
+                        </td>
                         </tr>
+                        
                     }
+            
                     </tbody>
                 </table>
             </div>
@@ -219,7 +274,7 @@
 @code {
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private LightningConfig? _config;
-    private (string id, string userId, string counterparty, long? shortChannelId, int? confirmations, int? confirmationsRequired, string fundingTransactionHash, bool usable, bool ready, LightMoney Balance, LightMoney Inbound, LightMoney Outbound, ChannelShutdownState? State)[]? _channels;
+    private Dictionary<string, (Channel channel, ChannelDetails? channelDetails)> _channels;
     private (string nodeId, string? socket)[]? _peers;
     private LDKNode? Node => LightningNodeManager.Node;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
@@ -274,7 +329,7 @@
         {
             await _semaphore.WaitAsync();
             _config = await Node.GetConfig();
-            _channels = (await Node.GetChannels()).Select(details => (id: Convert.ToHexString(details.get_channel_id().get_a()), userId: Convert.ToHexString(details.get_user_channel_id().getLEBytes()), counterparty: Convert.ToHexString(details.get_counterparty().get_node_id()), shortChannelId: details.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some1 ? some1.some : (long?)null, confirmations: details.get_confirmations() is Option_u32Z.Option_u32Z_Some some2 ? some2.some : (int?)null, confirmationsRequired: details.get_confirmations_required() is Option_u32Z.Option_u32Z_Some some3 ? some3.some : (int?)null, fundingTransactionHash: new uint256(details.get_funding_txo().get_txid()).ToString(), usable: details.get_is_usable(), ready: details.get_is_channel_ready(), Balance: LightMoney.MilliSatoshis(details.get_balance_msat()), Inbound: LightMoney.MilliSatoshis(details.get_inbound_capacity_msat()), Outbound: LightMoney.MilliSatoshis(details.get_outbound_capacity_msat()), State: details.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some4 ? some4.some : (ChannelShutdownState?)null)).ToArray();
+            _channels = await Node.GetChannels();
             _peers = (await Node.GetPeers()).Select(peer => (nodeId: Convert.ToHexString(peer.get_counterparty_node_id()), socket: peer.get_socket_address() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null)).ToArray();
         }
         finally

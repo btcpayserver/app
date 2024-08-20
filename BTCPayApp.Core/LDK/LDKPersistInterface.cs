@@ -182,7 +182,8 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
             _logger.LogDebug("channel updated to local, waiting for remote sync to finish");
             // await _updateTaskCompletionSources[updateId].Task;
             // _updateTaskCompletionSources.TryRemove(updateId, out _);
-            await Task.Run(() =>
+
+            await AsyncExtensions.RunInOtherThread(() =>
             {
                 _logger.LogDebug(
                     $"Calling channel_monitor_updated, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
@@ -217,7 +218,8 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
     public void archive_persisted_channel(OutPoint channel_funding_outpoint)
     {
         _logger.LogInformation($"Archiving channel, outpoint: {channel_funding_outpoint.Outpoint()}");
-        //TODO: add archive column to channels table
+        AsyncExtensions.RunInOtherThread(() =>
+            _node.ArchiveChannel(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint))).GetAwaiter().GetResult();
     }
     //
     // public async Task StartAsync(CancellationToken cancellationToken)

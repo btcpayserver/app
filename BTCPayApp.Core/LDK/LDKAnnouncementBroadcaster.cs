@@ -33,7 +33,9 @@ public class LDKAnnouncementBroadcaster : IScopedHostedService, ILDKEventHandler
     {
         while (cancellationToken.IsCancellationRequested == false)
         {
-            var channels = await _ldkNode.GetChannels(cancellationToken);
+            var channels = (await _ldkNode.GetChannels(cancellationToken)).Where(pair => pair.Value.channelDetails is not null)
+                .Select(pair => pair.Value.channelDetails!).ToList();
+
             if (channels.Any(details => details.get_is_public()))
             {
                 var endpoint = _ldkPeerHandler.Endpoint?.Endpoint();

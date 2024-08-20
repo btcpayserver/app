@@ -1,4 +1,5 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace BTCPayApp.Core.Data;
 
@@ -8,6 +9,11 @@ public class Channel:VersionedData
     public byte[] Data { get; set; }
     public List<ChannelAlias> Aliases { get; set; }
     public long Checkpoint { get; set; }
+    public bool Archived { get; set; }
+    
+    
+
+    [JsonExtensionData] public Dictionary<string, JsonElement> AdditionalData { get; set; } = new();
 
     public override string EntityKey
     {

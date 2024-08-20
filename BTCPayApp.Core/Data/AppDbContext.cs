@@ -55,6 +55,7 @@ public class AppDbContext : DbContext
                 request => request.MilliSatoshi,
                 str => new LightMoney(str));
 
+        modelBuilder.Entity<Channel>().Property(channel => channel.AdditionalData).HasJsonConversion();
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.AdditionalData).HasJsonConversion();
         modelBuilder.Entity<AppLightningPayment>()
             .HasKey(w => new {w.PaymentHash, w.Inbound, w.PaymentId});
