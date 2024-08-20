@@ -108,12 +108,17 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
                         list.Add(TwoTuple_usizeTransactionZ.of(0,tx.ToBytes()));
                         break;
                     }
-                    case { } when transactionResult.Value.BlockHash is not null:
+                    case { } when transactionResult.Value.BlockHash is not null && tx1.Block != uint256.Parse(transactionResult.Value.BlockHash):
+
                     {
                         foreach (var confirm in _confirms)
                         {
                             confirm.transaction_unconfirmed(tx1.TransactionId.ToBytes());
                         }
+                        blockToTxList.TryAdd(new uint256(transactionResult.Value.BlockHash), new List<TwoTuple_usizeTransactionZ>());
+              
+                        var list = blockToTxList[new uint256(transactionResult.Value.BlockHash)];
+                        list.Add(TwoTuple_usizeTransactionZ.of(0,tx.ToBytes()));
                         break;
                     }
                 }
