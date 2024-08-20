@@ -57,9 +57,9 @@
                         {
                             <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
                             <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with { Persistent = !peerConfig.Persistent })">
-                                Constant conn = @peerConfig.Persistent Toggle
+                                @(peerConfig.Persistent? "Persistent connection enabled": "Persistent connection disabled")
                             </button>
-                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with { Trusted = !peerConfig.Trusted })">Trusted = @peerConfig.Trusted Toggle</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with { Trusted = !peerConfig.Trusted })">@(peerConfig.Trusted? "Trusted": "Untrusted")</button>
                         }
                         else if (peer.socket is not null)
                         {
@@ -72,17 +72,33 @@
             @foreach (var peer in rememberedButUnconnected)
             {
                 var peerConfig = _config.Peers[peer];
+                
                 <div class="box">
-                    <td>@peer</td>
-                    <td>@peerConfig.Endpoint</td>
-                    <td>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { Persistent = !peerConfig.Persistent })">
-                            Constant conn = @peerConfig.Persistent Toggle
-                        </button>
-                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { Trusted = !peerConfig.Trusted })">Trusted = @peerConfig.Trusted Toggle</button>
-                    </td>
+                    <div class="form-floating">
+                        <TruncateCenter Text="@peer" Padding="7" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <label>Node ID</label>
+                    </div>
+                    <div class="form-floating">
+                        <TruncateCenter Text="@peerConfig.Endpoint" Padding="30" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <label>Socket</label>
+                    </div>
+                    @if (!string.IsNullOrEmpty(peerConfig.Label))
+                    {
+                        <div class="form-floating">
+                            <TruncateCenter Text="@peerConfig.Label" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                            <label>Peer label</label>
+                        </div>
+                    }
+                    <div class="d-grid d-sm-flex flex-wrap gap-3 buttons mt-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
+                      
+                            <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { Persistent = !peerConfig.Persistent })">
+                                @(peerConfig.Persistent? "Persistent connection enabled": "Persistent connection disabled")
+                            </button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { Trusted = !peerConfig.Trusted })">@(peerConfig.Trusted? "Trusted": "Untrusted")</button>
+                        
+                    </div>
                 </div>
             }
         }
