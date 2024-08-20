@@ -162,33 +162,36 @@ public class AuthStateProvider(
         var store = GetUserStore(storeId);
         if (store == null) return new FormResult(false, $"Store with ID '{storeId}' does not exist or belong to the user.");
 
-        if (storeId != GetCurrentStore()?.Id)
-        {
-            OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
-
-            // create associated POS app if there is none
-            if (string.IsNullOrEmpty(store.PosAppId))
-            {
-                try
-                {
-                    var posConfig = new PointOfSaleAppRequest { AppName = store.Name, DefaultView = PosViewType.Light };
-                    await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
-                    await CheckAuthenticated(true);
-                    store = GetUserStore(storeId);
-                }
-                catch (Exception e)
-                {
-                    return new FormResult(false, e.Message);
-                }
-            }
-
-            _account!.CurrentStoreId = storeId;
-            await UpdateAccount(_account);
-
-            OnAfterStoreChange?.Invoke(this, store);
-        }
+        if (store.Id != GetCurrentStore()?.Id)
+            await SetCurrentStore(store);
 
         return new FormResult(true);
+    }
+
+    private async Task SetCurrentStore(AppUserStoreInfo store)
+    {
+        OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
+
+        // create associated POS app if there is none
+        if (string.IsNullOrEmpty(store.PosAppId))
+        {
+            try
+            {
+                var posConfig = new PointOfSaleAppRequest { AppName = store.Name, DefaultView = PosViewType.Light };
+                await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
+                await CheckAuthenticated(true);
+                store = GetUserStore(store.Id)!;
+            }
+            catch (Exception)
+            {
+                return;
+            }
+        }
+
+        _account!.CurrentStoreId = store.Id;
+        await UpdateAccount(_account);
+
+        OnAfterStoreChange?.Invoke(this, store);
     }
 
     public async Task UnsetCurrentStore()
@@ -461,5 +464,8 @@ public class AuthStateProvider(
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
         OnAfterAccountChange?.Invoke(this, _account);
+
+        var store = GetCurrentStore();
+        if (store != null) await SetCurrentStore(store);
     }
 }
