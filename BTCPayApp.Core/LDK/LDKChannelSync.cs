@@ -99,6 +99,11 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
                 switch (tx1.Block)
                 {
                     case null when transactionResult.Value.BlockHash is null:
+                        if( tx1.Block != null)
+                            foreach (var confirm in _confirms)
+                            {
+                                confirm.transaction_unconfirmed(tx1.TransactionId.ToBytes());
+                            }
                         continue;
                     case null when transactionResult.Value.BlockHash is not null:
                     {
