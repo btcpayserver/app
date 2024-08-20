@@ -67,11 +67,17 @@ Interop = {
   },
   // chartist
   renderLineChart (selector, labels, series, seriesUnit, displayUnit, rate, defaultCurrency, divisibility) {
-    function valueTransform(value, fromUnit, toUnit) {
+    const $el = document.querySelector(selector);
+    if (!$el) return;
+    const valueTransform = (value, fromUnit, toUnit) =>{
       if (fromUnit === toUnit) return value;
-      if (fromUnit === 'BTC' && toUnit === 'SATS') return value * 100000000;
-      if (fromUnit === 'SATS' && toUnit === '') return value / 100000000;
+      if (fromUnit === 'BTC' && toUnit === 'SATS') return Math.round(value * 100000000);
+      if (fromUnit === 'SATS' && toUnit === 'BTC') return value / 100000000;
       else return value;
+    }
+    Interop.lineChartTooltipValueTransform = (value, label) => {
+      const val = valueTransform(value, seriesUnit, displayUnit)
+      return displayCurrency(val, rate, displayUnit, divisibility) + ' ' + (displayUnit === 'SATS' ? 'sats' : displayUnit)
     }
     const labelCount = 6
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat
@@ -81,10 +87,8 @@ Interop = {
     const low = Math.max(min - ((max - min) / 5), 0);
     const pointCount = series.length;
     const labelEvery = pointCount / labelCount;
-    new Chartist.Line(selector, {
-      labels: labels,
-      series: [series]
-    }, {
+    const data = { labels, series: [series] }
+    const opts = {
       low,
       fullWidth: true,
       showArea: true,
@@ -96,7 +100,7 @@ Interop = {
       },
       axisX: {
         labelInterpolationFnc(date, i) {
-          return i % labelEvery == 0 ? dateFormatter.format(new Date(date)) : null
+          return i % labelEvery === 0 ? dateFormatter.format(new Date(date)) : null
         }
       },
       plugins: [
@@ -107,12 +111,22 @@ Interop = {
             y: -16
           },
           valueTransformFunction(value, label) {
-            const val = valueTransform(value, seriesUnit, displayUnit)
-            return displayCurrency(val, rate, displayUnit, divisibility) + ' ' + (displayUnit === 'SATS' ? 'sats' : displayUnit)
+            return Interop.lineChartTooltipValueTransform(value, label)
           }
         })
       ]
-    });
+    }
+    if (!$el.__chartist__)
+      new Chartist.Line(selector, data, opts);
+    else
+      $el.__chartist__.update(data, opts);
+  },
+  cleanupLineChart (selector) {
+    const $el = document.querySelector(selector);
+    if (!$el.__chartist__) return;
+    const ttId = $el.__chartist__.container.getAttribute('data-charttooltip-id');
+    if (ttId) document.getElementById(ttId).remove();
+    $el.__chartist__.detach();
   }
 }
 

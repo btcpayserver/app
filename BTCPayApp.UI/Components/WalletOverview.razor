@@ -1,6 +1,7 @@
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client.Models
 @using NBitcoin
+@implements IDisposable
 @inject IJSRuntime JS
 @inject DisplayFormatter DisplayFormatter
 
@@ -73,6 +74,12 @@
     {
         if (Histogram != null)
             await JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC", BitcoinUnit, null, Currency);
+    }
+
+    public void Dispose()
+    {
+        if (Histogram != null)
+            JS.InvokeVoidAsync("Interop.cleanupLineChart", "#Histogram");
     }
 
     private string CssClass => $"d-flex flex-column gap-4 wallet-overview {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
