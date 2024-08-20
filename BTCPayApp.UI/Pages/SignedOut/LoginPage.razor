@@ -57,7 +57,7 @@
                     <ValidationMessage For="@(() => Model.TwoFactorCode)" />
                 </div>
             }
-            <div class="d-flex align-items-center justify-content-between gap-3">
+            <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary w-100" data-testid="LoginButton" disabled="@(InstanceInfo == null || Sending)">
                     @if (Sending)
                     {
