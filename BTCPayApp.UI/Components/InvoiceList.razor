@@ -1,11 +1,5 @@
 @using BTCPayServer.Client.Models
 <div @attributes="InputAttributes" class="@CssClass">
-    @if (Loading)
-    {
-        <div class="p-3 text-center">
-            <LoadingIndicator/>
-        </div>
-    }
     @if (Invoices is not null)
     {
         @if (Invoices.Any())
@@ -27,6 +21,14 @@
                 <p class="text-muted my-0">There are no invoices, yet.</p>
             </div>
         }
+    }
+    else if (Loading)
+    {
+        <div class="box">
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
+            </div>
+        </div>
     }
 </div>
 

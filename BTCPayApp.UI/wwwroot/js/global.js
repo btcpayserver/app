@@ -64,8 +64,10 @@ Interop = {
     } else {
       $icon.setAttribute('href', $icon.dataset.original);
     }
-  },
-  // chartist
+  }
+}
+
+Chart = {
   renderLineChart (selector, labels, series, seriesUnit, displayUnit, rate, defaultCurrency, divisibility) {
     const $el = document.querySelector(selector);
     if (!$el) return;
@@ -75,7 +77,7 @@ Interop = {
       if (fromUnit === 'SATS' && toUnit === 'BTC') return value / 100000000;
       else return value;
     }
-    Interop.lineChartTooltipValueTransform = (value, label) => {
+    Chart.lineChartTooltipValueTransform = (value, label) => {
       const val = valueTransform(value, seriesUnit, displayUnit)
       return displayCurrency(val, rate, displayUnit, divisibility) + ' ' + (displayUnit === 'SATS' ? 'sats' : displayUnit)
     }
@@ -111,7 +113,7 @@ Interop = {
             y: -16
           },
           valueTransformFunction(value, label) {
-            return Interop.lineChartTooltipValueTransform(value, label)
+            return Chart.lineChartTooltipValueTransform(value, label)
           }
         })
       ]
@@ -121,7 +123,38 @@ Interop = {
     else
       $el.__chartist__.update(data, opts);
   },
-  cleanupLineChart (selector) {
+  renderHorizontalBarChart(selector, labels, series) {
+    const $el = document.querySelector(selector);
+    if (!$el) return;
+    const data = { series };
+    const opts = {
+      distributeSeries: true,
+      horizontalBars: true,
+      showLabel: false,
+      stackBars: true,
+      axisY: {
+        offset: 0
+      }
+    };
+    if (!$el.__chartist__)
+      new Chartist.Bar(selector, data, opts);
+    else
+      $el.__chartist__.update(data, opts);
+  },
+  renderBarChart(selector, labels, series) {
+    const $el = document.querySelector(selector);
+    if (!$el) return;
+    const min = Math.min(...series);
+    const max = Math.max(...series);
+    const low = min === max ? 0 : Math.max(min - ((max - min) / 5), 0);
+    const data = { labels, series: [series] }
+    const opts = { low };
+    if (!$el.__chartist__)
+      new Chartist.Bar(selector, data, opts);
+    else
+      $el.__chartist__.update(data, opts);
+  },
+  cleanup (selector) {
     const $el = document.querySelector(selector);
     if (!$el.__chartist__) return;
     const ttId = $el.__chartist__.container.getAttribute('data-charttooltip-id');

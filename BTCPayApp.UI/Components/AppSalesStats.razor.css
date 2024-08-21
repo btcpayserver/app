@@ -1,0 +1,11 @@
+.app-sales-stats ::deep .ct-chart-bar {
+  margin-left: -1.5rem;
+  margin-right: -.5rem;
+  width: calc(100% + 2rem) !important;
+}
+
+@media (max-width: 575px) {
+  .app-sales-stats ::deep .ct-labels foreignObject[height="20"]:nth-child(2n) {
+    display: none;
+  }
+}

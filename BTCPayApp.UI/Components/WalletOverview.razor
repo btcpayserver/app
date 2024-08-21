@@ -73,13 +73,13 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (Histogram != null)
-            await JS.InvokeVoidAsync("Interop.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC", BitcoinUnit, null, Currency);
+            await JS.InvokeVoidAsync("Chart.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC", BitcoinUnit, null, Currency);
     }
 
     public void Dispose()
     {
         if (Histogram != null)
-            JS.InvokeVoidAsync("Interop.cleanupLineChart", "#Histogram");
+            JS.InvokeVoidAsync("Chart.dispose", "#Histogram");
     }
 
     private string CssClass => $"d-flex flex-column gap-4 wallet-overview {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();

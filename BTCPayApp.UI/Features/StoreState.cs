@@ -15,6 +15,8 @@ public record StoreState
     public RemoteData<LightningNodeBalanceData>? LightningBalance;
     public RemoteData<HistogramData>? LightningHistogram;
     public RemoteData<PointOfSaleAppData>? PointOfSale;
+    public RemoteData<AppSalesStats>? PosSalesStats;
+    public RemoteData<List<AppItemStats>>? PosItemStats;
     public RemoteData<IEnumerable<StoreRateResult>>? Rates;
     public RemoteData<IEnumerable<InvoiceData>>? Invoices;
     public RemoteData<IEnumerable<NotificationData>>? Notifications;
@@ -41,6 +43,9 @@ public record StoreState
     public record FetchInvoicePaymentMethods(string StoreId, string InvoiceId);
     public record FetchRates(AppUserStoreInfo Store);
     public record FetchPointOfSale(string AppId);
+    public record FetchPointOfSaleStats(string AppId);
+    public record FetchPosItemStats(string AppId);
+    public record FetchPosSalesStats(string AppId);
     public record UpdateStore(string StoreId, UpdateStoreRequest Request);
     public record UpdatedStore(StoreData? Store, string? Error) : SetStore(Store, Error);
     public record UpdatePointOfSale(string AppId, PointOfSaleAppRequest Request);
@@ -56,6 +61,8 @@ public record StoreState
     public record SetRates(IEnumerable<StoreRateResult>? Rates, string? Error);
     public record SetPointOfSale(PointOfSaleAppData? AppData, string? Error);
     public record UpdatedPointOfSale(PointOfSaleAppData? AppData, string? Error) : SetPointOfSale(AppData, Error);
+    public record SetPosItemStats(List<AppItemStats>? ItemStats, string? Error);
+    public record SetPosSalesStats(AppSalesStats? SalesStats, string? Error);
 
     protected class SetStoreInfoReducer : Reducer<StoreState, SetStoreInfo>
     {
@@ -70,6 +77,8 @@ public record StoreState
                 OnchainHistogram = new RemoteData<HistogramData>(),
                 LightningHistogram = new RemoteData<HistogramData>(),
                 PointOfSale = new RemoteData<PointOfSaleAppData>(),
+                PosItemStats = new RemoteData<List<AppItemStats>>(),
+                PosSalesStats = new RemoteData<AppSalesStats>(),
                 Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(),
                 Notifications = new RemoteData<IEnumerable<NotificationData>>(),
@@ -218,6 +227,24 @@ public record StoreState
             return state with
             {
                 PointOfSale = (state.PointOfSale ?? new RemoteData<PointOfSaleAppData>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class FetchPointOfSaleStatsReducer : Reducer<StoreState, FetchPointOfSaleStats>
+    {
+        public override StoreState Reduce(StoreState state, FetchPointOfSaleStats action)
+        {
+            return state with
+            {
+                PosItemStats = (state.PosItemStats ?? new RemoteData<List<AppItemStats>>()) with
+                {
+                    Loading = true
+                },
+                PosSalesStats = (state.PosSalesStats ?? new RemoteData<AppSalesStats>()) with
                 {
                     Loading = true
                 }
@@ -451,6 +478,40 @@ public record StoreState
         }
     }
 
+    protected class SetPosItemStatsReducer : Reducer<StoreState, SetPosItemStats>
+    {
+        public override StoreState Reduce(StoreState state, SetPosItemStats action)
+        {
+            return state with
+            {
+                PosItemStats = (state.PosItemStats ?? new RemoteData<List<AppItemStats>>()) with
+                {
+                    Data = action.ItemStats ?? state.PosItemStats?.Data,
+                    Error = action.Error,
+                    Loading = false,
+                    Sending = false
+                }
+            };
+        }
+    }
+
+    protected class SetPosSalesStatsReducer : Reducer<StoreState, SetPosSalesStats>
+    {
+        public override StoreState Reduce(StoreState state, SetPosSalesStats action)
+        {
+            return state with
+            {
+                PosSalesStats = (state.PosSalesStats ?? new RemoteData<AppSalesStats>()) with
+                {
+                    Data = action.SalesStats ?? state.PosSalesStats?.Data,
+                    Error = action.Error,
+                    Loading = false,
+                    Sending = false
+                }
+            };
+        }
+    }
+
     public RemoteData<InvoiceData>? GetInvoice(string invoiceId)
     {
         if (_invoicesById.TryGetValue(invoiceId, out var invoice)) return invoice;
@@ -501,12 +562,14 @@ public record StoreState
             if (store != null)
             {
                 var storeId = store.Id!;
+                var posId = store.PosAppId!;
                 dispatcher.Dispatch(new FetchStore(storeId));
                 dispatcher.Dispatch(new FetchBalances(storeId));
                 dispatcher.Dispatch(new FetchNotifications(storeId));
                 dispatcher.Dispatch(new FetchInvoices(storeId));
-                dispatcher.Dispatch(new FetchPointOfSale(store.PosAppId!));
                 dispatcher.Dispatch(new FetchRates(store));
+                dispatcher.Dispatch(new FetchPointOfSale(posId));
+                dispatcher.Dispatch(new FetchPointOfSaleStats(posId));
             }
             return Task.CompletedTask;
         }
@@ -668,6 +731,44 @@ public record StoreState
             {
                 var error = e.InnerException?.Message ?? e.Message;
                 dispatcher.Dispatch(new SetPointOfSale(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public Task FetchPointOfSaleStatsEffect(FetchPointOfSaleStats action, IDispatcher dispatcher)
+        {
+            dispatcher.Dispatch(new FetchPosItemStats(action.AppId));
+            dispatcher.Dispatch(new FetchPosSalesStats(action.AppId));
+            return Task.CompletedTask;
+        }
+
+        [EffectMethod]
+        public async Task FetchPosItemStatsEffect(FetchPosItemStats action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var data = await accountManager.GetClient().GetAppTopItems(action.AppId);
+                dispatcher.Dispatch(new SetPosItemStats(data, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetPosItemStats(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchPosSalesStatsEffect(FetchPosSalesStats action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var data = await accountManager.GetClient().GetAppSales(action.AppId);
+                dispatcher.Dispatch(new SetPosSalesStats(data, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetPosSalesStats(null, error));
             }
         }
 

@@ -111,7 +111,7 @@ public class StateMiddleware(
             logger.LogDebug("Received Server Event: {Type} - {Info} ({Detail})", serverEvent.Type, serverEvent.ToString(), serverEvent.Detail ?? "no details");
             var currentUserId = accountManager.GetUserInfo()?.UserId;
             if (string.IsNullOrEmpty(currentUserId)) return;
-            var currentStoreId = accountManager.GetCurrentStore()?.Id;
+            var currentStore = accountManager.GetCurrentStore();
             switch (serverEvent.Type)
             {
                 case "user-updated":
@@ -123,15 +123,19 @@ public class StateMiddleware(
                         await accountManager.Logout();
                     break;
                 case "notifications-updated":
-                    if (currentStoreId != null)
-                        dispatcher.Dispatch(new StoreState.FetchNotifications(currentStoreId));
+                    if (currentStore != null)
+                        dispatcher.Dispatch(new StoreState.FetchNotifications(currentStore.Id));
                     break;
                 case "invoice-updated":
-                    if (serverEvent.StoreId != null && serverEvent.StoreId == currentStoreId)
+                    if (serverEvent.StoreId != null && currentStore != null && serverEvent.StoreId == currentStore.Id)
                     {
                         dispatcher.Dispatch(new StoreState.FetchInvoices(serverEvent.StoreId));
                         if (serverEvent.Detail is "Processing" or "Settled")
+                        {
                             dispatcher.Dispatch(new StoreState.FetchBalances(serverEvent.StoreId));
+                            if (currentStore.PosAppId != null)
+                                dispatcher.Dispatch(new StoreState.FetchPointOfSaleStats(currentStore.PosAppId));
+                        }
                     }
                     break;
                 case "store-created":
@@ -143,7 +147,7 @@ public class StateMiddleware(
                     if (serverEvent.StoreId != null)
                     {
                         await accountManager.CheckAuthenticated(true);
-                        if (serverEvent.Type is "store-removed" or "user-store-removed" && serverEvent.StoreId == currentStoreId)
+                        if (serverEvent.Type is "store-removed" or "user-store-removed" && currentStore != null && serverEvent.StoreId == currentStore.Id)
                         {
                             await accountManager.UnsetCurrentStore();
                         }

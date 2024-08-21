@@ -1,0 +1,63 @@
+@implements IDisposable
+@inject IJSRuntime JS
+
+<div @attributes="InputAttributes" class="@CssClass" id="@HtmlId">
+    <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+        <h2 class="mb-0">Sales</h2>
+        @if (Stats?.SalesCount is > 0)
+        {
+            <span class="text-muted fw-semibold">@Stats.SalesCount Total</span>
+        }
+    </header>
+    <div class="box">
+        @if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
+        else if (Loading)
+        {
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
+            </div>
+        }
+        else if (Stats?.SalesCount is 0)
+        {
+            <p class="text-muted my-0">There are no sales, yet.</p>
+        }
+        <div class="ct-chart"></div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string AppId { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public BTCPayServer.Client.Models.AppSalesStats? Stats { get; set; }
+
+    [Parameter]
+    public bool Loading { get; set; }
+
+    [Parameter]
+    public string? Error { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Stats == null) return;
+        var labels = Stats.Series.Select(s => s.Label);
+        var series = Stats.Series.Select(s => s.SalesCount);
+        await JS.InvokeVoidAsync("Chart.renderBarChart", $"#{HtmlId} .ct-chart", labels, series);
+    }
+
+    public void Dispose()
+    {
+        if (Stats == null) return;
+        JS.InvokeVoidAsync("Chart.dispose", $"#{HtmlId} .ct-chart");
+    }
+
+    private string HtmlId => $"AppSalesStats-{AppId}";
+    private string CssClass => $"app-sales-stats {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
+}

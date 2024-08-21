@@ -1,0 +1,83 @@
+@implements IDisposable
+@inject IJSRuntime JS
+
+<div @attributes="InputAttributes" class="@CssClass" id="@HtmlId">
+    <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+        <h2 class="mb-0">Top Items</h2>
+        @if (TotalSales is > 0)
+        {
+            <span class="text-muted fw-semibold">@TotalSales Sales Total</span>
+        }
+    </header>
+    <div class="box">
+        @if (Series is not null)
+        {
+            <div class="ct-chart"></div>
+            <div class="app-items mt-3">
+                @for (var i = 0; i < Series.Count; i++)
+                {
+                    var entry = Series[i];
+                    <div class="app-item ct-series-@i">
+                        <span class="app-item-name">
+                            <span class="app-item-point ct-point"></span>
+                            @entry.Title
+                        </span>
+                        <span class="app-item-value" data-sensitive>
+                            <span class="text-muted">@entry.SalesCount @($"sale{(entry.SalesCount == 1 ? "" : "s")}"),</span>
+                            @entry.TotalFormatted
+                        </span>
+                    </div>
+                }
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
+        else if (Loading)
+        {
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted my-0">There are no sales, yet.</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string AppId { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public List<BTCPayServer.Client.Models.AppItemStats>? Stats { get; set; }
+
+    [Parameter]
+    public bool Loading { get; set; }
+
+    [Parameter]
+    public string? Error { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (Series == null) return;
+        var series = Series.Select(s => s.SalesCount);
+        await JS.InvokeVoidAsync("Chart.renderHorizontalBarChart", $"#{HtmlId} .ct-chart", null, series);
+    }
+
+    public void Dispose()
+    {
+        if (Series == null) return;
+        JS.InvokeVoidAsync("Chart.dispose", $"#{HtmlId}");
+    }
+
+    private string HtmlId => $"AppItemStats-{AppId}";
+    private string CssClass => $"app-item-stats {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
+    private int? TotalSales => Stats?.Sum(s => s.SalesCount);
+    private List<BTCPayServer.Client.Models.AppItemStats>? Series => Stats?.Take(5).ToList();
+}

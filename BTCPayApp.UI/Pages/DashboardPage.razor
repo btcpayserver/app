@@ -1,9 +1,12 @@
 ﻿@attribute [Route(Routes.Dashboard)]
+@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @using BTCPayServer.Lightning
 @using NBitcoin
+@using AppItemStats = BTCPayServer.Client.Models.AppItemStats
+@using AppSalesStats = BTCPayServer.Client.Models.AppSalesStats
 @inject IDispatcher Dispatcher
 @inject IState<UIState> UIState
 @inject IState<StoreState> StoreState
@@ -38,12 +41,25 @@
     <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="StoreId">
         @if (InvoicesLoading || Invoices is not null)
         {
-            <div class="invoices">
+            <div class="invoices mt-5">
                 <h2>Recent Invoices</h2>
                 <InvoiceList Invoices="Invoices" Loading="InvoicesLoading" Error="@InvoicesError"/>
             </div>
         }
     </AuthorizeView>
+    @if (PosAppId != null)
+    {
+        <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
+            @if (PosSalesStatsLoading || PosSalesStats is not null)
+            {
+                <AppSalesStats AppId="@PosAppId" Stats="PosSalesStats" Loading="PosSalesStatsLoading" Error="@PosSalesStatsError" class="mt-5"/>
+            }
+            @if (PosItemStatsLoading || PosItemStats is not null)
+            {
+                <AppItemStats AppId="@PosAppId" Stats="PosItemStats" Loading="PosItemStatsLoading" Error="@PosItemStatsError" class="mt-5"/>
+            }
+        </AuthorizeView>
+    }
 </section>
 
 @code {
@@ -71,9 +87,11 @@
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data?.Take(5);
     private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;
     private string? InvoicesError => StoreState.Value.Invoices?.Error;
-    private string? StoreId => StoreState.Value.StoreInfo?.Id;
+    private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
+    private string? StoreId => StoreInfo?.Id;
+    private string? PosAppId => StoreInfo?.PosAppId;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
-    private bool? BalanceLoading => StoreState.Value.OnchainBalance?.Loading is true || StoreState.Value.LightningBalance?.Loading is true;
+    private bool BalanceLoading => StoreState.Value.OnchainBalance?.Loading is true || StoreState.Value.LightningBalance?.Loading is true;
     private string? BalanceError => StoreState.Value.OnchainBalance?.Error ?? StoreState.Value.LightningBalance?.Error;
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
     private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
@@ -89,4 +107,10 @@
     private HistogramData? Histogram => StoreState.Value.UnifiedHistogram;
     private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private LightMoneyUnit UnitLightMoney => BitcoinUnit == CurrencyUnit.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
+    private bool PosSalesStatsLoading => StoreState.Value.PosSalesStats?.Loading is true;
+    private bool PosItemStatsLoading => StoreState.Value.PosItemStats?.Loading is true;
+    private AppSalesStats? PosSalesStats => StoreState.Value.PosSalesStats?.Data;
+    private List<AppItemStats>? PosItemStats => StoreState.Value.PosItemStats?.Data;
+    private string? PosSalesStatsError => StoreState.Value.PosSalesStats?.Error;
+    private string? PosItemStatsError => StoreState.Value.PosItemStats?.Error;
 }

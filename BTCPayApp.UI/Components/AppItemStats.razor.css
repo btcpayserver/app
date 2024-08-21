@@ -1,0 +1,47 @@
+.app-item-stats .ct-chart,
+.app-item-stats ::deep .ct-chart-bar {
+  height: 30px;
+}
+
+.app-item-stats ::deep .ct-chart-bar {
+  margin-left: -.4rem;
+  margin-right: -.5rem;
+  width: calc(100% + 1rem) !important;
+}
+
+.app-item-stats ::deep .ct-bar {
+  stroke-linecap: round;
+  stroke-width: 10px;
+}
+
+.app-item-stats ::deep .ct-grids,
+.app-item-stats ::deep .ct-labels {
+  display: none;
+}
+
+.app-item-stats .app-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--btcpay-space-s);
+}
+
+.app-item-stats .app-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--btcpay-space-s);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-item-stats .app-item-point {
+  display: inline-block;
+  width: var(--btcpay-space-s);
+  height: var(--btcpay-space-s);
+  margin-right: var(--btcpay-space-s);
+  border-radius: 50%;
+}
+
+.app-item-stats .app-item-value {
+  font-weight: var(--btcpay-font-weight-semibold);
+  margin-left: auto;
+}
