@@ -184,7 +184,6 @@ public class AuthStateProvider(
             }
             catch (Exception)
             {
-                return;
             }
         }
 

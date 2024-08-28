@@ -80,6 +80,16 @@
                         </a>
                     </li>
                 }
+                else
+                {
+                    <li class="list-group-item">
+                        <a href="@Routes.CreateStore">
+                            <Icon Symbol="nav-store"/>
+                            <span>Create Store</span>
+                            <Icon Symbol="caret-right"/>
+                        </a>
+                    </li>
+                }
                 @if (StoreInfo != null)
                 {
                     <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@StoreInfo.Id">

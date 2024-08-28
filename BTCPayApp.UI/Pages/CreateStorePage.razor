@@ -114,7 +114,9 @@ else if (_data is not null)
         var request = new CreateStoreRequest
         {
             Name = Model.Name,
-            DefaultCurrency = Model.DefaultCurrency
+            DefaultCurrency = Model.DefaultCurrency,
+            LightningAmountInSatoshi = true,
+            OnChainWithLnInvoiceFallback = true
         };
 
         try

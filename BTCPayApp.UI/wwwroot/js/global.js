@@ -148,7 +148,7 @@ Chart = {
     const max = Math.max(...series);
     const low = min === max ? 0 : Math.max(min - ((max - min) / 5), 0);
     const data = { labels, series: [series] }
-    const opts = { low };
+    const opts = { low, axisY: { onlyInteger: true } };
     if (!$el.__chartist__)
       new Chartist.Bar(selector, data, opts);
     else

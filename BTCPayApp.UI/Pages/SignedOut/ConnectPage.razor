@@ -39,7 +39,7 @@
                 }
                 else
                 {
-                    <span>Connect</span>
+                    <span>@(Model.Uri?.Contains(InviteSeparator) is true ? "Accept Invitation" : "Connect")</span>
                 }
             </button>
         </ValidationEditContext>

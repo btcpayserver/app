@@ -24,8 +24,8 @@
     [SupplyParameterFromQuery]
     protected string? Success { get; set; }
 
-    private const string InviteSeparator = "/invite/";
     private const string LoginCodeSeparator = ";";
+    protected const string InviteSeparator = "/invite/";
     protected ValidationEditContext? ValidationEditContext;
     protected bool Sending;
     protected string? ErrorMessage;
