@@ -1,4 +1,5 @@
 ﻿@attribute [Route(Routes.LightningSettings)]
+@using System.Text.Json
 @using BTCPayApp.UI.Features
 @using BTCPayApp.Core.Attempt2
 @using BTCPayApp.Core.Data
@@ -6,7 +7,6 @@
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.Core.Auth
 @using BTCPayServer.Client.Models
-@using Newtonsoft.Json.Linq
 @inject LightningNodeManager LightningNodeManager
 @inject IState<RootState> State
 @inject ILogger<IndexPage> Logger
@@ -206,17 +206,14 @@
 
     private async Task SetStorePaymentMethod()
     {
-        if (string.IsNullOrEmpty(StoreId) || string.IsNullOrEmpty(LightningNodeManager.ConnectionString)) return;
+        if (string.IsNullOrEmpty(StoreId) || string.IsNullOrEmpty(ConnectionString)) return;
         _successMessage = _errorMessage = null;
         try
         {
             var pm = await AccountManager.GetClient().UpdateStorePaymentMethod(StoreId, PaymentMethodId, new UpdatePaymentMethodRequest
             {
                 Enabled = true,
-                Config = new JObject
-                {
-                    ["connectionString"] = ConnectionString
-                }
+                Config = JsonSerializer.Serialize(new Dictionary<string, string> { ["connectionString"] = ConnectionString })
             });
             _storePaymentMethodIdentifier = GetConnectionString(pm);
             _successMessage = "Store payment method set.";
@@ -245,9 +242,10 @@
 
     private string? GetConnectionString(GenericPaymentMethodData? pm)
     {
-        return pm?.Config is JObject configObj &&
-               configObj.TryGetValue("connectionString", out var connectionStringToken) &&
-               connectionStringToken.Value<string>() is {} connectionString
+        if (string.IsNullOrEmpty(pm?.Config.ToString())) return null;
+        using var jsonDoc = JsonDocument.Parse(pm.Config.ToString());
+        return jsonDoc.RootElement.TryGetProperty("connectionString", out var connectionStringElement) &&
+               connectionStringElement.GetString() is { } connectionString
             ? connectionString
             : null;
     }

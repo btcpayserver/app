@@ -1,7 +1,7 @@
 ﻿@using System.Text.RegularExpressions
 @using System.Globalization
-@using Newtonsoft.Json
-@using Newtonsoft.Json.Linq
+@using System.Text.Json
+@using System.Text.Json.Nodes
 @inject IJSRuntime JS
 
 <div class="d-flex flex-column gap-4">
@@ -281,7 +281,7 @@
 
     private string GetData()
     {
-        var data = new JObject
+        var data = new JsonObject
         {
             ["subTotal"] = GetAmount(),
             ["total"] = GetTotal(),
@@ -306,7 +306,7 @@
         {
             data["tipPercentage"] = Model.TipPercent;
         }
-        return JsonConvert.SerializeObject(data);
+        return JsonSerializer.Serialize(data);
     }
 
     private List<InputMode> GetModes()

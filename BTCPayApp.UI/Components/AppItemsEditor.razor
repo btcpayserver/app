@@ -1,47 +1,42 @@
-@using Newtonsoft.Json.Linq
+@using System.Text.Json
 @implements IDisposable
 @inject IJSRuntime JS
 
 <div @attributes="InputAttributes" class="@CssClass">
     <div class="row align-items-start">
         <div class="col-12 col-xl-7">
-            @if (Items?.Any() is true)
+            @if (_items?.Any() is true)
             {
                 <div class="items list-group list-group-flush" v-sortable="{ handle: '.drag', onUpdate (event) { $emit('sort-items', event) } }">
-                    @for (var i = 0; i < Items.Count; i++)
+                    @for (var i = 0; i < _items.Count; i++)
                     {
-                        var item = Items[i] as JObject;
-                        var title = item.Property("title")?.Value.Value<string>();
-                        var image = item.Property("image")?.Value.Value<string>();
-                        var priceType = item.Property("priceType")?.Value.Value<string>();
-                        var price = item.Property("price")?.Value.Value<decimal>();
-                        var inventory = item.Property("inventory")?.Value.Value<int>();
-                        var imageUrl = string.IsNullOrEmpty(image) ? "_content/BTCPayApp.UI/img/img-placeholder.svg" : image;
+                        var item = _items[i];
+                        var imageUrl = string.IsNullOrEmpty(item.ImageUrl) ? "_content/BTCPayApp.UI/img/img-placeholder.svg" : item.ImageUrl;
                         <div class="d-inline-flex align-items-center gap-3 list-group-item @(item == SelectedItem ? "active" : null)" @onclick="() => { SelectItem(i); }">
                             <button type="button" class="btn b-0 control drag" :disabled="items.length === 1">
                                 <Icon Symbol="actions-drag"/>
                             </button>
                             <div class="template-item d-flex align-items-start w-100 gap-3">
                                 <div class="img">
-                                    <img src="@imageUrl" alt="@title" style="@(string.IsNullOrEmpty(image) ? "opacity:.5" : null)">
+                                    <img src="@imageUrl" alt="@item.Title" style="@(string.IsNullOrEmpty(item.ImageUrl) ? "opacity:.5" : null)">
                                 </div>
                                 <div class="d-flex flex-column gap-2">
-                                    <h5 class="card-title m-0">@title</h5>
+                                    <h5 class="card-title m-0">@item.Title</h5>
                                     <div class="d-flex gap-2 align-items-center">
-                                        @if (priceType == "Topup" || price == 0)
+                                        @if (item.PriceType == "Topup" || item.Price == 0)
                                         {
-                                            <span class="fw-semibold badge text-bg-info">@(priceType == "Topup" ? "Any amount" : "Free")</span>
+                                            <span class="fw-semibold badge text-bg-info">@(item.PriceType == "Topup" ? "Any amount" : "Free")</span>
                                         }
                                         else
                                         {
                                             <span class="fw-semibold text-muted">
-                                                <AmountDisplay Value="@price" Unit="@Currency"/> @(priceType == "Minimum" ? " minimum" : null)
+                                                <AmountDisplay Value="@item.Price" Unit="@Currency"/> @(item.PriceType == "Minimum" ? " minimum" : null)
                                             </span>
                                         }
-                                        @if (inventory != null)
+                                        @if (item.Inventory.HasValue)
                                         {
                                             <span class="badge text-bg-warning">
-                                                @(inventory > 0 ? $"{inventory} left" : "Sold out")
+                                                @(item.Inventory > 0 ? $"{item.Inventory} left" : "Sold out")
                                             </span>
                                         }
                                     </div>
@@ -144,8 +139,50 @@
 </div>
 
 @code {
-    [Parameter]
-    public JArray? Items { get; set; }
+    [Parameter, EditorRequired]
+    public object? Items
+    {
+        get => _items;
+        set
+        {
+            _items = new List<AppItem>();
+            var str = value?.ToString();
+            if (!string.IsNullOrEmpty(str))
+            {
+                try
+                {
+                    using var jsonDoc = JsonDocument.Parse(str);
+                    if (jsonDoc.RootElement is { ValueKind: JsonValueKind.Array } jsonArray)
+                    {
+                        foreach (var el in jsonArray.EnumerateArray())
+                        {
+                            _items.Add(new AppItem
+                            {
+                                Title = el.TryGetProperty("title", out var title) ? title.GetString() : null,
+                                Id = el.TryGetProperty("id", out var id) ? id.GetString() : null,
+                                PriceType = el.TryGetProperty("priceType", out var priceType) ? priceType.GetString() : null,
+                                Price = el.TryGetProperty("price", out var price)
+                                    ? price.ValueKind == JsonValueKind.String && decimal.TryParse(price.GetString(), out var number) ? number : price.GetDecimal()
+                                    : null,
+                                Inventory = el.TryGetProperty("inventory", out var inventory)
+                                    ? inventory.ValueKind == JsonValueKind.String && int.TryParse(inventory.GetString(), out var inv) ? inv : price.GetInt32()
+                                    : null,
+                                Description = el.TryGetProperty("description", out var description) ? description.GetString() : null,
+                                ImageUrl = el.TryGetProperty("image", out var imageUrl) ? imageUrl.GetString() : null,
+                                BuyButtonText = el.TryGetProperty("buyButtonText", out var buyButtonText) ? buyButtonText.GetString() : null,
+                                Enabled = !el.TryGetProperty("disabled", out var disabled) || !disabled.GetBoolean()
+                            });
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // ignored
+                }
+            }
+        }
+    }
+
 
     [Parameter, EditorRequired]
     public string Currency { get; set; } = null!;
@@ -153,7 +190,7 @@
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? InputAttributes { get; set; }
 
-    [Parameter]
+    /*[Parameter]
     public EventCallback OnAddItem { get; set; }
 
     [Parameter]
@@ -163,20 +200,16 @@
     public EventCallback OnSelectItem { get; set; }
 
     [Parameter]
-    public EventCallback OnSortItems { get; set; }
+    public EventCallback OnSortItems { get; set; }*/
 
     private ValidationEditContext? _validationEditContext;
-    private AppItemModel? Model { get; set; }
+    private List<AppItem>? _items { get; set; }
+    private AppItem? Model { get; set; }
     private string? _successMessage;
 
-    private JObject? SelectedItem { get; set; }
+    private AppItem? SelectedItem { get; set; }
 
-    public class AppItem
-    {
-
-    }
-
-    private class AppItemModel
+    private class AppItem
     {
         [Required]
         public string? Title { get; set; }
@@ -185,7 +218,6 @@
         [Required]
         public string? PriceType { get; set; }
         public decimal? Price {  get; set; }
-
         public int? Inventory { get; set; }
         public string? Description { get; set; }
         public string? ImageUrl { get; set; }
@@ -193,44 +225,38 @@
         public bool Enabled { get; set; } = true;
     }
 
+    private void SelectItem(int? index)
+    {
+        SelectedItem = index == null || _items == null || index > _items.Count - 1 ? null : _items[index.Value];
+        if (SelectedItem != null)
+        {
+            Model = new AppItem
+            {
+                Title = SelectedItem.Title,
+                Description = SelectedItem.Description,
+                ImageUrl = SelectedItem.ImageUrl,
+                PriceType = SelectedItem.PriceType,
+                Price = SelectedItem.Price,
+                Inventory = SelectedItem.Inventory,
+                BuyButtonText = SelectedItem.BuyButtonText,
+                Enabled = SelectedItem.Enabled
+            };
+        }
+
+        /*if (OnSelectItem.HasDelegate)
+            OnSelectItem.InvokeAsync(SelectedItem);*/
+    }
+
     private async Task AddItem()
     {
-        if (OnAddItem.HasDelegate)
-            await OnAddItem.InvokeAsync();
     }
 
     private async Task RemoveItem(int? index)
     {
-        if (OnRemoveItem.HasDelegate)
-            await OnRemoveItem.InvokeAsync(index);
-    }
-
-    private void SelectItem(int? index)
-    {
-        SelectedItem = index == null || Items == null || index > Items?.Count - 1 ? null : Items![index] as JObject;
-        if (SelectedItem != null)
-        {
-            Model = new AppItemModel
-            {
-                Title = SelectedItem.Property("title")?.Value.Value<string>(),
-                Description = SelectedItem.Property("description")?.Value.Value<string>(),
-                ImageUrl = SelectedItem.Property("imageUrl")?.Value.Value<string>(),
-                PriceType = SelectedItem.Property("priceType")?.Value.Value<string>(),
-                Price = SelectedItem.Property("price")?.Value.Value<decimal>(),
-                Inventory = SelectedItem.Property("inventory")?.Value.Value<int>(),
-                BuyButtonText = SelectedItem.Property("buyButtonText")?.Value.Value<string>(),
-                Enabled = SelectedItem.Property("disabled")?.Value.Value<bool>() is not true,
-            };
-        }
-
-        if (OnSelectItem.HasDelegate)
-            OnSelectItem.InvokeAsync(SelectedItem);
     }
 
     private async Task SortItems()
     {
-        if (OnSortItems.HasDelegate)
-            await OnSortItems.InvokeAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -242,10 +268,7 @@
     }
 
     private string CssClass => $"editor {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
-
-    private bool ItemChanged => Model != null && SelectedItem != null &&
-                                Model.Description != SelectedItem.Property("description")?.Value.Value<string>() &&
-                                Model.Title != SelectedItem.Property("title")?.Value.Value<string>();
+    private bool ItemChanged => Model != null && SelectedItem != null && SelectedItem.Title != Model.Title && SelectedItem.Description != Model.Description;
 
     private void HideOffcanvas()
     {

@@ -1,8 +1,8 @@
-﻿using BTCPayApp.CommonServer.Models;
+﻿using System.Text.Json.Serialization;
+using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core;
 using Fluxor;
 using Microsoft.JSInterop;
-using Newtonsoft.Json;
 
 namespace BTCPayApp.UI.Features;
 

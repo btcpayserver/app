@@ -1,14 +1,13 @@
+using System.Text.Json;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
-using BTCPayApp.Core.Data;
 using BTCPayApp.UI.Features;
 using Fluxor;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Components;
 using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
-using Newtonsoft.Json.Linq;
 
 namespace BTCPayApp.UI;
 
@@ -182,13 +181,16 @@ public class StateMiddleware(
                     Enabled = true,
                     Config = onchainDerivation.Descriptor
                 });
-            if (onchain?.Config is JObject configObj &&
-                configObj.TryGetValue("accountDerivation", out var derivationSchemeToken) &&
-                derivationSchemeToken.Value<string>() is { } derivationScheme &&
-                onchainDerivation?.Identifier.Contains(derivationScheme) is true)
+            if (!string.IsNullOrEmpty(onchain?.Config.ToString()))
             {
-                _dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeId));
-                _dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(storeId));
+                using var jsonDoc = JsonDocument.Parse(onchain.Config.ToString());
+                if (jsonDoc.RootElement.TryGetProperty("accountDerivation", out var derivationSchemeElement) &&
+                    derivationSchemeElement.GetString() is { } derivationScheme &&
+                    onchainDerivation?.Identifier.Contains(derivationScheme) is true)
+                {
+                    _dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeId));
+                    _dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(storeId));
+                }
             }
         }
         // lightning
@@ -199,15 +201,18 @@ public class StateMiddleware(
                 lightning = await accountManager.GetClient().UpdateStorePaymentMethod(storeId, LightningNodeManager.PaymentMethodId, new UpdatePaymentMethodRequest
                 {
                     Enabled = true,
-                    Config = new JObject { ["connectionString"] = lightningNodeService.ConnectionString }
+                    Config = JsonSerializer.Serialize(new Dictionary<string, string> { ["connectionString"] = lightningNodeService.ConnectionString })
                 });
-            if (lightning?.Config is JObject configObj &&
-                configObj.TryGetValue("connectionString", out var configuredConnectionStringToken) &&
-                configuredConnectionStringToken.Value<string>() is { } configuredConnectionString &&
-                configuredConnectionString == lightningNodeService.ConnectionString)
+            if (!string.IsNullOrEmpty(lightning?.Config.ToString()))
             {
-                _dispatcher.Dispatch(new StoreState.FetchLightningBalance(storeId));
-                _dispatcher.Dispatch(new StoreState.FetchLightningHistogram(storeId));
+                using var jsonDoc = JsonDocument.Parse(lightning.Config.ToString());
+                if (jsonDoc.RootElement.TryGetProperty("connectionString", out var configuredConnectionStringElement) &&
+                    configuredConnectionStringElement.GetString() is { } configuredConnectionString &&
+                    configuredConnectionString == lightningNodeService.ConnectionString)
+                {
+                    _dispatcher.Dispatch(new StoreState.FetchLightningBalance(storeId));
+                    _dispatcher.Dispatch(new StoreState.FetchLightningHistogram(storeId));
+                }
             }
         }
         return (onchain, lightning);

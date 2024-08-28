@@ -1,4 +1,5 @@
 ﻿@attribute [Route(Routes.PosSettings)]
+@using System.Text.Json
 @using System.Text.RegularExpressions
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
@@ -6,8 +7,6 @@
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
-@using Newtonsoft.Json
-@using Newtonsoft.Json.Linq
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
@@ -59,14 +58,6 @@
                         </div>
                     </fieldset>
 
-                    <h2>Products</h2>
-                    <fieldset class="box">
-                        <AppItemsEditor Items="@(Model.Items as JArray)" SelectedItem="@Model.SelectedItem"
-                                        OnAddItem="AddItem" OnRemoveItem="RemoveItem"
-                                        OnSelectItem="SelectItem" OnSortItems="SortItems"
-                                        Currency="@Model.Currency"/>
-                    </fieldset>
-
                     <h2>Keypad</h2>
                     <fieldset class="box">
                         <div class="form-group d-flex align-items-center">
@@ -75,6 +66,14 @@
                             <ValidationMessage For="@(() => Model.ShowItems)"/>
                         </div>
                     </fieldset>
+
+                    @if (Model.ShowItems)
+                    {
+                        <h2>Products</h2>
+                        <fieldset class="box">
+                            <AppItemsEditor Items="@Model.Items" Currency="@Model.Currency"/>
+                        </fieldset>
+                    }
 
                     <h2>Tips</h2>
                     <fieldset id="tips" class="box">
@@ -249,7 +248,7 @@
         public object? SelectedItem { get; set; }
     }
 
-    private string? StoreId => AccountManager.GetCurrentStore()!.Id;
+    private string StoreId => AccountManager.GetCurrentStore()!.Id;
     private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;
     private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
     private bool Sending => StoreState.Value.PointOfSale?.Sending is true;
@@ -269,10 +268,10 @@
     private static string? ItemsToTemplate(object? items)
     {
         return items != null
-            ? JsonConvert.SerializeObject(items, Formatting.None, new JsonSerializerSettings
+            ? JsonSerializer.Serialize(items, new JsonSerializerOptions
             {
-                ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
-                Formatting = Formatting.None
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false
             })
             : null;
     }

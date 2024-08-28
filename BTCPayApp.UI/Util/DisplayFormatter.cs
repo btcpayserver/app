@@ -1,8 +1,9 @@
 using System.Globalization;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using NBitcoin;
-using Newtonsoft.Json;
 
 namespace BTCPayApp.UI.Util;
 
@@ -10,7 +11,7 @@ public class DisplayFormatter
 {
     public DisplayFormatter()
     {
-        _Currencies = LoadCurrency().ToDictionary(k => k.Code, StringComparer.InvariantCultureIgnoreCase);
+        _Currencies = LoadData().ToDictionary(k => k.Code, StringComparer.InvariantCultureIgnoreCase);
     }
 
     public IEnumerable<CurrencyData> Currencies => _Currencies.Values;
@@ -34,13 +35,6 @@ public class DisplayFormatter
         None
     }
 
-    /// <summary>
-    /// Format a currency, rounded to significant divisibility
-    /// </summary>
-    /// <param name="value">The value</param>
-    /// <param name="currency">Currency code</param>
-    /// <param name="format">The format, defaults to amount + code, e.g. 1.234,56 USD</param>
-    /// <returns>Formatted amount and currency string</returns>
     public string Currency(decimal value, string currency, CurrencyFormat format = CurrencyFormat.Code)
     {
         var provider = GetNumberFormatInfo(currency, true);
@@ -55,7 +49,6 @@ public class DisplayFormatter
         var formatted = value.ToString("C", provider);
         if (currencyData.Code == "SATS") formatted = formatted.Replace(',', ' ');
 
-        // Ensure we are not using the symbol for BTC — we made that design choice consciously.
         if (format == CurrencyFormat.Symbol && currencyData.Code == "BTC")
         {
             format = CurrencyFormat.Code;
@@ -126,8 +119,6 @@ public class DisplayFormatter
             {
                 foreach (var culture in CultureInfo.GetCultures(CultureTypes.AllCultures))
                 {
-                    // This avoid storms of exception throwing slowing up
-                    // startup and debugging sessions
                     if (culture switch
                     {
                         { LCID: 0x007F or 0x0000 or 0x0c00 or 0x1000 } => true,
@@ -140,8 +131,6 @@ public class DisplayFormatter
                         var symbol = new RegionInfo(culture.LCID).ISOCurrencySymbol;
                         var c = symbol switch
                         {
-                            // ARS and COP are officially 2 digits, but due to depreciation,
-                            // nobody really use those anymore. (See https://github.com/btcpayserver/btcpayserver/issues/5708)
                             "ARS" or "COP" => ModifyCurrencyDecimalDigit(culture, 0),
                             _ => culture
                         };
@@ -187,7 +176,7 @@ public class DisplayFormatter
 
     readonly Dictionary<string, CurrencyData> _Currencies;
 
-    static CurrencyData[] LoadCurrency()
+    private static CurrencyData[] LoadData()
     {
         var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("BTCPayApp.UI.Util.Currencies.json");
         string? content;
@@ -195,20 +184,21 @@ public class DisplayFormatter
         {
             content = reader.ReadToEnd();
         }
-
-        return JsonConvert.DeserializeObject<CurrencyData[]>(content);
+        return JsonSerializer.Deserialize<CurrencyData[]>(content, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        })!;
     }
 
-    private CurrencyData GetCurrencyData(string currency, bool useFallback)
+    private CurrencyData? GetCurrencyData(string currency, bool useFallback)
     {
         ArgumentNullException.ThrowIfNull(currency);
-        CurrencyData result;
-        if (!_Currencies.TryGetValue(currency.ToUpperInvariant(), out result))
+        if (!_Currencies.TryGetValue(currency.ToUpperInvariant(), out var result))
         {
             if (useFallback)
             {
-                var usd = GetCurrencyData("USD", false);
-                result = new CurrencyData()
+                var usd = GetCurrencyData("USD", false)!;
+                result = new CurrencyData
                 {
                     Code = currency,
                     Crypto = true,
