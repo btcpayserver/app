@@ -10,7 +10,17 @@
         }
     </header>
     <div class="box">
-        @if (Series is not null)
+        @if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
+        else if (Loading)
+        {
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
+            </div>
+        }
+        else if (Series?.Count is > 0)
         {
             <div class="ct-chart"></div>
             <div class="app-items mt-3">
@@ -28,16 +38,6 @@
                         </span>
                     </div>
                 }
-            </div>
-        }
-        else if (!string.IsNullOrEmpty(Error))
-        {
-            <Alert Type="danger">@Error</Alert>
-        }
-        else if (Loading)
-        {
-            <div class="p-3 text-center">
-                <LoadingIndicator/>
             </div>
         }
         else

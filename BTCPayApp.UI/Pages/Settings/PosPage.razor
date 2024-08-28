@@ -7,6 +7,7 @@
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @using Newtonsoft.Json
+@using Newtonsoft.Json.Linq
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
@@ -58,9 +59,26 @@
                         </div>
                     </fieldset>
 
+                    <h2>Products</h2>
+                    <fieldset class="box">
+                        <AppItemsEditor Items="@(Model.Items as JArray)" SelectedItem="@Model.SelectedItem"
+                                        OnAddItem="AddItem" OnRemoveItem="RemoveItem"
+                                        OnSelectItem="SelectItem" OnSortItems="SortItems"
+                                        Currency="@Model.Currency"/>
+                    </fieldset>
+
+                    <h2>Keypad</h2>
+                    <fieldset class="box">
+                        <div class="form-group d-flex align-items-center">
+                            <InputCheckbox @bind-Value="@Model.ShowItems" id="ShowItems" class="btcpay-toggle me-3"/>
+                            <label for="ShowItems" class="form-check-label">Display item selection for keypad</label>
+                            <ValidationMessage For="@(() => Model.ShowItems)"/>
+                        </div>
+                    </fieldset>
+
                     <h2>Tips</h2>
                     <fieldset id="tips" class="box">
-                        <div class="form-group mb-0 d-flex align-items-center pt-2">
+                        <div class="form-group mb-0 d-flex align-items-center">
                             <InputCheckbox @bind-Value="@Model.EnableTips" id="EnableTips" class="btcpay-toggle me-3" data-bs-toggle="collapse" data-bs-target="#CustomTipsSettings" aria-expanded="@Model.EnableTips" aria-controls="CustomTipsSettings"/>
                             <label class="form-check-label" for="EnableTips">Enable tips</label>
                         </div>
@@ -166,7 +184,7 @@
         return ValueTask.CompletedTask;
     }
 
-    private async Task HandleValidSubmit()
+    private void HandleValidSubmit()
     {
         _successMessage = null;
 
@@ -175,15 +193,16 @@
         {
             Title = Model!.Title,
             Currency = Model.Currency,
+            ShowItems = Model.ShowItems,
             ShowDiscount = Model.ShowDiscount,
             EnableTips = Model.EnableTips,
             TipText = Model.TipText,
             CustomTipPercentages = string.IsNullOrEmpty(Model.CustomTipPercentages) ? null : SplitStringList(ListSeparator, Model.CustomTipPercentages),
+            Template = Model.Template ?? ItemsToTemplate(app.Items),
             // pass these attributes to not reset them
             AppName = app.AppName,
             Archived = app.Archived,
             DefaultView = app.DefaultView,
-            ShowItems = app.ShowItems,
             ShowCustomAmount = app.ShowCustomAmount,
             ShowSearch = app.ShowSearch,
             ShowCategories = app.ShowCategories,
@@ -193,14 +212,7 @@
             RedirectUrl = app.RedirectUrl,
             Description = app.Description,
             RedirectAutomatically = app.RedirectAutomatically,
-            FormId = app.FormId,
-            Template = app.Items != null
-                ? JsonConvert.SerializeObject(app.Items, Formatting.None, new JsonSerializerSettings
-                {
-                    ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
-                    Formatting = Formatting.None
-                })
-                : null
+            FormId = app.FormId
         }));
     }
 
@@ -213,7 +225,10 @@
             EnableTips = data.EnableTips is true,
             TipText = data.TipText,
             CustomTipPercentages = data.CustomTipPercentages != null ? string.Join(ListSeparator, data.CustomTipPercentages) : null,
-            ShowDiscount = data.ShowDiscount is true
+            ShowDiscount = data.ShowDiscount is true,
+            ShowItems = data.ShowItems is true,
+            Template = ItemsToTemplate(data.Items),
+            Items = data.Items
         };
     }
 
@@ -228,6 +243,10 @@
         public string? TipText { get; set; }
         public string? CustomTipPercentages { get; set; }
         public bool ShowDiscount { get; set; }
+        public bool ShowItems { get; set; }
+        public string? Template { get; set; }
+        public object? Items { get; set; }
+        public object? SelectedItem { get; set; }
     }
 
     private string? StoreId => AccountManager.GetCurrentStore()!.Id;
@@ -245,5 +264,32 @@
             .Split(separator, StringSplitOptions.RemoveEmptyEntries)
             .Select(int.Parse)
             .ToArray();
+    }
+
+    private static string? ItemsToTemplate(object? items)
+    {
+        return items != null
+            ? JsonConvert.SerializeObject(items, Formatting.None, new JsonSerializerSettings
+            {
+                ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
+                Formatting = Formatting.None
+            })
+            : null;
+    }
+
+    private void AddItem()
+    {
+    }
+
+    private void RemoveItem()
+    {
+    }
+
+    private void SelectItem()
+    {
+    }
+
+    private void SortItems()
+    {
     }
 }

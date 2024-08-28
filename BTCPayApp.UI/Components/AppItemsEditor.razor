@@ -1,0 +1,259 @@
+@using Newtonsoft.Json.Linq
+@implements IDisposable
+@inject IJSRuntime JS
+
+<div @attributes="InputAttributes" class="@CssClass">
+    <div class="row align-items-start">
+        <div class="col-12 col-xl-7">
+            @if (Items?.Any() is true)
+            {
+                <div class="items list-group list-group-flush" v-sortable="{ handle: '.drag', onUpdate (event) { $emit('sort-items', event) } }">
+                    @for (var i = 0; i < Items.Count; i++)
+                    {
+                        var item = Items[i] as JObject;
+                        var title = item.Property("title")?.Value.Value<string>();
+                        var image = item.Property("image")?.Value.Value<string>();
+                        var priceType = item.Property("priceType")?.Value.Value<string>();
+                        var price = item.Property("price")?.Value.Value<decimal>();
+                        var inventory = item.Property("inventory")?.Value.Value<int>();
+                        var imageUrl = string.IsNullOrEmpty(image) ? "_content/BTCPayApp.UI/img/img-placeholder.svg" : image;
+                        <div class="d-inline-flex align-items-center gap-3 list-group-item @(item == SelectedItem ? "active" : null)" @onclick="() => { SelectItem(i); }">
+                            <button type="button" class="btn b-0 control drag" :disabled="items.length === 1">
+                                <Icon Symbol="actions-drag"/>
+                            </button>
+                            <div class="template-item d-flex align-items-start w-100 gap-3">
+                                <div class="img">
+                                    <img src="@imageUrl" alt="@title" style="@(string.IsNullOrEmpty(image) ? "opacity:.5" : null)">
+                                </div>
+                                <div class="d-flex flex-column gap-2">
+                                    <h5 class="card-title m-0">@title</h5>
+                                    <div class="d-flex gap-2 align-items-center">
+                                        @if (priceType == "Topup" || price == 0)
+                                        {
+                                            <span class="fw-semibold badge text-bg-info">@(priceType == "Topup" ? "Any amount" : "Free")</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="fw-semibold text-muted">
+                                                <AmountDisplay Value="@price" Unit="@Currency"/> @(priceType == "Minimum" ? " minimum" : null)
+                                            </span>
+                                        }
+                                        @if (inventory != null)
+                                        {
+                                            <span class="badge text-bg-warning">
+                                                @(inventory > 0 ? $"{inventory} left" : "Sold out")
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn b-0 control remove" @onclick="() => RemoveItem(i)">
+                                <Icon Symbol="actions-remove"/>
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
+            <button type="button" id="btAddItem" class="btn btn-link py-0 px-2 mt-2 mb-2 gap-1 add fw-semibold d-inline-flex align-items-center" @onclick="AddItem">
+                <Icon Symbol="actions-add"/>
+                Add Item
+            </button>
+        </div>
+        <div class="col-xl-5 offcanvas-xl offcanvas-end" tabindex="-1">
+            <div class="offcanvas-header justify-content-between p-3">
+                <h5 class="offcanvas-title">Edit Item</h5>
+                <button type="button" class="btn btn-sm rounded-pill @(ItemChanged ? "btn-primary" : "btn-outline-secondary")" @onclick="HideOffcanvas">@(ItemChanged ? "Apply" : "Close")</button>
+            </div>
+            <div class="offcanvas-body p-3 p-xl-0">
+                <div class="bg-tile w-100 p-xl-4 rounded">
+                    @if (Model != null)
+                    {
+                        <ValidationEditContext @ref="_validationEditContext" Model="Model" id="item-form" class="item">
+                            <DataAnnotationsValidator />
+                            <div class="form-group">
+                                <label for="Title" class="form-label" data-required>Title</label>
+                                <InputText @bind-Value="Model.Title" @bind-Value:after="GenerateId" id="Title" class="form-control"/>
+                                <ValidationMessage For="@(() => Model.Title)" />
+                            </div>
+                            <div class="form-group">
+                                <label for="Id" class="form-label" data-required>ID</label>
+                                <InputText @bind-Value="Model.Id" id="Id" class="form-control"/>
+                                <ValidationMessage For="@(() => Model.Id)" />
+                                <div class="form-text">Leave blank to generate ID from title.</div>
+                            </div>
+                            <div class="form-group row">
+                                <div class="col-sm-6">
+                                    <label for="PriceType" class="form-label" data-required>Price</label>
+                                    <InputSelect @bind-Value="Model.PriceType" id="PriceType" class="form-select">
+                                        <option value="Fixed">Fixed</option>
+                                        <option value="Minimum">Minimum</option>
+                                        <option value="Topup">Custom</option>
+                                    </InputSelect>
+                                </div>
+                                @if (Model.PriceType != "Topup")
+                                {
+                                    <div class="col-sm-6">
+                                        <label for="Price" class="form-label">&nbsp;</label>
+                                        <div class="input-group mb-2">
+                                            <InputNumber @bind-Value="Model.Price" id="Price" class="form-control hide-number-spin" inputmode="decimal" min="0"
+                                                         pattern="\d*" step="any" aria-describedby="currency-addon"/>
+                                            <span class="input-group-text" id="currency-addon">@Currency</span>
+                                        </div>
+                                    </div>
+                                }
+                                <ValidationMessage For="@(() => Model.Price)" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="ImageUrl" class="form-label">Image Url</label>
+                                <InputText @bind-Value="Model.ImageUrl" id="ImageUrl" class="form-control" type="url"/>
+                                <ValidationMessage For="@(() => Model.ImageUrl)" />
+                            </div>
+                            <div class="form-group">
+                                <label for="Description" class="form-label">Description</label>
+                                <InputTextArea @bind-Value="Model.Description" id="Description" class="form-control" rows="3" cols="40"/>
+                                <ValidationMessage For="@(() => Model.Description)" />
+                            </div>
+
+                            <div class="form-group">
+                                <label for="Inventory" class="form-label">Inventory</label>
+                                <InputNumber @bind-Value="Model.Inventory" id="Inventory" class="form-control" inputmode="numeric" min="0" step="1"/>
+                                <ValidationMessage For="@(() => Model.Inventory)" />
+                                <div class="form-text">Leave blank to not use this feature.</div>
+                            </div>
+                            <div class="form-group">
+                                <label for="BuyButtonText" class="form-label">Buy Button Text</label>
+                                <InputText @bind-Value="Model.BuyButtonText" id="BuyButtonText" class="form-control"/>
+                                <ValidationMessage For="@(() => Model.BuyButtonText)" />
+                            </div>
+                            <div class="form-group d-flex align-items-center">
+                                <InputCheckbox @bind-Value="@Model.Enabled" id="Enable" class="btcpay-toggle me-3"/>
+                                <label for="Enable" class="form-check-label">Enable</label>
+                                <ValidationMessage For="@(() => Model.Enabled)"/>
+                            </div>
+                        </ValidationEditContext>
+                    }
+                    else
+                    {
+                        <div>Select an item to edit</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public JArray? Items { get; set; }
+
+    [Parameter, EditorRequired]
+    public string Currency { get; set; } = null!;
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    [Parameter]
+    public EventCallback OnAddItem { get; set; }
+
+    [Parameter]
+    public EventCallback OnRemoveItem { get; set; }
+
+    [Parameter]
+    public EventCallback OnSelectItem { get; set; }
+
+    [Parameter]
+    public EventCallback OnSortItems { get; set; }
+
+    private ValidationEditContext? _validationEditContext;
+    private AppItemModel? Model { get; set; }
+    private string? _successMessage;
+
+    private JObject? SelectedItem { get; set; }
+
+    public class AppItem
+    {
+
+    }
+
+    private class AppItemModel
+    {
+        [Required]
+        public string? Title { get; set; }
+        [Required]
+        public string? Id {  get; set; }
+        [Required]
+        public string? PriceType { get; set; }
+        public decimal? Price {  get; set; }
+
+        public int? Inventory { get; set; }
+        public string? Description { get; set; }
+        public string? ImageUrl { get; set; }
+        public string? BuyButtonText { get; set; }
+        public bool Enabled { get; set; } = true;
+    }
+
+    private async Task AddItem()
+    {
+        if (OnAddItem.HasDelegate)
+            await OnAddItem.InvokeAsync();
+    }
+
+    private async Task RemoveItem(int? index)
+    {
+        if (OnRemoveItem.HasDelegate)
+            await OnRemoveItem.InvokeAsync(index);
+    }
+
+    private void SelectItem(int? index)
+    {
+        SelectedItem = index == null || Items == null || index > Items?.Count - 1 ? null : Items![index] as JObject;
+        if (SelectedItem != null)
+        {
+            Model = new AppItemModel
+            {
+                Title = SelectedItem.Property("title")?.Value.Value<string>(),
+                Description = SelectedItem.Property("description")?.Value.Value<string>(),
+                ImageUrl = SelectedItem.Property("imageUrl")?.Value.Value<string>(),
+                PriceType = SelectedItem.Property("priceType")?.Value.Value<string>(),
+                Price = SelectedItem.Property("price")?.Value.Value<decimal>(),
+                Inventory = SelectedItem.Property("inventory")?.Value.Value<int>(),
+                BuyButtonText = SelectedItem.Property("buyButtonText")?.Value.Value<string>(),
+                Enabled = SelectedItem.Property("disabled")?.Value.Value<bool>() is not true,
+            };
+        }
+
+        if (OnSelectItem.HasDelegate)
+            OnSelectItem.InvokeAsync(SelectedItem);
+    }
+
+    private async Task SortItems()
+    {
+        if (OnSortItems.HasDelegate)
+            await OnSortItems.InvokeAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+    }
+
+    public void Dispose()
+    {
+    }
+
+    private string CssClass => $"editor {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
+
+    private bool ItemChanged => Model != null && SelectedItem != null &&
+                                Model.Description != SelectedItem.Property("description")?.Value.Value<string>() &&
+                                Model.Title != SelectedItem.Property("title")?.Value.Value<string>();
+
+    private void HideOffcanvas()
+    {
+        throw new NotImplementedException();
+    }
+
+    private void GenerateId()
+    {
+        if (string.IsNullOrEmpty(Model?.Id) && !string.IsNullOrEmpty(Model?.Title)) Model.Id = Model.Title;
+    }
+}

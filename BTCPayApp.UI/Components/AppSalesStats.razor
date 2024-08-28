@@ -20,11 +20,14 @@
                 <LoadingIndicator/>
             </div>
         }
-        else if (Stats?.SalesCount is 0)
+        else if (Stats?.SalesCount is > 0)
+        {
+            <div class="ct-chart"></div>
+        }
+        else
         {
             <p class="text-muted my-0">There are no sales, yet.</p>
         }
-        <div class="ct-chart"></div>
     </div>
 </div>
 
