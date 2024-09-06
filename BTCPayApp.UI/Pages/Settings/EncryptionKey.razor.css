@@ -1,17 +1,5 @@
-.container,
-.container ::deep form {
-  width: 100%;
-  flex: 1 1 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.container ::deep form {
-  gap: var(--btcpay-space-l);
-  padding-bottom: var(--btcpay-space-l);
-}
-
-.container ::deep form > div {
-  min-height: 8rem;
+.container {
+  max-width: 380px;
+  padding-top: var(--btcpay-space-m);
+  padding-bottom: var(--btcpay-space-m);
 }

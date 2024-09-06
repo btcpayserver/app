@@ -64,5 +64,7 @@
 }
 
 .truncate-center-text {
-  display: none;
+  color: transparent;
+  position: absolute;
+  pointer-events: none;
 }

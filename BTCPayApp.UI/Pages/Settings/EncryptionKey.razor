@@ -4,6 +4,7 @@
 @inject NavigationManager NavigationManager
 @inject BTCPayConnectionManager ConnectionManager
 @inject SyncService SyncService
+@inject IJSRuntime JS
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>@GetTitle()</PageTitle>
@@ -22,29 +23,40 @@
 </SectionContent>
 
 <section class="container">
-    <h4 class="my-4">Pairing Device</h4>
     @if (NeedsEncryptionKey)
     {
         <style>#NavbarBottom { display: none; }</style>
-        <p>Your encryption key is required to unlock the app.</p>
+        <p class="mb-4 text-center">
+            Your encryption key is required to unlock the app.
+            Enter the encryption key of your master device.
+        </p>
         <div class="box my-4 mx-auto">
             <ValidationEditContext @ref="_validationEditContext" Model="@this" OnValidSubmit="HandleValidSubmit">
                 <div class="form-group">
-                    <label for="EncryptionKey" class="form-label">Encryption Key</label>
-                    <InputText @bind-Value="EncryptionKeyValue" id="EncryptionKey" class="form-control"/>
+                    <label for="EncryptionKey" class="form-label">Your Encryption Key</label>
+                    <div class="d-flex gap-2">
+                        <InputText @bind-Value="EncryptionKeyValue" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" />
+                        <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
+                            <Icon Symbol="scan-qr"/>
+                        </button>
+                    </div>
                     <ValidationMessage For="@(() => EncryptionKeyValue)"/>
                 </div>
-                <button type="submit" class="btn btn-primary">Submit</button>
+                <button type="submit" class="btn btn-primary w-100">Use Encryption Key</button>
             </ValidationEditContext>
         </div>
+        <QrScanModal OnScan="@OnQrCodeScan"/>
     }
     else if (!string.IsNullOrEmpty(EncryptionKeyValue))
     {
-        <p>Back up your encryption key, otherwise you won't be able to restore the app and its wallet.</p>
+        <p class="mb-4 text-center">
+            Back up your encryption key, otherwise you won't be able to restore the app and its wallet.
+            You will also need this key to pair the app with other devices.
+        </p>
         <div class="box my-4 mx-auto">
             <div class="form-floating form-group">
-                <TruncateCenter Text="@EncryptionKeyValue" Padding="15" Copy="true" class="form-control-plaintext"/>
-                <label>Your encryption key</label>
+                <TruncateCenter Text="@EncryptionKeyValue" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                <label>Your Encryption Key</label>
             </div>
             <QrCode Data="@EncryptionKeyValue" class="w-100"/>
         </div>
@@ -64,6 +76,7 @@
 
     private ValidationEditContext? _validationEditContext;
     private string? _encryptionKeyValue;
+    private string? _qrInput;
 
     protected override async Task OnInitializedAsync()
     {
@@ -84,6 +97,17 @@
         }
     }
 
-    private string GetTitle() => NeedsEncryptionKey ? "Enter your encryption key" : "View your encryption key";
+    private async void OnQrCodeScan(string code)
+    {
+        // prevent duplicate submission due to quirk in QR reader lib
+        if (code == _qrInput) return;
+        _qrInput = code;
+        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
+
+        EncryptionKeyValue = code;
+        StateHasChanged();
+    }
+
+    private string GetTitle() => $"{(NeedsEncryptionKey ? "Enter" : "View")} your encryption key";
     private bool NeedsEncryptionKey => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey;
 }
