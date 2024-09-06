@@ -1,14 +1,24 @@
-a {
-  display: block;
+.invoice-item {
+  --gap: var(--btcpay-space-s);
+  --item-width: 25%;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
   color: var(--btcpay-body-text);
 }
-.invoice .badge-container {
-  flex: 0 0 5.125rem;
-  text-align: right;
+
+.invoice-item > span {
+  flex: 1 1 calc(var(--item-width) - var(--gap));
 }
 
-@media (max-width: 359px) {
-  .invoice .badge-container {
-    flex-grow: 1;
+@media (max-width: 767.98px) {
+  .invoice-item {
+    --item-width: 50%;
+  }
+  .invoice-item > span:nth-child(2) {
+    text-align: right;
   }
 }

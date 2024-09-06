@@ -2,20 +2,28 @@
 @using BTCPayServer.Client.Models
 @inject DisplayFormatter DisplayFormatter
 
-<a href="@Routes.InvoicePath(Invoice.Id)" class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-    <span class="text-end fw-semibold">
+<a href="@Routes.InvoicePath(Invoice.Id)" @attributes="InputAttributes" class="@CssClass">
+    <span class="fw-semibold">
         @DisplayFormatter.Currency(Invoice.Amount, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)
     </span>
-    <TruncateCenter Text="@Invoice.Id" class="truncate-center-id"/>
+    <span>
+        <TruncateCenter Text="@Invoice.Id" class="truncate-center-id"/>
+    </span>
     <span class="text-muted">
         <DateDisplay DateTimeOffset="@Invoice.CreatedTime"/>
     </span>
-    <InvoiceStatusDisplay Invoice="@Invoice" />
+    <span class="text-end">
+        <InvoiceStatusDisplay Invoice="@Invoice" />
+    </span>
 </a>
 
 @code {
     [Parameter, EditorRequired]
     public InvoiceData Invoice { get; set; }
 
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
     protected string? OrderId => Invoice.Metadata["orderId"]?.ToString();
+    private string CssClass => $"invoice-item {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
 }

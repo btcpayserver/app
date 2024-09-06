@@ -1,7 +1,7 @@
-.invoice-list .box {
+.invoice-list ::deep .box {
   margin-bottom: 0 !important;
 }
 
-.invoice-list .box + .box {
+.invoice-list ::deep .box + .box {
   margin-top: var(--btcpay-space-xs);
 }

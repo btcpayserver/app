@@ -6,9 +6,7 @@
         {
             @foreach (var i in Invoices)
             {
-                <div class="box">
-                    <InvoiceItem Invoice="@i"/>
-                </div>
+                <InvoiceItem Invoice="@i" class="box"/>
             }
         }
         else if (!string.IsNullOrEmpty(Error))
