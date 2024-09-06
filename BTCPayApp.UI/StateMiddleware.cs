@@ -201,7 +201,7 @@ public class StateMiddleware(
                 lightning = await accountManager.GetClient().UpdateStorePaymentMethod(storeId, LightningNodeManager.PaymentMethodId, new UpdatePaymentMethodRequest
                 {
                     Enabled = true,
-                    Config = JsonSerializer.Serialize(new Dictionary<string, string> { ["connectionString"] = lightningNodeService.ConnectionString })
+                    Config = lightningNodeService.ConnectionString
                 });
             if (!string.IsNullOrEmpty(lightning?.Config.ToString()))
             {

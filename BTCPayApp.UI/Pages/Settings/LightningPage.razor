@@ -213,7 +213,7 @@
             var pm = await AccountManager.GetClient().UpdateStorePaymentMethod(StoreId, PaymentMethodId, new UpdatePaymentMethodRequest
             {
                 Enabled = true,
-                Config = JsonSerializer.Serialize(new Dictionary<string, string> { ["connectionString"] = ConnectionString })
+                Config = ConnectionString
             });
             _storePaymentMethodIdentifier = GetConnectionString(pm);
             _successMessage = "Store payment method set.";
