@@ -1,0 +1,7 @@
+.payment-list .box {
+  margin-bottom: 0 !important;
+}
+
+.payment-list .box + .box {
+  margin-top: var(--btcpay-space-xs);
+}

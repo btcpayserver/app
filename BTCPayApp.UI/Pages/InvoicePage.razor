@@ -23,13 +23,13 @@
 </SectionContent>
 
 <section class="container">
-    @if (StoreInfo is null)
+    @if (string.IsNullOrEmpty(StoreId))
     {
         <section class="container">
             <Alert Type="info">Please configure a store first.</Alert>
         </section>
     }
-    else
+    else if (!string.IsNullOrEmpty(StoreInfo?.Id))
     {
         <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="@StoreInfo.Id">
             <Authorized>
@@ -250,63 +250,37 @@
 
                     </div>
 
-                    @if (PaymentMethods is not null && PaymentMethods.Any())
+                    <h4 class="mt-5">Payment Information</h4>
+                    @if (!string.IsNullOrEmpty(PaymentMethodsError))
                     {
-                        var paymentsCount = 0;
-                        <h4 class="mt-5">Payment Information</h4>
-                        @if (!string.IsNullOrEmpty(PaymentMethodsError))
-                        {
-                            <Alert Type="danger">@PaymentMethodsError</Alert>
-                        }
-
-                        <div class="box">
-                            @foreach (var pm in PaymentMethods)
-                            {
-                                @if (pm.Payments.Any())
-                                {
-                                    paymentsCount++;
-                                    <h5 class="mt-3">@pm.PaymentMethodId</h5>
-                                    <div class="payment-methods table-responsive">
-                                        <table class="table table-hover my-0">
-                                            <thead>
-                                            <tr>
-                                                <th class="text-nowrap w-175px">Payment method</th>
-                                                <th>Destination</th>
-                                                <th class="w-150px text-end">Rate</th>
-                                                <th class="w-150px text-end">Paid</th>
-                                            </tr>
-                                            </thead>
-                                            <tbody>
-                                            @foreach (var payment in pm.Payments)
-                                            {
-                                                <tr>
-                                                    <td class="text-nowrap">@pm.PaymentMethodId</td>
-                                                    <td title="@payment.Destination">
-                                                        <TruncateCenter Text="@payment.Destination"/>
-                                                    </td>
-                                                    <td class="text-nowrap text-end">
-                                                        <span data-sensitive>@DisplayFormatter.Currency(@pm.Rate, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
-                                                    </td>
-                                                    <td class="text-nowrap text-end">
-                                                        <span data-sensitive>@DisplayFormatter.Currency(payment.Value, pm.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
-                                                    </td>
-                                                </tr>
-                                            }
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                }
-                            }
-                            @if (paymentsCount == 0)
-                            {
-                                <p class="text-muted my-0">There are no payments, yet.</p>
-                            }
-                        </div>
+                        <Alert Type="danger">@PaymentMethodsError</Alert>
                     }
                     else if (PaymentMethodsLoading)
                     {
-                        <div class="p-3 text-center">
-                            <LoadingIndicator/>
+                        <div class="box">
+                            <div class="p-3 text-center">
+                                <LoadingIndicator/>
+                            </div>
+                        </div>
+                    }
+                    else if (Payments?.Any() is true)
+                    {
+                        <div class="payment-list">
+                            @foreach (var p in Payments)
+                            {
+                                <div class="box d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                    <span class="text-end">
+                                        @p.PaymentMethod.PaymentMethodId
+                                    </span>
+                                    <TruncateCenter Text="@p.Payment.Destination" class="truncate-center-id"/>
+                                    <span class="text-end text-muted" data-sensitive>
+                                        Rate: @DisplayFormatter.Currency(p.PaymentMethod.Rate, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)
+                                    </span>
+                                    <span class="text-end fw-semibold" data-sensitive>
+                                        @DisplayFormatter.Currency(p.Payment.Value, p.PaymentMethod.Currency, DisplayFormatter.CurrencyFormat.Symbol)
+                                    </span>
+                                </div>
+                            }
                         </div>
                     }
                 }
@@ -322,6 +296,12 @@
             </NotAuthorized>
         </AuthorizeView>
     }
+    else
+    {
+        <div class="p-3 text-center">
+            <LoadingIndicator/>
+        </div>
+    }
 </section>
 
 @code {
@@ -331,15 +311,16 @@
     {
         await base.OnInitializedAsync();
 
-        if (StoreInfo is not null && !string.IsNullOrEmpty(InvoiceId))
+        if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
         {
             if (Invoice == null)
-                Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreInfo.Id, InvoiceId));
+                Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
             if (PaymentMethods == null)
-                Dispatcher.Dispatch(new StoreState.FetchInvoicePaymentMethods(StoreInfo.Id, InvoiceId));
+                Dispatcher.Dispatch(new StoreState.FetchInvoicePaymentMethods(StoreId, InvoiceId));
         }
     }
 
+    private string? StoreId => AccountManager.GetCurrentStore()?.Id;
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private InvoiceData? Invoice => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoice(InvoiceId!)?.Data : null;
     private bool Loading => !string.IsNullOrEmpty(InvoiceId) && StoreState.Value.GetInvoice(InvoiceId!)?.Loading is true;
@@ -348,6 +329,13 @@
     private bool PaymentMethodsLoading => !string.IsNullOrEmpty(InvoiceId) && StoreState.Value.GetInvoicePaymentMethods(InvoiceId!)?.Loading is true;
     private string? PaymentMethodsError => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoicePaymentMethods(InvoiceId!)?.Error : null;
     private string? ReceiptUrl => Invoice is { Status: InvoiceStatus.Settled, Receipt.Enabled: true } ? $"{AccountManager.GetAccount()!.BaseUri}i/{InvoiceId}/receipt" : null;
+    private List<PaymentViewModel>? Payments => PaymentMethods?.SelectMany(pm => pm.Payments.Select(p => new PaymentViewModel { Payment = p, PaymentMethod = pm })).ToList();
+
+    private class PaymentViewModel
+    {
+        public InvoicePaymentMethodDataModel.Payment Payment { get; set; } = null!;
+        public InvoicePaymentMethodDataModel PaymentMethod { get; set; } = null!;
+    }
 
     private string GetTitle() => $"Invoice {Invoice?.Id}".Trim();
 }

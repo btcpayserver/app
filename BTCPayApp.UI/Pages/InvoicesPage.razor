@@ -1,9 +1,11 @@
 ﻿@attribute [Route(Routes.Invoices)]
 @using BTCPayApp.CommonServer.Models
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IAccountManager AccountManager
 @inject IState<StoreState> StoreState
 
 <PageTitle>Invoices</PageTitle>
@@ -12,11 +14,11 @@
     <header class="d-flex align-items-center justify-content-between gap-3 mb-4">
         <h1>Invoices</h1>
     </header>
-    @if (StoreInfo is null)
+    @if (string.IsNullOrEmpty(StoreId))
     {
         <Alert Type="info">Please configure a store first.</Alert>
     }
-    else
+    else if (!string.IsNullOrEmpty(StoreInfo?.Id))
     {
         <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="@StoreInfo.Id">
             <Authorized>
@@ -27,9 +29,16 @@
             </NotAuthorized>
         </AuthorizeView>
     }
+    else
+    {
+        <div class="p-3 text-center">
+            <LoadingIndicator/>
+        </div>
+    }
 </section>
 
 @code {
+    private string? StoreId => AccountManager.GetCurrentStore()?.Id;
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data;
     private bool Loading => StoreState.Value.Invoices?.Loading is true;
