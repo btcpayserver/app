@@ -70,13 +70,23 @@
         <h2>Store</h2>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
-                @if (UserInfo?.Stores?.Count() > 1 || StoreInfo == null)
+                @if (UserInfo?.Stores?.Count() > 1 || CurrentStore == null)
                 {
                     <li class="list-group-item">
-                        <a href="@Routes.SelectStore">
+                        <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : null)">
                             <Icon Symbol="nav-store"/>
-                            <span>Select Store</span>
-                            <Icon Symbol="caret-right"/>
+                            @if (CurrentStore == null)
+                            {
+                                <span>Select Store</span>
+                            }
+                            else
+                            {
+                                <div>
+                                    <div>@CurrentStore.Name</div>
+                                    <div class="text-muted">@CurrentStore.RoleId</div>
+                                </div>
+                                <span class="btn btn-link fw-semibold px-2 py-1 ms-auto">Select</span>
+                            }
                         </a>
                     </li>
                 }
@@ -90,22 +100,22 @@
                         </a>
                     </li>
                 }
-                @if (StoreInfo != null)
+                @if (CurrentStore != null)
                 {
-                    <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@StoreInfo.Id">
+                    <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id">
                         <li class="list-group-item">
-                            <a href="@Routes.StorePath(StoreInfo.Id)">
+                            <a href="@Routes.StorePath(CurrentStore.Id)">
                                 <Icon Symbol="nav-store"/>
-                                <span>@StoreInfo.Name</span>
+                                <span>@CurrentStore.Name</span>
                                 <Icon Symbol="caret-right"/>
                             </a>
                         </li>
                     </AuthorizeView>
-                    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@StoreInfo.Id">
-                        @if (StoreInfo.PosAppId != null)
+                    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id">
+                        @if (CurrentStore.PosAppId != null)
                         {
                             <li class="list-group-item">
-                                <a href="@Routes.PosSettingsPath(StoreInfo.PosAppId)">
+                                <a href="@Routes.PosSettingsPath(CurrentStore.PosAppId)">
                                     <Icon Symbol="nav-pointofsale"/>
                                     <span>Point of Sale</span>
                                     <Icon Symbol="caret-right"/>
@@ -197,7 +207,7 @@
                         <span>Hub: @State.Value.ConnectionState</span>
                         @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
                         {
-                            <button type="button" class="btn btn-sm btn-secondary px-2 py-1 ms-auto" @onclick="SwitchToSlave">
+                            <button type="button" class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchToSlave">
                                 <span>Switch to Slave</span>
                             </button>
                         }
@@ -279,8 +289,8 @@
 
     private static string[] ThemeList => [Themes.System, Themes.Light, Themes.Dark];
     private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
+    private AppUserStoreInfo? CurrentStore => AccountManager.GetCurrentStore();
     private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
-    private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private AppUserInfo? UserInfo => UserState.Value.Info?.Data;
 
     private void SwitchToSlave()
