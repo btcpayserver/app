@@ -143,10 +143,8 @@ public class LightningNodeManager : BaseHostedService
     public async Task Generate()
     {
         await _controlSemaphore.WaitAsync();
-        _logger.LogInformation("Generating lightning node");
         try
         {
-            if (State != LightningNodeState.NotConfigured) return;
             if (!IsHubConnected)
                 throw new InvalidOperationException("Cannot configure lightning node without BTCPay connection");
             if (!IsOnchainConfigured)
@@ -154,6 +152,7 @@ public class LightningNodeManager : BaseHostedService
             if (IsOnchainLightningDerivationConfigured)
                 throw new InvalidOperationException("On-chain wallet is already configured with a lightning derivation");
 
+            _logger.LogInformation("Generating lightning node");
             await _onChainWalletManager.AddDerivation(WalletDerivation.LightningScripts, "Lightning", null);
             // await _onChainWalletManager.AddDerivation(WalletDerivation.SpendableOutputs, "Lightning Spendables", null);
             State = LightningNodeState.WaitingForConnection;
@@ -196,6 +195,9 @@ public class LightningNodeManager : BaseHostedService
         {
             switch (state.New)
             {
+                case LightningNodeState.Init:
+                        newState = LightningNodeState.WaitingForConnection;
+                    break;
                 case LightningNodeState.WaitingForConnection:
                 {
                     if (IsHubConnected)
@@ -219,10 +221,7 @@ public class LightningNodeManager : BaseHostedService
                     break;
 
                 case LightningNodeState.NotConfigured:
-                    if (CanConfigureLightningNode)
-                    {
-                        await Generate();
-                    }
+                 
                     break;
             }
         }
@@ -237,6 +236,7 @@ public class LightningNodeManager : BaseHostedService
     {
         State = LightningNodeState.Init;
         StateChanged += OnStateChanged;
+        await StateChanged.Invoke(this, (LightningNodeState.Init, LightningNodeState.Init));
         _btcPayConnectionManager.ConnectionChanged += OnConnectionChanged;
         _onChainWalletManager.StateChanged += OnChainWalletManagerOnStateChanged;
     }

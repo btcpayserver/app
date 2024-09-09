@@ -19,7 +19,7 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<IDataDirectoryProvider, DesktopDataDirectoryProvider>();
         // serviceCollection.AddSingleton<IConfigProvider, DesktopConfigProvider>();
         serviceCollection.AddSingleton<ISecureConfigProvider, DesktopSecureConfigProvider>();
-        serviceCollection.AddSingleton<IFingerprint, FingerprintProvider>();
+        serviceCollection.AddSingleton<IFingerprint, StubFingerprintProvider>();
         return serviceCollection;
     }
 }
@@ -85,7 +85,7 @@ public class DesktopSecureConfigProvider: ISecureConfigProvider
     protected Task<string> WriteFromRaw(string str) => Task.FromResult(_dataProtector.Protect(str));
 }
 
-public class FingerprintProvider: IFingerprint
+public class StubFingerprintProvider: IFingerprint
 {
     public Task<FingerprintAvailability> GetAvailabilityAsync(bool allowAlternativeAuthentication = false)
     {

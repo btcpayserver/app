@@ -83,10 +83,7 @@ public class OnChainWalletManager : BaseHostedService
 
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
     {
-        if (e is { New: OnChainWalletState.NotConfigured } && CanConfigureWallet)
-        {
-            await Generate();
-        }
+
 
         if (e is {New: OnChainWalletState.Loaded} && IsConfigured)
         {
@@ -105,11 +102,11 @@ public class OnChainWalletManager : BaseHostedService
         try
         {
 
-            _logger.LogInformation("Generating wallet");
             if (State != OnChainWalletState.NotConfigured || IsConfigured || !IsHubConnected)
             {
                 throw new InvalidOperationException("Cannot generate wallet in current state");
             }
+            _logger.LogInformation("Generating wallet");
 
             var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
             var mainnet = _btcPayConnectionManager.ReportedNetwork == Network.Main;

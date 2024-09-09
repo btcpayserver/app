@@ -44,4 +44,17 @@ public abstract class BaseHostedService : IHostedService, IDisposable
         _cancellationTokenSource?.Dispose();
         _controlSemaphore?.Dispose();
     }
+    
+    protected async Task WrapInLock(Func<Task> act, CancellationToken cancellationToken)
+    {
+        await _controlSemaphore.WaitAsync(cancellationToken);
+        try
+        {
+            await act();
+        }
+        finally
+        {
+            _controlSemaphore.Release();
+        }
+    }
 }

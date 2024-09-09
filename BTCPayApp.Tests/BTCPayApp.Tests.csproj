@@ -28,5 +28,8 @@
     <ItemGroup>
       <ProjectReference Include="..\BTCPayApp.Server\BTCPayApp.Server.csproj" />
     </ItemGroup>
+    <ItemGroup>
+        <Content Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
+    </ItemGroup>
 
 </Project>

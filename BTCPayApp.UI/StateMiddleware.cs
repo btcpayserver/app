@@ -73,13 +73,24 @@ public class StateMiddleware(
         onChainWalletManager.StateChanged += async (sender, args) =>
         {
             dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
-            if (onChainWalletManager.State == OnChainWalletState.Loaded)
-                await TryApplyingAppPaymentMethodsToCurrentStore(true, false);
+            switch (onChainWalletManager.State)
+            {
+                case OnChainWalletState.Loaded:
+                    await TryApplyingAppPaymentMethodsToCurrentStore(true, false);
+                    break;
+                case OnChainWalletState.NotConfigured when onChainWalletManager.CanConfigureWallet:
+                    await onChainWalletManager.Generate();
+                    break;
+            }
         };
 
         lightningNodeService.StateChanged += async (sender, args) =>
         {
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
+            if (lightningNodeService is {State: LightningNodeState.NotConfigured, CanConfigureLightningNode: true})
+            {
+                await lightningNodeService.Generate();
+            }
             if (lightningNodeService.State == LightningNodeState.Loaded)
             {
                 await TryApplyingAppPaymentMethodsToCurrentStore(false, true);

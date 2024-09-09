@@ -5,8 +5,11 @@ using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.LDK;
 using Laraue.EfCoreTriggers.SqlLite.Extensions;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -31,16 +34,24 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<LightningNodeManager>();
         serviceCollection.AddSingleton<OnChainWalletManager>();
         serviceCollection.AddSingleton<BTCPayAppServerClient>();
-        serviceCollection.AddSingleton<IBTCPayAppHubClient>(provider => provider.GetRequiredService<BTCPayAppServerClient>());
-        serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BTCPayConnectionManager>());
+        serviceCollection.AddSingleton<IBTCPayAppHubClient>(provider =>
+            provider.GetRequiredService<BTCPayAppServerClient>());
+        serviceCollection.AddSingleton<IHostedService>(provider =>
+            provider.GetRequiredService<BTCPayConnectionManager>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<LightningNodeManager>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<OnChainWalletManager>());
         serviceCollection.AddSingleton<AuthStateProvider>();
-        serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>( provider => provider.GetRequiredService<AuthStateProvider>());
+        serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>(provider =>
+            provider.GetRequiredService<AuthStateProvider>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<AuthStateProvider>());
-        serviceCollection.AddSingleton(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
+        serviceCollection.AddSingleton(sp => (IAccountManager) sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddSingleton<IConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddLDK();
+        serviceCollection.AddSingleton<IAuthorizationHandler, BearerAuthorizationHandler>();
+        serviceCollection.AddAuthorizationCore(options =>
+        {
+            options.AddBTCPayPolicies();
+        });
         return serviceCollection;
     }
 }

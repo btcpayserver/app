@@ -13,12 +13,9 @@ public static class StartupExtensions
     public static IServiceCollection AddBTCPayAppUIServices(this IServiceCollection serviceCollection)
     {
         serviceCollection.AddOptions();
-        serviceCollection.AddSingleton<IAuthorizationHandler, BearerAuthorizationHandler>();
+       
         serviceCollection.AddSingleton<DisplayFormatter>();
-        serviceCollection.AddAuthorizationCore(options =>
-        {
-            options.AddBTCPayPolicies();
-        });
+        
         serviceCollection.AddCascadingAuthenticationState();
         serviceCollection.AddFluxor(options =>
         {
