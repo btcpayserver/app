@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="DEV ALL testnet" type="CompoundRunConfigurationType">
     <toRun name="App-Server" type="LaunchSettings" />
-    <toRun name="BTCPayServer: Bitcoin-HTTPS-TESTNET" type="LaunchSettings" />
+    <toRun name="Server Testnet" type="LaunchSettings" />
     <toRun name="Docker compose testnet" type="docker-deploy" />
     <method v="2" />
   </configuration>

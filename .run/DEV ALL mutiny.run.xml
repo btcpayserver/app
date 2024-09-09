@@ -1,7 +1,7 @@
 ﻿<component name="ProjectRunConfigurationManager">
   <configuration default="false" name="DEV ALL mutiny" type="CompoundRunConfigurationType">
-    <toRun name="BTCPayApp.Server: mutinynet" type="LaunchSettings" />
-    <toRun name="BTCPayServer: Bitcoin-HTTPS-MUTINYNET" type="LaunchSettings" />
+    <toRun name="App-Server Mutinynet" type="LaunchSettings" />
+    <toRun name="Server Mutinynet" type="LaunchSettings" />
     <toRun name="Docker compose mutiny" type="docker-deploy" />
     <method v="2" />
   </configuration>
