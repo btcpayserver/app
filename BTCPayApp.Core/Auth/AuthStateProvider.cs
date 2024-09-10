@@ -173,19 +173,7 @@ public class AuthStateProvider(
         OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
 
         // create associated POS app if there is none
-        if (string.IsNullOrEmpty(store.PosAppId))
-        {
-            try
-            {
-                var posConfig = new PointOfSaleAppRequest { AppName = store.Name, DefaultView = PosViewType.Light };
-                await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
-                await CheckAuthenticated(true);
-                store = GetUserStore(store.Id)!;
-            }
-            catch (Exception)
-            {
-            }
-        }
+        store = await EnsureStorePos(store);
 
         _account!.CurrentStoreId = store.Id;
         await UpdateAccount(_account);
@@ -199,6 +187,25 @@ public class AuthStateProvider(
         _account!.CurrentStoreId = null;
         await UpdateAccount(_account);
         OnAfterStoreChange?.Invoke(this, null);
+    }
+
+    public async Task<AppUserStoreInfo> EnsureStorePos(AppUserStoreInfo store, bool? forceCreate = false)
+    {
+        if (string.IsNullOrEmpty(store.PosAppId) || forceCreate is true)
+        {
+            try
+            {
+                var posConfig = new PointOfSaleAppRequest { AppName = store.Name, DefaultView = PosViewType.Light };
+                await GetClient().CreatePointOfSaleApp(store.Id, posConfig);
+                await CheckAuthenticated(true);
+                store = GetUserStore(store.Id)!;
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+        }
+        return store;
     }
 
     public AppUserStoreInfo? GetUserStore(string storeId)

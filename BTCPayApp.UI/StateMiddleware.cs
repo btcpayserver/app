@@ -122,8 +122,24 @@ public class StateMiddleware(
             var currentUserId = accountManager.GetUserInfo()?.UserId;
             if (string.IsNullOrEmpty(currentUserId)) return;
             var currentStore = accountManager.GetCurrentStore();
+            var isCurrentStore = serverEvent.StoreId != null && currentStore != null && serverEvent.StoreId == currentStore.Id;
             switch (serverEvent.Type)
             {
+                case "app-created":
+                    if (isCurrentStore && currentStore!.PosAppId == null)
+                        dispatcher.Dispatch(new StoreState.FetchPointOfSale(currentStore.PosAppId!));
+                    break;
+                case "app-deleted":
+                    if (isCurrentStore && currentStore.PosAppId == serverEvent.AppId)
+                    {
+                        var store = await accountManager.EnsureStorePos(currentStore, true);
+                        dispatcher.Dispatch(new StoreState.FetchPointOfSale(store.PosAppId!));
+                    }
+                    break;
+                case "app-updated":
+                    if (isCurrentStore && currentStore!.PosAppId == serverEvent.AppId)
+                        dispatcher.Dispatch(new StoreState.FetchPointOfSale(currentStore.PosAppId!));
+                    break;
                 case "user-updated":
                     if (currentUserId == serverEvent.UserId)
                         await accountManager.CheckAuthenticated(true);
@@ -137,13 +153,13 @@ public class StateMiddleware(
                         dispatcher.Dispatch(new StoreState.FetchNotifications(currentStore.Id));
                     break;
                 case "invoice-updated":
-                    if (serverEvent.StoreId != null && currentStore != null && serverEvent.StoreId == currentStore.Id)
+                    if (isCurrentStore)
                     {
-                        dispatcher.Dispatch(new StoreState.FetchInvoices(serverEvent.StoreId));
+                        dispatcher.Dispatch(new StoreState.FetchInvoices(serverEvent.StoreId!));
                         if (serverEvent.Detail is "Processing" or "Settled")
                         {
-                            dispatcher.Dispatch(new StoreState.FetchBalances(serverEvent.StoreId));
-                            if (currentStore.PosAppId != null)
+                            dispatcher.Dispatch(new StoreState.FetchBalances(serverEvent.StoreId!));
+                            if (currentStore!.PosAppId != null)
                                 dispatcher.Dispatch(new StoreState.FetchPointOfSaleStats(currentStore.PosAppId));
                         }
                     }

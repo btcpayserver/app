@@ -561,7 +561,7 @@ public record StoreState
             var store = action.StoreInfo;
             if (store != null)
             {
-                var storeId = store.Id!;
+                var storeId = store.Id;
                 var posId = store.PosAppId!;
                 dispatcher.Dispatch(new FetchStore(storeId));
                 dispatcher.Dispatch(new FetchBalances(storeId));

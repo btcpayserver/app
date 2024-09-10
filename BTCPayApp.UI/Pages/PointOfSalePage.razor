@@ -1,4 +1,5 @@
 @attribute [Route(Routes.PointOfSale)]
+@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
@@ -7,6 +8,7 @@
 @inject IAccountManager AccountManager
 @inject IState<StoreState> StoreState
 @inject IDispatcher Dispatcher
+@inject IActionSubscriber ActionSubscriber
 
 <PageTitle>Point Of Sale</PageTitle>
 
@@ -53,8 +55,29 @@ else if (!string.IsNullOrEmpty(Error))
         await base.OnInitializedAsync();
         NavigationManager.LocationChanged += OnLocationChanged;
 
-        if (AppData == null && !string.IsNullOrEmpty(AppId))
-            Dispatcher.Dispatch(new StoreState.FetchPointOfSale(AppId));
+        ActionSubscriber.SubscribeToAction<StoreState.SetPointOfSale>(this, action =>
+        {
+            if (Store != null && action.AppData == null)
+            {
+                AccountManager.EnsureStorePos(Store, true);
+                return;
+            }
+            InvokeAsync(StateHasChanged);
+        });
+
+        var appId = Store == null ? null : (await AccountManager.EnsureStorePos(Store)).PosAppId;
+        if (!Loading && AppData == null && !string.IsNullOrEmpty(appId))
+            Dispatcher.Dispatch(new StoreState.FetchPointOfSale(appId));
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        ActionSubscriber.UnsubscribeFromAllActions(this);
+        NavigationManager.LocationChanged -= OnLocationChanged;
+
+        return ValueTask.CompletedTask;
     }
 
     private void OnLocationChanged(object sender, LocationChangedEventArgs args)
@@ -66,16 +89,8 @@ else if (!string.IsNullOrEmpty(Error))
         }
     }
 
-    protected override ValueTask DisposeAsyncCore(bool disposing)
-    {
-        base.DisposeAsyncCore(disposing);
-
-        NavigationManager.LocationChanged -= OnLocationChanged;
-
-        return ValueTask.CompletedTask;
-    }
-
-    private string? AppId => AccountManager.GetCurrentStore()?.PosAppId ?? AppData?.Id;
+    private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
+    private string? AppId => Store?.PosAppId ?? AppData?.Id;
     private string? PosUrl => string.IsNullOrEmpty(AppId) ? null : $"{AccountManager.GetAccount()!.BaseUri}apps/{AppId}/pos";
     private string? IframeSrc => string.IsNullOrEmpty(PosUrl) ? null : $"{PosUrl}?guid={_iframeGuid}";
     private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;

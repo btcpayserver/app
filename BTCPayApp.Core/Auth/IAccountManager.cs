@@ -24,6 +24,7 @@ public interface IAccountManager
     public Task UnsetCurrentStore();
     public AppUserStoreInfo? GetCurrentStore();
     public AppUserStoreInfo? GetUserStore(string storeId);
+    public Task<AppUserStoreInfo> EnsureStorePos(AppUserStoreInfo store, bool? forceCreate = false);
     public Task Logout();
     public Task UpdateAccount(BTCPayAccount account);
     public Task RemoveAccount(BTCPayAccount account);
