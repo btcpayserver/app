@@ -46,6 +46,10 @@
                         </div>
                         <div class="status d-flex flex-wrap align-items-center gap-2">
                             <InvoiceStatusDisplay Invoice="@Invoice"/>
+                            @if (Invoice.Status == InvoiceStatus.New)
+                            {
+                                <a href="@Routes.CheckoutPath(Invoice.Id)">Checkout</a>
+                            }
                         </div>
 
                         <h4 class="mt-4">General Information</h4>

@@ -1,0 +1,24 @@
+.container {
+  max-width: 560px;
+  padding-top: var(--btcpay-space-l);
+  padding-bottom: var(--btcpay-space-l);
+}
+
+.loading-container {
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--btcpay-space-m);
+}
+
+iframe {
+  position: fixed;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: calc(100dvh - var(--navbar-bottom-height));
+}

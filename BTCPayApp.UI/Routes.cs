@@ -23,6 +23,7 @@ public static class Routes
     public const string Receive = "/receive";
     public const string Invoices = "/invoices";
     public const string Invoice = "/invoices/{InvoiceId}";
+    public const string Checkout = "/checkout/{InvoiceId}";
     public const string PointOfSale = "/pos";
     public const string Logout = "/logout";
     public const string CreateStore = "/store/create";
@@ -39,6 +40,7 @@ public static class Routes
     public const string User = "/settings/user";
     public const string EncryptionKey = "/settings/encryption";
     public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);
+    public static string CheckoutPath(string invoiceId) => Checkout.Replace("{InvoiceId}", invoiceId);
     public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);
     public static string PosSettingsPath(string appId) => PosSettings.Replace("{AppId}", appId);
 }
