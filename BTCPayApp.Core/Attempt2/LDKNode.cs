@@ -26,7 +26,7 @@ public partial class LDKNode :
         return (await _memoryCache.GetOrCreateAsync(nameof(GetChannels), async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            var dbContext =  await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            using var dbContext =  await _dbContextFactory.CreateDbContextAsync(cancellationToken);
             var dbChannels = dbContext.LightningChannels.AsNoTracking().Include(channel => channel.Aliases).AsAsyncEnumerable();
             var channels = ServiceProvider.GetRequiredService<ChannelManager>().list_channels();
             

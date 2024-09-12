@@ -86,7 +86,7 @@
 
     public async Task HandleValidSubmit()
     {
-        if (await SyncService.SetEncryptionKey(EncryptionKeyValue, await ConnectionManager.GetDeviceIdentifier()))
+        if (await SyncService.SetEncryptionKey(EncryptionKeyValue??string.Empty))
         {
             NavigationManager.NavigateTo(Routes.Settings);
         }

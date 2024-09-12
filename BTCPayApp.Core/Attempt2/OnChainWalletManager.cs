@@ -54,7 +54,7 @@ public class OnChainWalletManager : BaseHostedService
         BTCPayConnectionManager btcPayConnectionManager,
         ILogger<OnChainWalletManager> logger,
         IMemoryCache memoryCache,
-        SyncService syncService)
+        SyncService syncService) : base(logger)
     {
         _configProvider = configProvider;
         _btcPayAppServerClient = btcPayAppServerClient;
@@ -138,7 +138,7 @@ public class OnChainWalletManager : BaseHostedService
 
             }
 
-            if (!await _syncService.SetEncryptionKey(mnemonic, await _btcPayConnectionManager.GetDeviceIdentifier()))
+            if (!await _syncService.SetEncryptionKey(mnemonic))
             {
                 _logger.LogError("Failed to set encryption key");
                 return;
@@ -377,26 +377,6 @@ public class OnChainWalletManager : BaseHostedService
         {
             result.Add(ToCoin(coin));
         }
-        // if (WalletConfig.Derivations.TryGetValue(WalletDerivation.SpendableOutputs, out var spendableOutputDerivation))
-        // {
-        //
-        //     var spendableOutputUtxos  = utxos.Where(response => response.Identifier == spendableOutputDerivation.Identifier).ToArray();
-        //     await using var context = await _dbContextFactory.CreateDbContextAsync();
-        //     var scipts = spendableOutputUtxos.Select(response => response.Script).Distinct();
-        //     var spendableCoins = await context.SpendableCoins.Where(coin => scipts.Contains(coin.Script)).ToListAsync();
-        //
-        //     foreach (var spendableOutputUtxo in spendableOutputUtxos)
-        //     {
-        //         var spendableCoin = spendableCoins.FirstOrDefault(coin => coin.Script == spendableOutputUtxo.Script);
-        //         if (spendableCoin is null)
-        //             continue;
-        //         var coin = ToCoin(spendableOutputUtxo);
-        //         var data = SpendableOutputDescriptor.read(spendableCoin.Data);
-        //         if(data is Result_SpendableOutputDescriptorDecodeErrorZ.Result_SpendableOutputDescriptorDecodeErrorZ_OK ok)
-        //             result.Add(new SpendableOutputDescriptorCoin(coin.Outpoint, coin.TxOut, ok.res));
-        //     }
-        // }
-
         return result;
     }
 

@@ -17,6 +17,7 @@ namespace BTCPayApp.Core.Attempt2;
 
 public class SyncService : IDisposable
 {
+    private readonly IConfigProvider _configProvider;
     private readonly ILogger<SyncService> _logger;
     private readonly IAccountManager _accountManager;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -27,12 +28,14 @@ public class SyncService : IDisposable
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
 
     public SyncService(
+        IConfigProvider configProvider,
         ILogger<SyncService> logger,
         ISecureConfigProvider secureConfigProvider,
         IAccountManager accountManager,
         IHttpClientFactory httpClientFactory,
         IDbContextFactory<AppDbContext> dbContextFactory)
     {
+        _configProvider = configProvider;
         _logger = logger;
         _accountManager = accountManager;
         _httpClientFactory = httpClientFactory;
@@ -81,17 +84,17 @@ public class SyncService : IDisposable
         return false;
     }
 
-    public async Task<bool> SetEncryptionKey(Mnemonic mnemonic, long deviceIdentifier)
+    public async Task<bool> SetEncryptionKey(Mnemonic mnemonic)
     {
         var key = mnemonic.DeriveExtKey().Derive(1337).PrivateKey.ToBytes();
-        return await SetEncryptionKey(Convert.ToHexString(key), deviceIdentifier);
+        return await SetEncryptionKey(Convert.ToHexString(key));
     }
 
-    public async Task<bool> SetEncryptionKey(string key, long deviceIdentifier)
+    public async Task<bool> SetEncryptionKey(string key)
     {
         if (key.Contains(' '))
         {
-          return await SetEncryptionKey(new Mnemonic(key), deviceIdentifier);
+          return await SetEncryptionKey(new Mnemonic(key));
         }
         var dataProtector = new SingleKeyDataProtector(Convert.FromHexString(key));
         var encrypted = dataProtector.Protect("kukks"u8.ToArray());
@@ -130,6 +133,7 @@ public class SyncService : IDisposable
 
         await api.PutObjectAsync(new PutObjectRequest()
         {
+            GlobalVersion = await _configProvider.GetDeviceIdentifier(),
             TransactionItems =
             {
                 new KeyValue()
@@ -138,7 +142,6 @@ public class SyncService : IDisposable
                     Value = ByteString.CopyFrom(encrypted)
                 }
             },
-            GlobalVersion = deviceIdentifier
         });
         await _secureConfigProvider.Set("encryptionKey", key);
         EncryptionKeyChanged?.Invoke(this);
@@ -326,19 +329,25 @@ public class SyncService : IDisposable
         }
     }
 
-    public async Task SyncToRemote(long deviceIdentifier, CancellationToken cancellationToken = default)
+    public async Task SyncToRemote(CancellationToken cancellationToken = default)
     {
         var backupAPi = await GetVSSAPI();
         if (backupAPi is null)
             return;
         await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        var putObjectRequest = new PutObjectRequest();
+        var putObjectRequest = new PutObjectRequest
+        {
+            GlobalVersion = await _configProvider.GetDeviceIdentifier()
+        };
         var outbox = await db.OutboxItems.GroupBy(outbox1 => outbox1.Key)
             .ToListAsync(cancellationToken: cancellationToken);
-        if (outbox.Count == 0)
-            return;
+        if (outbox.Count != 0)
+        {
+          
         _logger.LogInformation($"Syncing to remote {outbox.Count} outbox items");
+           
+        }
         var removedOutboxItems = new List<Outbox>();
         foreach (var outboxItemSet in outbox)
         {
@@ -369,15 +378,19 @@ public class SyncService : IDisposable
             // Process outbox item
         }
 
-        putObjectRequest.GlobalVersion = deviceIdentifier;
+        if (putObjectRequest.TransactionItems.Count == 0 && putObjectRequest.DeleteItems.Count == 0 && (_syncTask is not null))
+        {
+            return;
+        }
         await backupAPi.PutObjectAsync(putObjectRequest, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         _logger.LogInformation(
             $"Synced to remote {putObjectRequest.TransactionItems.Count} items and deleted {putObjectRequest.DeleteItems.Count} items" +
             string.Join(", ", putObjectRequest.TransactionItems.Select(kv => kv.Key + " " + kv.Version)));
         RemoteObjectUpdated?.Invoke(this, (removedOutboxItems, putObjectRequest.Clone()));
+
     }
-    public async Task StartSync(bool local, long deviceIdentifier, CancellationToken cancellationToken = default)
+    public async Task StartSync(bool local,CancellationToken cancellationToken = default)
     {
         if (_syncTask.HasValue && _syncTask.Value.local == local && !_syncTask.Value.cts.IsCancellationRequested)
             return;
@@ -387,7 +400,7 @@ public class SyncService : IDisposable
         }
 
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _syncTask = (ContinuouslySync(deviceIdentifier, local, cts.Token), cts, local);
+        _syncTask = (ContinuouslySync( local, cts.Token), cts, local);
     }
 
     public async Task StopSync()
@@ -400,7 +413,7 @@ public class SyncService : IDisposable
         
     }
 
-    private async Task ContinuouslySync(long deviceIdentifier, bool local,
+    private async Task ContinuouslySync(bool local,
         CancellationToken cancellationToken = default)
     {
         while (!cancellationToken.IsCancellationRequested)
@@ -410,7 +423,7 @@ public class SyncService : IDisposable
                 if (local)
                     await SyncToLocal(cancellationToken);
                 else
-                    await SyncToRemote(deviceIdentifier, cancellationToken);
+                    await SyncToRemote( cancellationToken);
                 await Task.Delay(2000, cancellationToken);
             }
             catch (OperationCanceledException)

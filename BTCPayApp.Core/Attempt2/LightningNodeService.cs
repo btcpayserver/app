@@ -53,7 +53,7 @@ public class LightningNodeManager : BaseHostedService
         ILogger<LightningNodeManager> logger,
         OnChainWalletManager onChainWalletManager,
         BTCPayConnectionManager btcPayConnectionManager,
-        IServiceScopeFactory serviceScopeFactory)
+        IServiceScopeFactory serviceScopeFactory) : base(logger)
     {
         _accountManager = accountManager;
         _dbContextFactory = dbContextFactory;
@@ -165,15 +165,12 @@ public class LightningNodeManager : BaseHostedService
 
     private async Task OnConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
     {
-        switch (IsHubConnected)
+        State = IsHubConnected switch
         {
-            case true when State == LightningNodeState.WaitingForConnection:
-                State = LightningNodeState.Loading;
-                break;
-            case false:
-                _ = StopNode();
-                break;
-        }
+            true when State == LightningNodeState.WaitingForConnection => LightningNodeState.Loading,
+            false => LightningNodeState.Loading,
+            _ => State
+        };
     }
 
     private async Task OnChainWalletManagerOnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
