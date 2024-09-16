@@ -5,13 +5,30 @@ Interop = {
     return el.clientWidth;
   },
   openModal(selector) {
-    const modal = new bootstrap.Modal(selector);
+    const $el = document.querySelector(selector);
+    if (!$el) return console.warn('Selector does not exist:', selector);
+    const modal = bootstrap.Modal.getOrCreateInstance($el);
     modal.show();
   },
   closeModal(selector) {
     const $el = document.querySelector(selector);
     if (!$el) return console.warn('Selector does not exist:', selector);
-    bootstrap.Modal.getInstance($el).hide();
+    const modal = bootstrap.Modal.getOrCreateInstance($el);
+    modal.hide();
+  },
+  showOffcanvas(selector) {
+    const $el = document.querySelector(selector);
+    if (!$el) return console.warn('Selector does not exist:', selector);
+    if (window.getComputedStyle($el).visibility === 'hidden') {
+      const offcanvas = bootstrap.Offcanvas.getOrCreateInstance($el);
+      offcanvas.show();
+    }
+  },
+  hideOffcanvas(selector) {
+    const $el = document.querySelector(selector);
+    if (!$el) return console.warn('Selector does not exist:', selector);
+    const offcanvas = bootstrap.Offcanvas.getOrCreateInstance($el);
+    offcanvas.hide();
   },
   addEventListener(dotnetHelper, selector, eventName, methodName) {
     const $el = document.querySelector(selector);

@@ -4,9 +4,11 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Models
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
+@using Newtonsoft.Json.Linq
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
@@ -71,7 +73,7 @@
                     {
                         <h2>Products</h2>
                         <fieldset class="box">
-                            <AppItemsEditor Items="@Model.Items" Currency="@Model.Currency"/>
+                            <AppItemsEditor @bind-Items="@Model.Items" Currency="@Model.Currency"/>
                         </fieldset>
                     }
 
@@ -158,14 +160,14 @@
         {
             if (action.AppData == null) return;
             UpdateModel(action.AppData);
-            StateHasChanged();
+            InvokeAsync(StateHasChanged);
         });
 
         ActionSubscriber.SubscribeToAction<StoreState.UpdatedPointOfSale>(this, action =>
         {
             if (action.AppData == null || action.Error != null) return;
             _successMessage = $"Point of Sale \"{action.AppData.Title}\" successfully updated";
-            StateHasChanged();
+            InvokeAsync(StateHasChanged);
         });
 
         if (AppData != null)
@@ -197,7 +199,7 @@
             EnableTips = Model.EnableTips,
             TipText = Model.TipText,
             CustomTipPercentages = string.IsNullOrEmpty(Model.CustomTipPercentages) ? null : SplitStringList(ListSeparator, Model.CustomTipPercentages),
-            Template = Model.Template ?? ItemsToTemplate(app.Items),
+            Template = ItemsToTemplate(Model.Items),
             // pass these attributes to not reset them
             AppName = app.AppName,
             Archived = app.Archived,
@@ -226,9 +228,49 @@
             CustomTipPercentages = data.CustomTipPercentages != null ? string.Join(ListSeparator, data.CustomTipPercentages) : null,
             ShowDiscount = data.ShowDiscount is true,
             ShowItems = data.ShowItems is true,
-            Template = ItemsToTemplate(data.Items),
-            Items = data.Items
+            Items = ConvertItems(data.Items)
         };
+    }
+
+    private List<AppItemModel> ConvertItems(object? arr)
+    {
+        var items = new List<AppItemModel>();
+        var str = arr?.ToString();
+        if (!string.IsNullOrEmpty(str))
+        {
+            try
+            {
+                using var jsonDoc = JsonDocument.Parse(str);
+                if (jsonDoc.RootElement is { ValueKind: JsonValueKind.Array } jsonArray)
+                {
+                    foreach (var el in jsonArray.EnumerateArray())
+                    {
+                        items.Add(new AppItemModel
+                        {
+                            Id = el.TryGetProperty("id", out var id) ? id.GetString() : null,
+                            Title = el.TryGetProperty("title", out var title) ? title.GetString() : null,
+                            PriceType = el.TryGetProperty("priceType", out var priceType) ? priceType.GetString() : null,
+                            Price = el.TryGetProperty("price", out var price)
+                                ? price.ValueKind == JsonValueKind.String && decimal.TryParse(price.GetString(), out var number) ? number : price.GetDecimal()
+                                : null,
+                            Inventory = el.TryGetProperty("inventory", out var inventory)
+                                ? inventory.ValueKind == JsonValueKind.String && int.TryParse(inventory.GetString(), out var inv) ? inv : price.GetInt32()
+                                : null,
+                            Categories = el.TryGetProperty("categories", out var categories) ? categories.GetString() : null,
+                            Description = el.TryGetProperty("description", out var description) ? description.GetString() : null,
+                            ImageUrl = el.TryGetProperty("image", out var imageUrl) ? imageUrl.GetString() : null,
+                            BuyButtonText = el.TryGetProperty("buyButtonText", out var buyButtonText) ? buyButtonText.GetString() : null,
+                            Disabled = el.TryGetProperty("disabled", out var disabled) ? disabled.GetBoolean() : false
+                        });
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+        }
+        return items;
     }
 
     private class PosAppModel
@@ -243,9 +285,7 @@
         public string? CustomTipPercentages { get; set; }
         public bool ShowDiscount { get; set; }
         public bool ShowItems { get; set; }
-        public string? Template { get; set; }
-        public object? Items { get; set; }
-        public object? SelectedItem { get; set; }
+        public List<AppItemModel>? Items { get; set; }
     }
 
     private string StoreId => AccountManager.GetCurrentStore()!.Id;
@@ -265,7 +305,7 @@
             .ToArray();
     }
 
-    private static string? ItemsToTemplate(object? items)
+    private static string? ItemsToTemplate(List<AppItemModel>? items)
     {
         return items != null
             ? JsonSerializer.Serialize(items, new JsonSerializerOptions
@@ -274,21 +314,5 @@
                 WriteIndented = false
             })
             : null;
-    }
-
-    private void AddItem()
-    {
-    }
-
-    private void RemoveItem()
-    {
-    }
-
-    private void SelectItem()
-    {
-    }
-
-    private void SortItems()
-    {
     }
 }

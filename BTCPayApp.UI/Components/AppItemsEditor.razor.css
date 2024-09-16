@@ -1,25 +1,33 @@
-.editor .list-group-item:not(.active) {
+.editor .plk-dd-inprogess > * {
+  pointer-events: none;
+}
+
+.editor ::deep .list-group-item:not(.active) {
   background: none;
 }
 
-.editor .list-group-item {
+.editor ::deep .list-group-item.active {
+  background: var(--btcpay-bg-tile);;
+}
+
+.editor ::deep .list-group-item {
   --image-size: 3rem;
   border: none;
   margin: 0;
   padding: var(--btcpay-space-m) var(--btcpay-space-m) var(--btcpay-space-m) var(--btcpay-space-s) !important;
 }
 
-.editor .list-group-item + .list-group-item.active {
+.editor ::deep .list-group-item + .list-group-item.active {
   margin: 0;
   border: 0;
 }
 
-.editor .list-group-item .img img {
+.editor ::deep .list-group-item .img img {
   width: var(--image-size);
   height: var(--image-size);
 }
 
-.editor .list-group-item .img img {
+.editor ::deep .list-group-item .img img {
   max-width: var(--image-size);
   max-height: var(--image-size);
   object-fit: scale-down;

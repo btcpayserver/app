@@ -240,14 +240,14 @@
         {
             if (action.Store == null) return;
             UpdateModel(action.Store);
-            StateHasChanged();
+            InvokeAsync(StateHasChanged);
         });
 
         ActionSubscriber.SubscribeToAction<StoreState.UpdatedStore>(this, action =>
         {
             if (action.Store == null || action.Error != null) return;
             _successMessage = $"Store \"{action.Store.Name}\" successfully updated";
-            StateHasChanged();
+            InvokeAsync(StateHasChanged);
         });
 
         if (Store != null)

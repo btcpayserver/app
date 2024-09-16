@@ -1,130 +1,127 @@
-@using System.Text.Json
-@implements IDisposable
+@using BTCPayApp.UI.Models
+@using Plk.Blazor.DragDrop
 @inject IJSRuntime JS
 
 <div @attributes="InputAttributes" class="@CssClass">
     <div class="row align-items-start">
         <div class="col-12 col-xl-7">
-            @if (_items?.Any() is true)
+            @if (Items?.Any() is true)
             {
-                <div class="items list-group list-group-flush" v-sortable="{ handle: '.drag', onUpdate (event) { $emit('sort-items', event) } }">
-                    @for (var i = 0; i < _items.Count; i++)
-                    {
-                        var item = _items[i];
-                        var imageUrl = string.IsNullOrEmpty(item.ImageUrl) ? "_content/BTCPayApp.UI/img/img-placeholder.svg" : item.ImageUrl;
-                        <div class="d-inline-flex align-items-center gap-3 list-group-item @(item == SelectedItem ? "active" : null)" @onclick="() => { SelectItem(i); }">
-                            <button type="button" class="btn b-0 control drag" :disabled="items.length === 1">
-                                <Icon Symbol="actions-drag"/>
-                            </button>
-                            <div class="template-item d-flex align-items-start w-100 gap-3">
-                                <div class="img">
-                                    <img src="@imageUrl" alt="@item.Title" style="@(string.IsNullOrEmpty(item.ImageUrl) ? "opacity:.5" : null)">
-                                </div>
-                                <div class="d-flex flex-column gap-2">
-                                    <h5 class="card-title m-0">@item.Title</h5>
-                                    <div class="d-flex gap-2 align-items-center">
-                                        @if (item.PriceType == "Topup" || item.Price == 0)
-                                        {
-                                            <span class="fw-semibold badge text-bg-info">@(item.PriceType == "Topup" ? "Any amount" : "Free")</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="fw-semibold text-muted">
-                                                <AmountDisplay Value="@item.Price" Unit="@Currency"/> @(item.PriceType == "Minimum" ? " minimum" : null)
-                                            </span>
-                                        }
-                                        @if (item.Inventory.HasValue)
-                                        {
-                                            <span class="badge text-bg-warning">
-                                                @(item.Inventory > 0 ? $"{item.Inventory} left" : "Sold out")
-                                            </span>
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="button" class="btn b-0 control remove" @onclick="() => RemoveItem(i)">
-                                <Icon Symbol="actions-remove"/>
-                            </button>
-                        </div>
+                <Dropzone Items="Items" InstantReplace="true" Class="items list-group list-group-flush" ItemWrapperClass='item => { return $"d-inline-flex align-items-center gap-3 list-group-item rounded {(item == SelectedItem ? "active" : null)}"; }'>
+                    @{
+                        var hasImage = !string.IsNullOrEmpty(context.ImageUrl);
+                        var imageUrl = hasImage ? context.ImageUrl : "_content/BTCPayApp.UI/img/img-placeholder.svg";
                     }
-                </div>
+                    <button type="button" class="btn b-0 control drag" disabled="@(Items.Count == 1)">
+                        <Icon Symbol="actions-drag"/>
+                    </button>
+                    <div class="template-item d-flex align-items-start w-100 gap-3" @onclick="async () => { await SelectItem(context == SelectedItem ? null : context); }">
+                        <div class="img">
+                            <img src="@imageUrl" alt="@context.Title" style="@(hasImage ? null : "opacity:.5")">
+                        </div>
+                        <div class="d-flex flex-column gap-2">
+                            <h5 class="card-title m-0">@context.Title</h5>
+                            <div class="d-flex gap-2 align-items-center">
+                                @if (context.PriceType == "Topup" || context.Price == 0)
+                                {
+                                    <span class="fw-semibold badge text-bg-info">@(context.PriceType == "Topup" ? "Any amount" : "Free")</span>
+                                }
+                                else
+                                {
+                                    <span class="fw-semibold text-muted">
+                                        <AmountDisplay Value="@context.Price" Unit="@Currency"/> @(context.PriceType == "Minimum" ? " minimum" : null)
+                                    </span>
+                                }
+                                @if (context.Inventory.HasValue)
+                                {
+                                    <span class="badge text-bg-warning">
+                                        @(context.Inventory > 0 ? $"{context.Inventory} left" : "Sold out")
+                                    </span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn b-0 control remove" @onclick="() => RemoveItem(context)">
+                        <Icon Symbol="actions-remove"/>
+                    </button>
+                </Dropzone>
             }
             <button type="button" id="btAddItem" class="btn btn-link py-0 px-2 mt-2 mb-2 gap-1 add fw-semibold d-inline-flex align-items-center" @onclick="AddItem">
                 <Icon Symbol="actions-add"/>
                 Add Item
             </button>
         </div>
-        <div class="col-xl-5 offcanvas-xl offcanvas-end" tabindex="-1">
+        <div class="col-xl-5 offcanvas-xl offcanvas-end" tabindex="-1" id="AppItemsEditorOffcanvas">
             <div class="offcanvas-header justify-content-between p-3">
                 <h5 class="offcanvas-title">Edit Item</h5>
-                <button type="button" class="btn btn-sm rounded-pill @(ItemChanged ? "btn-primary" : "btn-outline-secondary")" @onclick="HideOffcanvas">@(ItemChanged ? "Apply" : "Close")</button>
+                <button type="button" class="btn btn-sm rounded-pill btn-outline-secondary" @onclick="HideOffcanvas">Close</button>
             </div>
             <div class="offcanvas-body p-3 p-xl-0">
                 <div class="bg-tile w-100 p-xl-4 rounded">
-                    @if (Model != null)
+                    @if (SelectedItem != null)
                     {
-                        <ValidationEditContext @ref="_validationEditContext" Model="Model" id="item-form" class="item">
+                        <ValidationEditContext @ref="_validationEditContext" Model="SelectedItem" id="item-form" class="item">
                             <DataAnnotationsValidator />
                             <div class="form-group">
                                 <label for="Title" class="form-label" data-required>Title</label>
-                                <InputText @bind-Value="Model.Title" @bind-Value:after="GenerateId" id="Title" class="form-control"/>
-                                <ValidationMessage For="@(() => Model.Title)" />
+                                <InputText @bind-Value="SelectedItem.Title" @bind-Value:after="GenerateId" id="Title" class="form-control"/>
+                                <ValidationMessage For="@(() => SelectedItem.Title)" />
                             </div>
                             <div class="form-group">
                                 <label for="Id" class="form-label" data-required>ID</label>
-                                <InputText @bind-Value="Model.Id" id="Id" class="form-control"/>
-                                <ValidationMessage For="@(() => Model.Id)" />
+                                <InputText @bind-Value="SelectedItem.Id" id="Id" class="form-control"/>
+                                <ValidationMessage For="@(() => SelectedItem.Id)" />
                                 <div class="form-text">Leave blank to generate ID from title.</div>
                             </div>
                             <div class="form-group row">
                                 <div class="col-sm-6">
                                     <label for="PriceType" class="form-label" data-required>Price</label>
-                                    <InputSelect @bind-Value="Model.PriceType" id="PriceType" class="form-select">
+                                    <InputSelect @bind-Value="SelectedItem.PriceType" id="PriceType" class="form-select">
                                         <option value="Fixed">Fixed</option>
                                         <option value="Minimum">Minimum</option>
                                         <option value="Topup">Custom</option>
                                     </InputSelect>
                                 </div>
-                                @if (Model.PriceType != "Topup")
+                                @if (SelectedItem.PriceType != "Topup")
                                 {
                                     <div class="col-sm-6">
                                         <label for="Price" class="form-label">&nbsp;</label>
                                         <div class="input-group mb-2">
-                                            <InputNumber @bind-Value="Model.Price" id="Price" class="form-control hide-number-spin" inputmode="decimal" min="0"
+                                            <InputNumber @bind-Value="SelectedItem.Price" id="Price" class="form-control hide-number-spin" inputmode="decimal" min="0"
                                                          pattern="\d*" step="any" aria-describedby="currency-addon"/>
                                             <span class="input-group-text" id="currency-addon">@Currency</span>
                                         </div>
                                     </div>
                                 }
-                                <ValidationMessage For="@(() => Model.Price)" />
+                                <ValidationMessage For="@(() => SelectedItem.Price)" />
                             </div>
 
                             <div class="form-group">
                                 <label for="ImageUrl" class="form-label">Image Url</label>
-                                <InputText @bind-Value="Model.ImageUrl" id="ImageUrl" class="form-control" type="url"/>
-                                <ValidationMessage For="@(() => Model.ImageUrl)" />
+                                <InputText @bind-Value="SelectedItem.ImageUrl" id="ImageUrl" class="form-control" type="url"/>
+                                <ValidationMessage For="@(() => SelectedItem.ImageUrl)" />
                             </div>
                             <div class="form-group">
                                 <label for="Description" class="form-label">Description</label>
-                                <InputTextArea @bind-Value="Model.Description" id="Description" class="form-control" rows="3" cols="40"/>
-                                <ValidationMessage For="@(() => Model.Description)" />
+                                <InputTextArea @bind-Value="SelectedItem.Description" id="Description" class="form-control" rows="3" cols="40"/>
+                                <ValidationMessage For="@(() => SelectedItem.Description)" />
                             </div>
 
                             <div class="form-group">
                                 <label for="Inventory" class="form-label">Inventory</label>
-                                <InputNumber @bind-Value="Model.Inventory" id="Inventory" class="form-control" inputmode="numeric" min="0" step="1"/>
-                                <ValidationMessage For="@(() => Model.Inventory)" />
-                                <div class="form-text">Leave blank to not use this feature.</div>
+                                <InputNumber @bind-Value="SelectedItem.Inventory" id="Inventory" class="form-control" inputmode="numeric" min="0" step="1"/>
+                                <ValidationMessage For="@(() => SelectedItem.Inventory)" />
+                                <div class="form-text">Leave empty to not use this feature.</div>
                             </div>
                             <div class="form-group">
                                 <label for="BuyButtonText" class="form-label">Buy Button Text</label>
-                                <InputText @bind-Value="Model.BuyButtonText" id="BuyButtonText" class="form-control"/>
-                                <ValidationMessage For="@(() => Model.BuyButtonText)" />
+                                <InputText @bind-Value="SelectedItem.BuyButtonText" id="BuyButtonText" class="form-control"/>
+                                <ValidationMessage For="@(() => SelectedItem.BuyButtonText)" />
                             </div>
                             <div class="form-group d-flex align-items-center">
-                                <InputCheckbox @bind-Value="@Model.Enabled" id="Enable" class="btcpay-toggle me-3"/>
+                                <InputCheckbox @bind-Value="@SelectedItem.Enabled" id="Enable" class="btcpay-toggle me-3"/>
                                 <label for="Enable" class="form-check-label">Enable</label>
-                                <ValidationMessage For="@(() => Model.Enabled)"/>
+                                <ValidationMessage For="@(() => SelectedItem.Enabled)"/>
                             </div>
                         </ValidationEditContext>
                     }
@@ -140,143 +137,61 @@
 
 @code {
     [Parameter, EditorRequired]
-    public object? Items
-    {
+    public string Currency { get; set; } = null!;
+
+    [Parameter]
+    public List<AppItemModel>? Items {
         get => _items;
-        set
-        {
-            _items = new List<AppItem>();
-            var str = value?.ToString();
-            if (!string.IsNullOrEmpty(str))
-            {
-                try
-                {
-                    using var jsonDoc = JsonDocument.Parse(str);
-                    if (jsonDoc.RootElement is { ValueKind: JsonValueKind.Array } jsonArray)
-                    {
-                        foreach (var el in jsonArray.EnumerateArray())
-                        {
-                            _items.Add(new AppItem
-                            {
-                                Title = el.TryGetProperty("title", out var title) ? title.GetString() : null,
-                                Id = el.TryGetProperty("id", out var id) ? id.GetString() : null,
-                                PriceType = el.TryGetProperty("priceType", out var priceType) ? priceType.GetString() : null,
-                                Price = el.TryGetProperty("price", out var price)
-                                    ? price.ValueKind == JsonValueKind.String && decimal.TryParse(price.GetString(), out var number) ? number : price.GetDecimal()
-                                    : null,
-                                Inventory = el.TryGetProperty("inventory", out var inventory)
-                                    ? inventory.ValueKind == JsonValueKind.String && int.TryParse(inventory.GetString(), out var inv) ? inv : price.GetInt32()
-                                    : null,
-                                Description = el.TryGetProperty("description", out var description) ? description.GetString() : null,
-                                ImageUrl = el.TryGetProperty("image", out var imageUrl) ? imageUrl.GetString() : null,
-                                BuyButtonText = el.TryGetProperty("buyButtonText", out var buyButtonText) ? buyButtonText.GetString() : null,
-                                Enabled = !el.TryGetProperty("disabled", out var disabled) || !disabled.GetBoolean()
-                            });
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-            }
+        set {
+            _items = value;
+            _ = SelectItem(null);
         }
     }
 
-
-    [Parameter, EditorRequired]
-    public string Currency { get; set; } = null!;
+    private List<AppItemModel>? _items;
 
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? InputAttributes { get; set; }
 
-    /*[Parameter]
-    public EventCallback OnAddItem { get; set; }
-
-    [Parameter]
-    public EventCallback OnRemoveItem { get; set; }
-
-    [Parameter]
-    public EventCallback OnSelectItem { get; set; }
-
-    [Parameter]
-    public EventCallback OnSortItems { get; set; }*/
-
     private ValidationEditContext? _validationEditContext;
-    private List<AppItem>? _items { get; set; }
-    private AppItem? Model { get; set; }
     private string? _successMessage;
 
-    private AppItem? SelectedItem { get; set; }
+    private AppItemModel? SelectedItem { get; set; }
 
-    private class AppItem
+    private async Task SelectItem(AppItemModel? item)
     {
-        [Required]
-        public string? Title { get; set; }
-        [Required]
-        public string? Id {  get; set; }
-        [Required]
-        public string? PriceType { get; set; }
-        public decimal? Price {  get; set; }
-        public int? Inventory { get; set; }
-        public string? Description { get; set; }
-        public string? ImageUrl { get; set; }
-        public string? BuyButtonText { get; set; }
-        public bool Enabled { get; set; } = true;
-    }
-
-    private void SelectItem(int? index)
-    {
-        SelectedItem = index == null || _items == null || index > _items.Count - 1 ? null : _items[index.Value];
-        if (SelectedItem != null)
-        {
-            Model = new AppItem
-            {
-                Title = SelectedItem.Title,
-                Description = SelectedItem.Description,
-                ImageUrl = SelectedItem.ImageUrl,
-                PriceType = SelectedItem.PriceType,
-                Price = SelectedItem.Price,
-                Inventory = SelectedItem.Inventory,
-                BuyButtonText = SelectedItem.BuyButtonText,
-                Enabled = SelectedItem.Enabled
-            };
-        }
-
-        /*if (OnSelectItem.HasDelegate)
-            OnSelectItem.InvokeAsync(SelectedItem);*/
+        SelectedItem = item;
+        await (SelectedItem != null ? ShowOffcanvas() : HideOffcanvas());
     }
 
     private async Task AddItem()
     {
+        var item = new AppItemModel { PriceType = "Fixed", Price = 0 };
+        Items ??= [];
+        Items.Add(item);
+        await SelectItem(item);
     }
 
-    private async Task RemoveItem(int? index)
+    private async Task RemoveItem(AppItemModel item)
     {
+        Items!.Remove(item);
+        await SelectItem(null);
     }
 
-    private async Task SortItems()
+    private async Task ShowOffcanvas()
     {
+        await JS.InvokeVoidAsync("Interop.showOffcanvas", "#AppItemsEditorOffcanvas");
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    private async Task HideOffcanvas()
     {
-    }
-
-    public void Dispose()
-    {
-    }
-
-    private string CssClass => $"editor {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
-    private bool ItemChanged => Model != null && SelectedItem != null && SelectedItem.Title != Model.Title && SelectedItem.Description != Model.Description;
-
-    private void HideOffcanvas()
-    {
-        throw new NotImplementedException();
+        await JS.InvokeVoidAsync("Interop.hideOffcanvas", "#AppItemsEditorOffcanvas");
     }
 
     private void GenerateId()
     {
-        if (string.IsNullOrEmpty(Model?.Id) && !string.IsNullOrEmpty(Model?.Title)) Model.Id = Model.Title;
+        if (string.IsNullOrEmpty(SelectedItem?.Id) && !string.IsNullOrEmpty(SelectedItem?.Title)) SelectedItem.Id = SelectedItem.Title;
     }
+
+    private string CssClass => $"editor {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
 }
