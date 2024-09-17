@@ -34,6 +34,12 @@
   border-radius: var(--btcpay-border-radius);
 }
 
+.editor .item-image {
+  height: 2.1rem;
+  width: 2.1rem;
+  object-fit: cover;
+}
+
 .editor fieldset .list-group-item {
   padding: var(--btcpay-space-m) 0 var(--btcpay-space-m);
 }

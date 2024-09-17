@@ -1,6 +1,11 @@
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Models
+@using BTCPayApp.UI.Util
 @using Plk.Blazor.DragDrop
 @inject IJSRuntime JS
+@inject IAccountManager AccountManager
+@inject IDataDirectoryProvider DataDirectoryProvider
 
 <div @attributes="InputAttributes" class="@CssClass">
     <div class="row align-items-start">
@@ -60,7 +65,7 @@
                 <div class="bg-tile w-100 p-xl-4 rounded">
                     @if (SelectedItem != null)
                     {
-                        <ValidationEditContext @ref="_validationEditContext" Model="SelectedItem" id="item-form" class="item">
+                        <ValidationEditContext @ref="_validationEditContext" Model="SelectedItem" id="item-form" class="item" ErrorMessage="@_errorMessage">
                             <DataAnnotationsValidator />
                             <div class="form-group">
                                 <label for="Title" class="form-label" data-required>Title</label>
@@ -95,11 +100,28 @@
                                 }
                                 <ValidationMessage For="@(() => SelectedItem.Price)" />
                             </div>
-
-                            <div class="form-group">
-                                <label for="ImageUrl" class="form-label">Image Url</label>
-                                <InputText @bind-Value="SelectedItem.ImageUrl" id="ImageUrl" class="form-control" type="url"/>
-                                <ValidationMessage For="@(() => SelectedItem.ImageUrl)" />
+                            <div class="form-group d-flex align-items-center justify-content-between gap-2">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center justify-content-between gap-2">
+                                        <label for="ImageUrl" class="form-label">Image Url</label>
+                                        @if (!string.IsNullOrEmpty(SelectedItem.ImageUrl))
+                                        {
+                                        <button type="button" class="btn btn-link p-0 text-danger" @onclick="UnsetImage">
+                                            <Icon Symbol="cross"/> Remove
+                                        </button>
+                                        }
+                                    </div>
+                                    <InputText @bind-Value="SelectedItem.ImageUrl" id="ImageUrl" class="form-control mb-2" type="url"/>
+                                    <ValidationMessage For="@(() => SelectedItem.ImageUrl)"/>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <InputFile OnChange="LoadImage" @key="@_inputFileId" id="Image" class="form-control"/>
+                                        <button class="btn btn-primary" type="button" @onclick="UploadImage" disabled="@(string.IsNullOrEmpty(SelectedItem.ImagePath))">Upload</button>
+                                    </div>
+                                </div>
+                                @if (!string.IsNullOrEmpty(SelectedItem.ImageUrl))
+                                {
+                                    <img src="@SelectedItem.ImageUrl" alt="@SelectedItem.Title" class="item-image"/>
+                                }
                             </div>
                             <div class="form-group">
                                 <label for="Description" class="form-label">Description</label>
@@ -137,6 +159,8 @@
 
 @code {
     [Parameter, EditorRequired]
+    public string AppId { get; set; } = null!;
+    [Parameter, EditorRequired]
     public string Currency { get; set; } = null!;
 
     [Parameter]
@@ -148,18 +172,19 @@
         }
     }
 
-    private List<AppItemModel>? _items;
-
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? InputAttributes { get; set; }
 
+    private List<AppItemModel>? _items;
+    private Guid _inputFileId = Guid.NewGuid();
     private ValidationEditContext? _validationEditContext;
-    private string? _successMessage;
-
     private AppItemModel? SelectedItem { get; set; }
+    private string? _successMessage;
+    private string? _errorMessage;
 
     private async Task SelectItem(AppItemModel? item)
     {
+        _errorMessage = null;
         SelectedItem = item;
         await (SelectedItem != null ? ShowOffcanvas() : HideOffcanvas());
     }
@@ -191,6 +216,55 @@
     private void GenerateId()
     {
         if (string.IsNullOrEmpty(SelectedItem?.Id) && !string.IsNullOrEmpty(SelectedItem?.Title)) SelectedItem.Id = SelectedItem.Title;
+    }
+
+    private async Task LoadImage(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var appData = await DataDirectoryProvider.GetAppDataDirectory();
+            var fileName = e.File.Name;
+            var dirPath = Path.Combine(appData, "tmp");
+            var filePath = Path.Combine(dirPath, fileName);
+            Directory.CreateDirectory(dirPath);
+
+            await using FileStream fs = new(filePath, FileMode.Create);
+            await e.File.OpenReadStream().CopyToAsync(fs);
+            await fs.FlushAsync();
+            SelectedItem!.ImagePath = filePath;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Image could not be applied: {ex.Message}";
+        }
+    }
+
+    private async Task UploadImage()
+    {
+        if (string.IsNullOrEmpty(SelectedItem!.ImagePath)) return;
+        try
+        {
+            var path = SelectedItem.ImagePath;
+            var mimeType = FileHelper.GetContentType(path);
+            var upload = await AccountManager.GetClient().UploadAppItemImage(AppId, path, mimeType);
+            SelectedItem.ImageUrl = upload.Url;
+            // cleanup
+            File.Delete(path);
+            SelectedItem.ImagePath = null;
+            _inputFileId = Guid.NewGuid();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Image could not be uploaded: {ex.Message}";
+        }
+    }
+
+    private async Task UnsetImage()
+    {
+        SelectedItem!.ImageUrl = null;
+        SelectedItem.ImagePath = null;
+        _inputFileId = Guid.NewGuid();
     }
 
     private string CssClass => $"editor {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();

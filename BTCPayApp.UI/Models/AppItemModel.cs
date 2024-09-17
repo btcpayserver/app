@@ -15,8 +15,11 @@ public class AppItemModel
     public string? Categories { get; set; }
     public int? Inventory { get; set; }
     public string? Description { get; set; }
+    [Url]
     [JsonPropertyName("image")]
     public string? ImageUrl { get; set; }
+    [JsonIgnore]
+    public string? ImagePath { get; set; }
     public string? BuyButtonText { get; set; }
     public bool Disabled { get; set; }
     [JsonIgnore]
