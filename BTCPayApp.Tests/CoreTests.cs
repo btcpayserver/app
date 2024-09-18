@@ -139,7 +139,7 @@ public class CoreTests
             return (config, true);
         });
         await TestUtils.EventuallyAsync(async () =>
-            Assert.True((await node.LNManager.Node.GetConfig()).AcceptInboundConnection));
+            Assert.True((await node2.LNManager.Node.GetConfig()).AcceptInboundConnection));
         TestUtils.Eventually(
             async () => Assert.NotNull(node.App.Services.GetRequiredService<LDKPeerHandler>().Endpoint));
         

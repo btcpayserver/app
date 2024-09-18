@@ -65,14 +65,24 @@ public class LightningNodeManager : BaseHostedService
 
     public async Task StartNode()
     {
-        if (_nodeScope is not null || State is LightningNodeState.Loaded or LightningNodeState.NotConfigured || _onChainWalletManager.State is not OnChainWalletState.Loaded)
+        if (_nodeScope is not null || State is LightningNodeState.Loaded or LightningNodeState.NotConfigured )
+        {
             return;
+        }
+
+      
         _logger.LogInformation("Starting lightning node");
         await _controlSemaphore.WaitAsync();
 
         _logger.LogInformation("Starting lightning node: lock acquired");
         try
         {
+            if (_onChainWalletManager.State is not OnChainWalletState.Loaded)
+            {
+                State = LightningNodeState.WaitingForConnection;
+            
+                return;
+            }
             if (_nodeScope is null)
             {
                 _nodeScope = _serviceScopeFactory.CreateScope();
