@@ -244,7 +244,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                 await _syncService.StopSync();
                 if (await _syncService.EncryptionKeyRequiresImport())
                 {
-                    ConnectionState = BTCPayConnectionState.WaitingForEncryptionKey;
+                    newState = BTCPayConnectionState.WaitingForEncryptionKey;
                     _logger.LogWarning(
                         "Existing state found but encryption key is missing, waiting until key is provided");
                 }
@@ -412,6 +412,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
             _logger.LogInformation("Sending device master signal to turn off");
             await _syncService.StopSync();
             await _syncService.SyncToRemote( CancellationToken.None);
+            await HubProxy.DeviceMasterSignal(await _configProvider.GetDeviceIdentifier(), false);
         }
     }
 }

@@ -79,9 +79,14 @@ public class SyncService : IDisposable
         }
         catch (VssClientException e) when (e.Error.ErrorCode == ErrorCode.NoSuchKeyException)
         {
+            return false;
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Error while checking if encryption key requires import");
+            throw;
         }
 
-        return false;
     }
 
     public async Task<bool> SetEncryptionKey(Mnemonic mnemonic)

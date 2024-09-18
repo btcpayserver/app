@@ -88,8 +88,8 @@ public class LDKRapidGossipSyncer : IScopedHostedService
                         case GraphSyncError.GraphSyncError_LightningError graphSyncErrorLightningError:
                             _logger.LogError(
                                 $"Failed to update network graph with error {graphSyncErrorLightningError.lightning_error.get_err()}");
-                            config = await _ldkNode.GetConfig();
-                            await _ldkNode.UpdateConfig(config);
+                            // config = await _ldkNode.GetConfig();
+                            // await _ldkNode.UpdateConfig(config);
                             continue;
                         default:
                             throw new ArgumentOutOfRangeException();

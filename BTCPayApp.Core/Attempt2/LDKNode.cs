@@ -259,13 +259,30 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         return ServiceProvider.GetServices<IJITService>().Select(jit => jit.ProviderName).ToArray();
     }
 
-    public async Task UpdateConfig(LightningConfig config)
+    public async Task UpdateConfig(Func<LightningConfig, Task<(LightningConfig, bool)>> config)
     {
         await _started.Task;
-        await _configProvider.Set(LightningConfig.Key, config, true);
-        _config = config;
+        await _semaphore.WaitAsync();
+        try
+        {
+            var current = await GetConfig();
+            var updated = await config(current);
+        
+            if (!updated.Item2)
+            {
+                return;
+            }
+            await _configProvider.Set(LightningConfig.Key, updated, true);
+            _config = updated.Item1;
 
-        ConfigUpdated?.Invoke(this, config);
+            ConfigUpdated?.Invoke(this, _config);
+        }
+        finally
+        {
+            
+            _semaphore.Release();
+        }
+        
     }
 
 
@@ -452,18 +469,20 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     public async Task Peer(PubKey key, PeerInfo? value)
     {
         var toString = key.ToString().ToLowerInvariant();
-        var config = await GetConfig();
-        if (value is null)
+        await UpdateConfig(async config =>
         {
-            if (config.Peers.Remove(toString))
+            if (value is null)
             {
-                await UpdateConfig(config);
-                return;
+                if (config.Peers.Remove(toString))
+                {
+                    
+                    return (config, true);
+                }
             }
-        }
 
-        config.Peers.AddOrReplace(toString, value);
-        await UpdateConfig(config);
+            config.Peers.AddOrReplace(toString, value);
+            return (config, true);
+        });
     }
 
     public async Task ArchiveChannel(ChannelId id)

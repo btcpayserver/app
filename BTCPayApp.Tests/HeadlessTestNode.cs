@@ -114,7 +114,7 @@ public class HeadlessTestNode : IDisposable
         App.Dispose();
         sw.Stop();
         Console.WriteLine($"App stopped in {sw.ElapsedMilliseconds}ms");
-        while (Directory.Exists(dir))
+        // while (Directory.Exists(dir))
         {
             try
             {

@@ -2,6 +2,7 @@ using System.Text.Json;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Helpers;
 using BTCPayApp.UI.Features;
 using Fluxor;
 using Microsoft.Extensions.Logging;
@@ -73,10 +74,19 @@ public class StateMiddleware(
         onChainWalletManager.StateChanged += async (sender, args) =>
         {
             dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
+           if(  accountManager.GetCurrentStore() is { } store)
             switch (onChainWalletManager.State)
             {
                 case OnChainWalletState.Loaded:
-                    await TryApplyingAppPaymentMethodsToCurrentStore(true, false);
+                    var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, false);
+                    if (res is { onchain: {} onchain } &&  onChainWalletManager.IsOnChainOurs(onchain))
+                    {
+                      
+                            _dispatcher.Dispatch(new StoreState.FetchOnchainBalance(store.Id));
+                            _dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(store.Id));
+                        
+                    
+                    }
                     break;
                 case OnChainWalletState.NotConfigured when onChainWalletManager.CanConfigureWallet:
                     await onChainWalletManager.Generate();
@@ -93,7 +103,17 @@ public class StateMiddleware(
             }
             if (lightningNodeService.State == LightningNodeState.Loaded)
             {
-                await TryApplyingAppPaymentMethodsToCurrentStore(false, true);
+                
+                var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, false, true);
+                if (res is { lightning: {} lightning } && lightningNodeService.IsLightningOurs(lightning))
+                {
+                    if (accountManager.GetCurrentStore() is { } store)
+                    {
+                        dispatcher.Dispatch(new StoreState.FetchLightningBalance(store.Id));
+                        dispatcher.Dispatch(new StoreState.FetchLightningHistogram(store.Id));
+                    }
+                }
+                
             }
         };
 
@@ -103,7 +123,20 @@ public class StateMiddleware(
             if (storeInfo != null)
             {
                 navigationManager.NavigateTo(Routes.Dashboard);
-                await TryApplyingAppPaymentMethodsToCurrentStore(true, true);
+               var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, true);
+                if (res is { onchain: {} onchain } && onChainWalletManager.IsOnChainOurs(onchain))
+                {
+                    dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeInfo.Id));
+                    dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(storeInfo.Id));
+                }
+                if (res is { lightning: {} lightning } && lightningNodeService.IsLightningOurs(lightning))
+                {
+                    dispatcher.Dispatch(new StoreState.FetchLightningBalance(storeInfo.Id));
+                    dispatcher.Dispatch(new StoreState.FetchLightningHistogram(storeInfo.Id));
+                }
+                dispatcher.Dispatch(new StoreState.FetchBalances(storeInfo.Id));
+                if (storeInfo.PosAppId != null)
+                    dispatcher.Dispatch(new StoreState.FetchPointOfSaleStats(storeInfo.PosAppId));
             }
             else
             {
@@ -186,62 +219,5 @@ public class StateMiddleware(
         _ = RefreshRates(dispatcher, _ratesCts.Token);
     }
 
-    private async Task<(GenericPaymentMethodData? onchain, GenericPaymentMethodData? lightning)?> TryApplyingAppPaymentMethodsToCurrentStore(bool applyOnchain, bool applyLighting)
-    {
-        var storeId = accountManager.GetCurrentStore()?.Id;
-        if (// is a store present?
-            string.IsNullOrEmpty(storeId) ||
-            // is user permitted? (store owner)
-            !await accountManager.IsAuthorized(Policies.CanModifyStoreSettings, storeId) ||
-            // is the onchain wallet configured?
-            !onChainWalletManager.IsConfigured) return null;
-        // check the store's payment methods
-        var pms = await accountManager.GetClient().GetStorePaymentMethods(storeId, includeConfig: true);
-        // onchain
-        var onchain = pms.FirstOrDefault(pm => pm.PaymentMethodId == OnChainWalletManager.PaymentMethodId);
-        if (applyOnchain)
-        {
-            var onchainDerivation = onChainWalletManager.Derivation;
-            if (onchain is null && onchainDerivation is not null)
-                onchain = await accountManager.GetClient().UpdateStorePaymentMethod(storeId, OnChainWalletManager.PaymentMethodId, new UpdatePaymentMethodRequest
-                {
-                    Enabled = true,
-                    Config = onchainDerivation.Descriptor
-                });
-            if (!string.IsNullOrEmpty(onchain?.Config.ToString()))
-            {
-                using var jsonDoc = JsonDocument.Parse(onchain.Config.ToString());
-                if (jsonDoc.RootElement.TryGetProperty("accountDerivation", out var derivationSchemeElement) &&
-                    derivationSchemeElement.GetString() is { } derivationScheme &&
-                    onchainDerivation?.Identifier.Contains(derivationScheme) is true)
-                {
-                    _dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeId));
-                    _dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(storeId));
-                }
-            }
-        }
-        // lightning
-        var lightning = pms.FirstOrDefault(pm => pm.PaymentMethodId == LightningNodeManager.PaymentMethodId);
-        if (applyLighting)
-        {
-            if (lightning is null && !string.IsNullOrEmpty(lightningNodeService.ConnectionString))
-                lightning = await accountManager.GetClient().UpdateStorePaymentMethod(storeId, LightningNodeManager.PaymentMethodId, new UpdatePaymentMethodRequest
-                {
-                    Enabled = true,
-                    Config = lightningNodeService.ConnectionString
-                });
-            if (!string.IsNullOrEmpty(lightning?.Config.ToString()))
-            {
-                using var jsonDoc = JsonDocument.Parse(lightning.Config.ToString());
-                if (jsonDoc.RootElement.TryGetProperty("connectionString", out var configuredConnectionStringElement) &&
-                    configuredConnectionStringElement.GetString() is { } configuredConnectionString &&
-                    configuredConnectionString == lightningNodeService.ConnectionString)
-                {
-                    _dispatcher.Dispatch(new StoreState.FetchLightningBalance(storeId));
-                    _dispatcher.Dispatch(new StoreState.FetchLightningHistogram(storeId));
-                }
-            }
-        }
-        return (onchain, lightning);
-    }
+   
 }
