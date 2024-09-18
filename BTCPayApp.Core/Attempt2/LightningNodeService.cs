@@ -67,8 +67,10 @@ public class LightningNodeManager : BaseHostedService
     {
         if (_nodeScope is not null || State is LightningNodeState.Loaded or LightningNodeState.NotConfigured || _onChainWalletManager.State is not OnChainWalletState.Loaded)
             return;
+        _logger.LogInformation("Starting lightning node");
         await _controlSemaphore.WaitAsync();
 
+        _logger.LogInformation("Starting lightning node: lock acquired");
         try
         {
             if (_nodeScope is null)

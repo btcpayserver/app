@@ -128,6 +128,10 @@ public class CoreTests
         TestUtils.Eventually(() =>
             Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node2.ConnectionManager.ConnectionState));
 
+        
+        TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Loaded, node2.OnChainWalletManager.State));
+        TestUtils.Eventually(() => Assert.Equal(LightningNodeState.Loaded, node2.LNManager.State));
+        
 
         await node2.LNManager.Node.UpdateConfig(async config =>
         {

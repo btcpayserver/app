@@ -4,6 +4,7 @@ using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Desktop;
+using Laraue.EfCoreTriggers.Common.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -19,10 +20,10 @@ public class TestLoggerFactory : ILoggerFactory
     private readonly string _prefix;
     private readonly ILoggerFactory _inner;
 
-    public TestLoggerFactory(string prefix, ILoggerFactory? inner = null)
+    public TestLoggerFactory(string prefix, ILoggerFactory inner)
     {
         _prefix = prefix;
-        _inner = inner ?? new LoggerFactory();
+        _inner = inner;
     }
     public void Dispose()
     {
@@ -84,6 +85,13 @@ public class HeadlessTestNode : IDisposable
         hostBuilder.ConfigureServices(collection =>
         {
             collection.ConfigureBTCPayAppCore();
+            collection.PostConfigure<LoggerFilterOptions>(options =>
+            {
+                var newRules= options.Rules.Select(rule => new LoggerFilterRule(rule.ProviderName, nodeName+":"+ rule.CategoryName, rule.LogLevel, rule.Filter)).ToArray();
+              options.Rules.Clear();
+options.Rules.AddRange(newRules);
+            });
+            
             collection.Replace(ServiceDescriptor.Singleton<ILoggerFactory, TestLoggerFactory>(provider => new TestLoggerFactory(nodeName, ActivatorUtilities.CreateInstance<LoggerFactory>(provider))));
             // collection.Replace(ServiceDescriptor.Singleton<IDbContextFactory<AppDbContext>, TestDbContextFactory>());
             collection.AddDataProtection(options => { options.ApplicationDiscriminator = "BTCPayApp"; });
