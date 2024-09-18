@@ -169,10 +169,12 @@
         _successMessage = _errorMessage = null;
         try
         {
-            _config = await Node.GetConfig();
-            _config.JITLSP = Model.JitLsp;
-            _config.RapidGossipSyncUrl = string.IsNullOrEmpty(Model.RgsUrl) ? null : Uri.TryCreate(Model.RgsUrl, UriKind.Absolute, out var uri) ? uri: null;
-            await Node.UpdateConfig(_config);
+            await Node.UpdateConfig(async config =>
+            {
+                config.JITLSP = Model.JitLsp;
+                config.RapidGossipSyncUrl = string.IsNullOrEmpty(Model.RgsUrl) ? null : Uri.TryCreate(Model.RgsUrl, UriKind.Absolute, out var uri) ? uri: null;
+                return (config, true);
+            });
             _successMessage = "Lightning configuration updated.";
         }
         catch (Exception e)

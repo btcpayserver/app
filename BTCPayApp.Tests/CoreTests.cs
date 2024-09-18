@@ -194,7 +194,14 @@ public class CoreTests
 
              Assert.Equal(Money.Coins(3).Satoshi, utxos.Sum(coin => (Money) coin.Amount));
          });
-         
+         await TestUtils.EventuallyAsync(async () =>
+         {
+             requestOfInvoice =
+                 Assert.Single(
+                     await node2.App.Services.GetRequiredService<PaymentsManager>().List(payments => payments));
+             Assert.Equal(pmLN.Destination, requestOfInvoice.Status.ToString());
+
+         });
          
          
          
@@ -210,7 +217,7 @@ public class CoreTests
         
     }
     
-    private async Task<uint256> FundWallet(RPCClient rpc, BitcoinAddress address, Money m)
+    private async Task<uint256?> FundWallet(RPCClient rpc, BitcoinAddress address, Money m)
     {
         
         var attempts = 0;
@@ -226,5 +233,7 @@ public class CoreTests
                 await rpc.GenerateAsync(1);
             }
         }
+
+        return null;
     }
 }
