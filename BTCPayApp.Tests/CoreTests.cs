@@ -211,6 +211,27 @@ public class CoreTests
              Assert.Equal(LightningPaymentStatus.Pending, requestOfInvoice.Status);
 
          });
+         invoice = await node2.AccountManager.GetClient().CreateInvoice(store.Id, new CreateInvoiceRequest()
+         {
+             Amount = 1m,
+             Currency = "BTC",
+         });
+         
+          pms = await  node2.AccountManager.GetClient().GetInvoicePaymentMethods(store.Id, invoice.Id);
+         Assert.Equal(2, pms.Length);
+         
+         pmLN = pms.First(p => p.PaymentMethodId == "BTC-LN");
+
+        var outbound = await node2.LNManager.Node.PaymentsManager.PayInvoice(BOLT11PaymentRequest.Parse(pmLN.Destination, network));
+        Assert.NotNull(outbound);
+        Assert.Equal(pmLN.Destination, outbound.PaymentRequest.ToString());
+        Assert.False(outbound.Inbound);
+        Assert.Equal(LightningPaymentStatus.Complete, outbound.Status);
+
+        var payments = await node2.LNManager.Node.PaymentsManager.List(payments => payments);
+         Assert.Equal(3, payments.Count);
+            Assert.Contains(payments, payment => payment.Inbound && payment.PaymentRequest.ToString() == pmLN.Destination && payment.Status == LightningPaymentStatus.Complete);
+            Assert.Contains(payments, payment => !payment.Inbound && payment.PaymentRequest.ToString() == pmLN.Destination && payment.Status == LightningPaymentStatus.Complete);
          
          
          
