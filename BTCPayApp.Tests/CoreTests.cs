@@ -142,8 +142,7 @@ public class CoreTests
         });
         await TestUtils.EventuallyAsync(async () =>
             Assert.True((await node2.LNManager.Node.GetConfig()).AcceptInboundConnection));
-        TestUtils.Eventually(
-            async () => Assert.NotNull(node2.LNManager.Node.PeerHandler.Endpoint));
+        TestUtils.Eventually(() => Assert.NotNull(node2.LNManager.Node?.PeerHandler.Endpoint));
         
         //test onchain wallet
         var address = await node.OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);

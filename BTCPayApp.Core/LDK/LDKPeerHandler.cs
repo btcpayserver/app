@@ -74,11 +74,11 @@ public class LDKPeerHandler : IScopedHostedService
         });
     }
 
-    private CancellationTokenSource _configCts = new();
+    private TaskCompletionSource? _configTcs;
 
     private async Task ConfigUpdated(object? sender, LightningConfig e)
     {
-        await _configCts.CancelAsync();
+        _configTcs?.TrySetResult();
     }
 
     private async Task ContinuouslyAttemptToConnectToPersistentPeers(CancellationToken ctsToken)
@@ -155,12 +155,13 @@ public class LDKPeerHandler : IScopedHostedService
         while (!cancellationToken.IsCancellationRequested)
         {
             
-            _configCts = new();
             var config = await _node.GetConfig();
             if (!config.AcceptInboundConnection)
             {
-                await CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _configCts.Token).Token;
-                continue;
+                _configTcs ??= new();
+                await _configTcs.Task.WaitAsync(cancellationToken);
+                _configTcs = null;
+               continue;
             }
 
             using var listener = new TcpListener(new IPEndPoint(IPAddress.Any, 0));
