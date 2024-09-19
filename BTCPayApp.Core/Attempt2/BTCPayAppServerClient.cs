@@ -76,6 +76,11 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
         return invs.FirstOrDefault()?.ToPayment();
     }
 
+    public async Task CancelInvoice(uint256 paymentHash)
+    {
+        await PaymentsManager.CancelInbound(paymentHash);
+    }
+
     public async Task<List<LightningPayment>> GetLightningPayments(ListPaymentsParams request)
     {
         return await PaymentsManager.List(payments => payments.Where(payment => !payment.Inbound), default)

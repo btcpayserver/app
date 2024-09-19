@@ -4,6 +4,7 @@ using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
 using BTCPayServer.Client.Models;
+using BTCPayServer.Lightning;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NBitcoin;
@@ -166,8 +167,9 @@ public class CoreTests
        {
            Name = "Store1"
        });
+       Assert.True(await node2.AccountManager.CheckAuthenticated(true));
        Assert.True((await node2.AccountManager.SetCurrentStoreId(store.Id)).Succeeded);
-         Assert.Equal(store.Id, node2.AccountManager.GetCurrentStore()?.Id);
+       Assert.Equal(store.Id, node2.AccountManager.GetCurrentStore()?.Id);
 
          var res = await node2.AccountManager.TryApplyingAppPaymentMethodsToCurrentStore(node2.OnChainWalletManager, node2.LNManager, true, true);
          Assert.NotNull(res);
@@ -182,11 +184,11 @@ public class CoreTests
          var pms = await  node2.AccountManager.GetClient().GetInvoicePaymentMethods(store.Id, invoice.Id);
          Assert.Equal(2, pms.Length);
          
-         var pmOnchain = pms.First(p => p.PaymentMethodId == "BTC");
+         var pmOnchain = pms.First(p => p.PaymentMethodId == "BTC-CHAIN");
          var pmLN = pms.First(p => p.PaymentMethodId == "BTC-LN");
 
          var requestOfInvoice =
-             Assert.Single(await node2.App.Services.GetRequiredService<PaymentsManager>().List(payments => payments));
+             Assert.Single(await node2.LNManager.Node.PaymentsManager.List(payments => payments));
          Assert.Equal(pmLN.Destination, requestOfInvoice.PaymentRequest.ToString());
          Assert.True(requestOfInvoice.Inbound);
          
@@ -203,8 +205,10 @@ public class CoreTests
          {
              requestOfInvoice =
                  Assert.Single(
-                     await node2.App.Services.GetRequiredService<PaymentsManager>().List(payments => payments));
-             Assert.Equal(pmLN.Destination, requestOfInvoice.Status.ToString());
+                     await node2.LNManager.Node.PaymentsManager.List(payments => payments));
+             Assert.Equal(pmLN.Destination, requestOfInvoice.PaymentRequest.ToString());
+             //Note: this should be failed in the future. BTCPay should cancel the invoice once btcpay invoice is paid..
+             Assert.Equal(LightningPaymentStatus.Pending, requestOfInvoice.Status);
 
          });
          
@@ -215,6 +219,8 @@ public class CoreTests
         var username2 = Guid.NewGuid() + "@gg.com";
         Assert.True((await node3.AccountManager.Register(btcpayUri.AbsoluteUri, username2, username2)).Succeeded);
         Assert.True(await node3.AuthStateProvider.CheckAuthenticated());
+        TestUtils.Eventually(() =>
+            Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node3.ConnectionManager.ConnectionState));
         await node3.OnChainWalletManager.Generate();
         await node3.LNManager.Generate();
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Loaded, node3.OnChainWalletManager.State));
