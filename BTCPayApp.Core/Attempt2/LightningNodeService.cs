@@ -105,7 +105,8 @@ public class LightningNodeManager : BaseHostedService
         }
     }
 
-    public async Task StopNode()
+    public async Task StopNode() => await StopNode(true);
+    public async Task StopNode(bool setAsStopped = true)
     {
         if (_nodeScope is null)
             return;
@@ -124,6 +125,7 @@ public class LightningNodeManager : BaseHostedService
             _nodeScope?.Dispose();
             _nodeScope = null;
             _controlSemaphore.Release();
+            if (setAsStopped)
             State = LightningNodeState.Stopped;
         }
     }
@@ -214,7 +216,7 @@ public class LightningNodeManager : BaseHostedService
                     break;
                 }
                 case LightningNodeState.Loading:
-                    await StopNode();
+                    await StopNode(false);
                     if (!IsHubConnected)
                     {
                         newState = LightningNodeState.WaitingForConnection;
@@ -246,13 +248,13 @@ public class LightningNodeManager : BaseHostedService
         State = LightningNodeState.Init;
         StateChanged += OnStateChanged;
         await StateChanged.Invoke(this, (LightningNodeState.Init, LightningNodeState.Init));
-        _btcPayConnectionManager.ConnectionChanged += OnConnectionChanged;
+        // _btcPayConnectionManager.ConnectionChanged += OnConnectionChanged;
         _onChainWalletManager.StateChanged += OnChainWalletManagerOnStateChanged;
     }
 
     protected override async Task ExecuteStopAsync(CancellationToken cancellationToken)
     {
-        _btcPayConnectionManager.ConnectionChanged -= OnConnectionChanged;
+        // _btcPayConnectionManager.ConnectionChanged -= OnConnectionChanged;
         _onChainWalletManager.StateChanged += OnChainWalletManagerOnStateChanged;
         StateChanged -= OnStateChanged;
         _nodeScope?.Dispose();

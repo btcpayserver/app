@@ -79,7 +79,6 @@ public class LDKPeerHandler : IScopedHostedService
     private async Task ConfigUpdated(object? sender, LightningConfig e)
     {
         await _configCts.CancelAsync();
-        _configCts = new();
     }
 
     private async Task ContinuouslyAttemptToConnectToPersistentPeers(CancellationToken ctsToken)
@@ -155,6 +154,8 @@ public class LDKPeerHandler : IScopedHostedService
     {
         while (!cancellationToken.IsCancellationRequested)
         {
+            
+            _configCts = new();
             var config = await _node.GetConfig();
             if (!config.AcceptInboundConnection)
             {

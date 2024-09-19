@@ -51,10 +51,11 @@ public class CoreTests
         TestUtils.Eventually(() =>
             Assert.Equal(BTCPayConnectionState.Connecting, node.ConnectionManager.ConnectionState));
         TestUtils.Eventually(() =>
-            Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node.ConnectionManager.ConnectionState));
-        TestUtils.Eventually(() => Assert.Equal(LightningNodeState.NotConfigured, node.LNManager.State));
+            Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node.ConnectionManager.ConnectionState)); 
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.NotConfigured, node.OnChainWalletManager.State));
-        Assert.Null(node.OnChainWalletManager.WalletConfig);
+
+        TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
+           Assert.Null(node.OnChainWalletManager.WalletConfig);
 
         await node.AccountManager.Logout();
         TestUtils.Eventually(() =>
@@ -65,7 +66,7 @@ public class CoreTests
         Assert.NotNull(node.AccountManager.GetAccount()?.RefreshToken);
 
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.NotConfigured, node.OnChainWalletManager.State));
-        TestUtils.Eventually(() => Assert.Equal(LightningNodeState.NotConfigured, node.LNManager.State));
+        TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
 
         Assert.False(node.LNManager.CanConfigureLightningNode);
         await node.OnChainWalletManager.Generate();
@@ -123,6 +124,7 @@ public class CoreTests
 
 
         await node.ConnectionManager.SwitchToSlave();
+        _output.WriteLine("SLAVE CHECKPOINT");
         TestUtils.Eventually(() =>
             Assert.Equal(BTCPayConnectionState.ConnectedAsSlave, node.ConnectionManager.ConnectionState));
         TestUtils.Eventually(() =>
@@ -141,7 +143,7 @@ public class CoreTests
         await TestUtils.EventuallyAsync(async () =>
             Assert.True((await node2.LNManager.Node.GetConfig()).AcceptInboundConnection));
         TestUtils.Eventually(
-            async () => Assert.NotNull(node.App.Services.GetRequiredService<LDKPeerHandler>().Endpoint));
+            async () => Assert.NotNull(node2.LNManager.Node.PeerHandler.Endpoint));
         
         //test onchain wallet
         var address = await node.OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);
@@ -149,7 +151,7 @@ public class CoreTests
     
         var network = node.ConnectionManager.ReportedNetwork;
         Assert.NotNull(network);
-        var rpc = new RPCClient(RPCCredentialString.Parse("server=http://bitcoind:43782;ceiwHEbqWI83:DwubwWsoo3"), network);
+        var rpc = new RPCClient(RPCCredentialString.Parse("server=http://localhost:43782;ceiwHEbqWI83:DwubwWsoo3"), network);
         Assert.NotNull(await FundWallet(rpc, address.GetDestinationAddress(network), Money.Coins(1)));
         Assert.NotNull(await FundWallet(rpc, address2.GetDestinationAddress(network), Money.Coins(1)));
         await TestUtils.EventuallyAsync(async () =>
