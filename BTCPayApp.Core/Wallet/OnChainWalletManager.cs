@@ -83,13 +83,10 @@ public class OnChainWalletManager : BaseHostedService
 
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
     {
-
-
         if (e is {New: OnChainWalletState.Loaded} && IsConfigured)
         {
             await Track();
         }
-
         if (e.New is OnChainWalletState.Loading)
         {
             DetermineState();
@@ -101,7 +98,6 @@ public class OnChainWalletManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-
             if (State != OnChainWalletState.NotConfigured || IsConfigured || !IsHubConnected)
             {
                 throw new InvalidOperationException("Cannot generate wallet in current state");
@@ -135,7 +131,6 @@ public class OnChainWalletManager : BaseHostedService
             foreach (var keyValuePair in result)
             {
                 walletConfig.Derivations[keyValuePair.Key].Identifier = keyValuePair.Value;
-
             }
 
             if (!await _syncService.SetEncryptionKey(mnemonic))

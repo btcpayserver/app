@@ -92,17 +92,15 @@
             </div>
         }
     }
+    else if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
+    {
+        <button class="btn btn-primary" @onclick="OnChainWalletManager.Generate">Generate wallet</button>
+    }
     else
     {
         <ul>
             <li>Connection state: @State.Value.ConnectionState</li>
             <li>Onchain wallet state: @State.Value.OnchainWalletState</li>
-            @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
-            {
-                <li>
-                    <button class="btn btn-primary" @onclick="OnChainWalletManager.Generate">Generate wallet</button>
-                </li>
-            }
         </ul>
     }
 </section>

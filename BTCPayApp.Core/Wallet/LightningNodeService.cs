@@ -72,7 +72,7 @@ public class LightningNodeManager : BaseHostedService
             return;
         }
 
-      
+
         _logger.LogInformation("Starting lightning node");
         await _controlSemaphore.WaitAsync();
 
@@ -82,7 +82,7 @@ public class LightningNodeManager : BaseHostedService
             if (_onChainWalletManager.State is not OnChainWalletState.Loaded)
             {
                 State = LightningNodeState.WaitingForConnection;
-            
+
                 return;
             }
             if (_nodeScope is null)
@@ -234,7 +234,6 @@ public class LightningNodeManager : BaseHostedService
                     break;
 
                 case LightningNodeState.NotConfigured:
-                 
                     break;
             }
         }

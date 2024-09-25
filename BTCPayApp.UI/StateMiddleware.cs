@@ -97,7 +97,14 @@ public class StateMiddleware(
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
             if (lightningNodeService is {State: LightningNodeState.NotConfigured, CanConfigureLightningNode: true})
             {
-                await lightningNodeService.Generate();
+                try
+                {
+                    await lightningNodeService.Generate();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error configuring LN wallet");
+                }
             }
             if (lightningNodeService.State == LightningNodeState.Loaded)
             {
