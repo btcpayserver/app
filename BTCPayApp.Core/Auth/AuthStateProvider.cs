@@ -22,6 +22,7 @@ public class AuthStateProvider(
     private const string AccountKeyPrefix = "Account";
     private const string CurrentAccountKey = "CurrentAccount";
     private bool _isInitialized;
+    private bool _refreshUserInfo;
     private BTCPayAccount? _account;
     private AppUserInfo? _userInfo;
     private CancellationTokenSource? _pingCts;
@@ -86,10 +87,12 @@ public class AuthStateProvider(
             }
 
             var oldUserInfo = _userInfo;
-            if (_userInfo == null && _account?.HasTokens is true)
+            var needsRefresh = _refreshUserInfo || _userInfo == null;
+            if (needsRefresh && _account?.HasTokens is true)
             {
                 var cts = new CancellationTokenSource(5000);
                 _userInfo = await GetClient().GetUserInfo(cts.Token);
+                _refreshUserInfo = false;
             }
 
             if (_userInfo != null)
@@ -126,6 +129,7 @@ public class AuthStateProvider(
         }
         catch
         {
+            _userInfo = null;
             return new AuthenticationState(user);
         }
         finally
@@ -136,7 +140,7 @@ public class AuthStateProvider(
 
     public async Task<bool> CheckAuthenticated(bool refreshUser = false)
     {
-        if (refreshUser) _userInfo = null;
+        if (refreshUser) _refreshUserInfo = true;
         await GetAuthenticationStateAsync();
         return _userInfo != null;
     }
