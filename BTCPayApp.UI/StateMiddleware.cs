@@ -1,4 +1,3 @@
-using System.Text.Json;
 using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
@@ -7,8 +6,6 @@ using BTCPayApp.UI.Features;
 using Fluxor;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Components;
-using BTCPayServer.Client;
-using BTCPayServer.Client.Models;
 
 namespace BTCPayApp.UI;
 
@@ -42,7 +39,7 @@ public class StateMiddleware(
                 await configProvider.Set(UiStateConfigKey, state, false);
             };
 
-            store.Initialized.ContinueWith(task => ListenIn(dispatcher));
+            _ = store.Initialized.ContinueWith(_ => ListenIn(dispatcher));
         }
 
         await base.InitializeAsync(dispatcher, store);
@@ -58,7 +55,7 @@ public class StateMiddleware(
         }
     }
 
-    private void ListenIn(IDispatcher dispatcher)
+    private async Task ListenIn(IDispatcher dispatcher)
     {
         dispatcher.Dispatch(new RootState.ConnectionStateUpdatedAction(btcPayConnectionManager.ConnectionState));
         dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
@@ -74,23 +71,22 @@ public class StateMiddleware(
         onChainWalletManager.StateChanged += async (sender, args) =>
         {
             dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
-           if(  accountManager.GetCurrentStore() is { } store)
-            switch (onChainWalletManager.State)
+            if (accountManager.GetCurrentStore() is { } store)
             {
-                case OnChainWalletState.Loaded:
-                    var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, false);
-                    if (res is { onchain: {} onchain } &&  onChainWalletManager.IsOnChainOurs(onchain))
-                    {
-                      
+                switch (onChainWalletManager.State)
+                {
+                    case OnChainWalletState.Loaded:
+                        var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, false);
+                        if (res is { onchain: {} onchain } &&  onChainWalletManager.IsOnChainOurs(onchain))
+                        {
                             _dispatcher.Dispatch(new StoreState.FetchOnchainBalance(store.Id));
                             _dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(store.Id));
-                        
-                    
-                    }
-                    break;
-                case OnChainWalletState.NotConfigured when onChainWalletManager.CanConfigureWallet:
-                    await onChainWalletManager.Generate();
-                    break;
+                        }
+                        break;
+                    case OnChainWalletState.NotConfigured when onChainWalletManager.CanConfigureWallet:
+                        await onChainWalletManager.Generate();
+                        break;
+                }
             }
         };
 
@@ -103,7 +99,6 @@ public class StateMiddleware(
             }
             if (lightningNodeService.State == LightningNodeState.Loaded)
             {
-                
                 var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, false, true);
                 if (res is { lightning: {} lightning } && lightningNodeService.IsLightningOurs(lightning))
                 {
@@ -113,7 +108,6 @@ public class StateMiddleware(
                         dispatcher.Dispatch(new StoreState.FetchLightningHistogram(store.Id));
                     }
                 }
-                
             }
         };
 
@@ -217,7 +211,11 @@ public class StateMiddleware(
 
         _ratesCts = new CancellationTokenSource();
         _ = RefreshRates(dispatcher, _ratesCts.Token);
-    }
 
-   
+        // initial wallet generation
+        if (onChainWalletManager is { State: OnChainWalletState.NotConfigured, CanConfigureWallet: true })
+        {
+            await onChainWalletManager.Generate();
+        }
+    }
 }
