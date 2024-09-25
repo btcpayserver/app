@@ -64,10 +64,15 @@ public class StateMiddleware(
         dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
         dispatcher.Dispatch(new UserState.SetInfo(accountManager.GetUserInfo(), null));
 
-        btcPayConnectionManager.ConnectionChanged += (sender, args) =>
+        btcPayConnectionManager.ConnectionChanged += async (sender, args) =>
         {
             dispatcher.Dispatch(new RootState.ConnectionStateUpdatedAction(btcPayConnectionManager.ConnectionState));
-            return Task.CompletedTask;
+
+            // initial wallet generation
+            if (onChainWalletManager is { State: OnChainWalletState.NotConfigured, CanConfigureWallet: true })
+            {
+                await onChainWalletManager.Generate();
+            }
         };
 
         onChainWalletManager.StateChanged += async (sender, args) =>
