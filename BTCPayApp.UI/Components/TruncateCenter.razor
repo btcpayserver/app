@@ -1,6 +1,6 @@
 <span @attributes="InputAttributes" class="@CssClass">
     <span class="truncate-center-truncated" data-bs-toggle="@(IsTruncated ? "tooltip" : null)" title="@(IsTruncated ? Text : null)">
-        <span class="truncate-center-start">@(Elastic || !IsTruncated ? StartTrimmed : $"{Start}…")</span>
+        <span class="truncate-center-start">@(IsTruncated && !Elastic ? $"{Start}…" : Text)</span>
         <span class="truncate-center-end">@End</span>
     </span>
     <span class="truncate-center-text">@Text</span>
@@ -41,7 +41,6 @@
 
     private string? Start => Text?.Length > 2 * Padding ? Text[..Padding] : null;
     private string? End => Text?.Length > 2 * Padding ? Text[^Padding..] : null;
-    private string? StartTrimmed => Text?.Length > 2 * Padding ? Text[..^Padding] : Start;
 
     private string CssClass => $"truncate-center {(Copy ? "truncate-center--copy" : "")} {(Elastic ? "truncate-center--elastic" : "")} {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
 }
