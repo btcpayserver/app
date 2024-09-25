@@ -1,11 +1,13 @@
 using BTCPayApp.Core.Auth;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.LDK;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace BTCPayApp.Core.Attempt2;
+namespace BTCPayApp.Core.Wallet;
 
 public class LightningNodeManager : BaseHostedService
 {

@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Helpers;
 using NBitcoin;
 using org.ldk.structs;

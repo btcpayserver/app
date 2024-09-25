@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using org.ldk.structs;
 
-namespace BTCPayApp.Core.Attempt2;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKRapidGossipSyncer : IScopedHostedService
 {

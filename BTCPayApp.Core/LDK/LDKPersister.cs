@@ -1,4 +1,3 @@
-using BTCPayApp.Core.Attempt2;
 using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;

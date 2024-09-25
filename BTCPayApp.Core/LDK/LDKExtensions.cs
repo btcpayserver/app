@@ -1,10 +1,11 @@
 ﻿using System.Net;
 using System.Net.Sockets;
-using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LSP.JIT;
+using BTCPayApp.Core.Wallet;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using NBitcoin;

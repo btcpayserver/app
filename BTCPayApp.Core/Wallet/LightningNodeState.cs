@@ -1,4 +1,4 @@
-﻿namespace BTCPayApp.Core.Attempt2;
+﻿namespace BTCPayApp.Core.Wallet;
 
 public enum LightningNodeState
 {

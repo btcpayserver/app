@@ -1,8 +1,9 @@
 ﻿using System.Diagnostics;
 using BTCPayApp.Core;
-using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Auth;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Wallet;
 using BTCPayApp.Desktop;
 using Laraue.EfCoreTriggers.Common.Extensions;
 using Microsoft.Extensions.Configuration;

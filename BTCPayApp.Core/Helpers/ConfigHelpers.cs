@@ -1,6 +1,6 @@
 ﻿using BTCPayApp.Core.Contracts;
 
-namespace BTCPayApp.Core.Attempt2;
+namespace BTCPayApp.Core.Helpers;
 
 public static class ConfigHelpers
 {

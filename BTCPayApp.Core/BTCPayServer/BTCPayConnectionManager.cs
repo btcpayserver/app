@@ -2,18 +2,17 @@
 using System.Net.WebSockets;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Auth;
+using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.AspNetCore.Http.Connections.Client;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using TypedSignalR.Client;
 
-namespace BTCPayApp.Core.Attempt2;
+namespace BTCPayApp.Core.BTCPayServer;
 
 public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
 {
@@ -27,7 +26,12 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
     private readonly SyncService _syncService;
     private IDisposable? _subscription;
 
-    public IBTCPayAppHubServer? HubProxy { get; private set; }
+    public IBTCPayAppHubServer? HubProxy
+    {
+        get => Connection?.State == HubConnectionState.Connected ? _hubProxy : null;
+        private set => _hubProxy = value;
+    }
+
     private HubConnection? Connection { get; set; }
     public Network? ReportedNetwork { get; private set; }
 
@@ -83,6 +87,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
     }
 
     private CancellationTokenSource _cts = new();
+    private IBTCPayAppHubServer? _hubProxy;
 
     protected override async Task ExecuteStartAsync(CancellationToken cancellationToken)
     {
@@ -187,7 +192,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                             NBitcoin.JsonConverters.Serializer.RegisterFrontConverters(
                                 options.PayloadSerializerSettings);
                             options.PayloadSerializerSettings.Converters.Add(
-                                new BTCPayServer.Lightning.JsonConverters.LightMoneyJsonConverter());
+                                new global::BTCPayServer.Lightning.JsonConverters.LightMoneyJsonConverter());
                         })
                         .WithUrl(new Uri(new Uri(account.BaseUri), "hub/btcpayapp").ToString(),
                             options =>
@@ -202,8 +207,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                         .Build();
 
                     _subscription = connection.Register(_btcPayAppServerClientInterface);
-                    HubProxy = new ExceptionWrappedHubProxy(connection.CreateHubProxy<IBTCPayAppHubServer>(),
-                        _logger);
+                    HubProxy = new ExceptionWrappedHubProxy(this, connection, _logger);
                 
 
                 if (connection.State == HubConnectionState.Disconnected)

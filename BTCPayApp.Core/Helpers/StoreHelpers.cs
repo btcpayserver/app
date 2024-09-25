@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
-using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Auth;
+using BTCPayApp.Core.Wallet;
 using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
 

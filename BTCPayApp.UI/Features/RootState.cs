@@ -1,4 +1,5 @@
-﻿using BTCPayApp.Core.Attempt2;
+﻿using BTCPayApp.Core.BTCPayServer;
+using BTCPayApp.Core.Wallet;
 using Fluxor;
 using Fluxor.Blazor.Web.Middlewares.Routing;
 using Microsoft.AspNetCore.Components;

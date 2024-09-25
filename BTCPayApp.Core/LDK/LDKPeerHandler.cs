@@ -2,7 +2,7 @@
 using System.Collections.Specialized;
 using System.Net;
 using System.Net.Sockets;
-using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using Microsoft.Extensions.Logging;

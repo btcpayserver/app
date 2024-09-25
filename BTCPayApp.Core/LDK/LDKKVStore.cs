@@ -2,7 +2,7 @@
 using org.ldk.enums;
 using org.ldk.structs;
 
-namespace BTCPayApp.Core.Attempt2;
+namespace BTCPayApp.Core.LDK;
 
 public class LDKKVStore:KVStoreInterface
 {

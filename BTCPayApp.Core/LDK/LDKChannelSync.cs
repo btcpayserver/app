@@ -1,7 +1,8 @@
 ﻿using BTCPayApp.CommonServer;
-using BTCPayApp.Core.Attempt2;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.Wallet;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using org.ldk.structs;

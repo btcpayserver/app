@@ -1,5 +1,4 @@
-﻿using BTCPayApp.Core.Attempt2;
-using BTCPayApp.Core.LDK;
+﻿using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
 using Microsoft.Extensions.Logging;
 using NBitcoin;

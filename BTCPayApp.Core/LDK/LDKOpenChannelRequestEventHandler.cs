@@ -1,5 +1,4 @@
-﻿using BTCPayApp.Core.Attempt2;
-using BTCPayApp.Core.Helpers;
+﻿using BTCPayApp.Core.Helpers;
 using org.ldk.structs;
 using UInt128 = org.ldk.util.UInt128;
 

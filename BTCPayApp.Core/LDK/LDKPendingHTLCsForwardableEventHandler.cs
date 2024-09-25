@@ -1,5 +1,4 @@
-﻿using BTCPayApp.Core.Attempt2;
-using BTCPayApp.Core.Helpers;
+﻿using BTCPayApp.Core.Helpers;
 using Microsoft.Extensions.DependencyInjection;
 using NBitcoin;
 using org.ldk.structs;

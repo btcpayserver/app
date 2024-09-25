@@ -1,7 +1,9 @@
-using BTCPayApp.Core.Attempt2;
+using System.Text.Json;
 using BTCPayApp.Core.Auth;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.Wallet;
 using BTCPayApp.UI.Features;
 using Fluxor;
 using Microsoft.Extensions.Logging;

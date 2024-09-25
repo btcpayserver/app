@@ -1,15 +1,16 @@
 using System.Text;
 using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.LDK;
+using BTCPayApp.Core.Wallet;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Crypto;
-using org.ldk.structs;
 
-namespace BTCPayApp.Core.Attempt2;
+namespace BTCPayApp.Core.BTCPayServer;
 
 public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServiceProvider _serviceProvider)
     : IBTCPayAppHubClient

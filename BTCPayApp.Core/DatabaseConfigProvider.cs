@@ -89,6 +89,8 @@ using BTCPayApp.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
+namespace BTCPayApp.Core;
+
 public class DatabaseConfigProvider: IConfigProvider
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;

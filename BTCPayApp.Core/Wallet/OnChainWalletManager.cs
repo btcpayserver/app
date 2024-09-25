@@ -1,9 +1,9 @@
 ﻿using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Backup;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
-using Microsoft.AspNetCore.SignalR.Client;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
@@ -11,7 +11,7 @@ using NBitcoin.Scripting;
 using OutPoint = NBitcoin.OutPoint;
 using TxOut = NBitcoin.TxOut;
 
-namespace BTCPayApp.Core.Attempt2;
+namespace BTCPayApp.Core.Wallet;
 public class OnChainWalletManager : BaseHostedService
 {
     public const string PaymentMethodId = "BTC-CHAIN";

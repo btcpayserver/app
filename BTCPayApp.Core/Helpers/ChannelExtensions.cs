@@ -81,16 +81,21 @@ public static class ChannelExtensions
     public static UserConfig AsLDKUserConfig(this LightningConfig config)
     {
         var result = UserConfig.with_default();
+        // var channelConfig = ChannelConfig.with_default();
+        // channelConfig.set
+        // result.set_channel_config(channelConfig);
         result.set_accept_intercept_htlcs(true);
         result.set_accept_mpp_keysend(true);
         result.set_manually_accept_inbound_channels(true);
         var channelHandshakeConfig = ChannelHandshakeConfig.with_default();
         channelHandshakeConfig.set_announced_channel(false);
+        // channelHandshakeConfig.set(false);
         channelHandshakeConfig.set_negotiate_anchors_zero_fee_htlc_tx(true);
         channelHandshakeConfig.set_minimum_depth(1);
         result.set_channel_handshake_config(channelHandshakeConfig);
         var channelHandshakeLimits = ChannelHandshakeLimits.with_default();
         channelHandshakeLimits.set_force_announced_channel_preference(true);
+        channelHandshakeLimits.set_max_funding_satoshis(Money.Coins(100m).Satoshi);
         result.set_channel_handshake_limits(channelHandshakeLimits);
         return result;
     }

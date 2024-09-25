@@ -1,10 +1,11 @@
 ﻿using System.Text.Json;
 using AsyncKeyedLock;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
-using BTCPayApp.Core.LDK;
 using BTCPayApp.Core.LSP.JIT;
+using BTCPayApp.Core.Wallet;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +15,7 @@ using NBitcoin;
 using org.ldk.structs;
 using UInt128 = org.ldk.util.UInt128;
 
-namespace BTCPayApp.Core.Attempt2;
+namespace BTCPayApp.Core.LDK;
 
 public partial class LDKNode :
     ILDKEventHandler<Event.Event_ChannelClosed>,
@@ -103,19 +104,20 @@ public partial class LDKNode :
 
         var channelManager = ServiceProvider.GetRequiredService<ChannelManager>();
         var entropySource = ServiceProvider.GetRequiredService<EntropySource>();
-        var userConfig = ServiceProvider.GetRequiredService<UserConfig>();
+        var userConfig = ServiceProvider.GetRequiredService<UserConfig>().clone();
 
 
         var temporaryChannelId = ChannelId.temporary_from_entropy_source(entropySource);
-
-
+     
         var userChannelId = new UInt128(temporaryChannelId.get_a().Take(16).ToArray());
         try
         {
             return await AsyncExtensions.RunInOtherThread(() => channelManager.create_channel(nodeId.ToBytes(),
-                amount.Satoshi, 0,
+                amount.Satoshi, 
+                0,
                 userChannelId,
-                temporaryChannelId, userConfig));
+                temporaryChannelId, 
+                userConfig));
         }
         finally
         {

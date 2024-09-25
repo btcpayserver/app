@@ -1,16 +1,13 @@
-﻿using System.Collections.Concurrent;
-using System.Text.Json;
-using BTCPayApp.Core;
-using BTCPayApp.Core.Attempt2;
+﻿using System.Text.Json;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
-using BTCPayApp.Core.LDK;
 using BTCPayApp.Core.LSP.JIT;
 using BTCPayServer.Lightning;
 using Microsoft.EntityFrameworkCore;
 using NBitcoin;
 using org.ldk.structs;
 
+namespace BTCPayApp.Core.LDK;
 
 public class PaymentsManager :
     ILDKEventHandler<Event.Event_PaymentClaimable>,

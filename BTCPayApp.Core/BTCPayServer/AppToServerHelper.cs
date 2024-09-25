@@ -1,7 +1,8 @@
 ﻿using BTCPayApp.Core.Data;
+using BTCPayApp.Core.LDK;
 using BTCPayServer.Lightning;
 
-namespace BTCPayApp.Core.Attempt2;
+namespace BTCPayApp.Core.BTCPayServer;
 
 public static class AppToServerHelper
 {

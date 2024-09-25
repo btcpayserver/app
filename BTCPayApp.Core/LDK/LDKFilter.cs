@@ -1,5 +1,4 @@
 ﻿using System.Text.Json.Serialization;
-using BTCPayApp.Core.Attempt2;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.JsonConverters;

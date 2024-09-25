@@ -1,4 +1,4 @@
-﻿using BTCPayApp.Core.Attempt2;
+﻿using BTCPayApp.Core.Wallet;
 using NBitcoin;
 using org.ldk.enums;
 using org.ldk.structs;

@@ -1,15 +1,19 @@
-﻿using BTCPayApp.Core.Attempt2;
-using BTCPayApp.Core.Auth;
+﻿using BTCPayApp.Core.Auth;
+using BTCPayApp.Core.Backup;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
+using BTCPayApp.Core.Wallet;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using NBitcoin;
 using NBitcoin.RPC;
+using org.ldk.structs;
 using Xunit.Abstractions;
+using PeerInfo = BTCPayApp.Core.Data.PeerInfo;
 
 namespace BTCPayApp.Tests;
 
@@ -211,6 +215,8 @@ public class CoreTests
              Assert.Equal(LightningPaymentStatus.Pending, requestOfInvoice.Status);
 
          });
+         
+         //artificial self payment
          invoice = await node2.AccountManager.GetClient().CreateInvoice(store.Id, new CreateInvoiceRequest()
          {
              Amount = 1m,
@@ -246,7 +252,96 @@ public class CoreTests
         await node3.LNManager.Generate();
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Loaded, node3.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.Loaded, node3.LNManager.State));
+
+        await node3.LNManager.Node.Peer(node2.LNManager.Node.NodeId, new PeerInfo()
+        {
+            Label = "App2",
+            Endpoint = node2.LNManager.Node.PeerHandler.Endpoint.ToEndpointString(),
+            Persistent = true,
+        });
+        await TestUtils.EventuallyAsync(async () =>
+        {
+            Assert.Contains(await node3.LNManager.Node.GetPeers(), peer =>
+                Convert.ToHexString(peer.get_counterparty_node_id()).Equals(node2.LNManager.Node.NodeId.ToHex(),
+                    StringComparison.InvariantCultureIgnoreCase));
+
+            Assert.Contains(await node2.LNManager.Node.GetPeers(), peer =>
+                Convert.ToHexString(peer.get_counterparty_node_id()).Equals(node3.LNManager.Node.NodeId.ToHex(),
+                    StringComparison.InvariantCultureIgnoreCase));
+
+            Assert.True(
+                (await node3.LNManager.Node.GetConfig()).Peers.TryGetValue(node2.LNManager.Node.NodeId.ToString(),
+                    out var peerInfo));
+            Assert.Equal("App2", peerInfo.Label);
+            Assert.Equal(node2.LNManager.Node.PeerHandler.Endpoint.ToEndpointString(), peerInfo.Endpoint);
+            Assert.True(peerInfo.Persistent);
+            Assert.False(peerInfo.Trusted);
+        });
+
+        var result =await node2.LNManager.Node.OpenChannel(Money.Coins(0.5m), node3.LNManager.Node.NodeId);
+        var _ = Convert.ToHexString(Assert.IsType<Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK>(result).res.get_a()).ToLowerInvariant();
+        await TestUtils.EventuallyAsync(async () =>
+        {
+
+            var node2Channel = Assert.Single( await node2.LNManager.Node.GetChannels());
+            var node3Channel= Assert.Single( await node3.LNManager.Node.GetChannels());
+         
+            Assert.Equal(node2Channel.Key, node3Channel.Key);
+            Assert.Equal(
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations()).some,
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations()).some);
+
+            Assert.Equal(0,
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations())
+                    .some);
+            
+            Assert.False(node3Channel.Value.channelDetails.get_is_channel_ready());
+            Assert.False(node2Channel.Value.channelDetails.get_is_channel_ready());
+            Assert.False(node3Channel.Value.channelDetails.get_is_usable());
+            Assert.False(node2Channel.Value.channelDetails.get_is_usable());
+            
+            Assert.Equal(1,
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations_required())
+                    .some);
+            Assert.Equal(1,
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations_required())
+                    .some);
+            
+            
+        });
         
+        
+        await rpc.GenerateAsync(1);
+        
+        await TestUtils.EventuallyAsync(async () =>
+        {
+
+            var node2Channel = Assert.Single( await node2.LNManager.Node.GetChannels());
+            var node3Channel= Assert.Single( await node3.LNManager.Node.GetChannels());
+         
+            Assert.Equal(node2Channel.Key, node3Channel.Key);
+            Assert.Equal(
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations()).some,
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations()).some);
+  
+            Assert.True(node3Channel.Value.channelDetails.get_is_channel_ready());
+            Assert.True(node2Channel.Value.channelDetails.get_is_channel_ready());
+            Assert.True(node3Channel.Value.channelDetails.get_is_usable());
+            Assert.True(node2Channel.Value.channelDetails.get_is_usable());
+            
+            Assert.Equal(1,
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations_required())
+                    .some);
+            Assert.Equal(1,
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations_required())
+                    .some);
+
+            var node2B = node2Channel.Value.channelDetails.get_balance_msat();
+            Assert.Equal(0, node3Channel.Value.channelDetails.get_balance_msat());
+            
+        });
+
+
     }
     
     private async Task<uint256?> FundWallet(RPCClient rpc, BitcoinAddress address, Money m)
