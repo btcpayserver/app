@@ -34,6 +34,10 @@
             await JS.InvokeVoidAsync("Interop.addEventListener", reference, "#ScanQrCodeModal", "show.bs.modal", "OnShow");
             await JS.InvokeVoidAsync("Interop.addEventListener", reference, "#ScanQrCodeModal", "hide.bs.modal", "OnHide");
         }
+        catch (JSDisconnectedException)
+        {
+            // ignored, see https://learn.microsoft.com/en-us/aspnet/core/blazor/javascript-interoperability/?view=aspnetcore-8.0#javascript-interop-calls-without-a-circuit
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error adding QrScanModel event listeners");
@@ -47,6 +51,10 @@
         try
         {
             await JS.InvokeVoidAsync("Interop.removeEventListeners", [show, hide]);
+        }
+        catch (JSDisconnectedException)
+        {
+            // ignored, see https://learn.microsoft.com/en-us/aspnet/core/blazor/javascript-interoperability/?view=aspnetcore-8.0#javascript-interop-calls-without-a-circuit
         }
         catch (Exception ex)
         {
