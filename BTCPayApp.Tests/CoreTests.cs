@@ -234,6 +234,11 @@ public class CoreTests
         Assert.False(outbound.Inbound);
         Assert.Equal(LightningPaymentStatus.Complete, outbound.Status);
 
+      await TestUtils.EventuallyAsync(async () =>
+        {
+            invoice = await node2.AccountManager.GetClient().GetInvoice(store.Id, invoice.Id);
+            Assert.Equal(InvoiceStatus.Settled, invoice.Status);
+        });
         var payments = await node2.LNManager.Node.PaymentsManager.List(payments => payments);
          Assert.Equal(3, payments.Count);
             Assert.Contains(payments, payment => payment.Inbound && payment.PaymentRequest.ToString() == pmLN.Destination && payment.Status == LightningPaymentStatus.Complete);
@@ -336,12 +341,27 @@ public class CoreTests
                 Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations_required())
                     .some);
 
-            var node2B = node2Channel.Value.channelDetails.get_balance_msat();
+            var node2B = node2Channel.Value.channelDetails.get_outbound_capacity_msat();
             Assert.Equal(0, node3Channel.Value.channelDetails.get_balance_msat());
+            Assert.Equal(LightMoney.Coins(0.5m).MilliSatoshi, node2Channel.Value.channelDetails.get_balance_msat());
+           
             
+
         });
+        var node3PR = await node3.LNManager.Node.PaymentsManager.RequestPayment(LightMoney.Coins(0.1m), TimeSpan.FromHours(2),
+            uint256.Zero);
+        var node2PR = await node2.LNManager.Node.PaymentsManager.PayInvoice(node3PR.PaymentRequest);
+        
+        Assert.Equal(node2PR.Preimage, node3PR.Preimage);
+        Assert.NotNull(node2PR.Preimage);
+        await TestUtils.EventuallyAsync(async () =>
+        {
 
-
+            Assert.Single(await node3.LNManager.Node.PaymentsManager.List(payments =>
+                payments.Where(payment => payment.PaymentHash == node3PR.PaymentHash && payment.Inbound)));
+            
+           
+        });
     }
     
     private async Task<uint256?> FundWallet(RPCClient rpc, BitcoinAddress address, Money m)
