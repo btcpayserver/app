@@ -2,6 +2,7 @@
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Models
 @using BTCPayApp.UI.Util
+@using BTCPayServer.Client.Models
 @using Plk.Blazor.DragDrop
 @inject IJSRuntime JS
 @inject IAccountManager AccountManager
@@ -10,31 +11,31 @@
 <div @attributes="InputAttributes" class="@CssClass">
     <div class="row align-items-start">
         <div class="col-12 col-xl-7">
-            @if (Items?.Any() is true)
+            @if (_items?.Any() is true)
             {
-                <Dropzone Items="Items" InstantReplace="true" Class="items list-group list-group-flush" ItemWrapperClass='item => { return $"d-inline-flex align-items-center gap-3 list-group-item rounded {(item == SelectedItem ? "active" : null)}"; }'>
+                <Dropzone Items="_items" InstantReplace="true" Class="items list-group list-group-flush" ItemWrapperClass='item => { return $"d-inline-flex align-items-center gap-3 list-group-item rounded {(SelectedItem != null && item.Id == SelectedItem.Id ? "active" : null)}"; }'>
                     @{
-                        var hasImage = !string.IsNullOrEmpty(context.ImageUrl);
-                        var imageUrl = hasImage ? context.ImageUrl : "_content/BTCPayApp.UI/img/img-placeholder.svg";
+                        var hasImage = !string.IsNullOrEmpty(context.Image);
+                        var imageUrl = hasImage ? context.Image : "_content/BTCPayApp.UI/img/img-placeholder.svg";
                     }
-                    <button type="button" class="btn b-0 control drag" disabled="@(Items.Count == 1)">
+                    <button type="button" class="btn b-0 control drag" disabled="@(_items.Count == 1)">
                         <Icon Symbol="actions-drag"/>
                     </button>
-                    <div class="template-item d-flex align-items-start w-100 gap-3" @onclick="async () => { await SelectItem(context == SelectedItem ? null : context); }">
+                    <div class="template-item d-flex align-items-start w-100 gap-3" @onclick="async () => { await SelectItem(SelectedItem != null && context.Id == SelectedItem.Id ? null : context); }">
                         <div class="img">
                             <img src="@imageUrl" alt="@context.Title" style="@(hasImage ? null : "opacity:.5")">
                         </div>
                         <div class="d-flex flex-column gap-2">
                             <h5 class="card-title m-0">@context.Title</h5>
                             <div class="d-flex gap-2 align-items-center">
-                                @if (context.PriceType == "Topup" || context.Price == 0)
+                                @if (context.PriceType == AppItemPriceType.Topup || context.Price == 0)
                                 {
-                                    <span class="fw-semibold badge text-bg-info">@(context.PriceType == "Topup" ? "Any amount" : "Free")</span>
+                                    <span class="fw-semibold badge text-bg-info">@(context.PriceType == AppItemPriceType.Topup ? "Any amount" : "Free")</span>
                                 }
                                 else
                                 {
                                     <span class="fw-semibold text-muted">
-                                        <AmountDisplay Value="@context.Price" Unit="@Currency"/> @(context.PriceType == "Minimum" ? " minimum" : null)
+                                        <AmountDisplay Value="@context.Price" Unit="@Currency"/> @(context.PriceType == AppItemPriceType.Minimum ? " minimum" : null)
                                     </span>
                                 }
                                 @if (context.Inventory.HasValue)
@@ -82,12 +83,12 @@
                                 <div class="col-sm-6">
                                     <label for="PriceType" class="form-label" data-required>Price</label>
                                     <InputSelect @bind-Value="SelectedItem.PriceType" id="PriceType" class="form-select">
-                                        <option value="Fixed">Fixed</option>
-                                        <option value="Minimum">Minimum</option>
-                                        <option value="Topup">Custom</option>
+                                        <option value="@AppItemPriceType.Fixed">Fixed</option>
+                                        <option value="@AppItemPriceType.Minimum">Minimum</option>
+                                        <option value="@AppItemPriceType.Topup">Custom</option>
                                     </InputSelect>
                                 </div>
-                                @if (SelectedItem.PriceType != "Topup")
+                                @if (SelectedItem.PriceType != AppItemPriceType.Topup)
                                 {
                                     <div class="col-sm-6">
                                         <label for="Price" class="form-label">&nbsp;</label>
@@ -164,10 +165,10 @@
     public string Currency { get; set; } = null!;
 
     [Parameter]
-    public List<AppItemModel>? Items {
+    public IEnumerable<AppItem>? Items {
         get => _items;
         set {
-            _items = value;
+            _items = value?.ToList();
             _ = SelectItem(null);
         }
     }
@@ -175,31 +176,31 @@
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? InputAttributes { get; set; }
 
-    private List<AppItemModel>? _items;
+    private List<AppItem>? _items;
     private Guid _inputFileId = Guid.NewGuid();
     private ValidationEditContext? _validationEditContext;
     private AppItemModel? SelectedItem { get; set; }
     private string? _successMessage;
     private string? _errorMessage;
 
-    private async Task SelectItem(AppItemModel? item)
+    private async Task SelectItem(AppItem? item)
     {
         _errorMessage = null;
-        SelectedItem = item;
+        SelectedItem = item != null ? new AppItemModel(item) : null;
         await (SelectedItem != null ? ShowOffcanvas() : HideOffcanvas());
     }
 
     private async Task AddItem()
     {
-        var item = new AppItemModel { PriceType = "Fixed", Price = 0 };
-        Items ??= [];
-        Items.Add(item);
+        var item = new AppItem { PriceType = AppItemPriceType.Fixed, Price = 0 };
+        _items ??= [];
+        _items.Add(item);
         await SelectItem(item);
     }
 
-    private async Task RemoveItem(AppItemModel item)
+    private async Task RemoveItem(AppItem item)
     {
-        Items!.Remove(item);
+        _items!.Remove(item);
         await SelectItem(null);
     }
 

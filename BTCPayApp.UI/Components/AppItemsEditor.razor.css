@@ -37,7 +37,7 @@
 .editor .item-image {
   height: 2.1rem;
   width: 2.1rem;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .editor fieldset .list-group-item {

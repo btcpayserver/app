@@ -1,31 +1,42 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
+using BTCPayApp.UI.Util;
+using BTCPayServer.Client.Models;
 
 namespace BTCPayApp.UI.Models;
 
-public class AppItemModel
+public class AppItemModel(AppItem item)
 {
+    private AppItem Item { get; } = item;
+
     [Required]
-    public string? Title { get; set; }
+    public string? Title { get => Item.Title; set => Item.Title = value; }
+
     [Required]
-    public string? Id {  get; set; }
+    public string? Id { get => Item.Id; set => Item.Id = value; }
+
     [Required]
-    public string? PriceType { get; set; }
-    public decimal? Price {  get; set; }
-    public string? Categories { get; set; }
-    public int? Inventory { get; set; }
-    public string? Description { get; set; }
+    public AppItemPriceType PriceType { get => Item.PriceType; set => Item.PriceType = value; }
+
+    public decimal? Price { get => Item.Price; set => Item.Price = value; }
+
+    public int? Inventory { get => Item.Inventory; set => Item.Inventory = value; }
+    public string? Description { get => Item.Description; set => Item.Description = value; }
+    public string? BuyButtonText { get => Item.BuyButtonText; set => Item.BuyButtonText = value; }
+
     [Url]
     [JsonPropertyName("image")]
-    public string? ImageUrl { get; set; }
+    public string? ImageUrl { get => Item.Image; set => Item.Image = value; }
+
     [JsonIgnore]
     public string? ImagePath { get; set; }
-    public string? BuyButtonText { get; set; }
-    public bool Disabled { get; set; }
+
     [JsonIgnore]
-    public bool Enabled
+    public bool Enabled { get => !Item.Disabled; set => Item.Disabled = !value; }
+
+    public string? Categories
     {
-        get => !Disabled;
-        set => Disabled = !value;
+        get => string.Join(',', Item.Categories?? []);
+        set => Item.Categories = value != null ? AppItemParser.SplitStringList(',', value) : null;
     }
 }

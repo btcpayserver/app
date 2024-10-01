@@ -1,10 +1,13 @@
 @attribute [Route(Routes.PointOfSale)]
+@using System.Globalization
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Util
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject NavigationManager NavigationManager
+@inject DisplayFormatter DisplayFormatter
 @inject IAccountManager AccountManager
 @inject IState<StoreState> StoreState
 @inject IDispatcher Dispatcher
@@ -12,7 +15,7 @@
 
 <PageTitle>Point Of Sale</PageTitle>
 
-@if (Loading || !string.IsNullOrEmpty(AppId) && string.IsNullOrEmpty(_iframeGuid))
+@if (Loading || string.IsNullOrEmpty(AppId))
 {
     <section class="loading-container">
         <LoadingIndicator Size="lg"/>
@@ -25,26 +28,23 @@ else if (!string.IsNullOrEmpty(Error))
         <Alert Type="danger">@Error</Alert>
     </section>
 }
-@if (!string.IsNullOrEmpty(AppId))
+@if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(AppId) && AppData != null)
 {
-
-    @*<section class="container">
-        @
-        else if (!string.IsNullOrEmpty(Error))
-        {
-            <Alert Type="danger">@Error</Alert>
-        }
-        else if (AppData is not null)
-        {
-            <form method="post" target="checkout" action="@FormAction">
-                <Keypad CurrencyCode="@AppData.Currency"
-                        IsDiscountEnabled="@AppData.ShowDiscount"
-                        IsTipEnabled="@AppData.EnableTips"
-                        CustomTipPercentages="new[] { 5, 10, 21 }"/>
-            </form>
-        }
-    </section>*@
-    <iframe name="pos" src="@IframeSrc" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>
+    <section class="container">
+        <form method="post" target="checkout" action="@IframeSrc">
+            <Keypad StoreId="@StoreId" AppId="@AppId" CurrencyCode="@AppData.Currency" CurrencyInfo="@CurrencyInfo"
+                    IsItemlistEnabled="@(AppData.ShowItems is true)"
+                    IsDiscountEnabled="@(AppData.ShowDiscount is true)"
+                    IsTipEnabled="@(AppData.EnableTips is true)"
+                    IsSearchEnabled="@(AppData.ShowSearch is true)"
+                    IsCategoriesEnabled="@(AppData.ShowCategories is true)"
+                    Items="@Items"
+                    CustomTipPercentages="@AppData.CustomTipPercentages"
+                    RecentTransactions="@RecentTransactions" LoadRecentTransactions="@LoadRecentTransactions" />
+        </form>
+    </section>
+    <iframe name="checkout" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>
+    @*<iframe name="pos" src="@IframeSrc" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>*@
 }
 
 @code {
@@ -89,11 +89,33 @@ else if (!string.IsNullOrEmpty(Error))
         }
     }
 
+    private async Task LoadRecentTransactions()
+    {
+        var from = DateTimeOffset.UtcNow - TimeSpan.FromDays(3);
+        var search = $"pos-app_{AppId}";
+        var invoices = await AccountManager.GetClient().GetInvoices(StoreId, startDate: from, textSearch: search);
+        RecentTransactions = invoices
+            .Take(10)
+            .Select(i => new Keypad.RecentTransaction
+            {
+                Id = i.Id,
+                Date = i.CreatedTime,
+                Price = i.Amount,
+                Status = i.Status.ToString(),
+                Url = Routes.InvoicePath(i.Id)
+            });
+    }
+
     private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
+    private string? StoreId => Store?.Id;
     private string? AppId => Store?.PosAppId ?? AppData?.Id;
     private string? PosUrl => string.IsNullOrEmpty(AppId) ? null : $"{AccountManager.GetAccount()!.BaseUri}apps/{AppId}/pos";
     private string? IframeSrc => string.IsNullOrEmpty(PosUrl) ? null : $"{PosUrl}?guid={_iframeGuid}";
     private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;
     private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
     private string? Error => StoreState.Value.PointOfSale?.Error;
+    private IEnumerable<Keypad.RecentTransaction>? RecentTransactions { get; set; }
+    private IEnumerable<AppItem> Items => AppItemParser.ConvertItems(AppData.Items);
+    private NumberFormatInfo DefaultCurrencyInfo => DisplayFormatter.GetNumberFormatInfo("USD");
+    private NumberFormatInfo CurrencyInfo => !string.IsNullOrEmpty(AppData?.Currency) ? DisplayFormatter.GetNumberFormatInfo(AppData.Currency) : DefaultCurrencyInfo;
 }
