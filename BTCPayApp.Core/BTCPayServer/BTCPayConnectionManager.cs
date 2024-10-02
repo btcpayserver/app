@@ -373,7 +373,10 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
             var deviceIdentifier = await _configProvider.GetDeviceIdentifier();
             await _syncService.StopSync();
             await _syncService.SyncToRemote(CancellationToken.None);
-            await HubProxy.DeviceMasterSignal(deviceIdentifier, false);
+            if (HubProxy is not null)
+            {
+                await HubProxy.DeviceMasterSignal(deviceIdentifier, false);
+            }
         }
 
         await Kill();

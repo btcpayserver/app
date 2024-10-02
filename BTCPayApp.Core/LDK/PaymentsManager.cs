@@ -174,6 +174,7 @@ public class PaymentsManager :
 
         if (inbound is not null)
         {
+            var successSelfPay = false;
             var newOutbound = new AppLightningPayment()
             {
                 Inbound = false,
@@ -192,6 +193,7 @@ public class PaymentsManager :
             {
                 inbound.Status = LightningPaymentStatus.Complete;
                 newOutbound.Status = LightningPaymentStatus.Complete;
+                successSelfPay = true;
             }
             else
             {
@@ -199,6 +201,13 @@ public class PaymentsManager :
             }
 
             await context.SaveChangesAsync();
+            if (successSelfPay)
+            {
+                
+                OnPaymentUpdate?.Invoke(this, inbound);
+            }
+            
+            OnPaymentUpdate?.Invoke(this, newOutbound);
             return newOutbound;
         }
 
@@ -234,11 +243,14 @@ public class PaymentsManager :
 
             if (result is Result_NoneRetryableSendFailureZ.Result_NoneRetryableSendFailureZ_Err err)
             {
-                throw new Exception(err.err.ToString());
+                outbound.Status = LightningPaymentStatus.Failed;
+                outbound.AdditionalData["Error"] = JsonSerializer.SerializeToElement(err.err.ToString());
+                await context.SaveChangesAsync();
             }
         }
         catch (Exception e)
         {
+            
             outbound.Status = LightningPaymentStatus.Failed;
             await context.SaveChangesAsync();
             throw;
@@ -385,7 +397,9 @@ public class PaymentsManager :
 
     public async Task Handle(Event.Event_PaymentSent eventPaymentSent)
     {
-        await PaymentUpdate(new uint256(eventPaymentSent.payment_hash), false,
+        
+        var paymentHash =  uint256.Parse(Convert.ToHexString(eventPaymentSent.payment_hash).ToLower());
+        await PaymentUpdate(paymentHash, false,
             Convert.ToHexString(
                 ((Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some) eventPaymentSent.payment_id).some).ToLower(),
             false,

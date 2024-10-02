@@ -227,7 +227,12 @@ public class CoreTests
          Assert.Equal(2, pms.Length);
          
          pmLN = pms.First(p => p.PaymentMethodId == "BTC-LN");
-
+         // AppLightningPayment node2PaymentUpdate = null;
+         // node2.LNManager.Node.PaymentsManager.OnPaymentUpdate += (sender, payment) =>
+         // {
+         //     node2PaymentUpdate = (AppLightningPayment?) payment;
+         //     return Task.CompletedTask;
+         // };
         var outbound = await node2.LNManager.Node.PaymentsManager.PayInvoice(BOLT11PaymentRequest.Parse(pmLN.Destination, network));
         Assert.NotNull(outbound);
         Assert.Equal(pmLN.Destination, outbound.PaymentRequest.ToString());
@@ -344,21 +349,36 @@ public class CoreTests
             var node2B = node2Channel.Value.channelDetails.get_outbound_capacity_msat();
             Assert.Equal(0, node3Channel.Value.channelDetails.get_balance_msat());
             Assert.Equal(LightMoney.Coins(0.5m).MilliSatoshi, node2Channel.Value.channelDetails.get_balance_msat());
+            Assert.Equal(LightMoney.Coins(0.5m).MilliSatoshi, node2Channel.Value.channelDetails.get_balance_msat());
            
             
 
         });
-        var node3PR = await node3.LNManager.Node.PaymentsManager.RequestPayment(LightMoney.Coins(0.1m), TimeSpan.FromHours(2),
+        var node3PR = await node3.LNManager.Node.PaymentsManager.RequestPayment(LightMoney.Coins(0.01m), TimeSpan.FromHours(2),
             uint256.Zero);
-        var node2PR = await node2.LNManager.Node.PaymentsManager.PayInvoice(node3PR.PaymentRequest);
         
-        Assert.Equal(node2PR.Preimage, node3PR.Preimage);
-        Assert.NotNull(node2PR.Preimage);
+        
+        
         await TestUtils.EventuallyAsync(async () =>
         {
-
+            var node2PR = await node2.LNManager.Node.PaymentsManager.PayInvoice(node3PR.PaymentRequest);
+            while(node2PR.Status == LightningPaymentStatus.Pending)
+            {
+                node2PR = (await node2.LNManager.Node.PaymentsManager.List(payments =>
+                    payments.Where(payment =>
+                        node2PR.Inbound == payment.Inbound &&
+                        payment.PaymentHash == node2PR.PaymentHash &&
+                        payment.PaymentId == node2PR.PaymentId
+                    ))).Single();
+                await Task.Delay(500);
+            }
+            
+            Assert.Equal(node2PR.Status, LightningPaymentStatus.Complete);
+            Assert.Equal(node2PR.Preimage, node3PR.Preimage);
+            Assert.NotNull(node2PR.Preimage);
+            
             Assert.Single(await node3.LNManager.Node.PaymentsManager.List(payments =>
-                payments.Where(payment => payment.PaymentHash == node3PR.PaymentHash && payment.Inbound)));
+                payments.Where(payment => payment.PaymentHash == node3PR.PaymentHash && payment.Inbound && payment.Status == LightningPaymentStatus.Complete)));
             
            
         });
