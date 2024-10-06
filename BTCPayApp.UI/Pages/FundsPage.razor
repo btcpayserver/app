@@ -24,10 +24,6 @@
 </SectionContent>
 <section class="container">
     <AuthorizeView Resource="StoreId">
-        <WalletOverview BitcoinBalance="@TotalBalance" BitcoinUnit="@BitcoinUnit" MoneyUnit="@UnitMoney" Histogram="@Histogram"
-                        Currency="@Currency" Rate="@Rate" Error="@BalanceError" Loading="@BalanceLoading" OnBalanceClick="ToggleDisplayCurrency"
-                        class="mt-3 mb-5"/>
-
         @if (OnchainConfirmedBalance != null || OnchainUnconfirmedBalance != null)
         {
             <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
