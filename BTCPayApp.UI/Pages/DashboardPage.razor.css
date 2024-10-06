@@ -2,3 +2,9 @@
   margin-top: var(--btcpay-space-m);
   margin-bottom: var(--btcpay-space-l);
 }
+
+.btn-group label {
+  --btcpay-btn-color: var(--btcpay-body-text-muted);
+  --btcpay-btn-active-color: var(--btcpay-body-text);
+  font-weight: var(--btcpay-font-weight-semibold);
+}
