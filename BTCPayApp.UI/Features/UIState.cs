@@ -1,6 +1,7 @@
 ﻿using System.Text.Json.Serialization;
 using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core;
+using BTCPayServer.Client.Models;
 using Fluxor;
 using Microsoft.JSInterop;
 
@@ -24,7 +25,9 @@ public record UIState
 {
     public string SelectedTheme { get; set; } = Themes.System;
     public string SystemTheme { get; set; } = Themes.Light;
-    public string BitcoinUnit{ get; set; }  = CurrencyUnit.SATS;
+    public string BitcoinUnit { get; set; } = CurrencyUnit.SATS;
+    public HistogramType HistogramType { get; set; } = HistogramType.Week;
+
     [JsonIgnore]
     public RemoteData<AppInstanceInfo>? Instance;
 
@@ -33,6 +36,7 @@ public record UIState
     public record FetchInstanceInfo(string? Url);
     public record SetInstanceInfo(AppInstanceInfo? Instance, string? Error);
     public record ToggleBitcoinUnit(string? BitcoinUnit = null);
+    public record SetHistogramType(HistogramType Type);
 
     protected class SetUserThemeReducer : Reducer<UIState, SetUserTheme>
     {
@@ -92,6 +96,17 @@ public record UIState
         }
     }
 
+    protected class SetHistogramTypeReducer : Reducer<UIState, SetHistogramType>
+    {
+        public override UIState Reduce(UIState state, SetHistogramType action)
+        {
+            return state with
+            {
+                HistogramType = action.Type
+            };
+        }
+    }
+
     public class UIEffects(IJSRuntime jsRuntime, IHttpClientFactory httpClientFactory, IState<UIState> state)
     {
         [EffectMethod]
@@ -136,6 +151,12 @@ public record UIState
         public async Task ToggleBitcoinUnitEffect(ToggleBitcoinUnit action, IDispatcher dispatcher)
         {
             await jsRuntime.InvokeVoidAsync("Interop.setBitcoinUnit", state.Value.BitcoinUnit);
+        }
+
+        [EffectMethod]
+        public async Task SetHistogramTypeEffect(SetHistogramType action, IDispatcher dispatcher)
+        {
+            dispatcher.Dispatch(new StoreState.SetHistogramType(action.Type));
         }
     }
 }

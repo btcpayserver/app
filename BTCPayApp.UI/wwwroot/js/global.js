@@ -85,7 +85,7 @@ Interop = {
 }
 
 Chart = {
-  renderLineChart (selector, labels, series, seriesUnit, displayUnit, rate, defaultCurrency, divisibility) {
+  renderLineChart (selector, labels, series, type, seriesUnit, displayUnit, rate, defaultCurrency, divisibility) {
     const $el = document.querySelector(selector);
     if (!$el) return;
     const valueTransform = (value, fromUnit, toUnit) =>{
@@ -94,13 +94,15 @@ Chart = {
       if (fromUnit === 'SATS' && toUnit === 'BTC') return value / 100000000;
       else return value;
     }
-    Chart.lineChartTooltipValueTransform = (value, label) => {
-      const val = valueTransform(value, seriesUnit, displayUnit)
-      return displayCurrency(val, rate, displayUnit, divisibility) + ' ' + (displayUnit === 'SATS' ? 'sats' : displayUnit)
-    }
     const labelCount = 6
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat
-    const dateFormatter = new Intl.DateTimeFormat('default', { month: 'short', day: 'numeric' })
+    const dateFormatter = new Intl.DateTimeFormat('default', type.toLowerCase() === 'day' ? { hour: 'numeric', minute: 'numeric' } : { month: 'short', day: 'numeric' })
+    const dateFormatterDetails = new Intl.DateTimeFormat('default', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' })
+    Chart.lineChartTooltipValueTransform = (value, label) => {
+      const date = dateFormatterDetails.format(new Date(label))
+      const val = valueTransform(value, seriesUnit, displayUnit)
+      return `<div class="chartist-tooltip-value-amount">${displayCurrency(val, rate, displayUnit, divisibility) + ' ' + (displayUnit === 'SATS' ? 'sats' : displayUnit)}</div><div class="chartist-tooltip-value-date">${date}</div>`
+    }
     const min = Math.min(...series);
     const max = Math.max(...series);
     const low = Math.max(min - ((max - min) / 5), 0);
@@ -127,7 +129,8 @@ Chart = {
           template: '<div class="chartist-tooltip-value">{{value}}</div><div class="chartist-tooltip-line"></div>',
           offset: {
             x: 0,
-            y: -16
+            y: -32,
+            lineY: -17.5
           },
           valueTransformFunction(value, label) {
             return Chart.lineChartTooltipValueTransform(value, label)

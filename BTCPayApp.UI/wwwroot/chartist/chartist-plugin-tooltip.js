@@ -317,14 +317,16 @@
                  */
                 function setTooltipPosition(relativeElement, ignoreClasses) {
                     containerRect = chart.container.getBoundingClientRect();
-                    var positionData = getTooltipPosition(relativeElement);
-
+                    var isLine = tooltipElement.innerHTML.match('chartist-tooltip-line');
+                    var positionData = getTooltipPosition(relativeElement, isLine);
                     tooltipElement.style.transform = 'translate(' + positionData.left + 'px, ' + positionData.top + 'px)';
-                    tooltipElement.style.height = containerRect.height + options.offset.y + 'px';
-
-                    if (ignoreClasses) {
-                        return;
+                    if (isLine) {
+                      var tooltipRect = tooltipElement.querySelector('.chartist-tooltip-value').getBoundingClientRect();
+                      tooltipElement.style.height = containerRect.height + options.offset.y + options.offset.lineY + tooltipRect.height + 'px';
                     }
+
+                    if (ignoreClasses)
+                        return;
 
                     tooltipElement.classList.remove(options.cssClass + '--right');
                     tooltipElement.classList.remove(options.cssClass + '--left');
@@ -336,7 +338,7 @@
                  * @param Element relativeElement
                  * @return Object positionData
                  */
-                function getTooltipPosition(relativeElement) {
+                function getTooltipPosition(relativeElement, isLine) {
                     var positionData = {
                         alignment: 'center',
                     };
@@ -345,7 +347,9 @@
 
                     var boxData = relativeElement.getBoundingClientRect();
                     var left = boxData.left + window.scrollX + options.offset.x - width / 2 + boxData.width / 2;
-                    var top = containerRect.top + window.scrollY + options.offset.y;
+                    var top = isLine
+                        ? containerRect.top + window.scrollY + options.offset.y
+                        : boxData.top + window.scrollY - height + options.offset.y;
 
                     // Minimum horizontal collision detection
                     if (left + width > document.body.clientWidth) {

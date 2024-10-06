@@ -28,12 +28,13 @@ public record StoreState
     private static string[] RateFetchExcludes = ["BTC", "SATS"];
 
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
-    public record SetHistogramType(HistogramType? HistogramType);
+    public record SetHistogramType(HistogramType Type);
     public record FetchStore(string StoreId);
     public record FetchOnchainBalance(string StoreId);
     public record FetchLightningBalance(string StoreId);
     public record FetchOnchainHistogram(string StoreId, HistogramType? Type = null);
     public record FetchLightningHistogram(string StoreId, HistogramType? Type = null);
+    public record FetchHistograms(string StoreId, HistogramType? Type = null);
     public record FetchBalances(string StoreId, HistogramType? Type = null);
     public record FetchNotifications(string StoreId);
     public record UpdateNotification(string NotificationId, bool Seen);
@@ -97,7 +98,7 @@ public record StoreState
         {
             return state with
             {
-                HistogramType = action.HistogramType,
+                HistogramType = action.Type,
             };
         }
     }
@@ -553,7 +554,7 @@ public record StoreState
         return histogram;
     }
 
-    public class StoreEffects(IAccountManager accountManager)
+    public class StoreEffects(IState<StoreState> state, IState<UIState> uiState, IAccountManager accountManager)
     {
         [EffectMethod]
         public Task SetStoreInfoEffect(SetStoreInfo action, IDispatcher dispatcher)
@@ -563,8 +564,9 @@ public record StoreState
             {
                 var storeId = store.Id;
                 var posId = store.PosAppId!;
+                var histogramType = state.Value.HistogramType ?? uiState.Value.HistogramType;
                 dispatcher.Dispatch(new FetchStore(storeId));
-                dispatcher.Dispatch(new FetchBalances(storeId));
+                dispatcher.Dispatch(new FetchBalances(storeId, histogramType));
                 dispatcher.Dispatch(new FetchNotifications(storeId));
                 dispatcher.Dispatch(new FetchInvoices(storeId));
                 dispatcher.Dispatch(new FetchRates(store));
@@ -609,6 +611,13 @@ public record StoreState
         {
             dispatcher.Dispatch(new FetchOnchainBalance(action.StoreId));
             dispatcher.Dispatch(new FetchLightningBalance(action.StoreId));
+            dispatcher.Dispatch(new FetchHistograms(action.StoreId, action.Type));
+            return Task.CompletedTask;
+        }
+
+        [EffectMethod]
+        public Task FetchHistogramsEffect(FetchHistograms action, IDispatcher dispatcher)
+        {
             dispatcher.Dispatch(new FetchOnchainHistogram(action.StoreId, action.Type));
             dispatcher.Dispatch(new FetchLightningHistogram(action.StoreId, action.Type));
             return Task.CompletedTask;
@@ -832,6 +841,14 @@ public record StoreState
                 var error = e.InnerException?.Message ?? e.Message;
                 dispatcher.Dispatch(new SetInvoicePaymentMethods(null, error, action.InvoiceId));
             }
+        }
+
+        [EffectMethod]
+        public async Task SetHistogramTypeEffect(SetHistogramType action, IDispatcher dispatcher)
+        {
+            var storeInfo = state.Value.StoreInfo;
+            if (storeInfo != null)
+                dispatcher.Dispatch(new FetchHistograms(storeInfo.Id, action.Type));
         }
     }
 }

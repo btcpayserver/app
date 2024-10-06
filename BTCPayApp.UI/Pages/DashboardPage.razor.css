@@ -1,4 +1,12 @@
 ::deep #WalletOverview {
   margin-top: var(--btcpay-space-m);
-  margin-bottom: var(--btcpay-space-l);
+  margin-bottom: var(--btcpay-space-s);
+}
+
+.btn-group label {
+  --btcpay-btn-color: var(--btcpay-body-text-muted);
+  --btcpay-btn-active-color: var(--btcpay-body-text);
+  --btcpay-btn-padding-x: var(--btcpay-space-s);
+  font-weight: var(--btcpay-font-weight-semibold);
+  max-width: 4rem;
 }
