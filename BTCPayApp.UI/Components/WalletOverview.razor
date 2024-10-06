@@ -73,7 +73,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (Histogram != null)
-            await JS.InvokeVoidAsync("Chart.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, "BTC", BitcoinUnit, null, Currency);
+            await JS.InvokeVoidAsync("Chart.renderLineChart", "#Histogram", Histogram.Labels, Histogram.Series, Histogram.Type.ToString(), "BTC", BitcoinUnit, null, Currency);
     }
 
     public void Dispose()

@@ -11,11 +11,14 @@
     gap: 4px;
 }
 .chartist-tooltip .chartist-tooltip-value {
-    color: var(--btcpay-body-text-muted);
     background-color: var(--btcpay-bg-tile);
     border-radius: var(--btcpay-border-radius);
-    padding: 0 var(--btcpay-space-s);
+    padding: var(--btcpay-space-xs) var(--btcpay-space-s);
     font-size: var(--btcpay-font-size-s);
+    text-align: center;
+}
+.chartist-tooltip .chartist-tooltip-value-date {
+  color: var(--btcpay-body-text-muted);
 }
 .chartist-tooltip .chartist-tooltip-line {
     width: 1px;
@@ -41,7 +44,7 @@
     opacity: 1;
 }
 
-/* Tooltip arrow 
+/* Tooltip arrow
 .chartist-tooltip::before {
     content: '\25BC';
     position: absolute;
