@@ -11,11 +11,11 @@ git clone git@github.com:btcpayserver/app.git
 # Switch to it
 cd app
 
-# Install the workloads
-dotnet workload restore
-
 # Initialize the server submodule
 git submodule init && git submodule update --recursive
+
+# Install the workloads
+dotnet workload restore
 
 # Go to the server submodule
 cd submodules/btcpayserver/BTCPayServer.Tests
