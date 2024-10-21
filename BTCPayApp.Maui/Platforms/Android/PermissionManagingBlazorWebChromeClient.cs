@@ -3,7 +3,6 @@ using Android.App;
 using Android.Content.PM;
 using Android.Graphics;
 using Android.OS;
-using Android.Views;
 using Android.Webkit;
 using AndroidX.Activity;
 using AndroidX.Activity.Result;

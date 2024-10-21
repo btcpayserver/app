@@ -15,7 +15,7 @@ public partial class MainPage : ContentPage
         BlazorWebView.BlazorWebViewInitializing += BlazorWebViewInitializing;
         BlazorWebView.BlazorWebViewInitialized += BlazorWebViewInitialized;
     }
-    
+
     private void BlazorWebViewInitializing(object? sender, BlazorWebViewInitializingEventArgs e)
     {
         #if IOS
@@ -26,7 +26,7 @@ public partial class MainPage : ContentPage
 
     private void BlazorWebViewInitialized(object? sender, BlazorWebViewInitializedEventArgs e)
     {
-        
+
 #if ANDROID
         if (e.WebView.Context?.GetActivity() is not ComponentActivity activity)
         {

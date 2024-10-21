@@ -33,7 +33,7 @@ jobs:
         run: dotnet build --configuration Release BTCPayApp.Server
       # E2E tests
       - name: Start containers
-        run: docker-compose -f "submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" up -d dev
+        run: docker compose -f "submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" up -d dev
       - name: Start BTCPay
         run: |
           cd submodules/btcpayserver
