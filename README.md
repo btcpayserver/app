@@ -34,3 +34,8 @@ Now you can open up the IDE and run `DEV ALL` profile which builds both the App 
 
 The app should open in the browser and you should see the Welcome screen.
 Click the Connect button, use `http://localhost:14142` as the server URL and an existing account for the server.
+
+## Troubleshooting
+
+After the first run of `DEV ALL` on a Linux machine with a new .NET setup, you may run into the [dotnet dev-certs - Untrusted Root](https://github.com/dotnet/aspnetcore/issues/41503)
+error, and you may find a solution at the [following link](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-dev-certs)
