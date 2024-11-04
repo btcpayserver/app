@@ -91,11 +91,11 @@ using Microsoft.Extensions.Logging;
 
 namespace BTCPayApp.Core;
 
-public class DatabaseConfigProvider: IConfigProvider
+public class DatabaseConfigProvider: ConfigProvider
 {
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<DatabaseConfigProvider> _logger;
-    private AsyncKeyedLocker<string> _lock = new();
+    private readonly AsyncKeyedLocker<string> _lock = new();
 
     public DatabaseConfigProvider(IDbContextFactory<AppDbContext> dbContextFactory, ILogger<DatabaseConfigProvider> logger)
     {
@@ -103,7 +103,7 @@ public class DatabaseConfigProvider: IConfigProvider
         _logger = logger;
     }
 
-    public async Task<T?> Get<T>(string key)
+    public override async Task<T?> Get<T>(string key) where T : default
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         var config = await dbContext.Settings.FindAsync(key);
@@ -112,7 +112,7 @@ public class DatabaseConfigProvider: IConfigProvider
         return config is null ? default : JsonSerializer.Deserialize<T>(config.Value);
     }
 
-    public async Task Set<T>(string key, T? value, bool backup)
+    public override async Task Set<T>(string key, T? value, bool backup) where T : default
     {
         using var releaser = await _lock.LockAsync(key);
         _logger.LogDebug("Setting {key} to {value} {backup}", key, value, backup? "backup": "no backup");
@@ -136,7 +136,7 @@ public class DatabaseConfigProvider: IConfigProvider
 
     }
 
-    public async Task<IEnumerable<string>> List(string prefix)
+    public override async Task<IEnumerable<string>> List(string prefix)
     {
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         return await dbContext.Settings.Where(s => s.Key.StartsWith(prefix)).Select(s => s.Key).ToListAsync();

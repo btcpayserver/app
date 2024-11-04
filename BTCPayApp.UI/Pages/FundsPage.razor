@@ -2,6 +2,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.BTCPayServer
 @using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Components.Layout
@@ -14,6 +15,7 @@
 @inject IState<StoreState> StoreState
 @inject IAccountManager AccountManager
 @inject OnChainWalletManager OnChainWalletManager
+@inject BTCPayConnectionManager ConnectionManager
 
 <PageTitle>@GetTitle()</PageTitle>
 
@@ -232,7 +234,7 @@
 
     private void UpdateForDestination(string? destination)
     {
-        var network = OnChainWalletManager.Network;
+        var network = ConnectionManager.ReportedNetwork;
         if (string.IsNullOrEmpty(destination) || network == null)
         {
             Model.Bolt11 = null;

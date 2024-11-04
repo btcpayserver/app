@@ -90,7 +90,7 @@ public static class LDKExtensions
             Persister.new_impl(provider.GetRequiredService<LDKPersister>()));
         services.AddScoped(provider =>
             provider.GetRequiredService<LDKNode>().GetConfig().GetAwaiter().GetResult().AsLDKUserConfig());
-        services.AddScoped(provider => provider.GetRequiredService<OnChainWalletManager>().Network!);
+        services.AddScoped(provider => provider.GetRequiredService<BTCPayConnectionManager>().ReportedNetwork!);
 
         services.AddScoped(provider =>
         {
@@ -213,6 +213,7 @@ public static class LDKExtensions
         services.AddScoped<LDKBackgroundProcessor>();
         services.AddScoped<LDKAnnouncementBroadcaster>();
         services.AddScoped<PaymentsManager>();
+        services.AddScoped<LightningAPIKeyManager>();
         services.AddScoped<BTCPayPaymentsNotifier>();
         services.AddScoped<BTCPayPaymentsNotifier>();
         services.AddScoped<LDKRapidGossipSyncer>();
@@ -271,7 +272,7 @@ public static class LDKExtensions
             ProbabilisticScoringDecayParameters.with_default());
         services.AddScoped<ProbabilisticScorer>(provider =>
         {
-            var configProvider = provider.GetRequiredService<IConfigProvider>();
+            var configProvider = provider.GetRequiredService<ConfigProvider>();
             var bytes = configProvider.Get<byte[]>("Score").ConfigureAwait(false).GetAwaiter().GetResult();
             var logger = provider.GetRequiredService<Logger>();
             if (bytes is not null)
@@ -289,7 +290,7 @@ public static class LDKExtensions
 
         services.AddScoped<NetworkGraph>(provider =>
         {
-            var configProvider = provider.GetRequiredService<IConfigProvider>();
+            var configProvider = provider.GetRequiredService<ConfigProvider>();
             var bytes = configProvider.Get<byte[]>("NetworkGraph").ConfigureAwait(false).GetAwaiter().GetResult();
             if (bytes is not null)
             {

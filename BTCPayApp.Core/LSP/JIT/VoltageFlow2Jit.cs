@@ -155,7 +155,6 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
                 return false;
             var invoice = lightningPayment.PaymentRequest;
 
-
             var proposal = await GetProposal(invoice, null, fee!.FeeIdentifier, cancellationToken);
             if (proposal.MinimumAmount != fee.AmountToRequestPayer || proposal.PaymentHash != invoice.PaymentHash)
                 return false;

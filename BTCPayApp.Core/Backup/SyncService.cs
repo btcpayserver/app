@@ -17,7 +17,7 @@ namespace BTCPayApp.Core.Backup;
 
 public class SyncService : IDisposable
 {
-    private readonly IConfigProvider _configProvider;
+    private readonly ConfigProvider _configProvider;
     private readonly ILogger<SyncService> _logger;
     private readonly IAccountManager _accountManager;
     private readonly IHttpClientFactory _httpClientFactory;
@@ -25,10 +25,12 @@ public class SyncService : IDisposable
     private readonly ISecureConfigProvider _secureConfigProvider;
     public AsyncEventHandler? EncryptionKeyChanged;    
     public AsyncEventHandler<(List<Outbox> OutboxItemsProcesed, PutObjectRequest RemoteRequest)>? RemoteObjectUpdated;
+    public AsyncEventHandler<string[]>? LocalUpdated;
+    
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
 
     public SyncService(
-        IConfigProvider configProvider,
+        ConfigProvider configProvider,
         ILogger<SyncService> logger,
         ISecureConfigProvider secureConfigProvider,
         IAccountManager accountManager,
@@ -258,7 +260,7 @@ public class SyncService : IDisposable
                 Value = setting.Value.ToByteArray(),
                 Version = setting.Version,
                 Backup = true
-            });
+            }).ToArray();
             var channelsToUpsert = toUpsert.Where(key => key.Key.StartsWith("Channel_"))
                 .Select(value => JsonSerializer.Deserialize<Channel>(value.Value.ToStringUtf8())!);
             var paymentsToUpsert = toUpsert.Where(key => key.Key.StartsWith("Payment_")).Select(value =>
@@ -277,6 +279,9 @@ public class SyncService : IDisposable
             await db.Database.CommitTransactionAsync(cancellationToken);
             _logger.LogInformation("Synced to local: {DeleteCount} deleted, {UpsertCount} upserted", deleteCount,
                 upsertCount);
+            LocalUpdated?.Invoke(this, toDelete.Concat(toUpsert).Select(key => key.Key).ToArray());
+            settingsToUpsert.Select(setting => setting.Key).Concat(settingsToDelete).Distinct().ToList()
+                .ForEach(key => _configProvider.Updated?.Invoke(this, key));
         }
         catch (Exception e)
         {
@@ -334,8 +339,13 @@ public class SyncService : IDisposable
         }
     }
 
+    private SemaphoreSlim _syncLock = new(1, 1);
     public async Task SyncToRemote(CancellationToken cancellationToken = default)
     {
+        try
+        {
+            await _syncLock.WaitAsync(cancellationToken);
+     
         var backupAPi = await GetVSSAPI();
         if (backupAPi is null)
             return;
@@ -393,7 +403,11 @@ public class SyncService : IDisposable
             $"Synced to remote {putObjectRequest.TransactionItems.Count} items and deleted {putObjectRequest.DeleteItems.Count} items" +
             string.Join(", ", putObjectRequest.TransactionItems.Select(kv => kv.Key + " " + kv.Version)));
         RemoteObjectUpdated?.Invoke(this, (removedOutboxItems, putObjectRequest.Clone()));
-
+        }
+        finally
+        {
+            _syncLock.Release();
+        }
     }
     public async Task StartSync(bool local,CancellationToken cancellationToken = default)
     {
@@ -446,5 +460,6 @@ public class SyncService : IDisposable
     {
         RemoteObjectUpdated = null;
         EncryptionKeyChanged = null;
+        LocalUpdated = null;
     }
 }

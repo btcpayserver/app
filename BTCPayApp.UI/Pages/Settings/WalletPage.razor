@@ -3,6 +3,7 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.BTCPayServer
+@using BTCPayApp.Core.Data
 @using BTCPayApp.Core.Helpers
 @using BTCPayApp.Core.Wallet
 @using Microsoft.Extensions.Logging
@@ -14,11 +15,11 @@
 @inject ILogger<IndexPage> Logger
 @inject IAccountManager AccountManager
 
-<PageTitle>@GetTitle()</PageTitle>
+<PageTitle>@_title</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>@GetTitle()</h1>
+        <h1>@_title</h1>
     </Titlebar>
 </SectionContent>
 <section class="container">
@@ -30,13 +31,13 @@
     {
         <Alert Type="success" Dismissible>@_successMessage</Alert>
     }
-    @if (OnChainWalletManager.IsConfigured)
+    @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Config is not null) 
     {
-        var config = OnChainWalletManager.WalletConfig!;
+        // var config = OnChainWalletManager.WalletConfig!;
         <h4>Wallet</h4>
         <div class="box mb-3">
             <div class="form-floating">
-                <TruncateCenter Text="@config.Fingerprint" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                <TruncateCenter Text="@Config.Fingerprint" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                 <label>Fingerprint</label>
             </div>
             <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#seed" aria-expanded="false" aria-controls="seed">
@@ -45,7 +46,7 @@
             <div id="seed" class="collapse">
                 <div class="box p-4 mt-3">
                     <ol class="m-0">
-                        @foreach (var word in config.Mnemonic.Split(' '))
+                        @foreach (var word in Config.Mnemonic.Split(' '))
                         {
                             <li class="font-monospace">@word</li>
                         }
@@ -54,7 +55,7 @@
             </div>
         </div>
         <h4>Derivations</h4>
-        @foreach (var d in config.Derivations)
+        @foreach (var d in Config.Derivations)
         {
             var identifier = d.Value.Identifier;
             var descriptor = d.Value.Descriptor;
@@ -112,6 +113,7 @@
     private string? _storePaymentMethodIdentifier;
     private string? _errorMessage;
     private string? _successMessage;
+    private string _title;
 
     protected override async Task OnInitializedAsync()
     {
@@ -119,7 +121,11 @@
 
         if (!string.IsNullOrEmpty(StoreId))
             await GetStorePaymentMethod();
+        Config = await OnChainWalletManager.GetConfig();
+        _title = GetTitle();
     }
+
+    public WalletConfig? Config { get; private set; }
 
     private async Task GetStorePaymentMethod()
     {
@@ -137,7 +143,7 @@
 
     private async Task SetStorePaymentMethod(string key)
     {
-        if (string.IsNullOrEmpty(StoreId) || OnChainWalletManager.WalletConfig?.Derivations.TryGetValue(key, out var derivation) is not true || derivation.Descriptor is null) return;
+        if (string.IsNullOrEmpty(StoreId) || Config?.Derivations.TryGetValue(key, out var derivation) is not true || derivation.Descriptor is null) return;
         _successMessage = _errorMessage = null;
         try
         {
@@ -183,6 +189,6 @@
             : null;
     }
 
-    private string GetTitle() => $"{OnChainWalletManager.Network?.Name ?? ""} Onchain Wallet".Trim();
+    private string GetTitle() => $"{Config.NBitcoinNetwork?.Name ?? ""} Onchain Wallet".Trim();
 }
 

@@ -47,7 +47,7 @@ public static class StartupExtensions
             provider.GetRequiredService<AuthStateProvider>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<AuthStateProvider>());
         serviceCollection.AddSingleton(sp => (IAccountManager) sp.GetRequiredService<AuthenticationStateProvider>());
-        serviceCollection.AddSingleton<IConfigProvider, DatabaseConfigProvider>();
+        serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddLDK();
         serviceCollection.AddSingleton<IAuthorizationHandler, BearerAuthorizationHandler>();
         serviceCollection.AddAuthorizationCore(options =>

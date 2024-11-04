@@ -6,9 +6,9 @@ namespace BTCPayApp.Core.LDK;
 
 public class LDKKVStore:KVStoreInterface
 {
-    private readonly IConfigProvider _configProvider;
+    private readonly ConfigProvider _configProvider;
 
-    public LDKKVStore(IConfigProvider configProvider)
+    public LDKKVStore(ConfigProvider configProvider)
     {
         _configProvider = configProvider;
     }

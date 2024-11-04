@@ -14,7 +14,7 @@ namespace BTCPayApp.Core.Auth;
 
 public class AuthStateProvider(
     IHttpClientFactory clientFactory,
-    IConfigProvider config,
+    ConfigProvider configProvider,
     IAuthorizationService authService,
     IOptionsMonitor<IdentityOptions> identityOptions)
     : AuthenticationStateProvider, IAccountManager, IHostedService
@@ -115,6 +115,7 @@ public class AuthStateProvider(
             var res = new AuthenticationState(user);
             if (AppUserInfo.Equals(oldUserInfo, _userInfo)) return res;
 
+            //TODO: should this check against old user info?s
             if (_userInfo != null)
             {
                 OnUserInfoChange?.Invoke(this, _userInfo);
@@ -430,11 +431,11 @@ public class AuthStateProvider(
     public async Task<IEnumerable<BTCPayAccount>> GetAccounts(string? hostFilter = null)
     {
         var prefix = $"{AccountKeyPrefix}:" + (hostFilter == null ? "" : $"{hostFilter}:");
-        var keys = (await config.List(prefix)).ToArray();
+        var keys = (await configProvider.List(prefix)).ToArray();
         var accounts = new List<BTCPayAccount>();
         foreach (var key in keys)
         {
-            var account = await config.Get<BTCPayAccount>(key);
+            var account = await configProvider.Get<BTCPayAccount>(key);
             accounts.Add(account!);
         }
         return accounts;
@@ -442,33 +443,33 @@ public class AuthStateProvider(
 
     public async Task UpdateAccount(BTCPayAccount account)
     {
-        await config.Set(GetKey(account.Id), account, false);
+        await configProvider.Set(GetKey(account.Id), account, false);
     }
 
     public async Task RemoveAccount(BTCPayAccount account)
     {
-        await config.Set<BTCPayAccount>(GetKey(account.Id), null, false);
+        await configProvider.Set<BTCPayAccount>(GetKey(account.Id), null, false);
     }
 
     private async Task<BTCPayAccount> GetAccount(string serverUrl, string email)
     {
         var accountId = BTCPayAccount.GetId(serverUrl, email);
-        var account = await config.Get<BTCPayAccount>(GetKey(accountId));
+        var account = await configProvider.Get<BTCPayAccount>(GetKey(accountId));
         return account ?? new BTCPayAccount(serverUrl, email);
     }
 
     private async Task<BTCPayAccount?> GetCurrentAccount()
     {
-        var accountId = await config.Get<string>(CurrentAccountKey);
+        var accountId = await configProvider.Get<string>(CurrentAccountKey);
         if (string.IsNullOrEmpty(accountId)) return null;
-        return await config.Get<BTCPayAccount>(GetKey(accountId));
+        return await configProvider.Get<BTCPayAccount>(GetKey(accountId));
     }
 
     private async Task SetCurrentAccount(BTCPayAccount? account)
     {
         OnBeforeAccountChange?.Invoke(this, _account);
         if (account != null) await UpdateAccount(account);
-        await config.Set(CurrentAccountKey, account?.Id, false);
+        await configProvider.Set(CurrentAccountKey, account?.Id, false);
         _account = account;
         _userInfo = null;
 

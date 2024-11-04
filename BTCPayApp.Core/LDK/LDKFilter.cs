@@ -12,9 +12,9 @@ namespace BTCPayApp.Core.LDK;
 public class LDKFilter : FilterInterface
 {
     private readonly LDKNode _ldkNode;
-    private readonly IConfigProvider _configProvider;
+    private readonly ConfigProvider _configProvider;
 
-    public LDKFilter(LDKNode ldkNode, IConfigProvider configProvider)
+    public LDKFilter(LDKNode ldkNode, ConfigProvider configProvider)
     {
         _ldkNode = ldkNode;
         _configProvider = configProvider;
@@ -36,10 +36,10 @@ public class LDKFilter : FilterInterface
 
     public async Task<List<LDKWatchedOutput>> GetWatchedOutputs()
     {
-        return (await _configProvider.Get<List<LDKWatchedOutput>>("ln:watchedOutputs"))?? new();
+        return await _configProvider.Get<List<LDKWatchedOutput>?>("ln:watchedOutputs")?? [];
     }
 
-    private SemaphoreSlim _semaphore = new(1, 1);
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     private async Task AddOrUpdateWatchedOutput(LDKWatchedOutput output)
     {

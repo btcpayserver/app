@@ -34,7 +34,6 @@ public abstract class BaseHostedService : IHostedService, IDisposable
         await _cancellationTokenSource.CancelAsync();
         await _controlSemaphore.WaitAsync(cancellationToken);
         
-        _logger.LogInformation("Stopping service: lock acquired");
         try
         {
             await ExecuteStopAsync(_cancellationTokenSource.Token);

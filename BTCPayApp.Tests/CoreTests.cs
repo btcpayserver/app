@@ -60,7 +60,7 @@ public class CoreTests
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.NotConfigured, node.OnChainWalletManager.State));
 
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
-           Assert.Null(node.OnChainWalletManager.WalletConfig);
+           Assert.Null((await node.OnChainWalletManager.GetConfig()));
 
         await node.AccountManager.Logout();
         TestUtils.Eventually(() =>
@@ -73,35 +73,35 @@ public class CoreTests
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.NotConfigured, node.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
 
-        Assert.False(node.LNManager.CanConfigureLightningNode);
+        Assert.False(await node.LNManager.CanConfigureLightningNode());
         await node.OnChainWalletManager.Generate();
         await Assert.ThrowsAsync<InvalidOperationException>(() => node.OnChainWalletManager.Generate());
 
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Loaded, node.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.NotConfigured, node.LNManager.State));
 
-        Assert.NotNull(node.OnChainWalletManager.WalletConfig);
-        Assert.NotNull(node.OnChainWalletManager.WalletConfig?.Derivations);
+        Assert.NotNull((await node.OnChainWalletManager.GetConfig()));
+        Assert.NotNull((await node.OnChainWalletManager.GetConfig())?.Derivations);
         Assert.False(
-            node.OnChainWalletManager.WalletConfig?.Derivations.ContainsKey(WalletDerivation.LightningScripts));
+            (await node.OnChainWalletManager.GetConfig())?.Derivations.ContainsKey(WalletDerivation.LightningScripts));
         WalletDerivation? segwitDerivation = null;
         Assert.True(
-            node.OnChainWalletManager.WalletConfig?.Derivations.TryGetValue(WalletDerivation.NativeSegwit,
+            (await node.OnChainWalletManager.GetConfig()).Derivations.TryGetValue(WalletDerivation.NativeSegwit,
                 out segwitDerivation));
-        Assert.False(string.IsNullOrEmpty(node.OnChainWalletManager.WalletConfig.Fingerprint));
+        Assert.False(string.IsNullOrEmpty((await node.OnChainWalletManager.GetConfig()).Fingerprint));
         Assert.NotNull(segwitDerivation.Identifier);
         Assert.NotNull(segwitDerivation.Descriptor);
         Assert.NotNull(segwitDerivation.Name);
 
 
-        Assert.True(node.LNManager.CanConfigureLightningNode);
+        Assert.True(await node.LNManager.CanConfigureLightningNode());
 
         await node.LNManager.Generate();
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.Loaded, node.LNManager.State));
         await Assert.ThrowsAsync<InvalidOperationException>(() => node.LNManager.Generate());
         WalletDerivation? lnDerivation = null;
         Assert.True(
-            node.OnChainWalletManager.WalletConfig?.Derivations.TryGetValue(WalletDerivation.LightningScripts,
+            (await node.OnChainWalletManager.GetConfig())?.Derivations.TryGetValue(WalletDerivation.LightningScripts,
                 out lnDerivation));
         Assert.NotNull(lnDerivation.Identifier);
         Assert.Null(lnDerivation.Descriptor);
@@ -120,7 +120,7 @@ public class CoreTests
         Assert.False(await node2.App.Services.GetRequiredService<SyncService>()
             .SetEncryptionKey(new Mnemonic(Wordlist.English).ToString()));
         Assert.True(await node2.App.Services.GetRequiredService<SyncService>()
-            .SetEncryptionKey(node.OnChainWalletManager.WalletConfig!.Mnemonic));
+            .SetEncryptionKey((await node.OnChainWalletManager.GetConfig())!.Mnemonic));
 
         TestUtils.Eventually(() =>
             Assert.Equal(BTCPayConnectionState.Syncing, node2.ConnectionManager.ConnectionState));
@@ -156,8 +156,8 @@ public class CoreTests
         var network = node.ConnectionManager.ReportedNetwork;
         Assert.NotNull(network);
         var rpc = new RPCClient(RPCCredentialString.Parse("server=http://localhost:43782;ceiwHEbqWI83:DwubwWsoo3"), network);
-        Assert.NotNull(await FundWallet(rpc, address.GetDestinationAddress(network), Money.Coins(1)));
-        Assert.NotNull(await FundWallet(rpc, address2.GetDestinationAddress(network), Money.Coins(1)));
+        Assert.NotNull(await FundWallet(rpc, address, Money.Coins(1)));
+        Assert.NotNull(await FundWallet(rpc, address2, Money.Coins(1)));
         await TestUtils.EventuallyAsync(async () =>
         {
             var utxos = await node.OnChainWalletManager.GetUTXOS();
@@ -177,8 +177,8 @@ public class CoreTests
 
          var res = await node2.AccountManager.TryApplyingAppPaymentMethodsToCurrentStore(node2.OnChainWalletManager, node2.LNManager, true, true);
          Assert.NotNull(res);
-         Assert.True(node2.OnChainWalletManager.IsOnChainOurs(res.Value.onchain));
-         Assert.True(node2.LNManager.IsLightningOurs(res.Value.lightning));
+         Assert.True(await node2.OnChainWalletManager.IsOnChainOurs(res.Value.onchain));
+         Assert.True(await node2.LNManager.IsLightningOurs(res.Value.lightning));
 
          var invoice = await node2.AccountManager.GetClient().CreateInvoice(store.Id, new CreateInvoiceRequest()
          {

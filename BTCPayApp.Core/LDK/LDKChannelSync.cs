@@ -20,7 +20,6 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     private readonly LDKFilter _ldkFilter;
     private readonly BTCPayAppServerClient _appHubClient;
     private readonly ILogger<LDKChannelSync> _logger;
-    private readonly IConfigProvider _configProvider;
     private readonly List<IDisposable> _disposables = new();
     
 
@@ -33,7 +32,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         Watch watch,
         LDKFilter ldkFilter,
         BTCPayAppServerClient appHubClient,
-        ILogger<LDKChannelSync> logger, IConfigProvider configProvider)
+        ILogger<LDKChannelSync> logger)
     {
         _confirms = confirms.ToArray();
         _connectionManager = connectionManager;
@@ -44,7 +43,6 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         _ldkFilter = ldkFilter;
         _appHubClient = appHubClient;
         _logger = logger;
-        _configProvider = configProvider;
     }
 
     private async Task PollForTransactionUpdates(uint256[]? txIds = null)
@@ -82,7 +80,8 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         _logger.LogInformation($"Fetching {relevantTransactionsFromConfirms.Count} transactions");
         var txIdsToQuery = relevantTransactionsFromConfirms.Select(zz => zz.Key.ToString()).ToArray();
         var outpoints = watchedOutputs.Select(zz => zz.Outpoint.ToString()).ToArray();
-        var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(_node.Identifier, txIdsToQuery, outpoints);
+        var lnIdentifier = await _node.Identifier;
+        var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(lnIdentifier, txIdsToQuery, outpoints);
          var blockHeaders = result.BlockHeaders.ToDictionary(zz => new uint256(zz.Key), zz => BlockHeader.Parse(zz.Value, _network));
         var txs = result.Txs.ToDictionary(zz => new uint256(zz.Key), zz => Transaction.Parse(zz.Value.Transaction, _network));
         

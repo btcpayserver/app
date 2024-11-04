@@ -172,7 +172,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly BTCPayConnectionManager _connectionManager;
     private readonly ILogger _logger;
-    private readonly IConfigProvider _configProvider;
+    private readonly ConfigProvider _configProvider;
     private readonly OnChainWalletManager _onChainWalletManager;
 
     public LDKNode(
@@ -181,7 +181,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         BTCPayConnectionManager connectionManager,
         IServiceProvider serviceProvider,
         LDKWalletLogger logger,
-        IConfigProvider configProvider,
+        ConfigProvider configProvider,
         OnChainWalletManager onChainWalletManager)
     {
         _memoryCache = cache;
@@ -223,12 +223,15 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         }
 
         InvalidateCache();
-        _config = await _configProvider.Get<LightningConfig>(key: LightningConfig.Key) ?? new LightningConfig();
-        _configLoaded.SetResult();
-        var keyPath = KeyPath.Parse(_config.LightningDerivationPath);
-        Seed = new Mnemonic(_onChainWalletManager.WalletConfig.Mnemonic).DeriveExtKey().Derive(keyPath).PrivateKey
+        var walletConfig = await _onChainWalletManager.GetConfig();
+        var lightningConfig = await _configProvider.Get<LightningConfig>(key: LightningConfig.Key) ?? new LightningConfig();
+
+        var keyPath = KeyPath.Parse(lightningConfig.LightningDerivationPath);
+        
+        
+        Seed = new Mnemonic(walletConfig.Mnemonic).DeriveExtKey().Derive(keyPath).PrivateKey
             .ToBytes();
-        _logger.LogInformation($"Node {_onChainWalletManager.WalletConfig.Mnemonic} SEED: {Convert.ToHexString(Seed)}");
+        _logger.LogInformation($"Node {walletConfig.Mnemonic} SEED: {Convert.ToHexString(Seed)}");
         var services = ServiceProvider.GetServices<IScopedHostedService>();
 
         _logger.LogInformation("Starting LDKNode services");
@@ -247,13 +250,24 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         _started.SetResult();
         _logger.LogInformation("LDKNode started");
     }
-
-    private readonly TaskCompletionSource _configLoaded = new();
+    //
+    // private Task Updated(object? sender, string e)
+    // {
+    //     if(e == LightningConfig.Key)
+    //     {
+    //         _ = GetConfig().ContinueWith(config =>
+    //         {
+    //             _config = config.Result;
+    //             ConfigUpdated?.Invoke(this, _config);
+    //         });
+    //     }
+    // }
+    //
+    // private readonly TaskCompletionSource _configLoaded = new();
 
     public async Task<LightningConfig> GetConfig()
     {
-        await _configLoaded.Task;
-        return _config!;
+        return await _configProvider.Get<LightningConfig>(LightningConfig.Key) ?? new LightningConfig();
     }
 
     public async Task<string[]> GetJITLSPs()
@@ -274,10 +288,10 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             {
                 return;
             }
-            await _configProvider.Set(LightningConfig.Key, updated, true);
-            _config = updated.Item1;
+            await _configProvider.Set(LightningConfig.Key, updated.Item1, true);
+            
 
-            ConfigUpdated?.Invoke(this, _config);
+            ConfigUpdated?.Invoke(this, updated.Item1);
         }
         finally
         {
@@ -293,6 +307,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     public byte[] Seed { get; private set; }
 
     public PaymentsManager PaymentsManager => ServiceProvider.GetRequiredService<PaymentsManager>();
+    public LightningAPIKeyManager ApiKeyManager => ServiceProvider.GetRequiredService<LightningAPIKeyManager>();
     public LDKPeerHandler PeerHandler => ServiceProvider.GetRequiredService<LDKPeerHandler>();
 
     public PubKey NodeId => new(ServiceProvider.GetRequiredService<ChannelManager>().get_our_node_id());
@@ -325,6 +340,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             _logger.LogInformation($"Stopped {service.GetType().Name}");
         }).ToArray();
         await Task.WhenAll(tasks);
+        // _configProvider.Updated -= Updated;
         // _ = _connectionManager.HubProxy.DeviceMasterSignal(identifier, false).RunSync();
     }
 
@@ -337,7 +353,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
 
     private readonly TaskCompletionSource<ChannelMonitor[]?> icm = new();
-    private LightningConfig? _config;
+    // private LightningConfig? _config;
 
     public async Task<ChannelMonitor[]> GetInitialChannelMonitors()
     {
@@ -397,11 +413,10 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     public async Task<Script> DeriveScript()
     {
         var derivationKey = (await GetConfig()).ScriptDerivationKey;
-        return await _onChainWalletManager.DeriveScript(derivationKey);
+        return (await _onChainWalletManager.DeriveScript(derivationKey)).ScriptPubKey;
     }
 
-    public string? Identifier => _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts]
-        .Identifier;
+    public Task<string?> Identifier => _onChainWalletManager.GetConfig().ContinueWith(task => task.Result?.Derivations[WalletDerivation.LightningScripts].Identifier);
     
 
     public async Task TrackScripts(Script[] scripts, string derivation = WalletDerivation.LightningScripts)
@@ -409,7 +424,8 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         try
         {
             _logger.LogDebug("Tracking scripts {scripts}", string.Join(",", scripts.Select(script => script.ToHex())));
-            var identifier = _onChainWalletManager.WalletConfig.Derivations[derivation].Identifier;
+            var config = await _onChainWalletManager.GetConfig();
+            var identifier = config.Derivations[derivation].Identifier;
 
             await _connectionManager.HubProxy.TrackScripts(identifier,
                 scripts.Select(script => script.ToHex()).ToArray()).RunInOtherThread();

@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Components;
 namespace BTCPayApp.UI;
 
 public class StateMiddleware(
-    IConfigProvider configProvider,
+    ConfigProvider configProvider,
     BTCPayConnectionManager btcPayConnectionManager,
     LightningNodeManager lightningNodeService,
     OnChainWalletManager onChainWalletManager,
@@ -69,7 +69,7 @@ public class StateMiddleware(
             dispatcher.Dispatch(new RootState.ConnectionStateUpdatedAction(btcPayConnectionManager.ConnectionState));
 
             // initial wallet generation
-            if (onChainWalletManager is { State: OnChainWalletState.NotConfigured, CanConfigureWallet: true })
+            if (onChainWalletManager is { State: OnChainWalletState.NotConfigured } && await onChainWalletManager.CanConfigureWallet())
             {
                 await onChainWalletManager.Generate();
             }
@@ -84,13 +84,13 @@ public class StateMiddleware(
                 {
                     case OnChainWalletState.Loaded:
                         var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, false);
-                        if (res is { onchain: {} onchain } &&  onChainWalletManager.IsOnChainOurs(onchain))
+                        if (res is { onchain: {} onchain } &&  await onChainWalletManager.IsOnChainOurs(onchain))
                         {
                             _dispatcher.Dispatch(new StoreState.FetchOnchainBalance(store.Id));
                             _dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(store.Id));
                         }
                         break;
-                    case OnChainWalletState.NotConfigured when onChainWalletManager.CanConfigureWallet:
+                    case OnChainWalletState.NotConfigured when await onChainWalletManager.CanConfigureWallet():
                         await onChainWalletManager.Generate();
                         break;
                 }
@@ -100,7 +100,7 @@ public class StateMiddleware(
         lightningNodeService.StateChanged += async (sender, args) =>
         {
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
-            if (lightningNodeService is {State: LightningNodeState.NotConfigured, CanConfigureLightningNode: true})
+            if (lightningNodeService is {State: LightningNodeState.NotConfigured} && await lightningNodeService.CanConfigureLightningNode())
             {
                 try
                 {
@@ -114,7 +114,7 @@ public class StateMiddleware(
             if (lightningNodeService.State == LightningNodeState.Loaded)
             {
                 var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, false, true);
-                if (res is { lightning: {} lightning } && lightningNodeService.IsLightningOurs(lightning))
+                if (res is { lightning: {} lightning } && await lightningNodeService.IsLightningOurs(lightning))
                 {
                     if (accountManager.GetCurrentStore() is { } store)
                     {
@@ -132,12 +132,12 @@ public class StateMiddleware(
             {
                 navigationManager.NavigateTo(Routes.Dashboard);
                var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, true);
-                if (res is { onchain: {} onchain } && onChainWalletManager.IsOnChainOurs(onchain))
+                if (res is { onchain: {} onchain } && await onChainWalletManager.IsOnChainOurs(onchain))
                 {
                     dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeInfo.Id));
                     dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(storeInfo.Id));
                 }
-                if (res is { lightning: {} lightning } && lightningNodeService.IsLightningOurs(lightning))
+                if (res is { lightning: {} lightning } && await lightningNodeService.IsLightningOurs(lightning))
                 {
                     dispatcher.Dispatch(new StoreState.FetchLightningBalance(storeInfo.Id));
                     dispatcher.Dispatch(new StoreState.FetchLightningHistogram(storeInfo.Id));
@@ -227,7 +227,7 @@ public class StateMiddleware(
         _ = RefreshRates(dispatcher, _ratesCts.Token);
 
         // initial wallet generation
-        if (onChainWalletManager is { State: OnChainWalletState.NotConfigured, CanConfigureWallet: true })
+        if (onChainWalletManager is { State: OnChainWalletState.NotConfigured } && await onChainWalletManager.CanConfigureWallet())
         {
             await onChainWalletManager.Generate();
         }

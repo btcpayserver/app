@@ -9,10 +9,12 @@ namespace BTCPayApp.Core.LDK;
 public class LDKFeeEstimator : FeeEstimatorInterface
 {
     private readonly OnChainWalletManager _onChainWalletManager;
+    private readonly Network _network;
 
-    public LDKFeeEstimator( OnChainWalletManager onChainWalletManager)
+    public LDKFeeEstimator( OnChainWalletManager onChainWalletManager, Network network)
     {
         _onChainWalletManager = onChainWalletManager;
+        _network = network;
     }
 
     public int get_est_sat_per_1000_weight(ConfirmationTarget confirmation_target)
@@ -38,7 +40,7 @@ public class LDKFeeEstimator : FeeEstimatorInterface
             _ => throw new ArgumentOutOfRangeException(nameof(confirmation_target), confirmation_target, null)
         };
 
-        if (_onChainWalletManager.Network == Network.TestNet  && targetBlocks >= 12)
+        if (_network == Network.TestNet  && targetBlocks >= 12)
                 targetBlocks = 144;
         
         return (int) _onChainWalletManager.GetFeeRate(targetBlocks).ConfigureAwait(false).GetAwaiter().GetResult().FeePerK.Satoshi;

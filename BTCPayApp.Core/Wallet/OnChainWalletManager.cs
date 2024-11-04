@@ -16,7 +16,7 @@ public class OnChainWalletManager : BaseHostedService
 {
     public const string PaymentMethodId = "BTC-CHAIN";
 
-    private readonly IConfigProvider _configProvider;
+    private readonly ConfigProvider _configProvider;
     private readonly BTCPayAppServerClient _btcPayAppServerClient;
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly ILogger<OnChainWalletManager> _logger;
@@ -24,11 +24,24 @@ public class OnChainWalletManager : BaseHostedService
     private readonly SyncService _syncService;
     private OnChainWalletState _state = OnChainWalletState.Init;
 
-    public WalletConfig? WalletConfig { get; private set; }
-    public WalletDerivation? Derivation => WalletConfig?.Derivations.TryGetValue(WalletDerivation.NativeSegwit, out var derivation) is true ? derivation : null;
-    public Network? Network => WalletConfig is null ? null : Network.GetNetwork(WalletConfig.Network);
-    public bool IsConfigured => !string.IsNullOrEmpty(Derivation?.Descriptor);
-    public bool CanConfigureWallet => IsHubConnected && !IsConfigured;
+    // public WalletConfig? WalletConfig { get; private set; }
+    // public Task<WalletDerivation?> Derivation => 
+    //     GetConfig().ContinueWith(task => task.Result?.Derivations.Values.FirstOrDefault());
+    public Task<bool> IsConfigured() => GetConfig().ContinueWith(task => IsConfigured(task.Result));
+
+    public bool IsConfigured(WalletConfig? walletConfig) =>
+        walletConfig?.Derivations.TryGetValue(WalletDerivation.NativeSegwit, out _) is true;
+
+    public bool CanConfigureWallet(WalletConfig walletConfig)
+    {
+        return IsHubConnected && !IsConfigured(walletConfig);
+    }
+
+    public async Task<bool> CanConfigureWallet()
+    {
+        return CanConfigureWallet(await GetConfig());
+    }
+
     private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
     public bool IsActive => State == OnChainWalletState.Loaded;
 
@@ -41,7 +54,7 @@ public class OnChainWalletManager : BaseHostedService
                 return;
             var old = _state;
             _state = value;
-            _logger.LogInformation($"Wallet state changed: {_state} from {old}" );
+            _logger.LogInformation($"Wallet state changed: {_state} from {old}");
             StateChanged?.Invoke(this, (old, value));
         }
     }
@@ -49,7 +62,7 @@ public class OnChainWalletManager : BaseHostedService
     public event AsyncEventHandler<(OnChainWalletState Old, OnChainWalletState New)>? StateChanged;
 
     public OnChainWalletManager(
-        IConfigProvider configProvider,
+        ConfigProvider configProvider,
         BTCPayAppServerClient btcPayAppServerClient,
         BTCPayConnectionManager btcPayConnectionManager,
         ILogger<OnChainWalletManager> logger,
@@ -64,14 +77,19 @@ public class OnChainWalletManager : BaseHostedService
         _syncService = syncService;
     }
 
+    public async Task<WalletConfig?> GetConfig()
+    {
+        return await _configProvider.Get<WalletConfig?>(WalletConfig.Key);
+    }
+
     protected override async Task ExecuteStartAsync(CancellationToken cancellationToken)
     {
         StateChanged += OnStateChanged;
         _btcPayAppServerClient.OnNewBlock += OnNewBlock;
         _btcPayAppServerClient.OnTransactionDetected += OnTransactionDetected;
         _btcPayConnectionManager.ConnectionChanged += ConnectionChanged;
-        WalletConfig = await _configProvider.Get<WalletConfig>(WalletConfig.Key);
-        DetermineState();
+
+        await DetermineState();
         if (IsHubConnected)
         {
             await Track();
@@ -83,25 +101,61 @@ public class OnChainWalletManager : BaseHostedService
 
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
     {
-        if (e is {New: OnChainWalletState.Loaded} && IsConfigured)
+        var config = await GetConfig();
+        if (e is {New: OnChainWalletState.Loaded} && IsConfigured(config))
         {
             await Track();
         }
+
         if (e.New is OnChainWalletState.Loading)
         {
-            DetermineState();
+            await DetermineState();
         }
     }
+
+    public async Task Restore()
+    {
+        throw new NotImplementedException("we're not there yet");
+        await _controlSemaphore.WaitAsync();
+        try
+        {
+
+
+            var config = await GetConfig();
+            var missingIds = await Track();
+            foreach (var missing in missingIds)
+            {
+                var wd = config.Derivations.First(pair => pair.Value.Identifier == missing).Value;
+                if (wd.Descriptor is null)
+                {
+                    // track and take the new identifier
+                    
+                }
+
+                //import utxos for the missing id
+                //ask ldk for the scipts we should be tacking and add them all 
+            }
+       
+            //if it is a wallet without a derivation, we generate a new goup for it
+        }
+        finally
+        {
+            _controlSemaphore.Release();
+        }
+    }
+
 
     public async Task Generate()
     {
         await _controlSemaphore.WaitAsync();
         try
         {
-            if (State != OnChainWalletState.NotConfigured || IsConfigured || !IsHubConnected)
+            if (State != OnChainWalletState.NotConfigured || !IsHubConnected || IsConfigured(await GetConfig()) ||
+                await GetBestBlock() is not { } block)
             {
                 throw new InvalidOperationException("Cannot generate wallet in current state");
             }
+
             _logger.LogInformation("Generating wallet");
 
             var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
@@ -109,18 +163,29 @@ public class OnChainWalletManager : BaseHostedService
             var path = new KeyPath($"m/84'/{(mainnet ? "0" : "1")}'/0'");
             var fingerprint = mnemonic.DeriveExtKey().GetPublicKey().GetHDFingerPrint();
             var xpub = mnemonic.DeriveExtKey().Derive(path).Neuter().ToString(_btcPayConnectionManager.ReportedNetwork);
+            var snapshot = new BlockSnapshot()
+            {
+                BlockHash = uint256.Parse(block.BlockHash),
+                BlockHeight = (uint) block.BlockHeight
+            };
             var walletConfig = new WalletConfig
             {
+                Birthday = snapshot,
                 Mnemonic = mnemonic.ToString(),
                 Network = _btcPayConnectionManager.ReportedNetwork.ToString(),
                 Derivations = new Dictionary<string, WalletDerivation>()
                 {
-                    [WalletDerivation.NativeSegwit] = new WalletDerivation()
+                    [WalletDerivation.NativeSegwit] = new()
                     {
                         Name = "Native Segwit",
                         Descriptor = OutputDescriptor.AddChecksum(
                             $"wpkh([{fingerprint.ToString()}/{path}]{xpub}/0/*)")
                     }
+                },
+                CoinSnapshot = new CoinSnapshot()
+                {
+                    Coins = new(),
+                    BlockSnapshot = snapshot
                 }
             };
 
@@ -137,9 +202,10 @@ public class OnChainWalletManager : BaseHostedService
             {
                 _logger.LogError("Failed to set encryption key");
                 return;
-            };
+            }
+
+            ;
             await _configProvider.Set(WalletConfig.Key, walletConfig, true);
-            WalletConfig = walletConfig;
             State = OnChainWalletState.Loaded;
         }
         finally
@@ -153,11 +219,13 @@ public class OnChainWalletManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-            if (State != OnChainWalletState.Loaded || !IsConfigured || !IsHubConnected)
+            var config = await GetConfig();
+            if (State != OnChainWalletState.Loaded || !IsHubConnected || !IsConfigured(config))
             {
                 throw new InvalidOperationException("Cannot add deriv in current state");
             }
-            if (WalletConfig?.Derivations.ContainsKey(key) is true)
+
+            if (config?.Derivations.ContainsKey(key) is true)
                 throw new InvalidOperationException("Derivation already exists");
 
             var result = await _btcPayConnectionManager.HubProxy.Pair(new PairRequest
@@ -167,13 +235,14 @@ public class OnChainWalletManager : BaseHostedService
                     [key] = descriptor
                 }
             });
-            WalletConfig.Derivations[key] = new WalletDerivation()
+
+            config.Derivations[key] = new WalletDerivation()
             {
                 Name = name,
                 Descriptor = descriptor,
                 Identifier = result[key]
             };
-            await _configProvider.Set(WalletConfig.Key, WalletConfig, true);
+            await _configProvider.Set(WalletConfig.Key, config, true);
         }
         finally
         {
@@ -181,43 +250,67 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
-    private async Task ConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
+    private async Task ConnectionChanged(object? sender,
+        (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
     {
-        if (valueTuple.New is BTCPayConnectionState.ConnectedFinishedInitialSync)
+        // if (valueTuple.New is BTCPayConnectionState.ConnectedFinishedInitialSync)
+        // {
+        //     WalletConfig = await _configProvider.Get<WalletConfig>(WalletConfig.Key);
+        // }
+        await DetermineState();
+    }
+
+    private async Task DetermineState()
+    {
+        var config = await GetConfig();
+        var configured = IsConfigured(config);
+        switch (IsHubConnected)
         {
-            WalletConfig = await _configProvider.Get<WalletConfig>(WalletConfig.Key);
+            case true when configured && config!.NBitcoinNetwork != _btcPayConnectionManager.ReportedNetwork:
+                State = OnChainWalletState.Error;
+                break;
+            case true when configured:
+                State = OnChainWalletState.Loaded;
+                break;
+            case false:
+                State = OnChainWalletState.WaitingForConnection;
+                break;
+            default:
+            {
+                if (!configured)
+                    State = OnChainWalletState.NotConfigured;
+                break;
+            }
         }
-        DetermineState();
     }
 
-    private void DetermineState()
+    private async Task<string[]> Track()
     {
-        if (IsHubConnected && IsConfigured)
-            State = OnChainWalletState.Loaded;
-        else if (!IsHubConnected)
-            State = OnChainWalletState.WaitingForConnection;
-        else if (!IsConfigured)
-            State = OnChainWalletState.NotConfigured;
-    }
+        if (!IsHubConnected)
+            return [];
+        var config = await GetConfig();
+        if (!IsConfigured(config))
+        {
+            return [];
+        }
 
-    private async Task Track()
-    {
-        if (!IsConfigured || !IsHubConnected)
-            return;
-
-        var identifiers = WalletConfig.Derivations.Select(pair => pair.Value.Identifier).ToArray();
+        var identifiers = config.Derivations.Select(pair => pair.Value.Identifier).ToArray();
         var response = await _btcPayConnectionManager.HubProxy.Handshake(new AppHandshake
         {
             Identifiers = identifiers
         });
 
         var missing =
-            WalletConfig.Derivations.Where(pair => !response.IdentifiersAcknowledged.Contains(pair.Value.Identifier));
+            config.Derivations.Where(pair => !response.IdentifiersAcknowledged.Contains(pair.Value.Identifier));
 
         if (missing.Any())
         {
-            _logger.LogWarning("Some identifiers that we had asked for BtcPayServer to track were not confirmed as being listened to. Tracking will be incomplete and functionality will critically fail.");
+            _logger.LogWarning(
+                "Some identifiers that we had asked for BtcPayServer to track were not confirmed as being listened to. Tracking will be incomplete and functionality will critically fail.");
         }
+
+        return missing.Select(pair => pair.Key).ToArray();
+
     }
 
     protected override async Task ExecuteStopAsync(CancellationToken cancellationToken)
@@ -225,47 +318,81 @@ public class OnChainWalletManager : BaseHostedService
         _btcPayAppServerClient.OnNewBlock -= OnNewBlock;
         _btcPayAppServerClient.OnTransactionDetected -= OnTransactionDetected;
         _btcPayConnectionManager.ConnectionChanged -= ConnectionChanged;
-        WalletConfig = null;
         State = OnChainWalletState.Init;
     }
 
-    private async Task  OnTransactionDetected(object? sender, TransactionDetectedRequest transactionDetectedRequest)
+    private async Task OnTransactionDetected(object? sender, TransactionDetectedRequest transactionDetectedRequest)
     {
+        _ = UpdateSnapshot();
     }
 
     private async Task OnNewBlock(object? sender, string e)
     {
         _memoryCache.Remove("bestblock");
         _ = GetBestBlock();
+        _ = UpdateSnapshot();
     }
 
-    public async Task<Script> DeriveScript(string derivation)
+    private async Task UpdateSnapshot()
     {
-        var identifier = WalletConfig?.Derivations[derivation].Identifier;
+        await _controlSemaphore.WaitAsync();
+        try
+        {
+            var config = await GetConfig();
+            var bb = await GetBestBlock();
+            var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
+            var utxos = (await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers))
+                .GroupBy(response => response.Identifier)
+                .ToDictionary(grouping => grouping.Key,
+                    grouping => grouping.Select(response => response.Outpoint).ToArray());
+            config.CoinSnapshot = new CoinSnapshot()
+            {
+                BlockSnapshot = new BlockSnapshot()
+                {
+                    BlockHash = uint256.Parse(bb.BlockHash),
+                    BlockHeight = (uint) bb.BlockHeight
+                },
+                Coins = utxos
+            };
+            await _configProvider.Set(WalletConfig.Key, config, true);
+        }
+        finally
+        {
+            _controlSemaphore.Release();
+        }
+    }
+
+
+    public async Task<BitcoinAddress> DeriveScript(string derivation)
+    {
+        var config = await GetConfig();
+        var identifier = config?.Derivations[derivation].Identifier;
         var addr = await _btcPayConnectionManager.HubProxy.DeriveScript(identifier);
-        return Script.FromHex(addr);
+        return Script.FromHex(addr).GetDestinationAddress(_btcPayConnectionManager.ReportedNetwork);
     }
 
-    public async Task<byte[]?> SignTransaction(byte[] psbtBytes)
+    public async Task<PSBT?> SignTransaction(byte[] psbtBytes)
     {
-       var psbt =  PSBT.Load(psbtBytes, Network);
-       psbt =  await SignTransaction(psbt);
-       return psbt?.ToBytes();
+        var psbt = PSBT.Load(psbtBytes, _btcPayConnectionManager.ReportedNetwork);
+        psbt = await SignTransaction(psbt);
+        return psbt;
     }
+
     public async Task<PSBT?> SignTransaction(PSBT psbt)
     {
-        var identifiers = WalletConfig.Derivations.Select(derivation => derivation.Value.Identifier).ToArray();
+        var config = await GetConfig();
+        var identifiers = config.Derivations.Select(derivation => derivation.Value.Identifier).ToArray();
         var updated = await _btcPayConnectionManager.HubProxy.UpdatePsbt(identifiers, psbt.ToHex());
-        psbt = PSBT.Parse(updated, Network);
-        var rootKey =new Mnemonic(WalletConfig.Mnemonic).DeriveExtKey();
-        foreach (var deriv in WalletConfig.Derivations.Values.Where(derivation => derivation.Descriptor is not null))
+        psbt = PSBT.Parse(updated, config.NBitcoinNetwork);
+        var rootKey = new Mnemonic(config.Mnemonic).DeriveExtKey();
+        foreach (var deriv in config.Derivations.Values.Where(derivation => derivation.Descriptor is not null))
         {
-            var data = deriv.Descriptor.ExtractFromDescriptor(Network);
-            if(data is null)
+            var data = deriv.Descriptor.ExtractFromDescriptor(config.NBitcoinNetwork);
+            if (data is null)
                 continue;
             var accKey = rootKey.Derive(data.Value.Item2);
             psbt = psbt.SignAll(data.Value.Item1.AsHDScriptPubKey(data.Value.Item3), accKey);
-            if(psbt.TryFinalize(out _))
+            if (psbt.TryFinalize(out _))
                 break;
         }
 
@@ -311,7 +438,7 @@ public class OnChainWalletManager : BaseHostedService
     //     }
     // }
 
-    public class CoinWithKey : Coin,ISignableCoin
+    public class CoinWithKey : Coin, ISignableCoin
     {
         public Key Key { get; }
 
@@ -333,57 +460,66 @@ public class OnChainWalletManager : BaseHostedService
 
     public async Task<Dictionary<string, TxResp[]>> GetTransactions()
     {
-        var identifiersWhichWeCanDeriveKeysFor = WalletConfig.Derivations.Values
+        var config = await GetConfig();
+        var identifiersWhichWeCanDeriveKeysFor = config.Derivations.Values
             .Select(derivation => derivation.Identifier).ToArray();
         var res = await _btcPayConnectionManager.HubProxy.GetTransactions(identifiersWhichWeCanDeriveKeysFor);
-        return res.ToDictionary(pair =>
-        {
-            return WalletConfig.Derivations.First(derivation => derivation.Value.Identifier.Equals(pair.Key, StringComparison.InvariantCultureIgnoreCase)).Key;
-        }, pair => pair.Value.OrderByDescending(tx => tx.Timestamp).ToArray());
+        return res.ToDictionary(
+            pair =>
+            {
+                return config.Derivations.First(derivation =>
+                    derivation.Value.Identifier.Equals(pair.Key, StringComparison.InvariantCultureIgnoreCase)).Key;
+            }, pair => pair.Value.OrderByDescending(tx => tx.Timestamp).ToArray());
     }
 
 
     public async Task<IEnumerable<ICoin>> GetUTXOS()
     {
-        var identifiers = WalletConfig.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
+        var config = await GetConfig();
+        var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
         var utxos = await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers);
-        var identifiersWhichWeCanDeriveKeysFor = WalletConfig.Derivations.Values
-            .Where(derivation => derivation.Descriptor is not null).Select(derivation => derivation.Identifier).ToArray();
+        var identifiersWhichWeCanDeriveKeysFor = config.Derivations.Values
+            .Where(derivation => derivation.Descriptor is not null).Select(derivation => derivation.Identifier)
+            .ToArray();
         var result = new List<ICoin>();
 
-        var utxosThatWeCanDeriveKeysFor = utxos.Where(utxo => identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Identifier)).ToArray();
+        var utxosThatWeCanDeriveKeysFor =
+            utxos.Where(utxo => identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Identifier)).ToArray();
         foreach (var coin in utxosThatWeCanDeriveKeysFor)
         {
             var derivation =
-                WalletConfig.Derivations.Values.First(derivation => derivation.Identifier == coin.Identifier);
-            var data = derivation.Descriptor.ExtractFromDescriptor(Network);
+                config.Derivations.Values.First(derivation => derivation.Identifier == coin.Identifier);
+            var data = derivation.Descriptor.ExtractFromDescriptor(config.NBitcoinNetwork);
             if (data is null)
                 continue;
             var coinKeyPath = KeyPath.Parse(coin.Path);
-            var key = new Mnemonic(WalletConfig.Mnemonic).DeriveExtKey().Derive(data.Value.Item2.KeyPath)
+            var key = new Mnemonic(config.Mnemonic).DeriveExtKey().Derive(data.Value.Item2.KeyPath)
                 .Derive(coinKeyPath).PrivateKey;
             var c = ToCoin(coin);
 
 
             result.Add(new CoinWithKey(c.Outpoint, c.TxOut, key));
-
         }
+
         foreach (var coin in utxos.Where(utxo => !identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Identifier)))
         {
             result.Add(ToCoin(coin));
         }
+
         return result;
     }
 
 
-    public async Task<(NBitcoin.Transaction Tx, ICoin[] SpentCoins, NBitcoin.Script Change)> CreateTransaction(
+    public async Task<(NBitcoin.Transaction Tx, ICoin[] SpentCoins, BitcoinAddress Change)> CreateTransaction(
         List<TxOut> txOuts, FeeRate? feeRate, List<Coin> explicitIns = null)
     {
         var availableCoins = (await GetUTXOS()).OfType<CoinWithKey>().ToList();
         feeRate ??= await GetFeeRate(1);
+
+        var config = await GetConfig();
 //TODO: do not hardcode this constant
         var changeScript = await DeriveScript(WalletDerivation.NativeSegwit);
-        var txBuilder = Network
+        var txBuilder = config.NBitcoinNetwork
             .CreateTransactionBuilder()
             .SetChange(changeScript)
             .SendEstimatedFees(feeRate);
@@ -396,6 +532,7 @@ public class OnChainWalletManager : BaseHostedService
         {
             txBuilder.AddCoins(explicitIns.ToArray());
         }
+
         while (true)
         {
             try
@@ -409,7 +546,7 @@ public class OnChainWalletManager : BaseHostedService
                     throw;
                 var newCoin = availableCoins.First();
                 //TODO: switch to nuilding a psbt and signing with the ISignableCoin interface
-                if(newCoin is CoinWithKey newCoinWithKey)
+                if (newCoin is CoinWithKey newCoinWithKey)
                 {
                     txBuilder.AddCoins(newCoin);
                     txBuilder.AddKeys(newCoinWithKey.Key);
@@ -424,32 +561,33 @@ public class OnChainWalletManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-            if (State != OnChainWalletState.Loaded || WalletConfig is null)
+            var config = await GetConfig();
+            if (State != OnChainWalletState.Loaded || config is null)
             {
                 throw new InvalidOperationException("Cannot remove deriv in current state");
             }
 
-            var updated = key.Aggregate(false, (current, k) => current || WalletConfig.Derivations.Remove(k));
+            var updated = key.Aggregate(false, (current, k) => current || config.Derivations.Remove(k));
             if (updated)
-                await _configProvider.Set(WalletConfig.Key, WalletConfig, true);
+                await _configProvider.Set(WalletConfig.Key, config, true);
         }
         finally
         {
             _controlSemaphore.Release();
         }
     }
+
     public async Task<BestBlockResponse?> GetBestBlock()
     {
-        var res =  await _memoryCache.GetOrCreateAsync("bestblock", async entry =>
+        var res = await _memoryCache.GetOrCreateAsync("bestblock", async entry =>
         {
             _logger.LogInformation("Getting best block");
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
             try
             {
-
                 return await _btcPayConnectionManager.HubProxy.GetBestBlock();
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.LogError(e, "Error getting best block");
                 return null;
@@ -463,6 +601,7 @@ public class OnChainWalletManager : BaseHostedService
         {
             _memoryCache.Remove("bestblock");
         }
+
         return res;
     }
 
@@ -483,9 +622,8 @@ public class OnChainWalletManager : BaseHostedService
 
                 var result = new FeeRate(await _btcPayConnectionManager.HubProxy.GetFeeRate(blockTarget));
 
-                    _logger.LogInformation($"Got fee rate for block target {blockTarget} {result}" );
-                    return result;
-
+                _logger.LogInformation($"Got fee rate for block target {blockTarget} {result}");
+                return result;
             });
         }
         catch (Exception e)
@@ -502,5 +640,6 @@ public enum OnChainWalletState
     NotConfigured,
     WaitingForConnection,
     Loading,
-    Loaded
+    Loaded,
+    Error
 }

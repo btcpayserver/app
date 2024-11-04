@@ -13,7 +13,6 @@ public class LightningNodeManager : BaseHostedService
 {
     public const string PaymentMethodId = "BTC-LN";
 
-    private readonly IAccountManager _accountManager;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ILogger<LightningNodeManager> _logger;
     private readonly OnChainWalletManager _onChainWalletManager;
@@ -25,11 +24,10 @@ public class LightningNodeManager : BaseHostedService
     public LDKNode? Node => _nodeScope?.ServiceProvider.GetService<LDKNode>();
     private LightningNodeState _state = LightningNodeState.Init;
     private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
-    private bool IsOnchainConfigured => _onChainWalletManager.WalletConfig is not null;
-    private bool IsOnchainLightningDerivationConfigured => _onChainWalletManager.WalletConfig?.Derivations.ContainsKey(WalletDerivation.LightningScripts) is true;
-    public bool CanConfigureLightningNode => IsHubConnected && IsOnchainConfigured && !IsOnchainLightningDerivationConfigured && State == LightningNodeState.NotConfigured;
-    public string? ConnectionString => IsOnchainLightningDerivationConfigured && _accountManager.GetUserInfo() is {} acc
-        ? $"type=app;user={acc.UserId}": null;
+    private async Task<bool> IsOnchainLightningDerivationConfigured() => (await _onChainWalletManager.GetConfig())?.Derivations.ContainsKey(WalletDerivation.LightningScripts) is true;
+    public  async Task<bool>  CanConfigureLightningNode ()=> IsHubConnected && await _onChainWalletManager.IsConfigured() && !await IsOnchainLightningDerivationConfigured() && State == LightningNodeState.NotConfigured;
+    // public string? ConnectionString => IsOnchainLightningDerivationConfigured && _accountManager.GetUserInfo() is {} acc
+    //     ? $"type=app;user={acc.UserId}": null;
 
     public bool IsActive => State == LightningNodeState.Loaded;
 
@@ -50,14 +48,12 @@ public class LightningNodeManager : BaseHostedService
     public event AsyncEventHandler<(LightningNodeState Old, LightningNodeState New)>? StateChanged;
 
     public LightningNodeManager(
-        IAccountManager accountManager,
         IDbContextFactory<AppDbContext> dbContextFactory,
         ILogger<LightningNodeManager> logger,
         OnChainWalletManager onChainWalletManager,
         BTCPayConnectionManager btcPayConnectionManager,
         IServiceScopeFactory serviceScopeFactory) : base(logger)
     {
-        _accountManager = accountManager;
         _dbContextFactory = dbContextFactory;
         _logger = logger;
         _onChainWalletManager = onChainWalletManager;
@@ -75,8 +71,6 @@ public class LightningNodeManager : BaseHostedService
 
         _logger.LogInformation("Starting lightning node");
         await _controlSemaphore.WaitAsync();
-
-        _logger.LogInformation("Starting lightning node: lock acquired");
         try
         {
             if (_onChainWalletManager.State is not OnChainWalletState.Loaded)
@@ -163,9 +157,10 @@ public class LightningNodeManager : BaseHostedService
         {
             if (!IsHubConnected)
                 throw new InvalidOperationException("Cannot configure lightning node without BTCPay connection");
-            if (!IsOnchainConfigured)
+          
+            if (!await _onChainWalletManager.IsConfigured())
                 throw new InvalidOperationException("Cannot configure lightning node without on-chain wallet configuration");
-            if (IsOnchainLightningDerivationConfigured)
+            if (await IsOnchainLightningDerivationConfigured())
                 throw new InvalidOperationException("On-chain wallet is already configured with a lightning derivation");
 
             _logger.LogInformation("Generating lightning node");
@@ -225,7 +220,7 @@ public class LightningNodeManager : BaseHostedService
                         break;
                     }
 
-                    if (!IsOnchainConfigured || !IsOnchainLightningDerivationConfigured)
+                    if (!await _onChainWalletManager.IsConfigured() || !await IsOnchainLightningDerivationConfigured())
                     {
                         newState = LightningNodeState.NotConfigured;
                         break;

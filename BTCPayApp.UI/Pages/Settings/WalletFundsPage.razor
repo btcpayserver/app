@@ -207,9 +207,10 @@
     private string? _successMessage { get; set; }
     private string? _errorMessage { get; set; }
     private ValidationEditContext? _validationEditContext;
+    private Network? _network;
     private SendModel? Model { get; set; } = new();
 
-    private string GetTitle() => $"{OnChainWalletManager.Network?.Name ?? ""} Onchain Wallet".Trim();
+    private string GetTitle() => $"{_network?.Name ?? ""} Onchain Wallet".Trim();
     private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
@@ -222,14 +223,14 @@
         [Required]
         public decimal? Amount { get; set; }
 
-        public (Transaction Tx, ICoin[] SpentCoins, Script Change)? Transaction { get; set; }
+        public (Transaction Tx, ICoin[] SpentCoins, BitcoinAddress Change)? Transaction { get; set; }
     }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        if (OnChainWalletManager.CanConfigureWallet)
+        if (await OnChainWalletManager.CanConfigureWallet())
         {
             NavigationManager.NavigateTo(Routes.WalletSettings);
         }
@@ -250,6 +251,7 @@
             _utxos = (await OnChainWalletManager.GetUTXOS()).OfType<OnChainWalletManager.CoinWithKey>();
             _totalBalance = _utxos.Sum(utxo => utxo.TxOut.Value);
             _txs = await OnChainWalletManager.GetTransactions();
+            _network = (await OnChainWalletManager.GetConfig()).NBitcoinNetwork;
         }
         catch (Exception ex)
         {
@@ -270,7 +272,7 @@
         try
         {
             var script = await OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);
-            _address = script.GetDestinationAddress(OnChainWalletManager.Network!)?.ToString();
+            _address = script?.ToString();
         }
         catch (Exception ex)
         {
@@ -308,12 +310,12 @@
         try
         {
             var amount = new Money(Model.Amount!.Value, MoneyUnit.Satoshi).ToUnit(MoneyUnit.BTC);
-            var txout = new TxOut(Money.Coins(amount), BitcoinAddress.Create(Model.Destination, OnChainWalletManager.Network));
+            var txout = new TxOut(Money.Coins(amount), BitcoinAddress.Create(Model.Destination, _network));
             Model.Transaction = await OnChainWalletManager.CreateTransaction([txout], null, null);
             if (Model.Transaction is null)
                 throw new Exception("Transaction creation failed");
             var changeAmt = Model.Transaction.Value.Tx.Outputs
-                .Where(o => o.IsTo(Model.Transaction.Value.Change.GetDestinationAddress(OnChainWalletManager.Network)))
+                .Where(o => o.IsTo(Model.Transaction.Value.Change))
                 .Sum(o => o.Value.ToDecimal(MoneyUnit.BTC));
             var feeaMT = Model.Transaction.Value.Tx.GetFee(Model.Transaction.Value.SpentCoins).ToDecimal(MoneyUnit.BTC);
             _successMessage = $"Created transaction {Model.Transaction.Value.Tx.GetHash()} spending {Model.Transaction.Value.SpentCoins.Sum(c => c.TxOut.Value.ToDecimal(MoneyUnit.BTC))} BTC, with change of {changeAmt} BTC and fee of {feeaMT} BTC";

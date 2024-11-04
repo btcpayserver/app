@@ -333,7 +333,7 @@
     {
         await base.OnInitializedAsync();
 
-        if (LightningNodeManager.CanConfigureLightningNode)
+        if (await LightningNodeManager.CanConfigureLightningNode())
         {
             NavigationManager.NavigateTo(Routes.LightningSettings);
         }

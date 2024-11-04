@@ -22,7 +22,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
     private readonly ILogger<BTCPayConnectionManager> _logger;
     private readonly BTCPayAppServerClient _btcPayAppServerClient;
     private readonly IBTCPayAppHubClient _btcPayAppServerClientInterface;
-    private readonly IConfigProvider _configProvider;
+    private readonly ConfigProvider _configProvider;
     private readonly SyncService _syncService;
     private IDisposable? _subscription;
 
@@ -73,7 +73,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         ILogger<BTCPayConnectionManager> logger,
         BTCPayAppServerClient btcPayAppServerClient,
         IBTCPayAppHubClient btcPayAppServerClientInterface,
-        IConfigProvider configProvider,
+        ConfigProvider configProvider,
         SyncService syncService) : base(logger)
     {
         _serviceProvider = serviceProvider;
