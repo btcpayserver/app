@@ -30,8 +30,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BTCPayApp.CommonServer", "s
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BTCPayApp.Tests", "BTCPayApp.Tests\BTCPayApp.Tests.csproj", "{B8196BE2-C7D7-4231-B477-A14AB78E0611}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BTCPayApp.VSS", "BTCPayApp.VSS\BTCPayApp.VSS.csproj", "{DA6964CA-A2B6-49C7-8DE5-DAE8996F822E}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -94,10 +92,6 @@ Global
 		{B8196BE2-C7D7-4231-B477-A14AB78E0611}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B8196BE2-C7D7-4231-B477-A14AB78E0611}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B8196BE2-C7D7-4231-B477-A14AB78E0611}.Release|Any CPU.Build.0 = Release|Any CPU
-		{DA6964CA-A2B6-49C7-8DE5-DAE8996F822E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DA6964CA-A2B6-49C7-8DE5-DAE8996F822E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{DA6964CA-A2B6-49C7-8DE5-DAE8996F822E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{DA6964CA-A2B6-49C7-8DE5-DAE8996F822E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{2464FC73-75E8-4254-A900-2090FB4D1EDD} = {1F7B46F8-2965-48B8-B402-E69A157709C1}

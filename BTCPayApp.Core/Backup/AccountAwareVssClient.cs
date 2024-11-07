@@ -1,6 +1,6 @@
 ﻿using System.Net;
 using BTCPayApp.Core.Auth;
-using BTCPayApp.VSS;
+using VSS;
 using VSSProto;
 
 namespace BTCPayApp.Core.Backup;

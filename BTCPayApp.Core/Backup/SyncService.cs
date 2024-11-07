@@ -5,12 +5,12 @@ using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
-using BTCPayApp.VSS;
 using Google.Protobuf;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
+using VSS;
 using VSSProto;
 
 namespace BTCPayApp.Core.Backup;
@@ -79,7 +79,7 @@ public class SyncService : IDisposable
             var decrypted = dataProtector.Unprotect(res.Value.ToByteArray());
             return "kukks" == Encoding.UTF8.GetString(decrypted);
         }
-        catch (VssClientException e) when (e.Error.ErrorCode == ErrorCode.NoSuchKeyException)
+        catch (VSSClientException e) when (e.Error.ErrorCode == ErrorCode.NoSuchKeyException)
         {
             return false;
         }
@@ -129,7 +129,7 @@ public class SyncService : IDisposable
                 }
             }
         }
-        catch (VssClientException e) when (e.Error.ErrorCode == ErrorCode.NoSuchKeyException)
+        catch (VSSClientException e) when (e.Error.ErrorCode == ErrorCode.NoSuchKeyException)
         {
         }
         catch (Exception e)
