@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -11,19 +10,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-
       <PackageReference Include="AsyncKeyedLock" Version="7.0.0" />
-
       <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" Version="8.0.0" />
-
       <PackageReference Include="Laraue.EfCoreTriggers.SqlLite" Version="8.0.3" />
-
       <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.8" />
-
       <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.6" />
-
       <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="8.0.6" />
-
       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.6">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -42,7 +34,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\BTCPayApp.VSS\BTCPayApp.VSS.csproj" />
       <ProjectReference Include="..\submodules\btcpayserver\BTCPayApp.CommonServer\BTCPayApp.CommonServer.csproj" />
       <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj" />
     </ItemGroup>
@@ -50,6 +41,4 @@
     <ItemGroup>
       <Folder Include="Migrations\" />
     </ItemGroup>
-
-
 </Project>
