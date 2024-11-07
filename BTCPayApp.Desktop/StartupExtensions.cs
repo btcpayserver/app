@@ -28,7 +28,7 @@ public class DesktopSecureConfigProvider: ISecureConfigProvider
 {
     private readonly IDataProtector _dataProtector;
 
-    public DesktopSecureConfigProvider(IDataDirectoryProvider directoryProvider, IDataProtectionProvider dataProtectionProvider) 
+    public DesktopSecureConfigProvider(IDataDirectoryProvider directoryProvider, IDataProtectionProvider dataProtectionProvider)
     {
         _dataProtector = dataProtectionProvider.CreateProtector("SecureConfig");
         _configDir = directoryProvider.GetAppDataDirectory().ContinueWith(task =>
@@ -38,7 +38,7 @@ public class DesktopSecureConfigProvider: ISecureConfigProvider
             return res;
         });
     }
-    
+
     private readonly Task<string> _configDir;
 
     public async Task<T?> Get<T>(string key)
@@ -118,7 +118,7 @@ public class DesktopDataDirectoryProvider : IDataDirectoryProvider
     }
     public virtual Task<string> GetAppDataDirectory()
     {
-        var dirName = _configuration.GetValue<string>("BTCPAYAPP_DIRNAME", "BTCPayApp");
+        var dirName = _configuration.GetValue<string>("BTCPAYAPP_DIRNAME", "BTCPayApp")!;
         return Task.FromResult(GetDirectory(dirName));
     }
 

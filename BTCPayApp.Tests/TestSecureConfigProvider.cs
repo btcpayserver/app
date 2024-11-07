@@ -8,18 +8,19 @@ public class TestSecureConfigProvider : ISecureConfigProvider
 {
     private readonly ConcurrentDictionary<string, object> _data = new();
 
-    public async Task<T?> Get<T>(string key)
+    public Task<T?> Get<T>(string key)
     {
-        if (_data.TryGetValue(key, out var value)) return (T?) value;
-
-        return default;
+        return _data.TryGetValue(key, out var value)
+            ? Task.FromResult((T?) value)
+            : Task.FromResult<T?>(default);
     }
 
-    public async Task Set<T>(string key, T? value)
+    public Task Set<T>(string key, T? value)
     {
         if (value is null)
             _data.TryRemove(key, out _);
         else
             _data.AddOrReplace(key, value);
+        return Task.CompletedTask;
     }
 }

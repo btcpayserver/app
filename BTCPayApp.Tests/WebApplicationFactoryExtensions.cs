@@ -23,7 +23,7 @@ public  static class WebApplicationFactoryExtensions
         private const string Warn = "warn";
         private const string Error = "fail";
         private const string Critical = "crit";
-            
+
         private readonly string _categoryName;
         private readonly bool _useScopes;
         private readonly ITestOutputHelper _output;
@@ -47,7 +47,7 @@ public  static class WebApplicationFactoryExtensions
             return _scopes.Push(state);
         }
 
-        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception,
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception,
             Func<TState, Exception, string> formatter)
         {
             var sb = new StringBuilder();
