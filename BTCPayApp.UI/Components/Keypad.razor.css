@@ -3,6 +3,32 @@
   min-height: 2.75rem;
 }
 
+/* keypad */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+.keypad .btn {
+  --icon-size: 1.75rem;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  position: relative;
+  border-radius: 0;
+  border-color: transparent !important;
+  font-weight: var(--btcpay-font-weight-bold);
+  font-size: var(--icon-size);
+  min-height: 3.5rem;
+  height: 8vh;
+  max-height: 6rem;
+  color: var(--btcpay-body-text);
+}
+.keypad .btn:disabled,
+.keypad .btn.disabled {
+  color: var(--btcpay-body-text-muted);
+}
 .btcpay-pills label,
 .btn-secondary.rounded-pill {
   padding-left: 1rem;

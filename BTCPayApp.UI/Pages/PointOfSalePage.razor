@@ -30,6 +30,7 @@ else if (!string.IsNullOrEmpty(Error))
 }
 @if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(AppId) && AppData != null)
 {
+    @*
     <section class="container">
         <form method="post" target="checkout" action="@IframeSrc">
             <Keypad StoreId="@StoreId" AppId="@AppId" CurrencyCode="@AppData.Currency" CurrencyInfo="@CurrencyInfo"
@@ -39,12 +40,14 @@ else if (!string.IsNullOrEmpty(Error))
                     IsSearchEnabled="@(AppData.ShowSearch is true)"
                     IsCategoriesEnabled="@(AppData.ShowCategories is true)"
                     Items="@Items"
+                    Categories="@Categories"
                     CustomTipPercentages="@AppData.CustomTipPercentages"
                     RecentTransactions="@RecentTransactions" LoadRecentTransactions="@LoadRecentTransactions" />
         </form>
     </section>
     <iframe name="checkout" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>
-    @*<iframe name="pos" src="@IframeSrc" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>*@
+    *@
+    <iframe name="pos" src="@IframeSrc" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>
 }
 
 @code {
@@ -115,7 +118,8 @@ else if (!string.IsNullOrEmpty(Error))
     private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
     private string? Error => StoreState.Value.PointOfSale?.Error;
     private IEnumerable<Keypad.RecentTransaction>? RecentTransactions { get; set; }
-    private IEnumerable<AppItem> Items => AppItemParser.ConvertItems(AppData.Items);
+    private IEnumerable<AppItem>? Items => AppData?.Items != null ? AppItemParser.ConvertItems(AppData.Items) : null;
+    private IEnumerable<string>? Categories => Items?.SelectMany(g => g.Categories ?? []).ToHashSet().ToList();
     private NumberFormatInfo DefaultCurrencyInfo => DisplayFormatter.GetNumberFormatInfo("USD");
     private NumberFormatInfo CurrencyInfo => !string.IsNullOrEmpty(AppData?.Currency) ? DisplayFormatter.GetNumberFormatInfo(AppData.Currency) : DefaultCurrencyInfo;
 }

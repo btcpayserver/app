@@ -14,7 +14,6 @@
   gap: var(--btcpay-space-m);
 }
 
-/*
 iframe {
   position: fixed;
   z-index: 1;
@@ -23,4 +22,3 @@ iframe {
   width: 100%;
   height: calc(100dvh - var(--navbar-bottom-height));
 }
-*/
