@@ -270,7 +270,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         return await _configProvider.Get<LightningConfig>(LightningConfig.Key) ?? new LightningConfig();
     }
 
-    public async Task<string[]> GetJITLSPs()
+    public async Task<string[]?> GetJITLSPs()
     {
         return ServiceProvider.GetServices<IJITService>().Select(jit => jit.ProviderName).ToArray();
     }

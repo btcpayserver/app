@@ -31,8 +31,8 @@
         <h2>Peers</h2>
         @if (_peers?.Any() is true || _config?.Peers.Any() is true)
         {
-            var rememberedButUnconnected = _config.Peers.Keys.Where(peer => _peers.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
-            @foreach (var peer in _peers)
+            var rememberedButUnconnected = _config!.Peers.Keys.Where(peer => _peers!.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
+            @foreach (var peer in _peers!)
             {
                 var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
                 <div class="box">
@@ -44,7 +44,7 @@
                         <TruncateCenter Text="@peer.socket" Padding="30" Copy="true" Elastic="true" class="form-control-plaintext"/>
                         <label>Socket</label>
                     </div>
-                    @if (!string.IsNullOrEmpty(peerConfig.Label))
+                    @if (!string.IsNullOrEmpty(peerConfig?.Label))
                     {
                         <div class="form-floating">
                             <TruncateCenter Text="@peerConfig.Label" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
@@ -56,14 +56,14 @@
                         @if (peerRemembered)
                         {
                             <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
-                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with { Persistent = !peerConfig.Persistent })">
-                                @(peerConfig.Persistent? "Persistent connection enabled": "Persistent connection disabled")
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig! with { Persistent = !peerConfig.Persistent })">
+                                @(peerConfig!.Persistent? "Persistent connection enabled": "Persistent connection disabled")
                             </button>
                             <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with { Trusted = !peerConfig.Trusted })">@(peerConfig.Trusted? "Trusted": "Untrusted")</button>
                         }
                         else if (peer.socket is not null)
                         {
-                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo() { Endpoint = peer.socket })">Remember peer</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo { Endpoint = peer.socket })">Remember peer</button>
                         }
                     </div>
                 </div>
@@ -109,27 +109,30 @@
             </div>
         }
 
-        <h2>Connect Peer</h2>
-        <ValidationEditContext @ref="_connectEditContext" Model="PeerModel" OnValidSubmit="() => ConnectToNewPeer()" SuccessMessage="@ConnectSuccessMessage" ErrorMessage="@ConnectErrorMessage">
-            <DataAnnotationsValidator/>
-            <fieldset class="box">
-                <div class="form-group">
-                    <label for="PeerUrl" class="form-label" data-required>Peer URL</label>
-                    <InputText @bind-Value="PeerModel.PeerUrl" id="PeerUrl" class="form-control"/>
-                    <ValidationMessage For="@(() => PeerModel.PeerUrl)"/>
-                </div>
-                <button type="submit" class="btn btn-primary w-100" disabled="@(_connectEditContext!.Invalid || PeerConnecting)">
-                    @if (PeerConnecting)
-                    {
-                        <LoadingIndicator/>
-                    }
-                    else
-                    {
-                        <span>Connect Peer</span>
-                    }
-                </button>
-            </fieldset>
-        </ValidationEditContext>
+        @if (PeerModel != null)
+        {
+            <h2>Connect Peer</h2>
+            <ValidationEditContext @ref="_connectEditContext" Model="PeerModel" OnValidSubmit="() => ConnectToNewPeer()" SuccessMessage="@ConnectSuccessMessage" ErrorMessage="@ConnectErrorMessage">
+                <DataAnnotationsValidator/>
+                <fieldset class="box">
+                    <div class="form-group">
+                        <label for="PeerUrl" class="form-label" data-required>Peer URL</label>
+                        <InputText @bind-Value="PeerModel.PeerUrl" id="PeerUrl" class="form-control"/>
+                        <ValidationMessage For="@(() => PeerModel.PeerUrl)"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" disabled="@(_connectEditContext!.Invalid || PeerConnecting)">
+                        @if (PeerConnecting)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Connect Peer</span>
+                        }
+                    </button>
+                </fieldset>
+            </ValidationEditContext>
+        }
 
         <h2>Channels</h2>
         @if (_channels?.Any() is true)
@@ -156,12 +159,10 @@
                     <tbody>
                     @foreach (var channel in _channels)
                     {
-
-                        var connected = _peers.Any(p => string.Equals(p.nodeId, channel.Value.channelDetails?.get_counterparty().get_node_id().ToString(), StringComparison.InvariantCultureIgnoreCase));
+                        var connected = _peers?.Any(p => string.Equals(p.nodeId, channel.Value.channelDetails?.get_counterparty().get_node_id().ToString(), StringComparison.InvariantCultureIgnoreCase)) is true;
                         var active = false;
                         var alternates = channel.Value.channel.Aliases.Select(alias => alias.Id).ToHashSet();
-
-                        if(channel.Value.channelDetails is not null)
+                        if (channel.Value.channelDetails is not null)
                         {
                             if(channel.Value.channelDetails.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some)
                             {
@@ -182,10 +183,11 @@
                             @if (channel.Value.channelDetails is not null && channel.Value.channelDetails.get_counterparty() is ChannelCounterparty counterparty)
                             {
                                 var counterpartyNodeId = Convert.ToHexString(counterparty.get_node_id()).ToLowerInvariant();
-                                if(_config.Peers.TryGetValue(counterpartyNodeId, out var peerConfig) && !string.IsNullOrEmpty(peerConfig.Label))
+                                if (_config.Peers.TryGetValue(counterpartyNodeId, out var peerConfig) && !string.IsNullOrEmpty(peerConfig.Label))
                                 {
                                     <span>@peerConfig.Label</span>
-                                }else
+                                }
+                                else
                                 {
                                     <span>@counterpartyNodeId</span>
                                 }
@@ -245,7 +247,7 @@
             </div>
         }
 
-        @if (_peers?.Any() is true)
+        @if (_peers?.Any() is true && _config?.Peers != null && ChannelModel != null)
         {
             <h2>Open Channel</h2>
             <ValidationEditContext @ref="_openChannelEditContext" Model="ChannelModel" OnValidSubmit="() => OpenChannel()" SuccessMessage="@ChannelSuccessMessage" ErrorMessage="@ChannelErrorMessage">

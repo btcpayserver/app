@@ -118,12 +118,12 @@ public class DesktopDataDirectoryProvider : IDataDirectoryProvider
     }
     public virtual Task<string> GetAppDataDirectory()
     {
-        var dirName = _configuration.GetValue<string>("BTCPAYAPP_DIRNAME", "BTCPayApp")!;
-        return Task.FromResult(GetDirectory(dirName));
+        var def = "BTCPayApp";
+        var dirName = _configuration.GetValue("BTCPAYAPP_DIRNAME", def);
+        return Task.FromResult(GetDirectory(dirName ?? def));
     }
 
-    private string GetDirectory(
-        string appDirectory)
+    private string GetDirectory(string appDirectory)
     {
         var environmentVariable1 = _configuration.GetValue<string>("HOME");
         var environmentVariable2 = _configuration.GetValue<string>("APPDATA");

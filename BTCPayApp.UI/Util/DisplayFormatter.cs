@@ -37,8 +37,10 @@ public class DisplayFormatter
 
     public string Currency(decimal value, string currency, CurrencyFormat format = CurrencyFormat.Code)
     {
-        var provider = GetNumberFormatInfo(currency, true);
+        var provider = GetNumberFormatInfo(currency, true)!;
         var currencyData = GetCurrencyData(currency, true);
+        if (currencyData is null) return value.ToString("C", provider);
+
         var divisibility = currencyData.Divisibility;
         value = value.RoundToSignificant(ref divisibility);
         if (divisibility != provider.CurrencyDecimalDigits)
@@ -77,25 +79,21 @@ public class DisplayFormatter
     public decimal Rounded(decimal value, string currency)
     {
         var currencyData = GetCurrencyData(currency, true);
-        var divisibility = currencyData.Divisibility;
+        var divisibility = currencyData!.Divisibility;
         return value.RoundToSignificant(ref divisibility);
     }
 
-    private NumberFormatInfo GetNumberFormatInfo(string currency, bool useFallback)
+    private NumberFormatInfo? GetNumberFormatInfo(string currency, bool useFallback)
     {
         var data = GetCurrencyProvider(currency);
-        if (data is NumberFormatInfo nfi)
-            return nfi;
-        if (data is CultureInfo ci)
-            return ci.NumberFormat;
-        if (!useFallback)
-            return null;
-        return CreateFallbackCurrencyFormatInfo(currency);
+        if (data is NumberFormatInfo nfi) return nfi;
+        if (data is CultureInfo ci) return ci.NumberFormat;
+        return useFallback ? CreateFallbackCurrencyFormatInfo(currency) : null;
     }
 
     private NumberFormatInfo CreateFallbackCurrencyFormatInfo(string currency)
     {
-        var usd = GetNumberFormatInfo("USD", false);
+        var usd = GetNumberFormatInfo("USD", false)!;
         var currencyInfo = (NumberFormatInfo)usd.Clone();
         currencyInfo.CurrencySymbol = currency;
         return currencyInfo;

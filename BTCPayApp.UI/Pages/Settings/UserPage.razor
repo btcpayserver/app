@@ -24,16 +24,16 @@
         </div>
         <div class="box">
             <ValidationEditContext Model="Account" OnValidSubmit="HandleValidAccountSubmit" SuccessMessage="@_accountSuccessMessage" ErrorMessage="@_accountErrorMessage" enctype="multipart/form-data">
-                <DataAnnotationsValidator />
+                <DataAnnotationsValidator/>
                 <div class="form-group">
                     <label for="Email" class="form-label" data-required>Email</label>
                     <InputText @bind-Value="Account.Email" id="Email" type="email" class="form-control"/>
-                    <ValidationMessage For="@(() => Account.Email)" />
+                    <ValidationMessage For="@(() => Account.Email)"/>
                 </div>
                 <div class="form-group">
                     <label for="Name" class="form-label">Name</label>
                     <InputText @bind-Value="Account.Name" id="Name" class="form-control"/>
-                    <ValidationMessage For="@(() => Account.Name)" />
+                    <ValidationMessage For="@(() => Account.Name)"/>
                 </div>
                 <div class="form-group">
                     <div class="d-flex align-items-center justify-content-between gap-2">
@@ -41,7 +41,7 @@
                         @if (!string.IsNullOrEmpty(Account.ImageUrl))
                         {
                             <button type="button" class="btn btn-link p-0 text-danger" @onclick="UnsetProfilePicture">
-                                <Icon Symbol="cross" /> Remove
+                                <Icon Symbol="cross"/> Remove
                             </button>
                         }
                     </div>
@@ -52,13 +52,13 @@
                             <img src="@Account.ImageUrl" alt="Profile picture" class="profile-picture"/>
                         }
                     </div>
-                    <ValidationMessage For="@(() => Account.ImageUrl)" />
+                    <ValidationMessage For="@(() => Account.ImageUrl)"/>
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100" disabled="@(_accountSending)">
                     @if (_accountSending)
                     {
-                        <LoadingIndicator />
+                        <LoadingIndicator/>
                     }
                     else
                     {
@@ -67,7 +67,9 @@
                 </button>
             </ValidationEditContext>
         </div>
-
+    }
+    @if (Password != null)
+    {
         <h2>Password</h2>
         <div class="box">
             <ValidationEditContext Model="Password" OnValidSubmit="HandleValidPasswordSubmit" SuccessMessage="@_passwordSuccessMessage" ErrorMessage="@_passwordErrorMessage">
@@ -99,19 +101,19 @@
                 </button>
             </ValidationEditContext>
         </div>
-
-        <h2>Want to leave?</h2>
-        <div class="box">
-            <ul class="list-group list-group-flush list-group-links">
-                <li class="list-group-item">
-                    <button class="btn btn-link text-danger" type="button" @onclick="Logout">Logout</button>
-                </li>
-                <li class="list-group-item">
-                    <button class="btn btn-link text-danger" type="button" @onclick="RemoveAccount">Remove account</button>
-                </li>
-            </ul>
-        </div>
     }
+
+    <h2>Want to leave?</h2>
+    <div class="box">
+        <ul class="list-group list-group-flush list-group-links">
+            <li class="list-group-item">
+                <button class="btn btn-link text-danger" type="button" @onclick="Logout">Logout</button>
+            </li>
+            <li class="list-group-item">
+                <button class="btn btn-link text-danger" type="button" @onclick="RemoveAccount">Remove account</button>
+            </li>
+        </ul>
+    </div>
 </section>
 
 @code {
@@ -171,7 +173,7 @@
     {
         var account = AccountManager.GetAccount()!;
         await Logout();
-        await AccountManager.RemoveAccount(account!);
+        await AccountManager.RemoveAccount(account);
     }
 
     public async Task HandleValidAccountSubmit()

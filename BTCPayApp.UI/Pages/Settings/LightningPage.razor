@@ -76,16 +76,16 @@
         @if (Node is not null)
         {
             <h2>Lightning Settings</h2>
-            <ValidationEditContext @ref="_validationEditContext"  Model="Model" OnValidSubmit="UpdateConfig" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
+            <ValidationEditContext @ref="_validationEditContext"  Model="Model" OnValidSubmit="UpdateConfig" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
                 <DataAnnotationsValidator/>
                 <fieldset class="box">
-                    @if (JITOptions?.Any() is true)
+                    @if (_jitOptions?.Any() is true)
                     {
                         <div class="form-group">
                             <label for="JITLSP" class="form-label">Lightning Service Provider</label>
                             <InputSelect id="JITLSP" @bind-Value="Model.JitLsp" class="form-select">
                                 <option value="">None</option>
-                                @foreach (var jit in JITOptions)
+                                @foreach (var jit in _jitOptions)
                                 {
                                     <option value="@jit">@jit</option>
                                 }
@@ -129,14 +129,14 @@
     private LightningConfig? _config;
     private LDKNode? Node => LightningNodeManager.Node;
     private string? StoreId => AccountManager.GetCurrentStore()?.Id;
-    private string PaymentMethodId => LightningNodeManager.PaymentMethodId;
+    private static string PaymentMethodId => LightningNodeManager.PaymentMethodId;
     private string? _storePaymentMethodIdentifier;
     // We need a ui/component for the api keys now.
     // private string? ConnectionString => LightningNodeManager.ConnectionString;
-    private string[] JITOptions;
+    private string[]? _jitOptions;
     private SettingsModel Model { get; set; } = new();
-    private string? _successMessage { get; set; }
-    private string? _errorMessage { get; set; }
+    private string? SuccessMessage { get; set; }
+    private string? ErrorMessage { get; set; }
     private ValidationEditContext? _validationEditContext;
 
     private class SettingsModel
@@ -151,7 +151,7 @@
         if (Node is not null)
         {
             Node.ConfigUpdated += RefreshConfig;
-            JITOptions = await Node.GetJITLSPs();
+            _jitOptions = await Node.GetJITLSPs();
             await RefreshConfig(this, await Node.GetConfig());
         }
 
@@ -172,7 +172,7 @@
     private async Task UpdateConfig()
     {
         if (Node is null) return;
-        _successMessage = _errorMessage = null;
+        SuccessMessage = ErrorMessage = null;
         try
         {
             await Node.UpdateConfig(config =>
@@ -181,11 +181,11 @@
                 config.RapidGossipSyncUrl = string.IsNullOrEmpty(Model.RgsUrl) ? null : Uri.TryCreate(Model.RgsUrl, UriKind.Absolute, out var uri) ? uri: null;
                 return Task.FromResult((config, true));
             });
-            _successMessage = "Lightning configuration updated.";
+            SuccessMessage = "Lightning configuration updated.";
         }
         catch (Exception e)
         {
-            _errorMessage = e.Message;
+            ErrorMessage = e.Message;
         }
     }
 
@@ -243,7 +243,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = "Error configuring LN wallet";
+            ErrorMessage = "Error configuring LN wallet";
             Logger.LogError(ex, "Error configuring LN wallet");
         }
     }

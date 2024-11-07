@@ -370,7 +370,7 @@
         _qrInput = code;
         await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
 
-        Model.Destination = code;
+        Model!.Destination = code;
         StateHasChanged();
     }
 }

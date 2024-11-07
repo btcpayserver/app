@@ -13,7 +13,7 @@
         <Icon Symbol="caret-down"/>
     </button>
     <ul class="dropdown-menu">
-        @if (_accounts.Count() > 1)
+        @if (_accounts?.Count() > 1)
         {
             @foreach (var account in _accounts)
             {
@@ -85,7 +85,7 @@
 
 @code {
     private BTCPayAccount? _account;
-    private IEnumerable<BTCPayAccount> _accounts;
+    private IEnumerable<BTCPayAccount>? _accounts;
     private bool _sending;
     private string? _errorMessage;
     private LoginModel? Model { get; set; }

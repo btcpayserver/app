@@ -1,7 +1,7 @@
 ﻿@using System.Linq.Expressions
 @implements IDisposable
 
-<EditForm EditContext="EditContext" OnSubmit="OnSubmit" @attributes="@InputAttributes">
+<EditForm EditContext="EditContext" OnSubmit="@OnSubmit" @attributes="@InputAttributes">
     @if (!string.IsNullOrEmpty(ErrorMessage))
     {
         <Alert Type="danger">@ErrorMessage</Alert>
@@ -22,8 +22,8 @@
 </EditForm>
 
 @code {
-    [Parameter]
-    public object Model { get; set; }
+    [Parameter, EditorRequired]
+    public object Model { get; set; } = null!;
 
     [Parameter]
     public Func<Task>? Validate { get; set; }
@@ -44,10 +44,10 @@
     public string? ErrorMessage { get; set; }
 
     [Parameter(CaptureUnmatchedValues = true)]
-    public Dictionary<string, object> InputAttributes { get; set; }
+    public Dictionary<string, object>? InputAttributes { get; set; }
 
-    public EditContext EditContext { get; set; }
-    public ValidationMessageStore MessageStore { get; set; }
+    public EditContext? EditContext { get; set; }
+    public ValidationMessageStore? MessageStore { get; set; }
 
     protected override void OnInitialized()
     {
@@ -67,14 +67,14 @@
 
     private void EditContextOnOnFieldChanged(object? sender, FieldChangedEventArgs e)
     {
-        if (!EditContext.GetValidationMessages(e.FieldIdentifier).Any()) return;
-        MessageStore.Clear(e.FieldIdentifier);
-        EditContext.NotifyValidationStateChanged();
+        if (!EditContext?.GetValidationMessages(e.FieldIdentifier).Any() is true) return;
+        MessageStore?.Clear(e.FieldIdentifier);
+        EditContext?.NotifyValidationStateChanged();
     }
 
     public void NotifyFieldChanged(Expression<Func<object>> field)
     {
-        EditContext.NotifyFieldChanged(FieldIdentifier.Create(field));
+        EditContext?.NotifyFieldChanged(FieldIdentifier.Create(field));
     }
 
     private void EditContextOnOnValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)
@@ -86,7 +86,7 @@
     {
         if (Validate is not null)
             await Validate.Invoke();
-        EditContext.Validate();
+        EditContext?.Validate();
 
         if (Invalid)
         {
@@ -98,15 +98,16 @@
         }
     }
 
-    public bool Invalid => EditContext.GetValidationMessages().Any();
+    public bool Invalid => EditContext?.GetValidationMessages().Any() is true;
 
     public async Task Submit()
     {
-        await OnSubmit(EditContext);
+        if (EditContext != null) await OnSubmit(EditContext);
     }
 
     public void Dispose()
     {
+        if (EditContext == null) return;
         EditContext.OnFieldChanged -= EditContextOnOnFieldChanged;
         EditContext.OnValidationRequested -= EditContextOnOnValidationRequested;
         EditContext.OnValidationStateChanged -= EditContextOnOnValidationStateChanged;
