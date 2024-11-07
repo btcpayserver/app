@@ -36,7 +36,7 @@
     {
         <h2 class="d-flex flex-wrap align-items-center gap-2">
             <span>@(_config?.Alias ?? "Lightning Node")</span>
-            @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier) 
+            @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier)
                  // && _storePaymentMethodIdentifier == ConnectionString
         )
             {
@@ -59,7 +59,7 @@
                     <label>Derivation Path</label>
                 </div>
             }
-          
+
             @* @if (!string.IsNullOrEmpty(ConnectionString)) *@
             @* { *@
             @*     <div class="form-floating"> *@
@@ -171,14 +171,15 @@
 
     private async Task UpdateConfig()
     {
+        if (Node is null) return;
         _successMessage = _errorMessage = null;
         try
         {
-            await Node.UpdateConfig(async config =>
+            await Node.UpdateConfig(config =>
             {
                 config.JITLSP = Model.JitLsp;
                 config.RapidGossipSyncUrl = string.IsNullOrEmpty(Model.RgsUrl) ? null : Uri.TryCreate(Model.RgsUrl, UriKind.Absolute, out var uri) ? uri: null;
-                return (config, true);
+                return Task.FromResult((config, true));
             });
             _successMessage = "Lightning configuration updated.";
         }

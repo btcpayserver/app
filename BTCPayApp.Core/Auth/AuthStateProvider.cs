@@ -39,10 +39,11 @@ public class AuthStateProvider(
     public AsyncEventHandler<BTCPayAccount?>? OnAccountInfoChange { get; set; }
     public AsyncEventHandler<AppUserInfo?>? OnUserInfoChange { get; set; }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         _pingCts = new CancellationTokenSource();
         _ = PingOccasionally(_pingCts.Token);
+        return Task.CompletedTask;
     }
 
     private async Task PingOccasionally(CancellationToken pingCtsToken)

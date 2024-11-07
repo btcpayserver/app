@@ -11,14 +11,14 @@ public class BearerAuthorizationHandler(IOptionsMonitor<IdentityOptions> identit
     //TODO: In the future, we will add these store permissions to actual aspnet roles, and remove this class.
     private static readonly PermissionSet _serverAdminRolePermissions = new([Permission.Create(Policies.CanViewStoreSettings)]);
 
-    protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, PolicyRequirement requirement)
+    protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, PolicyRequirement requirement)
     {
         if (context.User.Identity?.AuthenticationType != AuthenticationSchemes.GreenfieldBearer)
-            return;
+            return Task.CompletedTask;
 
         var userId = context.User.Claims.FirstOrDefault(c => c.Type == identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType)?.Value;
         if (string.IsNullOrEmpty(userId))
-            return;
+            return Task.CompletedTask;
 
         var permissionSet = new PermissionSet();
         var success = false;
@@ -73,5 +73,7 @@ public class BearerAuthorizationHandler(IOptionsMonitor<IdentityOptions> identit
         {
             context.Succeed(requirement);
         }
+
+        return Task.CompletedTask;
     }
 }

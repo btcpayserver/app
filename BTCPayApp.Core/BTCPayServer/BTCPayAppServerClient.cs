@@ -58,16 +58,16 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
     {
         await AssertPermission(key, APIKeyPermission.Read);
         _serviceProvider
-            .GetRequiredService<LightningNodeManager>().Node
+            .GetRequiredService<LightningNodeManager>().Node?
             .GetServiceProvider()
             .GetRequiredService<BTCPayPaymentsNotifier>()
             .StartListen();
     }
 
     private PaymentsManager PaymentsManager =>
-        _serviceProvider.GetRequiredService<LightningNodeManager>().Node.PaymentsManager;
+        _serviceProvider.GetRequiredService<LightningNodeManager>().Node?.PaymentsManager;
     private LightningAPIKeyManager ApiKeyManager =>
-        _serviceProvider.GetRequiredService<LightningNodeManager>().Node.ApiKeyManager;
+        _serviceProvider.GetRequiredService<LightningNodeManager>().Node?.ApiKeyManager;
 
     private async Task AssertPermission(string key, APIKeyPermission permission)
     {
@@ -76,7 +76,7 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
             throw new HubException("Permission denied");
         }
     }
-    
+
     public async Task<LightningInvoice> CreateInvoice(string key, CreateLightningInvoiceRequest createLightningInvoiceRequest)
     {
         await AssertPermission(key, APIKeyPermission.Read);
@@ -88,7 +88,7 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
 
     public async Task<LightningInvoice?> GetLightningInvoice(string key, uint256 paymentHash)
     {
-        
+
         await AssertPermission(key, APIKeyPermission.Read);
         var invs = await PaymentsManager.List(payments =>
             payments.Where(payment => payment.Inbound && payment.PaymentHash == paymentHash));
@@ -111,7 +111,7 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
 
     public async Task<List<LightningPayment>> GetLightningPayments(string key, ListPaymentsParams request)
     {
-        
+
         await AssertPermission(key, APIKeyPermission.Read);
         return await PaymentsManager.List(payments => payments.Where(payment => !payment.Inbound), default)
             .ToPayments();
@@ -125,7 +125,7 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
 
     public async Task<PayResponse> PayInvoice(string key, string bolt11, long? amountMilliSatoshi)
     {
-        
+
         await AssertPermission(key, APIKeyPermission.Write);
         var config = await _serviceProvider.GetRequiredService<OnChainWalletManager>().GetConfig();
         var bolt = BOLT11PaymentRequest.Parse(bolt11, config.NBitcoinNetwork);
@@ -165,7 +165,7 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
 
     public async Task<LightningNodeInformation> GetLightningNodeInfo(string key)
     {
-        
+
         await AssertPermission(key, APIKeyPermission.Read);
         var node = _serviceProvider.GetRequiredService<LightningNodeManager>().Node;
         var bb = await _serviceProvider.GetRequiredService<OnChainWalletManager>().GetBestBlock();

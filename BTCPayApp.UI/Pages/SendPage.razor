@@ -89,6 +89,7 @@
 
     private async Task FetchData()
     {
+        if (PaymentsManager is null) return;
         await Wrap(async () =>
         {
             var list = await PaymentsManager.List(payments => payments.Where(p => !p.Inbound));
@@ -98,6 +99,7 @@
 
     private async void SendPayment()
     {
+        if (Node is null || string.IsNullOrEmpty(Model.PaymentRequest)) return;
         _successMessage = _errorMessage = null;
         _paymentSending = true;
         await Wrap(async () =>

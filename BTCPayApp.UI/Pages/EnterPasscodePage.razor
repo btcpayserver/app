@@ -38,9 +38,9 @@
         }
     }
 
-    public async Task HandleValidSubmit()
+    public Task HandleValidSubmit()
     {
-
+        return Task.CompletedTask;
     }
 
     public async Task HandlePasscodeEntered(Passcode.PasscodeEntered form)

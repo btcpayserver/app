@@ -229,7 +229,7 @@
         _passwordErrorMessage = _passwordSuccessMessage = null;
         _passwordSending = true;
 
-        var result = await AccountManager.ChangePassword(Password.CurrentPassword!, Password.NewPassword!);
+        var result = await AccountManager.ChangePassword(Password!.CurrentPassword!, Password.NewPassword!);
         _passwordSending = false;
 
         if (result.Succeeded)

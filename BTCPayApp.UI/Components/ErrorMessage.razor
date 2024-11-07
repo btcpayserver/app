@@ -1,6 +1,7 @@
 ﻿@using System.Linq.Expressions
 @implements IDisposable
 @{
+    if (For == null) return;
     var messages = EditContext.GetValidationMessages(For);
     foreach (var message in messages)
     {
@@ -10,10 +11,10 @@
 
 @code {
     [CascadingParameter]
-    public EditContext EditContext { get; set; }
+    public EditContext EditContext { get; set; } = null!;
 
     [Parameter]
-    public Expression<Func<object>> For { get; set; }
+    public Expression<Func<object>>? For { get; set; }
 
     protected override void OnInitialized()
     {

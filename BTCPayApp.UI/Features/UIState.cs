@@ -154,9 +154,10 @@ public record UIState
         }
 
         [EffectMethod]
-        public async Task SetHistogramTypeEffect(SetHistogramType action, IDispatcher dispatcher)
+        public Task SetHistogramTypeEffect(SetHistogramType action, IDispatcher dispatcher)
         {
             dispatcher.Dispatch(new StoreState.SetHistogramType(action.Type));
+            return Task.CompletedTask;
         }
     }
 }

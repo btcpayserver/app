@@ -12,7 +12,7 @@
 
 @code {
     [Parameter, EditorRequired]
-    public InvoiceData Invoice { get; set; }
+    public InvoiceData Invoice { get; set; } = null!;
 
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? InputAttributes { get; set; }

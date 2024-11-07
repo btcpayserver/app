@@ -171,7 +171,7 @@ public class StateMiddleware(
                         dispatcher.Dispatch(new StoreState.FetchPointOfSale(currentStore.PosAppId!));
                     break;
                 case "app-deleted":
-                    if (isCurrentStore && currentStore.PosAppId == serverEvent.AppId)
+                    if (isCurrentStore && currentStore!.PosAppId == serverEvent.AppId)
                     {
                         var store = await accountManager.EnsureStorePos(currentStore, true);
                         dispatcher.Dispatch(new StoreState.FetchPointOfSale(store.PosAppId!));

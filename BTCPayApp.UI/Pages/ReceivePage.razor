@@ -95,6 +95,7 @@
 
     private async Task FetchData()
     {
+        if (PaymentsManager is null) return;
         await Wrap(async () =>
         {
             var list = await PaymentsManager.List(payments => payments.Where(p => p.Inbound));
@@ -104,6 +105,7 @@
 
     private async void GenerateInvoice()
     {
+        if (PaymentsManager is null) return;
         _paymentRequest = _successMessage = _errorMessage = null;
         _invoiceGenerating = true;
         await Wrap(async () =>
@@ -128,6 +130,7 @@
 
     private async Task Cancel(AppLightningPayment payment)
     {
+        if (PaymentsManager is null) return;
         await Wrap(async () =>
         {
             await PaymentsManager.Cancel(payment);

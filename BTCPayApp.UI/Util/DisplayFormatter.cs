@@ -18,11 +18,11 @@ public class DisplayFormatter
 
     public class CurrencyData
     {
-        public string Name { get; set; }
-        public string Code { get; set; }
-        public int Divisibility { get; set; }
-        public string Symbol { get; set; }
-        public bool Crypto { get; set; }
+        public string Name { get; set; } = null!;
+        public string Code { get; init; } = null!;
+        public int Divisibility { get; init; }
+        public string? Symbol { get; set; }
+        public bool Crypto { get; init; }
     }
 
     static readonly Dictionary<string, IFormatProvider> _CurrencyProviders = new();
@@ -101,7 +101,7 @@ public class DisplayFormatter
         return currencyInfo;
     }
 
-    public NumberFormatInfo GetNumberFormatInfo(string currency)
+    public NumberFormatInfo? GetNumberFormatInfo(string currency)
     {
         var curr = GetCurrencyProvider(currency);
         if (curr is CultureInfo cu)
@@ -180,7 +180,7 @@ public class DisplayFormatter
     {
         var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("BTCPayApp.UI.Util.Currencies.json");
         string? content;
-        using (var reader = new StreamReader(stream, Encoding.UTF8))
+        using (var reader = new StreamReader(stream!, Encoding.UTF8))
         {
             content = reader.ReadToEnd();
         }

@@ -13,7 +13,7 @@
 
 @code {
     [Parameter, EditorRequired, SupplyParameterFromQuery]
-    public string Title { get; set; } = "Loading";
+    public string Title { get; set; } = null!;
 
     [Parameter, SupplyParameterFromQuery]
     public string? Message { get; set; }

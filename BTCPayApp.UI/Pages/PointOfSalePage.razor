@@ -80,7 +80,7 @@ else if (!string.IsNullOrEmpty(Error))
         return ValueTask.CompletedTask;
     }
 
-    private void OnLocationChanged(object sender, LocationChangedEventArgs args)
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
     {
         if (args.Location.EndsWith(Routes.PointOfSale))
         {

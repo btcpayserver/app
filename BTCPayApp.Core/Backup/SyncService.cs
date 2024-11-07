@@ -23,10 +23,10 @@ public class SyncService : IDisposable
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
     private readonly ISecureConfigProvider _secureConfigProvider;
-    public AsyncEventHandler? EncryptionKeyChanged;    
+    public AsyncEventHandler? EncryptionKeyChanged;
     public AsyncEventHandler<(List<Outbox> OutboxItemsProcesed, PutObjectRequest RemoteRequest)>? RemoteObjectUpdated;
     public AsyncEventHandler<string[]>? LocalUpdated;
-    
+
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
 
     public SyncService(
@@ -44,7 +44,7 @@ public class SyncService : IDisposable
         _dbContextFactory = dbContextFactory;
         _secureConfigProvider = secureConfigProvider;
     }
-    
+
     public async Task<string?> GetEncryptionKey()
     {
        return  await _secureConfigProvider.Get<string>("encryptionKey");
@@ -115,7 +115,7 @@ public class SyncService : IDisposable
             });
 
             if (res.Value is {Value.Length: > 0})
-            { 
+            {
                 var decrypted = dataProtector.Unprotect(res.Value.Value.ToByteArray());
                 if ("kukks" == Encoding.UTF8.GetString(decrypted))
                 {
@@ -155,7 +155,7 @@ public class SyncService : IDisposable
         return true;
     }
 
-    private async Task<IVSSAPI> GetUnencryptedVSSAPI()
+    private Task<IVSSAPI> GetUnencryptedVSSAPI()
     {
         var account = _accountManager.GetAccount();
         if (account is null)
@@ -165,7 +165,7 @@ public class SyncService : IDisposable
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", account.AccessToken);
         var vssClient = new HttpVSSAPIClient(vssUri, httpClient);
 
-        return new AccountAwareVssClient(vssClient, _accountManager);
+        return Task.FromResult<IVSSAPI>(new AccountAwareVssClient(vssClient, _accountManager));
     }
 
     private async Task<IVSSAPI?> GetVSSAPI()
@@ -291,8 +291,8 @@ public class SyncService : IDisposable
         }
     }
 
-    
-    
+
+
     private async Task<KeyValue?> GetValue(AppDbContext dbContext, Outbox outbox)
     {
         switch (outbox.Entity)
@@ -315,7 +315,7 @@ public class SyncService : IDisposable
                 if (channel == null)
                     return null;
                 var val = JsonSerializer.SerializeToUtf8Bytes(channel);
-                
+
                 return new KeyValue()
                 {
                     Key = outbox.Key,
@@ -345,7 +345,7 @@ public class SyncService : IDisposable
         try
         {
             await _syncLock.WaitAsync(cancellationToken);
-     
+
         var backupAPi = await GetVSSAPI();
         if (backupAPi is null)
             return;
@@ -359,9 +359,9 @@ public class SyncService : IDisposable
             .ToListAsync(cancellationToken: cancellationToken);
         if (outbox.Count != 0)
         {
-          
+
         _logger.LogInformation($"Syncing to remote {outbox.Count} outbox items");
-           
+
         }
         var removedOutboxItems = new List<Outbox>();
         foreach (var outboxItemSet in outbox)
@@ -429,7 +429,7 @@ public class SyncService : IDisposable
             await _syncTask.Value.cts.CancelAsync();
             _syncTask = null;
         }
-        
+
     }
 
     private async Task ContinuouslySync(bool local,
@@ -447,7 +447,7 @@ public class SyncService : IDisposable
             }
             catch (OperationCanceledException)
             {
-                
+
             }
             catch (Exception e)
             {

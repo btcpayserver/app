@@ -28,9 +28,9 @@
             <Alert Type="danger">@Error</Alert>
         }
     }
-    else if (Model is not null)
+    else if (Model.Notifications is not null)
     {
-        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@Error">
             <DataAnnotationsValidator/>
             @foreach (var item in Model.Notifications)
             {
@@ -60,8 +60,6 @@
     public string? AppId { get; set; }
 
     private ValidationEditContext? _validationEditContext;
-    private string? _errorMessage;
-    private string? _successMessage;
 
     protected override async Task OnInitializedAsync()
     {

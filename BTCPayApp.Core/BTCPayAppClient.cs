@@ -67,7 +67,7 @@ public class BTCPayAppClient(string baseUri, HttpClient client) : BTCPayServerCl
                         }
 
                         var query = HttpUtility.ParseQueryString(uri.Query);
-                        var queryPayload = query.HasKeys() ? query.AllKeys.ToDictionary(k => k, k => query[k]) : null;
+                        var queryPayload = query.HasKeys() ? query.AllKeys.ToDictionary(k => k!, k => query[k]!) : null;
                         return await SendHttpRequest<T>(path, queryPayload, method: req.Method);
                     }
                 }
@@ -86,7 +86,7 @@ public class BTCPayAppClient(string baseUri, HttpClient client) : BTCPayServerCl
                         throw new GreenfieldAPIException(err.Status.Value, error);
                     }
                 }
-                catch (JsonSerializationException e)
+                catch (JsonSerializationException)
                 {
                     // ignored
                 }

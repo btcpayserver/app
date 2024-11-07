@@ -844,11 +844,12 @@ public record StoreState
         }
 
         [EffectMethod]
-        public async Task SetHistogramTypeEffect(SetHistogramType action, IDispatcher dispatcher)
+        public Task SetHistogramTypeEffect(SetHistogramType action, IDispatcher dispatcher)
         {
             var storeInfo = state.Value.StoreInfo;
             if (storeInfo != null)
                 dispatcher.Dispatch(new FetchHistograms(storeInfo.Id, action.Type));
+            return Task.CompletedTask;
         }
     }
 }

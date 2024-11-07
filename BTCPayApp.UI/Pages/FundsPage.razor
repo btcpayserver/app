@@ -299,7 +299,7 @@
                 _successMessage = $"Created transaction {txData.TransactionHash} spending {new Money(txData.Amount, MoneyUnit.BTC)} BTC";
             }
 
-            Dispatcher.Dispatch(new StoreState.FetchBalances(StoreId));
+            Dispatcher.Dispatch(new StoreState.FetchBalances(StoreId!));
             Model = new SendModel();
         }
         catch (Exception e)

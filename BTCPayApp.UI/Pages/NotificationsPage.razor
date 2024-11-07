@@ -66,11 +66,12 @@
             NavigationManager.NavigateTo(link);
     }
 
-    private async Task MarkAllRead()
+    private Task MarkAllRead()
     {
-        if (Notifications == null) return;
+        if (Notifications == null) return Task.CompletedTask;
         foreach (var notification in Notifications)
             Dispatcher.Dispatch(new StoreState.UpdateNotification(notification.Id, true));
+        return Task.CompletedTask;
     }
 
     private string? GetLink(NotificationData notification)

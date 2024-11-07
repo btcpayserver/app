@@ -17,17 +17,18 @@ public record RootState
     public record OnChainWalletStateUpdatedAction(OnChainWalletState State);
     public record LightningNodeStateUpdatedAction(LightningNodeState State);
 
-
     public class ConnectionEffects(NavigationManager navigationManager)
     {
         [EffectMethod]
-        public async  Task HandleConnectionStateUpdatedAction(RootState.ConnectionStateUpdatedAction action, IDispatcher dispatcher)
+        public Task HandleConnectionStateUpdatedAction(RootState.ConnectionStateUpdatedAction action, IDispatcher dispatcher)
         {
             if(action.State == BTCPayConnectionState.WaitingForEncryptionKey)
             {
-                
+
                 dispatcher.Dispatch(new GoAction(navigationManager.ToAbsoluteUri(Routes.EncryptionKey).ToString()));
             }
+
+            return Task.CompletedTask;
         }
     }
 

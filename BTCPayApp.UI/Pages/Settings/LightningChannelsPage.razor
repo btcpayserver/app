@@ -72,7 +72,7 @@
             @foreach (var peer in rememberedButUnconnected)
             {
                 var peerConfig = _config.Peers[peer];
-                
+
                 <div class="box">
                     <div class="form-floating">
                         <TruncateCenter Text="@peer" Padding="7" Copy="true" Elastic="true" class="form-control-plaintext"/>
@@ -91,13 +91,13 @@
                     }
                     <div class="d-grid d-sm-flex flex-wrap gap-3 buttons mt-3">
                         <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
-                      
+
                             <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
                             <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { Persistent = !peerConfig.Persistent })">
                                 @(peerConfig.Persistent? "Persistent connection enabled": "Persistent connection disabled")
                             </button>
                             <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { Trusted = !peerConfig.Trusted })">@(peerConfig.Trusted? "Trusted": "Untrusted")</button>
-                        
+
                     </div>
                 </div>
             }
@@ -156,11 +156,11 @@
                     <tbody>
                     @foreach (var channel in _channels)
                     {
-                      
+
                         var connected = _peers.Any(p => string.Equals(p.nodeId, channel.Value.channelDetails?.get_counterparty().get_node_id().ToString(), StringComparison.InvariantCultureIgnoreCase));
                         var active = false;
                         var alternates = channel.Value.channel.Aliases.Select(alias => alias.Id).ToHashSet();
-                        
+
                         if(channel.Value.channelDetails is not null)
                         {
                             if(channel.Value.channelDetails.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some)
@@ -231,9 +231,9 @@
                             }
                         </td>
                         </tr>
-                        
+
                     }
-            
+
                     </tbody>
                 </table>
             </div>
@@ -365,6 +365,7 @@
 
     private async Task ConnectToNewPeer()
     {
+        if (Node == null || PeerModel == null) return;
         _connectSuccessMessage = _connectErrorMessage = null;
         try
         {
