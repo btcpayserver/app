@@ -48,17 +48,20 @@ else if (_data is not null)
             <InputText @bind-Value="Model.DefaultCurrency" id="DefaultCurrency" class="form-control"/>
             <ValidationMessage For="@(() => Model.DefaultCurrency)"/>
         </div>
-        <div class="form-group">
-            <label for="PreferredExchange" class="form-label" data-required>Preferred Exchange</label>
-            <InputSelect @bind-Value="Model.PreferredExchange" id="PreferredExchange" class="form-select">
-                @foreach (var e in _data.Exchanges)
-                {
-                    <option value="@e.Key">@e.Value</option>
-                }
-            </InputSelect>
-            <div class="form-text mt-2 only-for-js">The recommended price source gets chosen based on the default currency.</div>
-            <ValidationMessage For="@(() => Model.PreferredExchange)"/>
-        </div>
+        @if (_data.Exchanges?.Any() is true)
+        {
+            <div class="form-group">
+                <label for="PreferredExchange" class="form-label" data-required>Preferred Exchange</label>
+                <InputSelect @bind-Value="Model.PreferredExchange" id="PreferredExchange" class="form-select">
+                    @foreach (var e in _data.Exchanges)
+                    {
+                        <option value="@e.Key">@e.Value</option>
+                    }
+                </InputSelect>
+                <div class="form-text mt-2 only-for-js">The recommended price source gets chosen based on the default currency.</div>
+                <ValidationMessage For="@(() => Model.PreferredExchange)"/>
+            </div>
+        }
         <button class="btn btn-primary w-100" type="submit" data-testid="CreateStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
             @if (_sending)
             {
@@ -92,8 +95,8 @@ else if (_data is not null)
             _errorMessage = null;
             _data = await AccountManager.GetClient().GetCreateStore();
 
-            Model.DefaultCurrency = _data.DefaultCurrency;
-            Model.PreferredExchange = _data.RecommendedExchangeId;
+            Model.DefaultCurrency = _data?.DefaultCurrency;
+            Model.PreferredExchange = _data?.RecommendedExchangeId;
         }
         catch (Exception e)
         {

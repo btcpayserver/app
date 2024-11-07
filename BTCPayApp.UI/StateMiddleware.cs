@@ -152,9 +152,10 @@ public class StateMiddleware(
             }
         };
 
-        accountManager.OnUserInfoChange += async (sender, userInfo) =>
+        accountManager.OnUserInfoChange += (sender, userInfo) =>
         {
             dispatcher.Dispatch(new UserState.SetInfo(userInfo, null));
+            return Task.CompletedTask;
         };
 
         btcpayAppServerClient.OnNotifyServerEvent += async (sender, serverEvent) =>

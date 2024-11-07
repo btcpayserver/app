@@ -27,9 +27,9 @@
 </SectionContent>
 
 <section class="container">
-    @if (!string.IsNullOrEmpty(_errorMessage))
+    @if (!string.IsNullOrEmpty(ErrorMessage))
     {
-        <Alert Type="danger" Dismissible>@_errorMessage</Alert>
+        <Alert Type="danger" Dismissible>@ErrorMessage</Alert>
     }
     <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
         <h2 class="mb-0">Coins</h2>
@@ -107,10 +107,10 @@
         </div>
     }
 
-    @if (_totalBalance?.ToDecimal(MoneyUnit.Satoshi) is > 0)
+    @if (_totalBalance?.ToDecimal(MoneyUnit.Satoshi) is > 0 && Model != null)
     {
         <h2>Send Bitcoin</h2>
-        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="Transact" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="Transact" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
             <DataAnnotationsValidator/>
             <fieldset class="box">
                 <div class="form-group">
@@ -130,8 +130,8 @@
                 </div>
                 @if (Model.Transaction is null)
                 {
-                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
-                        @if (_sending)
+                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
+                        @if (Sending)
                         {
                             <LoadingIndicator/>
                         }
@@ -144,8 +144,8 @@
                 else
                 {
                     <pre>@Model.Transaction.Value.Tx.ToString()</pre>
-                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
-                        @if (_sending)
+                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
+                        @if (Sending)
                         {
                             <LoadingIndicator/>
                         }
@@ -154,8 +154,8 @@
                             <span>Broadcast transaction</span>
                         }
                     </button>
-                    <button type="button" class="btn btn-outline-secondary w-100 mt-2" disabled="@(_sending)" @onclick="CancelTx">
-                        @if (_sending)
+                    <button type="button" class="btn btn-outline-secondary w-100 mt-2" disabled="@(Sending)" @onclick="CancelTx">
+                        @if (Sending)
                         {
                             <LoadingIndicator/>
                         }
@@ -199,13 +199,12 @@
     private Money? _totalBalance;
     private string? _address;
     private string? _qrInput;
-    private Dictionary<string, TxResp[]> _txs;
+    private Dictionary<string, TxResp[]>? _txs;
     private IEnumerable<ICoin>? _utxos;
-    private string? _txResponse { get; set; }
 
-    private bool _sending { get; set; }
-    private string? _successMessage { get; set; }
-    private string? _errorMessage { get; set; }
+    private bool Sending { get; set; }
+    private string? SuccessMessage { get; set; }
+    private string? ErrorMessage { get; set; }
     private ValidationEditContext? _validationEditContext;
     private Network? _network;
     private SendModel? Model { get; set; } = new();
@@ -242,20 +241,20 @@
 
     private async Task FetchData()
     {
-        if (_loading || _sending) return;
+        if (_loading || Sending) return;
         _loading = true;
-        _errorMessage = null;
+        ErrorMessage = null;
         await InvokeAsync(StateHasChanged);
         try
         {
             _utxos = (await OnChainWalletManager.GetUTXOS()).OfType<OnChainWalletManager.CoinWithKey>();
             _totalBalance = _utxos.Sum(utxo => utxo.TxOut.Value);
             _txs = await OnChainWalletManager.GetTransactions();
-            _network = (await OnChainWalletManager.GetConfig()).NBitcoinNetwork;
+            _network = (await OnChainWalletManager.GetConfig())?.NBitcoinNetwork;
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            ErrorMessage = ex.Message;
         }
         finally
         {
@@ -276,7 +275,7 @@
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            ErrorMessage = ex.Message;
         }
         finally
         {
@@ -287,8 +286,8 @@
 
     private async Task Transact()
     {
-        if (_loading || _sending) return;
-        if (Model.Transaction == null)
+        if (_loading || Sending) return;
+        if (Model?.Transaction == null)
             await CreateTx();
         else
             await BroadcastTx();
@@ -296,7 +295,7 @@
 
     private async Task CancelTx()
     {
-        if (Model.Transaction is null) return;
+        if (Model?.Transaction is null) return;
 
         Model.Transaction = null;
         await InvokeAsync(StateHasChanged);
@@ -304,8 +303,8 @@
 
     private async Task CreateTx()
     {
-        if (_totalBalance is null || Model.Amount is <= 0 || string.IsNullOrWhiteSpace(Model.Destination)) return;
-        _sending = true;
+        if (_totalBalance is null || Model?.Amount is <= 0 || string.IsNullOrWhiteSpace(Model?.Destination)) return;
+        Sending = true;
         await InvokeAsync(StateHasChanged);
         try
         {
@@ -318,16 +317,16 @@
                 .Where(o => o.IsTo(Model.Transaction.Value.Change))
                 .Sum(o => o.Value.ToDecimal(MoneyUnit.BTC));
             var feeaMT = Model.Transaction.Value.Tx.GetFee(Model.Transaction.Value.SpentCoins).ToDecimal(MoneyUnit.BTC);
-            _successMessage = $"Created transaction {Model.Transaction.Value.Tx.GetHash()} spending {Model.Transaction.Value.SpentCoins.Sum(c => c.TxOut.Value.ToDecimal(MoneyUnit.BTC))} BTC, with change of {changeAmt} BTC and fee of {feeaMT} BTC";
+            SuccessMessage = $"Created transaction {Model.Transaction.Value.Tx.GetHash()} spending {Model.Transaction.Value.SpentCoins.Sum(c => c.TxOut.Value.ToDecimal(MoneyUnit.BTC))} BTC, with change of {changeAmt} BTC and fee of {feeaMT} BTC";
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            ErrorMessage = ex.Message;
             Model.Transaction = null;
         }
         finally
         {
-            _sending = false;
+            Sending = false;
             await InvokeAsync(StateHasChanged);
         }
     }
@@ -335,21 +334,21 @@
     private async Task BroadcastTx()
     {
         if (Model.Transaction is null) return;
-        _sending = true;
+        Sending = true;
         await InvokeAsync(StateHasChanged);
         try
         {
             await OnChainWalletManager.BroadcastTransaction(Model.Transaction.Value.Tx);
-            _successMessage = $"Transaction {Model.Transaction.Value.Tx.GetHash()} broadcasted";
+            SuccessMessage = $"Transaction {Model.Transaction.Value.Tx.GetHash()} broadcasted";
             Model = new SendModel();
         }
         catch (Exception ex)
         {
-            _errorMessage = ex.Message;
+            ErrorMessage = ex.Message;
         }
         finally
         {
-            _sending = false;
+            Sending = false;
             await InvokeAsync(StateHasChanged);
         }
         _ = FetchData();
@@ -357,7 +356,7 @@
 
     private void ToggleDisplayCurrency()
     {
-        if (Model.Amount.HasValue)
+        if (Model?.Amount.HasValue is true)
             Model.Amount = new Money(Model.Amount.Value, UnitMoney).ToDecimal(UnitMoney == MoneyUnit.Satoshi
                 ? MoneyUnit.BTC
                 : MoneyUnit.Satoshi);

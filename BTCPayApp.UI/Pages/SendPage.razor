@@ -122,6 +122,7 @@
 
     private async Task Cancel(AppLightningPayment payment)
     {
+        if (PaymentsManager is null) return;
         await Wrap(async () =>
         {
             await PaymentsManager.Cancel(payment);

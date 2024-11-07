@@ -11,9 +11,9 @@ namespace BTCPayApp.Core.Helpers;
 /// </summary>
 /// <typeparam name="TKey">The type of the keys in the dictionary.</typeparam>
 /// <typeparam name="TValue">The type of the values in the dictionary.</typeparam>
-public sealed class ObservableConcurrentDictionary<TKey, TValue> : ConcurrentDictionary<TKey, TValue>, INotifyCollectionChanged, INotifyPropertyChanged
+public sealed class ObservableConcurrentDictionary<TKey, TValue> : ConcurrentDictionary<TKey, TValue>, INotifyCollectionChanged, INotifyPropertyChanged where TKey : notnull
 {
-   private const string IndexerName = "Item[]";
+   private const string? IndexerName = "Item[]";
 
    /// <summary>
    /// Initializes a new instance of the <see cref="ObservableConcurrentDictionary{TKey, TValue}"/> class that is empty, has the
@@ -109,10 +109,10 @@ public sealed class ObservableConcurrentDictionary<TKey, TValue> : ConcurrentDic
    }
 
    /// <summary>Occurs when an item is added, removed, changed, moved, or the entire list is refreshed.</summary>
-   public event NotifyCollectionChangedEventHandler CollectionChanged;
+   public event NotifyCollectionChangedEventHandler? CollectionChanged;
 
    /// <summary>Occurs when a property value changes.</summary>
-   public event PropertyChangedEventHandler PropertyChanged;
+   public event PropertyChangedEventHandler? PropertyChanged;
 
    /// <summary>
    /// Uses the specified functions to add a key/value pair to the <see cref="ObservableConcurrentDictionary{TKey, TValue}"/> if the
@@ -319,5 +319,5 @@ public sealed class ObservableConcurrentDictionary<TKey, TValue> : ConcurrentDic
 
    /// <summary>Raises the <see cref="PropertyChanged" /> event.</summary>
    /// <param name="propertyName">Name of the property that has changed.</param>
-   private void OnPropertyChanged([CallerMemberName] string propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+   private void OnPropertyChanged([CallerMemberName] string? propertyName = null) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

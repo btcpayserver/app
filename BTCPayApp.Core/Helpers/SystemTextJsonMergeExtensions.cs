@@ -23,20 +23,20 @@ namespace BTCPayApp.Core.Helpers
         /// <param name="jsonMerge"></param>
         /// <returns></returns>
         /// <exception cref="ArgumentException"></exception>
-        public static JsonNode Merge(this JsonNode jsonBase, JsonNode jsonMerge)
+        public static JsonNode Merge(this JsonNode jsonBase, JsonNode? jsonMerge)
         {
-            if (jsonBase == null || jsonMerge == null)
+            if (jsonMerge == null)
                 return jsonBase;
 
             switch (jsonBase)
             {
                 case JsonObject jsonBaseObj when jsonMerge is JsonObject jsonMergeObj:
                 {
-                    //NOTE: We must materialize the set (e.g. to an Array), and then clear the merge array so the node can then be 
+                    //NOTE: We must materialize the set (e.g. to an Array), and then clear the merge array so the node can then be
                     //      re-assigned to the target/base Json; clearing the Object seems to be the most efficient approach...
                     var mergeNodesArray = jsonMergeObj.ToArray();
                     jsonMergeObj.Clear();
-                    
+
                     foreach (var prop in mergeNodesArray)
                     {
                         jsonBaseObj[prop.Key] = jsonBaseObj[prop.Key] switch
@@ -60,7 +60,7 @@ namespace BTCPayApp.Core.Helpers
                 default:
                     throw new ArgumentException($"The JsonNode type [{jsonBase.GetType().Name}] is incompatible for merging with the target/base " +
                                                         $"type [{jsonMerge.GetType().Name}]; merge requires the types to be the same.");
-                
+
             }
 
             return jsonBase;
@@ -75,7 +75,7 @@ namespace BTCPayApp.Core.Helpers
         /// <param name="dictionary"></param>
         /// <param name="options"></param>
         /// <returns></returns>
-        public static JsonNode MergeDictionary<TKey, TValue>(this JsonNode jsonBase, IDictionary<TKey, TValue> dictionary, JsonSerializerOptions options = null)
+        public static JsonNode MergeDictionary<TKey, TValue>(this JsonNode jsonBase, IDictionary<TKey, TValue> dictionary, JsonSerializerOptions? options = null)
             => jsonBase.Merge(JsonSerializer.SerializeToNode(dictionary, options));
     }
 }

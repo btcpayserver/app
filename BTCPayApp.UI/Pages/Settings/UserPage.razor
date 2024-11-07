@@ -155,9 +155,9 @@
     {
         Account = new AccountModel
         {
-            Email = account.Email,
-            Name = account.Name,
-            ImageUrl = account.ImageUrl
+            Email = account?.Email,
+            Name = account?.Name,
+            ImageUrl = account?.ImageUrl
         };
         await InvokeAsync(StateHasChanged);
     }

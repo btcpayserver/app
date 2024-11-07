@@ -22,7 +22,7 @@ public partial class LDKNode :
     ILDKEventHandler<Event.Event_ChannelPending>,
     ILDKEventHandler<Event.Event_ChannelReady>
 {
-    public async Task<Dictionary<string, (Channel channel, ChannelDetails? channelDetails)>> GetChannels(CancellationToken cancellationToken = default)
+    public async Task<Dictionary<string, (Channel channel, ChannelDetails? channelDetails)>?> GetChannels(CancellationToken cancellationToken = default)
     {
         return (await _memoryCache.GetOrCreateAsync(nameof(GetChannels), async entry =>
         {

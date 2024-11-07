@@ -464,7 +464,7 @@ public class OnChainWalletManager : BaseHostedService
         Task<PSBT> Sign(PSBT psbt);
     }
 
-    public async Task<Dictionary<string, TxResp[]>> GetTransactions()
+    public async Task<Dictionary<string, TxResp[]>?> GetTransactions()
     {
         var config = await GetConfig();
         var identifiersWhichWeCanDeriveKeysFor = config.Derivations.Values

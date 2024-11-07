@@ -12,7 +12,7 @@
 
 @code {
     [Parameter, EditorRequired]
-    public AppLightningPayment Payment { get; set; }
+    public AppLightningPayment Payment { get; set; } = null!;
 
     [Parameter]
     public EventCallback<AppLightningPayment> OnCancelClick { get; set; }

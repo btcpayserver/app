@@ -9,7 +9,7 @@ public class HostedServiceInitializer : IMauiInitializeService, IDisposable
     private static bool _running = false;
     private static Task? _executingTask;
     private IEnumerable<IHostedService> _services;
-    private ILogger<HostedServiceInitializer> _logger;
+    private ILogger<HostedServiceInitializer>? _logger;
 
     public void Initialize(IServiceProvider serviceProvider)
     {

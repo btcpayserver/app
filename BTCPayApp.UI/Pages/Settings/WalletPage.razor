@@ -31,7 +31,7 @@
     {
         <Alert Type="success" Dismissible>@_successMessage</Alert>
     }
-    @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Config is not null) 
+    @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Config is not null)
     {
         // var config = OnChainWalletManager.WalletConfig!;
         <h4>Wallet</h4>
@@ -113,7 +113,7 @@
     private string? _storePaymentMethodIdentifier;
     private string? _errorMessage;
     private string? _successMessage;
-    private string _title;
+    private string? _title;
 
     protected override async Task OnInitializedAsync()
     {
@@ -189,6 +189,6 @@
             : null;
     }
 
-    private string GetTitle() => $"{Config.NBitcoinNetwork?.Name ?? ""} Onchain Wallet".Trim();
+    private string GetTitle() => $"{Config?.NBitcoinNetwork.Name ?? ""} Onchain Wallet".Trim();
 }
 

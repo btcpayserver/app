@@ -28,7 +28,7 @@
 
 @code {
     [Parameter, EditorRequired]
-    public AppLightningPayment Payment { get; set; }
+    public AppLightningPayment Payment { get; set; } = null!;
 
     [Parameter, EditorRequired]
     public string? Unit { get; set; }

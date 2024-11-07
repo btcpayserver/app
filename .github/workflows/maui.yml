@@ -30,7 +30,7 @@ jobs:
         with:
           dotnet-version: 8.0.x
       - name: Set up JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '22'
           distribution: 'temurin'
@@ -48,4 +48,3 @@ jobs:
         run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Fast=Fast"
       - name: Run integration tests
         run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Integration=Integration"
-
