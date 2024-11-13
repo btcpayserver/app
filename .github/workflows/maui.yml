@@ -43,7 +43,18 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --configuration Release --no-restore
-      # Unit and integration tests
+      # Setup infrastructure
+      - name: Start containers
+        run: docker compose -f "submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" up -d dev
+      - name: Start BTCPay
+        run: |
+          cd submodules/btcpayserver
+          nohup dotnet run -c Release --project BTCPayServer &
+          while ! curl -s http://localhost:14142/api/v1/health > /dev/null; do
+            echo "Waiting for BTCPay Server to start..."
+            sleep 10
+          done
+      # Run tests
       - name: Run fast tests
         run: dotnet test --no-restore -v n --logger "console;verbosity=normal" --filter "Fast=Fast"
       - name: Run integration tests

@@ -31,7 +31,7 @@ jobs:
           dotnet-version: 8.0.x
       - name: Build
         run: dotnet build --configuration Release BTCPayApp.Server
-      # E2E tests
+      # Setup infrastructure
       - name: Start containers
         run: docker compose -f "submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" up -d dev
       - name: Start BTCPay
@@ -42,7 +42,7 @@ jobs:
             echo "Waiting for BTCPay Server to start..."
             sleep 10
           done
-          # Unit and integration tests
+      # Run tests
       - name: Run fast tests
         run: dotnet test -v n --logger "console;verbosity=normal" --filter "Fast=Fast" BTCPayApp.Tests
       - name: Run integration tests
