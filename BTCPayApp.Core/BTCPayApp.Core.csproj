@@ -24,7 +24,7 @@
       <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
       <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
       <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
-      <PackageReference Include="NBitcoin" Version="7.0.37" />
+      <PackageReference Include="NBitcoin" Version="7.0.45" />
         <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.8" />
         <PackageReference Include="org.ldk" Version="0.0.123" />
       <PackageReference Include="TypedSignalR.Client" Version="3.6.0">
