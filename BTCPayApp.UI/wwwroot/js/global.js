@@ -113,9 +113,7 @@ Chart = {
       low,
       fullWidth: true,
       showArea: true,
-      //lineSmooth: false,
       axisY: {
-        //labelInterpolationFnc: valueTransform,
         showLabel: false,
         offset: 0
       },
@@ -129,8 +127,8 @@ Chart = {
           template: '<div class="chartist-tooltip-value">{{value}}</div><div class="chartist-tooltip-line"></div>',
           offset: {
             x: 0,
-            y: -32,
-            lineY: -17.5
+            y: -24,
+            lineY: -24
           },
           valueTransformFunction(value, label) {
             return Chart.lineChartTooltipValueTransform(value, label)
@@ -146,7 +144,7 @@ Chart = {
   renderHorizontalBarChart(selector, labels, series) {
     const $el = document.querySelector(selector);
     if (!$el) return;
-    const data = { series };
+    const data = { series, labels };
     const opts = {
       distributeSeries: true,
       horizontalBars: true,
@@ -154,7 +152,16 @@ Chart = {
       stackBars: true,
       axisY: {
         offset: 0
-      }
+      },
+      plugins: [
+        Chartist.plugins.tooltip2({
+          template: '<div class="chartist-tooltip-inner">{{meta}} - Sales: {{value}}</div>',
+          offset: {
+            x: 0,
+            y: -8
+          }
+        })
+      ]
     };
     if (!$el.__chartist__)
       new Chartist.Bar(selector, data, opts);
@@ -168,7 +175,21 @@ Chart = {
     const max = Math.max(...series);
     const low = min === max ? 0 : Math.max(min - ((max - min) / 5), 0);
     const data = { labels, series: [series] }
-    const opts = { low, axisY: { onlyInteger: true } };
+    const opts = {
+      low,
+      axisY: {
+        onlyInteger: true
+      },
+      plugins: [
+        Chartist.plugins.tooltip2({
+          template: '<div class="chartist-tooltip-inner">Sales: {{value}}</div>',
+          offset: {
+            x: 0,
+            y: -8
+          }
+        })
+      ]
+    };
     if (!$el.__chartist__)
       new Chartist.Bar(selector, data, opts);
     else

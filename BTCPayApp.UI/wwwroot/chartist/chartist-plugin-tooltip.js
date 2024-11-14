@@ -199,18 +199,13 @@
                     seriesData = chart.options.reverseData ? seriesData.reverse()[seriesIndex] : seriesData[seriesIndex];
                     seriesData = (!Array.isArray(seriesData) && typeof seriesData == 'object' && seriesData.data) ? seriesData.data : seriesData;
 
-                    if (!seriesData) {
-                        return;
-                    }
-
+                    if (!seriesData) return;
                     itemData = (!Array.isArray(seriesData) && typeof seriesData == 'object') ? seriesData : seriesData[valueIndex];
-
-                    if (typeof itemData == 'undefined') {
-                        return;
-                    }
+                    if (!itemData && typeof seriesData == 'number') itemData = { value: seriesData, meta: chart.data.labels[seriesIndex] };
+                    if (typeof itemData == 'undefined') return;
                     meta = itemData.meta;
                     value = itemData.value || itemData;
-
+                    if (typeof itemData == 'undefined') return;
                     if (typeof options.valueTransformFunction === 'function') {
                         value = options.valueTransformFunction.call(chart, value, chart.data.labels[valueIndex], valueIndex);
                     }

@@ -66,8 +66,9 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (Series == null) return;
+        var labels = Series.Select(s => s.Title);
         var series = Series.Select(s => s.SalesCount);
-        await JS.InvokeVoidAsync("Chart.renderHorizontalBarChart", $"#{HtmlId} .ct-chart", null, series);
+        await JS.InvokeVoidAsync("Chart.renderHorizontalBarChart", $"#{HtmlId} .ct-chart", labels, series);
     }
 
     public void Dispose()
