@@ -259,14 +259,6 @@
                     {
                         <Alert Type="danger">@PaymentMethodsError</Alert>
                     }
-                    else if (PaymentMethodsLoading)
-                    {
-                        <div class="box">
-                            <div class="p-3 text-center">
-                                <LoadingIndicator/>
-                            </div>
-                        </div>
-                    }
                     else if (Payments?.Any() is true)
                     {
                         <div class="payment-list">
@@ -284,6 +276,21 @@
                                         @DisplayFormatter.Currency(p.Payment.Value, p.PaymentMethod.Currency, DisplayFormatter.CurrencyFormat.Symbol)
                                     </span>
                                 </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="box">
+                            @if (PaymentMethodsLoading)
+                            {
+                                <div class="p-3 text-center">
+                                    <LoadingIndicator/>
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted my-2">There are no payments, yet.</p>
                             }
                         </div>
                     }
