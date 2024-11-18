@@ -2,15 +2,17 @@
 @using System.Globalization
 @using System.Text.Json
 @using System.Text.Json.Nodes
+@using BTCPayApp.CommonServer.Models
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @inject IJSRuntime JS
 @inject IAuthorizationService AuthService
 @inject AuthenticationStateProvider AuthStateProvider
 
-<div class="d-flex flex-column gap-4">
-    <input type="hidden" name="amount" value="@GetTotal()">
-    <input type="hidden" name="tip" value="@GetTip()">
+<div class="d-flex flex-column gap-4 w-100" disabled="@IsSubmitting">
+    @{ var amount = GetAmount(); }
+    <input type="hidden" name="amount" value="@GetTotal().ToString(CultureInfo.InvariantCulture)">
+    <input type="hidden" name="tip" value="@GetTip()?.ToString(CultureInfo.InvariantCulture)">
     <input type="hidden" name="discount" value="@GetDiscountPercent()">
     <input type="hidden" name="posdata" value="@GetData()">
     <div class="d-flex flex-column align-items-center px-4 mb-auto" @ref="_keypadTop">
@@ -18,7 +20,6 @@
         <div class="fw-bold lh-sm" id="Amount" style="font-size:@($"{FontSize}px")" @ref="_keypadAmount">@FormatCurrency(GetTotal(), false)</div>
         <div class="text-muted text-center mt-2" id="Calculation">@Calculation(Model)</div>
     </div>
-    @{ var amount = GetAmount(); }
     @if (IsDiscountEnabled || IsTipEnabled)
     {
         <div id="ModeTabs" class="tab-content mb-n2">
@@ -58,7 +59,7 @@
                         {
                             var tip = GetTip();
                             <div class="h5 fw-semibold text-muted text-center">
-                                Amount@(tip > 0 ? $": {FormatCurrency(tip)}" : "")
+                                Amount@(tip > 0 ? $": {FormatCurrency(tip.Value)}" : "")
                             </div>
                         }
                     </div>
@@ -97,7 +98,7 @@
             </button>
         }
     </div>
-    <button class="btn btn-lg btn-primary mx-3" type="submit" disabled="@IsSubmitting" id="pay-button" @onclick="@(_ => { IsSubmitting = true; })">
+    <button class="btn btn-lg btn-primary mx-3" type="submit" disabled="@(IsSubmitting || amount == 0)" id="pay-button" @onclick="HandleSubmit">
         @if (IsSubmitting)
         {
             <div class="spinner-border spinner-border-sm" role="status">
@@ -137,7 +138,7 @@
                             <div class="list-group list-group-flush">
                                 @foreach (var t in RecentTransactions)
                                 {
-                                    <a href="@t.Url" class="list-group-item list-group-item-action d-flex align-items-center gap-3 pe-1 py-3">
+                                    <a href="@t.Url" class="list-group-item list-group-item-action d-flex align-items-center gap-3 pe-2 ps-3 py-3" @onclick="@(_ => OnClickRecentTransaction(t))">
                                         <div class="d-flex align-items-baseline justify-content-between flex-wrap flex-grow-1 gap-2">
                                             <span class="flex-grow-1">
                                                 <DateDisplay DateTimeOffset="@t.Date"/>
@@ -274,6 +275,8 @@
     [Parameter]
     public EventCallback LoadRecentTransactions { get; set; }
     [Parameter]
+    public EventCallback<CreatePosInvoiceRequest> CreateInvoice { get; set; }
+    [Parameter]
     public IEnumerable<RecentTransaction>? RecentTransactions { get; set; }
     [Parameter]
     public IEnumerable<AppItem>? Items { get; set; }
@@ -304,7 +307,7 @@
 
     public class KeypadModel
     {
-        public List<CartItem> Cart { get; } = [];
+        public List<AppCartItem> Cart { get; } = [];
         public List<decimal> Amounts { get; } = [0];
         public int? DiscountAmount { get; set; }
         public int? DiscountPercent { get; set; }
@@ -321,14 +324,6 @@
         public decimal Price { get; init; }
         public string? Url { get; init; }
         public DateTimeOffset Date { get; init; }
-    }
-
-    public class CartItem
-    {
-        public string Id { get; init; } = null!;
-        public string Title { get; init; } = null!;
-        public decimal Price { get; init; }
-        public int Count { get; set; }
     }
 
     protected override async Task OnInitializedAsync()
@@ -446,7 +441,7 @@
         };
 
         // clear empty or zero values
-        var amounts = Model.Amounts.Where(a => a > 0).ToList();
+        var amounts = GetAmounts();
         if (amounts.Count > 0)
         {
             data["amounts"] = JsonValue.Create(amounts);
@@ -492,12 +487,17 @@
         return amt;
     }
 
-    private decimal GetDiscount()
+    private List<decimal> GetAmounts()
+    {
+        return Model.Amounts.Where(a => a > 0).ToList();
+    }
+
+    private decimal? GetDiscount()
     {
         var amount = GetAmount();
         return amount > 0 && Model.DiscountPercent is > 0
             ? Math.Round(amount * (Model.DiscountPercent.Value / 100.0m), CurrencyDivisibility)
-            : 0;
+            : null;
     }
 
     private int GetDiscountPercent()
@@ -505,18 +505,18 @@
         return Model.DiscountPercent ?? 0;
     }
 
-    private decimal GetTip()
+    private decimal? GetTip()
     {
         if (Model.TipPercent is > 0) {
-            var amount = GetAmount() - GetDiscount();
+            var amount = GetAmount() - (GetDiscount() ?? 0);
             return Math.Round(amount * (Model.TipPercent.Value / 100.0m), CurrencyDivisibility);
         }
-        return Model.Tip is > 0 ? Math.Round(Model.Tip.Value, CurrencyDivisibility) : 0.0m;
+        return Model.Tip is > 0 ? Math.Round(Model.Tip.Value, CurrencyDivisibility) : null;
     }
 
     private decimal GetTotal()
     {
-        return GetAmount() - GetDiscount() + GetTip();
+        return GetAmount() - (GetDiscount() ?? 0) + (GetTip() ?? 0);
     }
 
     private string? Calculation(KeypadModel model)
@@ -529,9 +529,9 @@
         if (hasCart && hasAmounts) calc += " + ";
         if (hasAmounts) calc += string.Join(" + ", model.Amounts.Select(amt => FormatCurrency(amt)));
         var discount = GetDiscount();
-        if (discount > 0) calc += $" - {FormatCurrency(discount)} ({model.DiscountPercent}%)";
+        if (discount > 0) calc += $" - {FormatCurrency(discount.Value)} ({model.DiscountPercent}%)";
         var tip = GetTip();
-        if (tip > 0) calc += $" + {FormatCurrency(tip)}";
+        if (tip > 0) calc += $" + {FormatCurrency(tip.Value)}";
         if (model.TipPercent > 0) calc += $" ({model.TipPercent}%)";
         return calc;
     }
@@ -588,7 +588,7 @@
         return item.PriceType == AppItemPriceType.Minimum ? $"{formatted} minimum" : formatted;
     }
 
-    private CartItem? ItemInCart(AppItem item, decimal? amount = null)
+    private AppCartItem? ItemInCart(AppItem item, decimal? amount = null)
     {
         return Model.Cart.FirstOrDefault(lineItem => lineItem.Id == item.Id && amount == null || lineItem.Price == amount);
     }
@@ -605,7 +605,7 @@
         return left > 0 ? $"{left} left" : "Sold out";
     }
 
-    private CartItem? AddToCart(AppItem item, int count, decimal? amount = null) {
+    private AppCartItem? AddToCart(AppItem item, int count, decimal? amount = null) {
         if (!InStock(item)) return null;
         // Check if price is needed
         var isFixedPrice = item.PriceType == AppItemPriceType.Fixed;
@@ -617,7 +617,7 @@
         var cartItem = ItemInCart(item, amount);
         if (cartItem == null)
         {
-            cartItem = new CartItem
+            cartItem = new AppCartItem
             {
                 Id = item.Id,
                 Title = item.Title,
@@ -631,7 +631,7 @@
         return cartItem;
     }
 
-    private void RemoveFromCart(CartItem cartItem) {
+    private void RemoveFromCart(AppCartItem cartItem) {
         Model.Cart.Remove(cartItem);
     }
 
@@ -658,6 +658,33 @@
             await LoadRecentTransactions.InvokeAsync();
         IsLoadingRecentTransactions = false;
         StateHasChanged();
+    }
+
+    private async Task HandleSubmit()
+    {
+        IsSubmitting = true;
+        StateHasChanged();
+        if (CreateInvoice.HasDelegate)
+        {
+            var req = new CreatePosInvoiceRequest
+            {
+                Cart = Model.Cart,
+                DiscountPercent = Model.DiscountPercent,
+                TipPercent = Model.TipPercent,
+                Tip = GetTip(),
+                Amounts = GetAmounts(),
+                DiscountAmount = GetDiscount(),
+                Subtotal = GetAmount(),
+                Total = GetTotal(),
+                PosData = GetData()
+            };
+            await CreateInvoice.InvokeAsync(req);
+        }
+    }
+
+    private async Task OnClickRecentTransaction(RecentTransaction t)
+    {
+        await JS.InvokeVoidAsync("Interop.closeModal", "#RecentTransactions");
     }
 
     private string ItemCssClass(AppItem item)

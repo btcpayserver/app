@@ -57,7 +57,7 @@
 
 #NavbarBottom ~ #MainContent {
   padding-bottom: var(--navbar-bottom-height);
-  min-height: calc(100dvh - var(--navbar-bottom-height));
+  min-height: 100dvh;
 }
 
 .public-page-wrap {

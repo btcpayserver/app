@@ -1,7 +1,17 @@
 .container {
-  max-width: 560px;
-  padding-top: var(--btcpay-space-l);
-  padding-bottom: var(--btcpay-space-l);
+  width: 100%;
+  max-width: 500px;
+  overflow: hidden;
+  position: relative;
+  flex: 1 0 100%;
+  display: flex;
+  align-items: center;
+}
+
+.container ::deep .alert {
+  width: 100%;
+  align-self: start;
+  margin-top: 1.5rem;
 }
 
 .loading-container {
@@ -14,11 +24,11 @@
   gap: var(--btcpay-space-m);
 }
 
-iframe {
+/*iframe {
   position: fixed;
   z-index: 1;
   top: 0;
   left: 0;
   width: 100%;
   height: calc(100dvh - var(--navbar-bottom-height));
-}
+}*/

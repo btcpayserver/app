@@ -31,7 +31,3 @@
 #MainContent ::deep .box {
   margin-bottom: var(--btcpay-space-l);
 }
-
-#MainContent ::deep section.container:last-child {
-  margin-bottom: var(--btcpay-space-xl);
-}

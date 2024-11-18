@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Web;
@@ -39,6 +40,7 @@ public class BTCPayAppClient(string baseUri, HttpClient client) : BTCPayServerCl
     {
         var req = base.CreateHttpRequest(path, queryPayload, method);
         req.Headers.Add("User-Agent", "BTCPayAppClient");
+        req.Headers.Add("Accept", "application/json");
         if (!string.IsNullOrEmpty(AccessToken))
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", AccessToken);
         return req;
@@ -138,30 +140,40 @@ public class BTCPayAppClient(string baseUri, HttpClient client) : BTCPayServerCl
         return await SendHttpRequest<CreateStoreData>("btcpayapp/create-store", null, HttpMethod.Get, cancellation);
     }
 
-    public async Task<JObject> RegisterUser(SignupRequest payload, CancellationToken cancellation)
+    public async Task<JObject> RegisterUser(SignupRequest payload, CancellationToken cancellation = default)
     {
         return await SendHttpRequest<JObject>("btcpayapp/register", payload, HttpMethod.Post, cancellation);
     }
 
-    public async Task<AccessTokenResponse> Login(LoginRequest payload, CancellationToken cancellation)
+    public async Task<AccessTokenResponse> Login(LoginRequest payload, CancellationToken cancellation = default)
     {
         return await SendHttpRequest<AccessTokenResponse>("btcpayapp/login", payload, HttpMethod.Post, cancellation);
     }
 
-    public async Task<AccessTokenResponse> Login(string loginCode, CancellationToken cancellation)
+    public async Task<AccessTokenResponse> Login(string loginCode, CancellationToken cancellation = default)
     {
         return await SendHttpRequest<AccessTokenResponse>("btcpayapp/login/code", loginCode, HttpMethod.Post, cancellation);
     }
 
-    public async Task<AcceptInviteResult> AcceptInvite(AcceptInviteRequest payload, CancellationToken cancellation)
+    public async Task<AcceptInviteResult> AcceptInvite(AcceptInviteRequest payload, CancellationToken cancellation = default)
     {
         return await SendHttpRequest<AcceptInviteResult>("btcpayapp/accept-invite", payload, HttpMethod.Post, cancellation);
     }
 
-    public async Task<JObject?> ResetPassword(ResetPasswordRequest payload, CancellationToken cancellation)
+    public async Task<JObject?> ResetPassword(ResetPasswordRequest payload, CancellationToken cancellation = default)
     {
         var isForgotStep = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword);
         var path = isForgotStep ? "btcpayapp/forgot-password" : "btcpayapp/reset-password";
         return await SendHttpRequest<JObject?>(path, payload, HttpMethod.Post, cancellation);
+    }
+
+    public async Task<JObject?> CreatePosInvoice(CreatePosInvoiceRequest req, CancellationToken cancellation = default)
+    {
+        var query = new Dictionary<string, object>();
+        if (req.Total != null) query.Add("amount", req.Total.Value.ToString(CultureInfo.InvariantCulture));
+        if (req.DiscountPercent != null) query.Add("discount", req.DiscountPercent.Value.ToString(CultureInfo.InvariantCulture));
+        if (req.Tip != null) query.Add("tip", req.Tip.Value.ToString(CultureInfo.InvariantCulture));
+        if (req.PosData != null) query.Add("posData", req.PosData);
+        return await SendHttpRequest<JObject?>($"apps/{req.AppId}/pos/light", query, HttpMethod.Post, cancellation);
     }
 }

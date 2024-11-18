@@ -30,33 +30,30 @@ else if (!string.IsNullOrEmpty(Error))
 }
 @if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(AppId) && AppData != null)
 {
-    @*
-    <section class="container">
-        <form method="post" target="checkout" action="@IframeSrc">
-            <Keypad StoreId="@StoreId" AppId="@AppId" CurrencyCode="@AppData.Currency" CurrencyInfo="@CurrencyInfo"
-                    IsItemlistEnabled="@(AppData.ShowItems is true)"
-                    IsDiscountEnabled="@(AppData.ShowDiscount is true)"
-                    IsTipEnabled="@(AppData.EnableTips is true)"
-                    IsSearchEnabled="@(AppData.ShowSearch is true)"
-                    IsCategoriesEnabled="@(AppData.ShowCategories is true)"
-                    Items="@Items"
-                    Categories="@Categories"
-                    CustomTipPercentages="@AppData.CustomTipPercentages"
-                    RecentTransactions="@RecentTransactions" LoadRecentTransactions="@LoadRecentTransactions" />
-        </form>
+    <section class="container py-4">
+        <Keypad
+            StoreId="@StoreId"
+            AppId="@AppId"
+            CurrencyCode="@AppData.Currency"
+            CurrencyInfo="@CurrencyInfo"
+            IsItemlistEnabled="@(AppData.ShowItems is true)"
+            IsDiscountEnabled="@(AppData.ShowDiscount is true)"
+            IsTipEnabled="@(AppData.EnableTips is true)"
+            IsSearchEnabled="@(AppData.ShowSearch is true)"
+            IsCategoriesEnabled="@(AppData.ShowCategories is true)"
+            Items="@Items"
+            Categories="@Categories"
+            CustomTipPercentages="@AppData.CustomTipPercentages"
+            RecentTransactions="@RecentTransactions"
+            LoadRecentTransactions="@LoadRecentTransactions"
+            CreateInvoice="@CreateInvoice" />
     </section>
-    <iframe name="checkout" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>
-    *@
-    <iframe name="pos" src="@IframeSrc" allow="clipboard-read;clipboard-write" allowfullscreen></iframe>
 }
 
 @code {
-    private string? _iframeGuid;
-
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        NavigationManager.LocationChanged += OnLocationChanged;
 
         ActionSubscriber.SubscribeToAction<StoreState.SetPointOfSale>(this, action =>
         {
@@ -78,18 +75,19 @@ else if (!string.IsNullOrEmpty(Error))
         base.DisposeAsyncCore(disposing);
 
         ActionSubscriber.UnsubscribeFromAllActions(this);
-        NavigationManager.LocationChanged -= OnLocationChanged;
 
         return ValueTask.CompletedTask;
     }
 
-    private void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    private async Task CreateInvoice(CreatePosInvoiceRequest req)
     {
-        if (args.Location.EndsWith(Routes.PointOfSale))
-        {
-            _iframeGuid = Guid.NewGuid().ToString();
-            StateHasChanged();
-        }
+        _errorMessage = null;
+        req.AppId = AppId;
+        var res = await AccountManager.GetClient().CreatePosInvoice(req);
+        if (res?.TryGetValue("invoiceId", out var invoiceId) is true)
+            NavigationManager.NavigateTo(Routes.CheckoutPath(invoiceId.ToString()));
+        else if (res?.TryGetValue("error", out var error) is true)
+            _errorMessage = error.ToString();
     }
 
     private async Task LoadRecentTransactions()
@@ -109,17 +107,18 @@ else if (!string.IsNullOrEmpty(Error))
             });
     }
 
+    private string? _errorMessage;
     private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
     private string? StoreId => Store?.Id;
     private string? AppId => Store?.PosAppId ?? AppData?.Id;
-    private string? PosUrl => string.IsNullOrEmpty(AppId) ? null : $"{AccountManager.GetAccount()!.BaseUri}apps/{AppId}/pos";
-    private string? IframeSrc => string.IsNullOrEmpty(PosUrl) ? null : $"{PosUrl}?guid={_iframeGuid}";
     private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;
     private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
-    private string? Error => StoreState.Value.PointOfSale?.Error;
+    private string? Error => StoreState.Value.PointOfSale?.Error ?? _errorMessage;
     private IEnumerable<Keypad.RecentTransaction>? RecentTransactions { get; set; }
-    private IEnumerable<AppItem>? Items => AppData?.Items != null ? AppItemParser.ConvertItems(AppData.Items) : null;
+    private IEnumerable<AppItem>? Items => AppData?.Items;
     private IEnumerable<string>? Categories => Items?.SelectMany(g => g.Categories ?? []).ToHashSet().ToList();
-    private NumberFormatInfo DefaultCurrencyInfo => DisplayFormatter.GetNumberFormatInfo("USD");
-    private NumberFormatInfo CurrencyInfo => !string.IsNullOrEmpty(AppData?.Currency) ? DisplayFormatter.GetNumberFormatInfo(AppData.Currency) : DefaultCurrencyInfo;
+    private NumberFormatInfo DefaultCurrencyInfo => DisplayFormatter.GetNumberFormatInfo("USD")!;
+    private NumberFormatInfo CurrencyInfo => !string.IsNullOrEmpty(AppData?.Currency)
+        ? DisplayFormatter.GetNumberFormatInfo(AppData.Currency) ?? DefaultCurrencyInfo
+        : DefaultCurrencyInfo;
 }
