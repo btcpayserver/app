@@ -15,10 +15,10 @@
     <PackageReference Include="blazor-dragdrop" Version="2.6.1" />
     <PackageReference Include="Fluxor.Blazor.Web" Version="6.1.0" />
     <PackageReference Include="Fluxor.Blazor.Web.ReduxDevTools" Version="6.1.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Components" Version="8.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.8" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.Forms" Version="8.0.8" />
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Components" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Forms" Version="8.0.11" />
     <PackageReference Include="QRCoder" Version="1.6.0" />
     <PackageReference Include="ReactorBlazorQRCodeScanner" Version="1.0.7" />
     <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
