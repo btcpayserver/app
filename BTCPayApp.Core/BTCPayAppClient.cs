@@ -2,9 +2,9 @@ using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Web;
-using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.AspNetRip;
 using BTCPayServer.Client;
+using BTCPayServer.Client.App.Models;
 using BTCPayServer.Client.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -101,7 +101,12 @@ public class BTCPayAppClient(string baseUri, HttpClient client) : BTCPayServerCl
     {
         var expiry = expiryOffset + TimeSpan.FromSeconds(response.ExpiresIn);
         SetAccess(response.AccessToken, response.RefreshToken, expiry);
-        return new AccessTokenResult(response.AccessToken, response.RefreshToken, expiry);
+        return new AccessTokenResult
+        {
+            AccessToken = response.AccessToken,
+            RefreshToken = response.RefreshToken,
+            Expiry = expiry
+        };
     }
 
     public async Task<(AccessTokenResult? success, string? errorCode)> RefreshAccess(string? refreshToken = null, CancellationToken? cancellation = default)

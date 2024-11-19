@@ -1,5 +1,4 @@
 ﻿@attribute [Route(Routes.Settings)]
-@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.BTCPayServer
@@ -7,6 +6,7 @@
 @using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client
+@using BTCPayServer.Client.App.Models
 @using Plugin.Fingerprint.Abstractions
 @inject IState<RootState> State
 @inject IState<UIState> UiState
@@ -16,7 +16,6 @@
 @inject IFingerprint Fingerprint
 @inject IState<UIState> UIState
 @inject IState<UserState> UserState
-@inject IState<StoreState> StoreState
 @inject BTCPayConnectionManager ConnectionManager
 @inject OnChainWalletManager OnChainWalletManager
 @inject LightningNodeManager LightningNodeManager

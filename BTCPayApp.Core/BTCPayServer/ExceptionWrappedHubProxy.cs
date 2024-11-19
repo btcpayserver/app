@@ -1,5 +1,5 @@
-﻿using BTCPayApp.CommonServer;
-using BTCPayApp.Core.Helpers;
+﻿using BTCPayApp.Core.Helpers;
+using BTCPayServer.Client.App;
 using BTCPayServer.Lightning;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.Logging;

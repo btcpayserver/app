@@ -1,17 +1,16 @@
-﻿using BTCPayApp.CommonServer;
-using BTCPayApp.Core.Auth;
+﻿using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
+using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
 using BTCPayApp.Core.Wallet;
+using BTCPayServer.Client.App;
 using Laraue.EfCoreTriggers.SqlLite.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -26,8 +25,8 @@ public static class StartupExtensions
             var dir = provider.GetRequiredService<IDataDirectoryProvider>().GetAppDataDirectory().ConfigureAwait(false).GetAwaiter().GetResult();
             options.UseSqlite($"Data Source={dir}/app.db");
             options.UseSqlLiteTriggers();
-        }); 
-        
+        });
+
         serviceCollection.AddMemoryCache();
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddHttpClient();
@@ -50,10 +49,7 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddLDK();
         serviceCollection.AddSingleton<IAuthorizationHandler, BearerAuthorizationHandler>();
-        serviceCollection.AddAuthorizationCore(options =>
-        {
-            options.AddBTCPayPolicies();
-        });
+        serviceCollection.AddAuthorizationCore(options => options.AddBTCPayPolicies());
         return serviceCollection;
     }
 }

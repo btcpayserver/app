@@ -1,9 +1,9 @@
-﻿using BTCPayApp.CommonServer;
-using BTCPayApp.Core.Backup;
+﻿using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
+using BTCPayServer.Client.App;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using NBitcoin;

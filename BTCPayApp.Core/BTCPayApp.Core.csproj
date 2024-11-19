@@ -31,10 +31,12 @@
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
+      <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="8.0.10" />
+      <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.11" />
+      <PackageReference Include="VSS" Version="1.0.1" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\submodules\btcpayserver\BTCPayApp.CommonServer\BTCPayApp.CommonServer.csproj" />
       <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj" />
     </ItemGroup>
 

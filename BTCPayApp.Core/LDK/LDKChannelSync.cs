@@ -1,8 +1,7 @@
-﻿using BTCPayApp.CommonServer;
-using BTCPayApp.Core.BTCPayServer;
-using BTCPayApp.Core.Contracts;
+﻿using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.Wallet;
+using BTCPayServer.Client.App;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using org.ldk.structs;
@@ -21,7 +20,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     private readonly BTCPayAppServerClient _appHubClient;
     private readonly ILogger<LDKChannelSync> _logger;
     private readonly List<IDisposable> _disposables = new();
-    
+
 
     public LDKChannelSync(
         IEnumerable<Confirm> confirms,
@@ -50,8 +49,8 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         Dictionary<uint256, (uint256 TransactionId, int Height, uint256? Block)> relevantTransactionsFromConfirms;
         List<LDKWatchedOutput> watchedOutputs= new();
         List<LDKWatchedOutput> spentWatchedOutputs= new();
-        
-        
+
+
         if (txIds is null)
         {
             txIds = [];
@@ -76,7 +75,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
             relevantTransactionsFromConfirms = txIds.ToDictionary(zz => zz, (uint256 TransactionId, int Height, uint256? Block) (uint256) => (uint256, 0, null));
 
         }
-       
+
         _logger.LogInformation($"Fetching {relevantTransactionsFromConfirms.Count} transactions");
         var txIdsToQuery = relevantTransactionsFromConfirms.Select(zz => zz.Key.ToString()).ToArray();
         var outpoints = watchedOutputs.Select(zz => zz.Outpoint.ToString()).ToArray();
@@ -84,12 +83,12 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         var result = await _connectionManager.HubProxy.FetchTxsAndTheirBlockHeads(lnIdentifier, txIdsToQuery, outpoints);
          var blockHeaders = result.BlockHeaders.ToDictionary(zz => new uint256(zz.Key), zz => BlockHeader.Parse(zz.Value, _network));
         var txs = result.Txs.ToDictionary(zz => new uint256(zz.Key), zz => Transaction.Parse(zz.Value.Transaction, _network));
-        
-        
+
+
         _logger.LogInformation($"Fetched {result.Txs.Count} transactions");
         Dictionary<uint256, List<TwoTuple_usizeTransactionZ>> blockToTxList = new();
-        
-        
+
+
         // Dictionary<uint256, List<TwoTuple_usizeTransactionZ>> confirmedTxList = new();
         foreach (var transactionResult in result.Txs)
         {
@@ -108,7 +107,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
                     case null when transactionResult.Value.BlockHash is not null:
                     {
                         blockToTxList.TryAdd(new uint256(transactionResult.Value.BlockHash), new List<TwoTuple_usizeTransactionZ>());
-              
+
                         var list = blockToTxList[new uint256(transactionResult.Value.BlockHash)];
                         list.Add(TwoTuple_usizeTransactionZ.of(0,tx.ToBytes()));
                         break;
@@ -121,7 +120,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
                             confirm.transaction_unconfirmed(tx1.TransactionId.ToBytes());
                         }
                         blockToTxList.TryAdd(new uint256(transactionResult.Value.BlockHash), new List<TwoTuple_usizeTransactionZ>());
-              
+
                         var list = blockToTxList[new uint256(transactionResult.Value.BlockHash)];
                         list.Add(TwoTuple_usizeTransactionZ.of(0,tx.ToBytes()));
                         break;
@@ -134,10 +133,10 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
                 blockToTxList.TryAdd(new uint256(transactionResult.Value.BlockHash), new List<TwoTuple_usizeTransactionZ>());
                 var list = blockToTxList[new uint256(transactionResult.Value.BlockHash)];
                 list.Add(TwoTuple_usizeTransactionZ.of(0,tx.ToBytes()));
-                
+
                 spentWatchedOutputs.Add(watchedOutput);
             }
-            
+
         }
         foreach (var block in blockToTxList)
         {
@@ -154,7 +153,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
 
         await _ldkFilter.OutputsSpent(spentWatchedOutputs);
     }
-    
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         _disposables.Clear();
@@ -173,20 +172,20 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
             confirm.best_block_updated(bbHeader, bb.BlockHeight);
         }
 
-        
-        
+
+
         _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<string>(
             action =>_appHubClient.OnNewBlock += action,
             action => _appHubClient.OnNewBlock -= action, OnNewBlock,
-            cancellationToken)); 
-        
+            cancellationToken));
+
         _disposables.Add(ChannelExtensions.SubscribeToEventWithChannelQueue<TransactionDetectedRequest>(
             action => _appHubClient.OnTransactionDetected += action,
             action => _appHubClient.OnTransactionDetected -= action, OnTransactionUpdate,
             cancellationToken));
     }
 
-  
+
 
     private async Task OnTransactionUpdate( TransactionDetectedRequest txUpdate , CancellationToken cancellationToken)
     {
@@ -194,12 +193,12 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
 
         await PollForTransactionUpdates([new uint256(txUpdate.TxId)]);
         _logger.LogInformation($"Transaction update {txUpdate.TxId} processed");
-        
+
     }
     private async Task OnNewBlock(string e, CancellationToken arg2)
     {
         _logger.LogInformation($"New block {e}");
-       
+
         var blockHeaderResponse = await  _onchainWalletManager.GetBestBlock();
         var header = BlockHeader.Parse(blockHeaderResponse.BlockHeader, _network);
         var headerBytes = header.ToBytes();
@@ -214,7 +213,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        
+
     }
 
     public void Dispose()

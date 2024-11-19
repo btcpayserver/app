@@ -61,8 +61,8 @@ public static class StoreHelpers
             var config = await onChainWalletManager.GetConfig();
             using var jsonDoc = JsonDocument.Parse(onchain.Config.ToString());
             if (jsonDoc.RootElement.TryGetProperty("accountDerivation", out var derivationSchemeElement) &&
-                derivationSchemeElement.GetString() is { } derivationScheme && 
-                config.Derivations.Any(pair => pair.Value.Identifier == 
+                derivationSchemeElement.GetString() is { } derivationScheme &&
+                config.Derivations.Any(pair => pair.Value.Identifier ==
                                                $"DERIVATIONSCHEME:{derivationScheme}"))
             {
                 return true;
@@ -71,16 +71,16 @@ public static class StoreHelpers
 
         return false;
     }
-    
+
     public static async Task<bool> IsLightningOurs(this LightningNodeManager lightningNodeManager, GenericPaymentMethodData? lightning)
     {
         if (!string.IsNullOrEmpty(lightning?.Config.ToString()))
         {
             using var jsonDoc = JsonDocument.Parse(lightning.Config.ToString());
             if (jsonDoc.RootElement.TryGetProperty("connectionString", out var connectionStringElement) &&
-                connectionStringElement.GetString() is { } connectionString && 
-                LightningConnectionStringHelper.ExtractValues(connectionString, out var lnConnectionString) is { } lnValues && 
-                lnConnectionString == "app" && 
+                connectionStringElement.GetString() is { } connectionString &&
+                LightningConnectionStringHelper.ExtractValues(connectionString, out var lnConnectionString) is { } lnValues &&
+                lnConnectionString == "app" &&
                 lnValues.TryGetValue("key", out var key) &&
                 key is not null &&
                 await lightningNodeManager.Node.ApiKeyManager.CheckPermission(key, APIKeyPermission.Read))

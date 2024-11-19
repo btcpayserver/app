@@ -1,11 +1,10 @@
 ﻿@attribute [Route(Routes.Funds)]
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
-@using BTCPayApp.CommonServer.Models
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.BTCPayServer
-@using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayServer.Client.App.Models
 @using NBitcoin
 @using BTCPayServer.Client.Models
 @using BTCPayServer.Lightning
@@ -14,7 +13,6 @@
 @inject IState<UIState> UIState
 @inject IState<StoreState> StoreState
 @inject IAccountManager AccountManager
-@inject OnChainWalletManager OnChainWalletManager
 @inject BTCPayConnectionManager ConnectionManager
 
 <PageTitle>@GetTitle()</PageTitle>

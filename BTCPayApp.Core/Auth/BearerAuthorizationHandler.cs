@@ -1,4 +1,4 @@
-using BTCPayApp.CommonServer;
+using BTCPayApp.Core.Helpers;
 using BTCPayServer.Client;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -8,12 +8,16 @@ namespace BTCPayApp.Core.Auth;
 
 public class BearerAuthorizationHandler(IOptionsMonitor<IdentityOptions> identityOptions) : AuthorizationHandler<PolicyRequirement>
 {
+    // Copied from BTCPayServer, because we cannot reference them. We need to keep the same values!
+    private const string ServerAdminRole = "ServerAdmin";
+    private const string GreenfieldBearerAuthenticationScheme = "Greenfield.Bearer";
+
     //TODO: In the future, we will add these store permissions to actual aspnet roles, and remove this class.
     private static readonly PermissionSet _serverAdminRolePermissions = new([Permission.Create(Policies.CanViewStoreSettings)]);
 
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, PolicyRequirement requirement)
     {
-        if (context.User.Identity?.AuthenticationType != AuthenticationSchemes.GreenfieldBearer)
+        if (context.User.Identity?.AuthenticationType != GreenfieldBearerAuthenticationScheme)
             return Task.CompletedTask;
 
         var userId = context.User.Claims.FirstOrDefault(c => c.Type == identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType)?.Value;
@@ -22,7 +26,7 @@ public class BearerAuthorizationHandler(IOptionsMonitor<IdentityOptions> identit
 
         var permissionSet = new PermissionSet();
         var success = false;
-        var isAdmin = context.User.IsInRole(Roles.ServerAdmin);
+        var isAdmin = context.User.IsInRole(ServerAdminRole);
         var storeId = context.Resource as string;
         var policy = requirement.Policy;
         var requiredUnscoped = false;

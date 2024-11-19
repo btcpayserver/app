@@ -1,10 +1,10 @@
 ﻿using System.Net;
 using System.Net.WebSockets;
-using BTCPayApp.CommonServer;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
+using BTCPayServer.Client.App;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;

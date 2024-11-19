@@ -1,5 +1,5 @@
-using BTCPayApp.CommonServer.Models;
 using BTCPayApp.Core.Helpers;
+using BTCPayServer.Client.App.Models;
 using BTCPayServer.Client.Models;
 
 namespace BTCPayApp.Core.Auth;

@@ -1,13 +1,7 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
-using BTCPayApp.CommonServer.Models;
-using BTCPayApp.Core.JsonConverters;
-using BTCPayApp.Core.LDK;
+﻿using BTCPayApp.Core.JsonConverters;
 using BTCPayServer.Lightning;
 using Laraue.EfCoreTriggers.Common.Extensions;
-using Laraue.EfCoreTriggers.Common.TriggerBuilders.Actions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Hosting;
 using NBitcoin;
 
 namespace BTCPayApp.Core.Data;
@@ -189,12 +183,12 @@ public class AppDbContext : DbContext
                             ActionType = OutboxAction.Delete
                         })))
             .AfterUpdate(trigger => trigger
-                .Action(group => 
-                    
+                .Action(group =>
+
                     group.Update<AppLightningPayment>(
                     (tableRefs, setting) => tableRefs.Old.PaymentHash == setting.PaymentHash,
                     (tableRefs, setting) => new AppLightningPayment() {Version = tableRefs.Old.Version + 1}).Insert(
-                        // .InsertIfNotExists( (@ref, outbox) => 
+                        // .InsertIfNotExists( (@ref, outbox) =>
                         // outbox.Version != @ref.New.Version || outbox.ActionType != OutboxAction.Update || outbox.Entity != "Payment" || outbox.Key != @ref.New.PaymentHash+ "_"+@ref.New.PaymentId+ "_"+@ref.New.Inbound,
                         @ref => new Outbox()
                         {
