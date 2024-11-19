@@ -299,7 +299,7 @@ public class AuthStateProvider(
 
     public async Task<FormResult> Register(string serverUrl, string email, string password, CancellationToken? cancellation = default)
     {
-        var payload = new SignupRequest
+        var payload = new CreateApplicationUserRequest
         {
             Email = email,
             Password = password
@@ -317,10 +317,10 @@ public class AuthStateProvider(
             }
             else
             {
-                var signup = response.ToObject<SignupResult>();
-                if (signup.RequiresConfirmedEmail)
+                var signup = response.ToObject<ApplicationUserData>();
+                if (signup.RequiresEmailConfirmation)
                     message += " Please confirm your email.";
-                if (signup.RequiresUserApproval)
+                if (signup.RequiresApproval)
                     message += " The new account requires approval by an admin before you can log in.";
             }
             await SetCurrentAccount(account);

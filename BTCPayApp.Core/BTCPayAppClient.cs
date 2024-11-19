@@ -140,7 +140,7 @@ public class BTCPayAppClient(string baseUri, HttpClient client) : BTCPayServerCl
         return await SendHttpRequest<CreateStoreData>("btcpayapp/create-store", null, HttpMethod.Get, cancellation);
     }
 
-    public async Task<JObject> RegisterUser(SignupRequest payload, CancellationToken cancellation = default)
+    public async Task<JObject> RegisterUser(CreateApplicationUserRequest payload, CancellationToken cancellation = default)
     {
         return await SendHttpRequest<JObject>("btcpayapp/register", payload, HttpMethod.Post, cancellation);
     }
