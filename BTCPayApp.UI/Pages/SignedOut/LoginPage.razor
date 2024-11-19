@@ -102,11 +102,6 @@
     {
         base.OnInitialized();
 
-        if (!string.IsNullOrEmpty(Success))
-        {
-            SuccessMessage = Uri.UnescapeDataString(Success);
-        }
-
         if (!string.IsNullOrEmpty(ServerUrl))
         {
             Model.Uri = Uri.UnescapeDataString(ServerUrl);

@@ -84,10 +84,8 @@
 
     private string? _successMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnParametersSet()
     {
-        await base.OnInitializedAsync();
-
         if (!string.IsNullOrEmpty(Success))
         {
             _successMessage = Uri.UnescapeDataString(Success);

@@ -44,6 +44,14 @@
         AuthenticationStateProvider.AuthenticationStateChanged += AuthStateProviderOnAuthenticationStateChanged;
     }
 
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Success))
+        {
+            SuccessMessage = Uri.UnescapeDataString(Success);
+        }
+    }
+
     protected override ValueTask DisposeAsyncCore(bool disposing)
     {
         base.DisposeAsyncCore(disposing);
