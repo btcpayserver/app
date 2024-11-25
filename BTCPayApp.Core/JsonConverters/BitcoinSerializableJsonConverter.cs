@@ -1,25 +1,12 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-using NBitcoin;
+﻿using NBitcoin;
 
 namespace BTCPayApp.Core.JsonConverters;
 
-public class BitcoinSerializableJsonConverter<T> : JsonConverter<T> where T : IBitcoinSerializable
+public class BitcoinSerializableJsonConverter<T> : GenericStringJsonConverter<T> where T : IBitcoinSerializable
 {
-    
-    public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    public override T Create(string str)
     {
-        if (reader.TokenType == JsonTokenType.Null)
-        {
-            return default;
-        }
-
-        if (reader.TokenType != JsonTokenType.String)
-        {
-            throw new JsonException("Expected string");
-        }
-
-        var bytes = Convert.FromHexString(reader.GetString());
+        var bytes = Convert.FromHexString(str);
         var instance = Activator.CreateInstance<T>();
         return NetworkHelper.Try(network =>
         {
@@ -29,14 +16,8 @@ public class BitcoinSerializableJsonConverter<T> : JsonConverter<T> where T : IB
     }
 
 
-    public override void Write(Utf8JsonWriter writer, T? value, JsonSerializerOptions options)
+    public override string ToString(T? instance)
     {
-        if (value == null)
-        {
-            writer.WriteNullValue();
-            return;
-        }
-
-        writer.WriteStringValue(Convert.ToHexString(value.ToBytes()).ToLowerInvariant());
+        return Convert.ToHexString(instance.ToBytes()).ToLowerInvariant();
     }
 }

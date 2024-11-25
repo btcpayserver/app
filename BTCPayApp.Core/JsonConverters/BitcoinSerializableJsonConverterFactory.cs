@@ -4,7 +4,7 @@ using NBitcoin;
 
 namespace BTCPayApp.Core.JsonConverters;
 
-public class BitcoinSerializableJsonConverterFactory: JsonConverterFactory
+public class BitcoinSerializableJsonConverterFactory : JsonConverterFactory
 {
     public override bool CanConvert(Type typeToConvert)
     {
@@ -14,6 +14,6 @@ public class BitcoinSerializableJsonConverterFactory: JsonConverterFactory
     public override JsonConverter? CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         var converterType = typeof(BitcoinSerializableJsonConverter<>).MakeGenericType(typeToConvert);
-        return (JsonConverter)Activator.CreateInstance(converterType)!;
+        return (JsonConverter) Activator.CreateInstance(converterType)!;
     }
 }

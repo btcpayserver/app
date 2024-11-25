@@ -8,7 +8,6 @@ public static class NetworkHelper
     {
         Exception? lastException = null;
         foreach (var network in Network.GetNetworks())
-        {
             try
             {
                 return func.Invoke(network);
@@ -17,7 +16,6 @@ public static class NetworkHelper
             {
                 lastException = e;
             }
-        }
 
         throw lastException!;
     }
