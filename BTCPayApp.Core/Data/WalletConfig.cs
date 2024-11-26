@@ -29,11 +29,22 @@ public class WalletConfig
 public class CoinSnapshot
 {
     public BlockSnapshot BlockSnapshot { get; set; }
-    public Dictionary<string, string[]> Coins { get; set; }
+    public Dictionary<string, SavedCoin[]> Coins { get; set; }
+    
+}
+
+public class SavedCoin
+{
+    
+    [JsonConverter(typeof(BitcoinSerializableJsonConverterFactory))]
+    public OutPoint Outpoint { get; set; }
+    [JsonConverter(typeof(KeyPathJsonConverter))]
+    public KeyPath? Path { get; set; }
 }
 
 public class BlockSnapshot
 {
+    
     public uint BlockHeight { get; set; }
     [JsonConverter(typeof(UInt256JsonConverter))]
     public uint256 BlockHash { get; set; }

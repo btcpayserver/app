@@ -347,10 +347,7 @@ public class OnChainWalletManager : BaseHostedService
             var config = await GetConfig();
             var bb = await GetBestBlock();
             var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
-            var utxos = (await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers))
-                .GroupBy(response => response.Identifier)
-                .ToDictionary(grouping => grouping.Key,
-                    grouping => grouping.Select(response => response.Outpoint).ToArray());
+            var utxos = (await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers));
             config.CoinSnapshot = new CoinSnapshot()
             {
                 BlockSnapshot = new BlockSnapshot()
@@ -358,7 +355,12 @@ public class OnChainWalletManager : BaseHostedService
                     BlockHash = uint256.Parse(bb.BlockHash),
                     BlockHeight = (uint) bb.BlockHeight
                 },
-                Coins = utxos
+                Coins = utxos.ToDictionary(kv => kv.Key, 
+                    kv => kv.Value.Select(coin => new SavedCoin()
+                {
+                    Outpoint = OutPoint.Parse(coin.Outpoint),
+                    Path = coin.Path is null ? null : KeyPath.Parse(coin.Path)
+                }).ToArray())
             };
             await _configProvider.Set(WalletConfig.Key, config, true);
         }
@@ -429,8 +431,8 @@ public class OnChainWalletManager : BaseHostedService
     //         Descriptor.create_spendable_outpcreate_spendable_outputs_psbtuts_psbt
     //         switch (Descriptor)
     //         {
-    //             case SpendableOutputDescriptor.SpendableOutputDescriptor_DelayedPaymentOutput spendableOutputDescriptorDelayedPaymentOutput:
-    //                 spendableOutputDescriptorDelayedPaymentOutput.delayed_payment_output.
+    //             case SpendableOutputDescriptor.Spendatput spendableOutputDescriptorDelayedPaymentOutput:
+                                                            //                 spendableOutputDescriptorDelayedPaymentOutput.delayed_payment_output.bleOutputDescriptor_DelayedPaymentOu
     //                 break;
     //             case SpendableOutputDescriptor.SpendableOutputDescriptor_StaticOutput spendableOutputDescriptorStaticOutput:
     //                 //ignore
@@ -490,26 +492,32 @@ public class OnChainWalletManager : BaseHostedService
         var result = new List<ICoin>();
 
         var utxosThatWeCanDeriveKeysFor =
-            utxos.Where(utxo => identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Identifier)).ToArray();
-        foreach (var coin in utxosThatWeCanDeriveKeysFor)
+            utxos.Where(utxo => identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Key)).ToDictionary(pair => pair.Key, pair => pair.Value);
+        foreach (var kp in utxosThatWeCanDeriveKeysFor)
         {
             var derivation =
-                config.Derivations.Values.First(derivation => derivation.Identifier == coin.Identifier);
+                config.Derivations.Values.First(derivation => derivation.Identifier == kp.Key);
             var data = derivation.Descriptor.ExtractFromDescriptor(config.NBitcoinNetwork);
             if (data is null)
                 continue;
-            var coinKeyPath = KeyPath.Parse(coin.Path);
-            var key = new Mnemonic(config.Mnemonic).DeriveExtKey().Derive(data.Value.Item2.KeyPath)
-                .Derive(coinKeyPath).PrivateKey;
-            var c = ToCoin(coin);
 
 
-            result.Add(new CoinWithKey(c.Outpoint, c.TxOut, key));
+            foreach (var coin in kp.Value)
+            {
+                var coinKeyPath = KeyPath.Parse(coin.Path);
+                var key = new Mnemonic(config.Mnemonic).DeriveExtKey().Derive(data.Value.Item2.KeyPath)
+                    .Derive(coinKeyPath).PrivateKey;
+                var c = ToCoin(coin);
+
+
+                result.Add(new CoinWithKey(c.Outpoint, c.TxOut, key));
+            }
         }
 
-        foreach (var coin in utxos.Where(utxo => !identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Identifier)))
+        foreach (var kv in utxos.ExceptBy(utxosThatWeCanDeriveKeysFor.Select(pair => pair.Key), kv => kv.Key).ToArray()) 
         {
-            result.Add(ToCoin(coin));
+            foreach (var coin in kv.Value)
+                result.Add(ToCoin(coin));
         }
 
         return result;

@@ -99,7 +99,7 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
         return await Wrap(async ()=>  await _hubProxy.UpdatePsbt(identifiers, psbt));
     }
 
-    public async Task<CoinResponse[]> GetUTXOs(string[] identifiers)
+    public async Task<Dictionary<string, CoinResponse[]>> GetUTXOs(string[] identifiers)
     {
         return await Wrap(async ()=>  await _hubProxy.GetUTXOs(identifiers));
     }
