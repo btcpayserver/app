@@ -7,6 +7,8 @@ using Microsoft.Maui.Platform;
 
 namespace BTCPayApp.Maui;
 
+    [XamlCompilation(XamlCompilationOptions.Skip)]
+
 public partial class MainPage : ContentPage
 {
     public MainPage()

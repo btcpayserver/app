@@ -65,7 +65,7 @@ public static class MauiProgram
 }
 ));
 #endif
-            static bool LogEvent(string eventName, string type = null)
+            static bool LogEvent(string eventName, string? type = null)
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"Lifecycle event: {eventName}{(type == null ? string.Empty : $" ({type})")}");

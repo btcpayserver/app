@@ -5,11 +5,16 @@ namespace BTCPayApp.Maui;
 
 public class HostedServiceInitializer : IMauiInitializeService, IDisposable
 {
-    static readonly SemaphoreSlim _semaphore = new(1, 1);
+    static readonly SemaphoreSlim Semaphore = new(1, 1);
     private static bool _running = false;
-    private static Task? _executingTask;
-    private IEnumerable<IHostedService> _services;
+    public static Task? ExecutingTask;
+    private IEnumerable<IHostedService>? _services;
     private ILogger<HostedServiceInitializer>? _logger;
+
+    public HostedServiceInitializer(IEnumerable<IHostedService> services)
+    {
+        _services = services;
+    }
 
     public void Initialize(IServiceProvider serviceProvider)
     {
@@ -24,13 +29,17 @@ public class HostedServiceInitializer : IMauiInitializeService, IDisposable
         return LockWaitRunExecute(async () =>
         {
             if (!_running) return;
-            foreach (var service in _services)
+            if (_services is not null)
             {
-                await service.StopAsync(CancellationToken.None);
-            }
+                foreach (var service in _services)
+                {
+                    await service.StopAsync(CancellationToken.None);
+                }
 
+            }
+         
             _running = false;
-            _logger.LogInformation("Service stopped");
+            _logger?.LogInformation("Service stopped");
         });
     }
 
@@ -39,24 +48,24 @@ public class HostedServiceInitializer : IMauiInitializeService, IDisposable
         await LockWaitRunExecute(async () =>
         {
             if (_running) return;
-            foreach (var service in _services)
+            foreach (var service in _services!)
             {
                 await service.StartAsync(CancellationToken.None);
             }
 
             _running = true;
-            _logger.LogInformation("Service started");
+            _logger?.LogInformation("Service started");
         });
     }
 
 
     private async Task LockWaitRunExecute(Func<Task> action)
     {
-        await _semaphore.WaitAsync();
-        if (_executingTask != null)
-            await _executingTask;
+        await Semaphore.WaitAsync();
+        if (ExecutingTask != null)
+            await ExecutingTask;
         await action();
-        _semaphore.Release();
+        Semaphore.Release();
     }
 
     public void Dispose()
