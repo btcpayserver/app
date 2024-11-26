@@ -2,11 +2,17 @@
 
 namespace BTCPayApp.Core.LDK;
 
+/// <summary>
+/// A typed variant of <see cref="ILDKEventHandler"/> that handles a specific type of event 
+/// </summary>
+/// <typeparam name="TEvent"></typeparam>
 public interface ILDKEventHandler<in TEvent>: ILDKEventHandler where TEvent : Event
 {
     Task Handle(TEvent @event);
 }
-
+/// <summary>
+/// Handles events published by LDK
+/// </summary>
 public interface ILDKEventHandler
 {
     Task Handle(Event @event)

@@ -3,7 +3,9 @@ using org.ldk.structs;
 using EventHandler = org.ldk.structs.EventHandler;
 
 namespace BTCPayApp.Core.LDK;
-
+/// <summary>
+/// Runs the LDK background processor which handles the main event loop for the LDK library.
+/// </summary>
 public class LDKBackgroundProcessor : IScopedHostedService
 {
     private readonly Persister _persister;

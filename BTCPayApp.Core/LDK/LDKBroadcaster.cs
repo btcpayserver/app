@@ -4,6 +4,9 @@ using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;
 
+/// <summary>
+/// Enables LDK to broadcast transactions through BTCPayServer.
+/// </summary>
 public class LDKBroadcaster : BroadcasterInterfaceInterface
 {
     private readonly Network _network;

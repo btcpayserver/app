@@ -3,6 +3,9 @@ using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;
 
+/// <summary>
+/// Provides a bitcoin address from the main wallet when sweeping funds from closed channels 
+/// </summary>
 public class LDKChangeDestinationSource:ChangeDestinationSourceInterface
 {
     private readonly LightningNodeManager _lightningNodeManager;

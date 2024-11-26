@@ -5,6 +5,7 @@ using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;
 
+// a background service that periodically checks if we have any public channels if so, publish a node announcement to the lightning network to be discoverable.
 public class LDKAnnouncementBroadcaster : IScopedHostedService, ILDKEventHandler<Event.Event_ChannelReady>
 {
     private readonly LDKPeerHandler _ldkPeerHandler;
