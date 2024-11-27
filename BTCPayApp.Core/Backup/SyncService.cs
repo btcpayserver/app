@@ -443,7 +443,6 @@ public class SyncService : IDisposable
                     await SyncToLocal(cancellationToken);
                 else
                     await SyncToRemote( cancellationToken);
-                await Task.Delay(2000, cancellationToken);
             }
             catch (OperationCanceledException)
             {
@@ -452,6 +451,10 @@ public class SyncService : IDisposable
             catch (Exception e)
             {
                 _logger.LogError(e, "Error while syncing to {Local}", local ? "local" : "remote");
+            }finally 
+            {
+                if(!cancellationToken.IsCancellationRequested)
+                    await Task.Delay(2000, cancellationToken);
             }
         }
     }
