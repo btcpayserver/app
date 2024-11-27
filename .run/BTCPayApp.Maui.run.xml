@@ -8,4 +8,11 @@
       <option name="Build" />
     </method>
   </configuration>
+  <configuration default="false" name="BTCPayApp.Maui" type="XamarinIOSProject" factoryName="Xamarin.iOS">
+    <option name="PROJECT_PATH" value="$PROJECT_DIR$/BTCPayApp.Maui/BTCPayApp.Maui.csproj" />
+    <option name="PROGRAM_PARAMETERS" value="" />
+    <option name="IS_PASS_PARENT_ENVS" value="false" />
+    <option name="EXTRA_MLAUNCH_PARAMETERS" value="" />
+    <method v="2" />
+  </configuration>
 </component>

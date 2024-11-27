@@ -2,7 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <Platforms>AnyCPU;x64</Platforms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>WinExe</OutputType>
@@ -11,13 +10,14 @@
   </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Photino.Blazor" Version="2.7.0" />
+        <PackageReference Include="Photino.Blazor" Version="3.2.0" />
     </ItemGroup>
-    <ItemGroup>
-        <Content Update="wwwroot\**">
-            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        </Content>
-    </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
       <ProjectReference Include="..\BTCPayApp.Desktop\BTCPayApp.Desktop.csproj" />

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Photino.Blazor;
-using PhotinoNET;
+using Photino.NET;
 
 namespace BTCPayApp.Photino;
 
