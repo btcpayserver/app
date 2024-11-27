@@ -40,28 +40,29 @@ jobs:
           name: android build
           path: |
             publish/android
-      
-  build-ios:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Setup Xcode version
-        uses: maxim-lobanov/setup-xcode@v1.6.0
-        with:
-          xcode-version: 16.0
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Install workloads
-        run: dotnet workload install maui
-      - name: Build
-        run: dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net8.0-ios -c Debug -o publish/ios
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios build
-          path: |
-            publish/ios
+
+# need a apple dev account to continue on this      
+#  build-ios:
+#    runs-on: macos-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          submodules: recursive
+#      - name: Setup Xcode version
+#        uses: maxim-lobanov/setup-xcode@v1.6.0
+#        with:
+#          xcode-version: 16.0
+#      - name: Setup .NET
+#        uses: actions/setup-dotnet@v4
+#        with:
+#          dotnet-version: 8.0.x
+#      - name: Install workloads
+#        run: dotnet workload install maui
+#      - name: Build
+#        run: dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net8.0-ios -c Debug -o publish/ios
+#      - name: Upload artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: ios build
+#          path: |
+#            publish/ios
