@@ -107,12 +107,12 @@ jobs:
           dotnet-version: 8.0.x
       - name: Build mac x64
         run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -r osx-x64 -c Debug -o publish/osx-x64
-      - name: Build linux 
+      - name: Build mac arm64 
         run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -r osx-arm64  -c Debug -o publish/osx-arm64
-      - name: Upload artifact linux
+      - name: Upload artifact mac
         uses: actions/upload-artifact@v4
         with:
-          name: linux build
+          name: mac build
           path: |
             publish/osx-x64
             publish/osx-arm64
