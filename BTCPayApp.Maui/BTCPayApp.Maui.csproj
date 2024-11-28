@@ -62,10 +62,10 @@
     <ItemGroup>
         <PackageReference Include="org.ldk" Version="0.0.123"/>
         <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1"/>
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.91"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.100"/>
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2"/>
-        <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.91"/>
-        <PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.91"/>
+        <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100"/>
+        <PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.100"/>
     </ItemGroup>
     <ItemGroup  Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
 
