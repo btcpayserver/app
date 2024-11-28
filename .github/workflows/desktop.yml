@@ -1,4 +1,4 @@
-﻿name: 'Test the desktop app'
+﻿name: 'Test & Build the desktop app'
 on:
   push:
     branches:
@@ -47,8 +47,8 @@ jobs:
         run: dotnet test -v n --logger "console;verbosity=normal" BTCPayApp.Tests
         # Stop infrastructure
 
-  build-windows:
-    runs-on: windows-latest
+  build-desktop:
+    runs-on: ubuntu-latest
     steps:
       # Setup code, .NET and Android
       - uses: actions/checkout@v4
@@ -79,7 +79,7 @@ jobs:
       - name: Upload artifact linux
         uses: actions/upload-artifact@v4
         with:
-          name: windows build
+          name: linux build
           path: |
             publish/linux-x64
             publish/linux-arm64
