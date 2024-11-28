@@ -18,7 +18,7 @@ env:
 
 # https://blog.taranissoftware.com/build-net-maui-apps-with-github-actions
 jobs:
-  build:
+  test-desktop:
     runs-on: ubuntu-latest
     steps:
       # Setup code, .NET and Android
@@ -43,9 +43,43 @@ jobs:
             sleep 10
           done
       # Run tests
-      - name: Run fast tests
-        run: dotnet test -v n --logger "console;verbosity=normal" --filter "Fast=Fast" BTCPayApp.Tests
-      - name: Run integration tests
-        run: dotnet test  -v n --logger "console;verbosity=normal" --filter "Integration=Integration"  BTCPayApp.Tests
-      - name: Run Selenium tests
-        run: dotnet test --filter "Selenium=Selenium" -v n --logger "console;verbosity=normal"  BTCPayApp.Tests
+      - name: Run tests
+        run: dotnet test -v n --logger "console;verbosity=normal" BTCPayApp.Tests
+        # Stop infrastructure
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      # Setup code, .NET and Android
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Build win x64
+        run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -f win-x64  -c Debug -o publish/win-x64
+      - name: Build win x86
+        run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -f win-x86  -c Debug -o publish/win-x86
+      - name: Build win-arm64
+        run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -f win-arm64  -c Debug -o publish/win-arm64
+      - name: Build linux x64
+        run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -f linux-x64  -c Debug -o publish/linux-x64
+      - name: Build linux arm64
+        run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -f linux-arm64  -c Debug -o publish/linux-arm64
+      - name: Upload artifact win
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows build
+          path: |
+            publish/win-x64
+            publish/win-x86
+            publish/win-arm64  
+      - name: Upload artifact linux
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows build
+          path: |
+            publish/linux-x64
+            publish/linux-arm64

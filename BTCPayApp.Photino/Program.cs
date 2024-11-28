@@ -17,6 +17,7 @@ public static class Program
     private static void Main(string[] args)
     {
         var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
+        
         builder.Services.TryAddSingleton<IConfiguration>(_ =>
         {
             var configBuilder = new ConfigurationBuilder();
@@ -27,7 +28,7 @@ public static class Program
         builder.Services.ConfigureBTCPayAppCore();
         builder.Services.ConfigureBTCPayAppDesktop();
         builder.Services.AddLogging();
-        builder.RootComponents.Add<App>("app");
+        builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
 
         var app = builder.Build();
