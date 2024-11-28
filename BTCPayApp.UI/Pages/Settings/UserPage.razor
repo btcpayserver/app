@@ -2,9 +2,12 @@
 @using System.ComponentModel
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.BTCPayServer
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
+@inject IState<RootState> State
 @inject IAccountManager AccountManager
 @inject IDataDirectoryProvider DataDirectoryProvider
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -103,16 +106,20 @@
         </div>
     }
 
-    <h2>Want to leave?</h2>
+    <h2>Logout</h2>
     <div class="box">
-        <ul class="list-group list-group-flush list-group-links">
-            <li class="list-group-item">
-                <button class="btn btn-link text-danger" type="button" @onclick="Logout">Logout</button>
-            </li>
-            <li class="list-group-item">
-                <button class="btn btn-link text-danger" type="button" @onclick="RemoveAccount">Remove account</button>
-            </li>
-        </ul>
+        @switch (State.Value.ConnectionState)
+        {
+            case BTCPayConnectionState.ConnectedAsMaster:
+                <p>This device is currently connected as primary device for communication with the BTCPay Server.</p>
+                <p>Please note, that when you sign out of the account on this device, your Lightning node will go offline and you will not be able to receive any payments.</p>
+                break;
+            case BTCPayConnectionState.ConnectedAsSlave:
+                <p>This device is currently connected as additional device for communication with the BTCPay Server.</p>
+                <p>Please ensure, that your primary device is still connected to the BTCPay Server, because otherwise you will not be able to receive any payments.</p>
+                break;
+        }
+        <button class="btn btn-outline-danger w-100 mt-2" type="button" @onclick="Logout">Logout</button>
     </div>
 </section>
 
