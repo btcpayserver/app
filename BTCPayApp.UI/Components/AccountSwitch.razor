@@ -6,33 +6,24 @@
 @inject NavigationManager NavigationManager
 @implements IDisposable
 
-@if (_account != null)
+
+@if (_accounts?.Count() > 1)
 {
     <button class="d-inline-flex align-items-center btn btn-link text-body dropdown-toggle dropdown-toggle-no-caret p-0 gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
         <AccountInfo Account="@_account" />
         <Icon Symbol="caret-down"/>
     </button>
     <ul class="dropdown-menu">
-        @if (_accounts?.Count() > 1)
+        @foreach (var account in _accounts)
         {
-            @foreach (var account in _accounts)
-            {
-                if (account.Id == _account.Id) continue;
-                <li>
-                    <button class="d-inline-flex align-items-center dropdown-item gap-2" type="button" @onclick="() => SwitchToAccount(account)">
-                        <AccountInfo Account="@account" />
-                    </button>
-                </li>
-            }
-            <li><hr class="dropdown-divider"></li>
+            if (account.Id == _account.Id) continue;
+            <li>
+                <button class="d-inline-flex align-items-center dropdown-item gap-2" type="button" @onclick="() => SwitchToAccount(account)">
+                    <AccountInfo Account="@account" />
+                </button>
+            </li>
         }
-        <li>
-            <a class="dropdown-item fw-semibold text-danger" href="@Routes.Logout">
-                <span>Logout @(_account.Name ?? _account.Email)</span>
-            </a>
-        </li>
     </ul>
-
     <div class="modal fade" id="AccountSwitchModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             @if (Model != null)
@@ -80,6 +71,12 @@
                 </EditForm>
             }
         </div>
+    </div>
+}
+else if (_account != null)
+{
+    <div>
+        <AccountInfo Account="@_account" />
     </div>
 }
 
