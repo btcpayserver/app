@@ -5,6 +5,7 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IState<NotificationState> NotificationState
 @inject IDispatcher Dispatcher
+@inject IActionSubscriber ActionSubscriber
 
 <PageTitle>Notifications</PageTitle>
 
@@ -30,7 +31,7 @@
     }
     else if (Model.Notifications is not null)
     {
-        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@Error">
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
             <DataAnnotationsValidator/>
             @foreach (var item in Model.Notifications)
             {
@@ -58,6 +59,7 @@
 @code {
     [Parameter, EditorRequired]
     public string? AppId { get; set; }
+    private string? _successMessage;
 
     private ValidationEditContext? _validationEditContext;
 
@@ -65,11 +67,28 @@
     {
         await base.OnInitializedAsync();
 
+        ActionSubscriber.SubscribeToAction<NotificationState.UpdatedSettings>(this, action =>
+        {
+            if (action.Settings == null || action.Error != null) return;
+            _successMessage = "Settings successfully updated";
+            InvokeAsync(StateHasChanged);
+        });
+
         Dispatcher.Dispatch(new NotificationState.FetchSettings());
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        ActionSubscriber.UnsubscribeFromAllActions(this);
+
+        return ValueTask.CompletedTask;
     }
 
     private void HandleValidSubmit()
     {
+        _successMessage = null;
         var disabled = Model.Notifications!
             .Where(n => !n.Enabled)
             .Select(n => n.Identifier)
