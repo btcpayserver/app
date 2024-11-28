@@ -33,25 +33,22 @@
     }
     @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Config is not null)
     {
-        // var config = OnChainWalletManager.WalletConfig!;
         <h4>Wallet</h4>
         <div class="box mb-3">
             <div class="form-floating">
                 <TruncateCenter Text="@Config.Fingerprint" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                 <label>Fingerprint</label>
             </div>
-            <button class="btn btn-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#seed" aria-expanded="false" aria-controls="seed">
+            <button class="btn btn-secondary mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#seed" aria-expanded="false" aria-controls="seed">
                 Show seed
             </button>
             <div id="seed" class="collapse">
-                <div class="box p-4 mt-3">
-                    <ol class="m-0">
-                        @foreach (var word in Config.Mnemonic.Split(' '))
-                        {
-                            <li class="font-monospace">@word</li>
-                        }
-                    </ol>
-                </div>
+                <ol class="m-0 pt-4 ms-3">
+                    @foreach (var word in Config.Mnemonic.Split(' '))
+                    {
+                        <li class="font-monospace">@word</li>
+                    }
+                </ol>
             </div>
         </div>
         <h4>Derivations</h4>

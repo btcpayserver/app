@@ -68,10 +68,10 @@
     }
 
     <h2>Transactions</h2>
-    @if (_txs?.Any() is true)
+    @if (TxGroups?.Any() is true)
     {
         <div class="transactions-list mb-l">
-            @foreach (var txGroup in _txs.Where(txGroup => txGroup.Value.Any()))
+            @foreach (var txGroup in TxGroups)
             {
                 <h3 class="mb-2">@txGroup.Key</h3>
                 foreach (var tx in txGroup.Value) {
@@ -214,6 +214,7 @@
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
     private string BitcoinUnit => UIState.Value.BitcoinUnit;
+    private IEnumerable<KeyValuePair<string, TxResp[]>>? TxGroups => _txs?.Where(txGroup => txGroup.Value.Any());
 
     private class SendModel
     {
@@ -248,7 +249,7 @@
         try
         {
             _utxos = (await OnChainWalletManager.GetUTXOS()).OfType<OnChainWalletManager.CoinWithKey>();
-            _totalBalance = _utxos.Sum(utxo => utxo.TxOut.Value);
+            _totalBalance = _utxos?.Sum(utxo => utxo.TxOut.Value);
             _txs = await OnChainWalletManager.GetTransactions();
             _network = (await OnChainWalletManager.GetConfig())?.NBitcoinNetwork;
         }
