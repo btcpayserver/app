@@ -113,9 +113,16 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
-    public Task Restore()
+    public async Task Restore()
     {
         throw new NotImplementedException("we're not there yet");
+        
+        var config = await GetConfig();
+        if (config is null || !IsConfigured(config))
+        {
+            throw new InvalidOperationException("Cannot restore wallet in current state");
+        }
+        
         /*
         await _controlSemaphore.WaitAsync();
         try
@@ -487,16 +494,16 @@ public class OnChainWalletManager : BaseHostedService
         var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
         var utxos = await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers);
         var identifiersWhichWeCanDeriveKeysFor = config.Derivations.Values
-            .Where(derivation => derivation.Descriptor is not null).Select(derivation => derivation.Identifier)
+            .Where(derivation => derivation.Descriptor is not null).Select(derivation => derivation.Identifier.ToLowerInvariant())
             .ToArray();
         var result = new List<ICoin>();
 
         var utxosThatWeCanDeriveKeysFor =
-            utxos.Where(utxo => identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Key)).ToDictionary(pair => pair.Key, pair => pair.Value);
+            utxos.Where(utxo => identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Key.ToLowerInvariant())).ToDictionary(pair => pair.Key, pair => pair.Value);
         foreach (var kp in utxosThatWeCanDeriveKeysFor)
         {
             var derivation =
-                config.Derivations.Values.First(derivation => derivation.Identifier == kp.Key);
+                config.Derivations.Values.First(derivation => derivation.Identifier.Equals(kp.Key, StringComparison.InvariantCultureIgnoreCase));
             var data = derivation.Descriptor.ExtractFromDescriptor(config.NBitcoinNetwork);
             if (data is null)
                 continue;
