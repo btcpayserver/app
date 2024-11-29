@@ -6,6 +6,7 @@
 @using BTCPayApp.Core.LDK
 @using BTCPayApp.Core.Wallet
 @using BTCPayServer.Lightning
+@using LNURL
 @using NBitcoin
 @using org.ldk.enums
 @using org.ldk.structs
@@ -17,6 +18,7 @@
 @inject IState<StoreState> StoreState
 @inject IState<UIState> UIState
 @inject IDispatcher Dispatcher
+@inject IHttpClientFactory HttpClientFactory
 
 <PageTitle>Peers and Channels</PageTitle>
 
@@ -61,9 +63,9 @@
                             </button>
                             <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with { Trusted = !peerConfig.Trusted })">@(peerConfig.Trusted? "Trusted": "Untrusted")</button>
                         }
-                        else if (peer.socket is not null)
+                        else if (peer.socket is not null && EndPointParser.TryParse(peer.socket, 9735, out var endpoint))
                         {
-                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo { Endpoint = peer.socket })">Remember peer</button>
+                            <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo { Endpoint = endpoint })">Remember peer</button>
                         }
                     </div>
                 </div>
@@ -79,7 +81,7 @@
                         <label>Node ID</label>
                     </div>
                     <div class="form-floating">
-                        <TruncateCenter Text="@peerConfig.Endpoint" Padding="30" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <TruncateCenter  Text="@peerConfig.Endpoint?.ToEndpointString()" Padding="30" Copy="true" Elastic="true" class="form-control-plaintext"/>
                         <label>Socket</label>
                     </div>
                     @if (!string.IsNullOrEmpty(peerConfig.Label))
@@ -456,8 +458,7 @@
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
 
-            EndPointParser.TryParse(peerConfig.Endpoint, 9735, out var endpoint);
-            if (endpoint != null) await Node.PeerHandler.ConnectAsync(new PubKey(peer), endpoint);
+            if (peerConfig.Endpoint != null) await Node.PeerHandler.ConnectAsync(new PubKey(peer), peerConfig.Endpoint);
         }
         finally
         {
@@ -500,6 +501,52 @@
             await InvokeAsync(StateHasChanged);
         }
 
+        if (string.IsNullOrEmpty(ChannelErrorMessage))
+            _ = FetchData();
+    }
+
+    private async Task ParseChannelRequest(string lnurl, string name, bool trusted)
+    {
+        if (Loading || Node == null || ChannelModel?.Amount is null || string.IsNullOrEmpty(ChannelModel.PeerId)) return;
+        try
+        {
+            ChannelSuccessMessage = ChannelErrorMessage = null;
+            ChannelOpening = true;
+            await InvokeAsync(StateHasChanged);
+
+            var uri = LNURL.Parse(lnurl, out var tag);
+            var http = HttpClientFactory.CreateClient();
+            var channelRequest = (LNURLChannelRequest) await LNURL.FetchInformation(uri, tag, http, new CancellationTokenSource(TimeSpan.FromSeconds(5)).Token);
+            if (channelRequest is null)
+            {
+                ChannelErrorMessage = "The channel request is invalid";
+                return;
+            }
+
+
+            if (!EndPointParser.TryParse($"{channelRequest.Uri.Host}:{channelRequest.Uri.Port}", 9735, out var endpoint))
+            {
+                ChannelErrorMessage = "The channel request provided an invalid endpoint for the peer";
+                return;
+            }
+
+            await Node.Peer(channelRequest.Uri.NodeId, new PeerInfo {Endpoint = endpoint, Label = name, Trusted = trusted});
+            await ConnectPeer(channelRequest.Uri.NodeId.ToString(), new PeerInfo {Endpoint = endpoint, Label = name, Trusted = trusted});
+            await channelRequest.SendRequest(Node.NodeId, true, http, new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
+            ChannelSuccessMessage = "Successfully initiated channel creation. Please wait for the peer to execute.";
+        }
+        catch (Exception e)
+        {
+            ChannelErrorMessage = e.Message;
+        }
+        finally
+        {
+            if(ChannelSuccessMessage is null && ChannelErrorMessage is null)
+                ChannelErrorMessage = "Error opening channel";
+            _semaphore.Release();
+            ChannelOpening = false;
+            await InvokeAsync(StateHasChanged);
+        }
         if (string.IsNullOrEmpty(ChannelErrorMessage))
             _ = FetchData();
     }
