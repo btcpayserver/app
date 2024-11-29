@@ -68,7 +68,7 @@ public class LDKPeerHandler : IScopedHostedService
         await _node.Peer(nodeInfo.NodeId, new PeerInfo()
         {
             Label = "BTCPay Server Node",
-            Endpoint = endpoint.ToString(),
+            Endpoint = endpoint,
             Persistent = true,
             Trusted = true
         });
@@ -104,7 +104,7 @@ public class LDKPeerHandler : IScopedHostedService
             {
                 var kv = config.Peers[persistentPeer];
                 var nodeid = new PubKey(persistentPeer);
-                if (EndPointParser.TryParse(kv.Endpoint, 9735, out var endpoint))
+                if (kv.Endpoint is {} endpoint)
                 {
                     var cts = CancellationTokenSource.CreateLinkedTokenSource(ctsToken);
                     cts.CancelAfter(10000);
@@ -195,9 +195,7 @@ public class LDKPeerHandler : IScopedHostedService
 
     public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey peerNodeId,PeerInfo peerInfo, CancellationToken cancellationToken = default)
     {
-        if (peerInfo.Endpoint is null)
-            return null;
-        if (EndPointParser.TryParse(peerInfo.Endpoint, 9735, out var endpoint))
+        if (peerInfo.Endpoint is {} endpoint)
         {
             if(peerInfo.Label is not null)
                 _logger.LogInformation($"Attempting to connect to {peerNodeId} at {endpoint} ({peerInfo.Label})");
@@ -245,9 +243,9 @@ public class LDKPeerHandler : IScopedHostedService
                     peer = new PeerInfo();
                 }
 
-                if (peer.Endpoint != remote.ToString())
+                if (peer.Endpoint.ToEndpointString() != remote.ToString())
                 {
-                    peer.Endpoint = remote.ToString()!;
+                    peer.Endpoint = remote;
                     await _node.Peer(theirNodeId, peer);
                 }
             }

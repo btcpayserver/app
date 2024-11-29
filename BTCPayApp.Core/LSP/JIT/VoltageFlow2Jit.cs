@@ -258,12 +258,12 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
                 {
                     //check if the endpoint matches any of the info ones 
                     if (!_info.ConnectionMethods.Any(a =>
-                            a.ToEndpoint().ToEndpointString().Equals(peer.Endpoint, StringComparison.OrdinalIgnoreCase)))
+                            a.ToEndpoint().ToEndpointString().Equals(peer.Endpoint.ToEndpointString(), StringComparison.OrdinalIgnoreCase)))
                     {
                         peer = new PeerInfo
                         {
                             Label = ProviderName,
-                            Endpoint = _info.ConnectionMethods.First().ToEndpoint().ToEndpointString(), Persistent = true,
+                            Endpoint = _info.ConnectionMethods.First().ToEndpoint(), Persistent = true,
                             Trusted = true
                         };
                     }
@@ -284,7 +284,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
                     peer = new PeerInfo
                     {
                         Label = ProviderName,
-                        Endpoint = _info.ConnectionMethods.First().ToEndpoint().ToEndpointString(),
+                        Endpoint = _info.ConnectionMethods.First().ToEndpoint(),
                         Persistent = true,
                         Trusted = true
                     };

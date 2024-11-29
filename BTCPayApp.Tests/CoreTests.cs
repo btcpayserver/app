@@ -266,7 +266,7 @@ public class CoreTests
         await node3.LNManager.Node.Peer(node2.LNManager.Node.NodeId, new PeerInfo()
         {
             Label = "App2",
-            Endpoint = node2.LNManager.Node.PeerHandler.Endpoint.ToEndpointString(),
+            Endpoint = node2.LNManager.Node.PeerHandler.Endpoint,
             Persistent = true,
         });
         await TestUtils.EventuallyAsync(async () =>
@@ -283,7 +283,7 @@ public class CoreTests
                 (await node3.LNManager.Node.GetConfig()).Peers.TryGetValue(node2.LNManager.Node.NodeId.ToString(),
                     out var peerInfo));
             Assert.Equal("App2", peerInfo.Label);
-            Assert.Equal(node2.LNManager.Node.PeerHandler.Endpoint.ToEndpointString(), peerInfo.Endpoint);
+            Assert.Equal(node2.LNManager.Node.PeerHandler.Endpoint.ToEndpointString(), peerInfo.Endpoint.ToEndpointString());
             Assert.True(peerInfo.Persistent);
             Assert.False(peerInfo.Trusted);
         });
