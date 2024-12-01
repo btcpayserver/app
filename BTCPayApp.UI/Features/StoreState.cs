@@ -19,6 +19,8 @@ public record StoreState
     public RemoteData<List<AppItemStats>>? PosItemStats;
     public RemoteData<IEnumerable<StoreRateResult>>? Rates;
     public RemoteData<IEnumerable<InvoiceData>>? Invoices;
+    public RemoteData<IEnumerable<StoreUserData>>? Users;
+    public RemoteData<IEnumerable<RoleData>>? Roles;
     public RemoteData<IEnumerable<NotificationData>>? Notifications;
     private IDictionary<string,RemoteData<InvoiceData>?> _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>();
     private IDictionary<string,RemoteData<InvoicePaymentMethodDataModel[]>?> _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>();
@@ -39,6 +41,8 @@ public record StoreState
     public record FetchNotifications(string StoreId);
     public record UpdateNotification(string NotificationId, bool Seen);
     public record SetNotification(NotificationData? Notification, string? Error);
+    public record FetchRoles(string StoreId);
+    public record FetchUsers(string StoreId);
     public record FetchInvoices(string StoreId);
     public record FetchInvoice(string StoreId, string InvoiceId);
     public record FetchInvoicePaymentMethods(string StoreId, string InvoiceId);
@@ -55,6 +59,8 @@ public record StoreState
     public record SetLightningBalance(LightningNodeBalanceData? Balance, string? Error);
     public record SetOnchainHistogram(HistogramData? Data, string? Error);
     public record SetLightningHistogram(HistogramData? Data, string? Error);
+    public record SetRoles(IEnumerable<RoleData>? Roles, string? Error);
+    public record SetUsers(IEnumerable<StoreUserData>? Users, string? Error);
     public record SetNotifications(IEnumerable<NotificationData>? Notifications, string? Error);
     public record SetInvoices(IEnumerable<InvoiceData>? Invoices, string? Error);
     public record SetInvoice(InvoiceData? Invoice, string? Error, string InvoiceId);
@@ -138,6 +144,34 @@ public record StoreState
             return state with
             {
                 LightningBalance = (state.LightningBalance ?? new RemoteData<LightningNodeBalanceData>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class FetchRolesReducer : Reducer<StoreState, FetchRoles>
+    {
+        public override StoreState Reduce(StoreState state, FetchRoles action)
+        {
+            return state with
+            {
+                Roles = (state.Roles ?? new RemoteData<IEnumerable<RoleData>>()) with
+                {
+                    Loading = true
+                }
+            };
+        }
+    }
+
+    protected class FetchUsersReducer : Reducer<StoreState, FetchUsers>
+    {
+        public override StoreState Reduce(StoreState state, FetchUsers action)
+        {
+            return state with
+            {
+                Users = (state.Users ?? new RemoteData<IEnumerable<StoreUserData>>()) with
                 {
                     Loading = true
                 }
@@ -347,6 +381,38 @@ public record StoreState
                     Sending = false
                 },
                 UnifiedHistogram = GetUnifiedHistogram(state.OnchainHistogram?.Data, data)
+            };
+        }
+    }
+
+    protected class SetRolesReducer : Reducer<StoreState, SetRoles>
+    {
+        public override StoreState Reduce(StoreState state, SetRoles action)
+        {
+            return state with
+            {
+                Roles = (state.Roles ?? new RemoteData<IEnumerable<RoleData>>()) with
+                {
+                    Data = action.Roles,
+                    Error = action.Error,
+                    Loading = false
+                }
+            };
+        }
+    }
+
+    protected class SetUsersReducer : Reducer<StoreState, SetUsers>
+    {
+        public override StoreState Reduce(StoreState state, SetUsers action)
+        {
+            return state with
+            {
+                Users = (state.Users ?? new RemoteData<IEnumerable<StoreUserData>>()) with
+                {
+                    Data = action.Users,
+                    Error = action.Error,
+                    Loading = false
+                }
             };
         }
     }
@@ -568,6 +634,8 @@ public record StoreState
                 dispatcher.Dispatch(new FetchStore(storeId));
                 dispatcher.Dispatch(new FetchBalances(storeId, histogramType));
                 dispatcher.Dispatch(new FetchNotifications(storeId));
+                dispatcher.Dispatch(new FetchRoles(storeId));
+                dispatcher.Dispatch(new FetchUsers(storeId));
                 dispatcher.Dispatch(new FetchInvoices(storeId));
                 dispatcher.Dispatch(new FetchRates(store));
                 dispatcher.Dispatch(new FetchPointOfSale(posId));
@@ -680,6 +748,36 @@ public record StoreState
             {
                 var error = e.InnerException?.Message ?? e.Message;
                 dispatcher.Dispatch(new SetLightningHistogram(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchRolesEffect(FetchRoles action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var roles = await accountManager.GetClient().GetStoreRoles(action.StoreId);
+                dispatcher.Dispatch(new SetRoles(roles, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetRoles(null, error));
+            }
+        }
+
+        [EffectMethod]
+        public async Task FetchUsersEffect(FetchUsers action, IDispatcher dispatcher)
+        {
+            try
+            {
+                var users = await accountManager.GetClient().GetStoreUsers(action.StoreId);
+                dispatcher.Dispatch(new SetUsers(users, null));
+            }
+            catch (Exception e)
+            {
+                var error = e.InnerException?.Message ?? e.Message;
+                dispatcher.Dispatch(new SetUsers(null, error));
             }
         }
 
