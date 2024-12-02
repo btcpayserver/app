@@ -154,13 +154,26 @@
         @if (TotalBalance > 0 && (LightningOffchainLocalBalance is > 0 || OnchainConfirmedBalance is > 0) && (OnchainState == SourceState.Supported || LightningState == SourceState.Supported))
         {
             <h2>Send Bitcoin</h2>
-            @if (Model.Amount is > 0 && MaxAvailable < Model.Amount)
+            @if (InsufficientFunds || NotSupported)
             {
                 <Alert Type="warning">
-                    Not enough
-                    @(Model.Bolt11 != null ? "Lightning" : Model.Address != null ? "onchain" : "")
-                    balance to send
-                    <AmountDisplay Value="Model.Amount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
+                    @if (NotSupported)
+                    {
+                        <div>
+                            Sending via external
+                            @(Model.Bolt11 != null ? "Lightning node" : "wallet")
+                            is not supported, see above.
+                        </div>
+                    }
+                    else
+                    {
+                        <div>
+                            Not enough
+                            @(Model.Bolt11 != null ? "Lightning" : Model.Address != null ? "onchain" : "")
+                            balance to send
+                            <AmountDisplay Value="Model.Amount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                        </div>
+                    }
                 </Alert>
             }
             <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="SendFunds" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
@@ -169,7 +182,7 @@
                     <div class="form-group">
                         <label for="Destination" class="form-label" data-required>Destination</label>
                         <div class="d-flex gap-2">
-                            <InputText @bind-Value="Model.Destination" @bind-Value:after="() => UpdateForDestination(Model.Destination)" id="Destination" class="form-control flex-grow-1" placeholder="Bitcoin address or BOLT11" />
+                            <InputText @bind-Value="Model.Destination" @bind-Value:after="() => UpdateForDestination(Model.Destination)" id="Destination" class="form-control flex-grow-1" placeholder="@DestinationPlaceholder" />
                             <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
                                 <Icon Symbol="scan-qr"/>
                             </button>
@@ -200,11 +213,19 @@
                         {
                             <LoadingIndicator/>
                         }
+                        else if (Model.Transaction != null)
+                        {
+                            <span>Broadcast transaction</span>
+                        }
                         else
                         {
                             <span>Send @(Model.Bolt11 != null ? "via Lightning" : Model.Address != null ? "onchain" : "")</span>
                         }
                     </button>
+                    @if (Model.Transaction != null)
+                    {
+                        <button type="button" class="btn btn-outline-secondary w-100 mt-3" @onclick="CancelTx">Cancel transaction</button>
+                    }
                 </fieldset>
             </ValidationEditContext>
             <QrScanModal OnScan="@OnQrCodeScan"/>
@@ -241,12 +262,31 @@
     private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private LightMoneyUnit UnitLightMoney => BitcoinUnit == CurrencyUnit.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
     private string GetTitle() => $"{StoreInfo?.Name ?? "Store"} Funds";
+    private bool InsufficientFunds => Model.Amount is > 0 && MaxAvailable < Model.Amount;
+    private bool NotSupported => Model.Bolt11 != null && LightningState != SourceState.Supported || Model.Address != null && OnchainState != SourceState.Supported;
+    private string DestinationPlaceholder
+    {
+        get
+        {
+            var canOnchain = OnchainState == SourceState.Supported && OnchainConfirmedBalance is > 0;
+            var canLightning = LightningState == SourceState.Supported && LightningOffchainLocalBalance is > 0;
+            return canOnchain && canLightning
+                ? "Bitcoin address or Lightning invoice (BOLT11)"
+                : canOnchain
+                    ? "Bitcoin address"
+                    : canLightning
+                        ? "Lightning invoice (BOLT11)"
+                        : "";
+        }
+    }
+
     private bool CanAdjustAmount => Model.Bolt11?.MinimumAmount == null && MaxAvailable > 0;
     private decimal? MaxAvailable => Model.Bolt11 != null
         ? (LightningOffchainLocalBalance ?? 0)
         : (OnchainConfirmedBalance ?? 0);
-    private bool IsValidForm => !_validationEditContext!.Invalid && MaxAvailable is > 0 && Model.Amount is > 0 &&
-                                !string.IsNullOrEmpty(Model.Destination) && (Model.Bolt11 != null || Model.Address != null);
+    private bool IsValidForm => !_validationEditContext!.Invalid && MaxAvailable is > 0 && Model.Amount is > 0 && !string.IsNullOrEmpty(Model.Destination) && (
+                                    (Model.Bolt11 != null && LightningState == SourceState.Supported) ||
+                                    (Model.Address != null && OnchainState == SourceState.Supported));
 
     protected override async Task OnInitializedAsync()
     {
@@ -296,6 +336,7 @@
 
         public BOLT11PaymentRequest? Bolt11 { get; set; }
         public BitcoinAddress? Address { get; set; }
+        public (Transaction Tx, ICoin[] SpentCoins, BitcoinAddress Change)? Transaction { get; set; }
     }
 
     private void UpdateForDestination(string? destination)
@@ -305,6 +346,7 @@
         {
             Model.Bolt11 = null;
             Model.Address = null;
+            Model.Transaction = null;
             return;
         }
 
@@ -325,6 +367,7 @@
         catch
         {
             Model.Address = null;
+            Model.Transaction = null;
         }
     }
 
@@ -343,43 +386,32 @@
 
     private async Task SendFunds()
     {
-        if (_sending || Model.Amount is null || string.IsNullOrEmpty(Model.Destination) ||
-            (Model.Bolt11 == null && Model.Address == null)) return;
+        if (_sending || !IsValidForm) return;
         try
         {
             _successMessage = _errorMessage = null;
             _sending = true;
             await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-
+            FormResult? result = null;
             if (Model.Bolt11 != null)
             {
-                var lnRequest = new PayLightningInvoiceRequest
-                {
-                    BOLT11 = Model.Bolt11.ToString(),
-                    Amount = new LightMoney(Model.Amount.Value, UnitLightMoney)
-                };
-                var payData = await AccountManager.GetClient().PayLightningInvoice(StoreId, "BTC", lnRequest);
-                _successMessage = $"Created transaction {payData.PaymentHash} spending {payData.TotalAmount} BTC";
+                // TODO: Implement send via external node: SendLightningExternal(Model.Bolt11, new LightMoney(Model.Amount.Value, UnitLightMoney));
+                result = await SendLightning(Model.Bolt11, new LightMoney(Model.Amount.Value, UnitLightMoney));
             }
             else if (Model.Address != null)
             {
-                var dest = new CreateOnChainTransactionRequest.CreateOnChainTransactionRequestDestination
-                {
-                    Destination = Model.Address.ToString(),
-                    Amount = new Money(Model.Amount.Value, UnitMoney).ToDecimal(MoneyUnit.BTC),
-                    SubtractFromAmount = Model.Amount.Value == MaxAvailable
-                };
-                var txRequest = new CreateOnChainTransactionRequest
-                {
-                    Destinations = [dest]
-                };
-                var txData = await AccountManager.GetClient().CreateOnChainTransaction(StoreId, "BTC", txRequest);
-                _successMessage = $"Created transaction {txData.TransactionHash} spending {new Money(txData.Amount, MoneyUnit.BTC)} BTC";
+                // TODO: Implement send via external wallet: SendOnchainExternal(Model.Address, new Money(Model.Amount.Value, UnitMoney));
+                result = await SendOnchain(Model.Address, new Money(Model.Amount.Value, UnitMoney));
             }
-
-            Dispatcher.Dispatch(new StoreState.FetchBalances(StoreId!));
-            Model = new SendModel();
+            switch (result?.Succeeded)
+            {
+                case true:
+                    _successMessage = string.Join(".", result.Messages!);
+                    break;
+                case false:
+                    _errorMessage = string.Join(".", result.Messages!);
+                    break;
+            }
         }
         catch (Exception e)
         {
@@ -387,9 +419,135 @@
         }
         finally
         {
-            _semaphore.Release();
             _sending = false;
             await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task<FormResult> SendOnchain(BitcoinAddress address, Money amount)
+    {
+        try
+        {
+            await _semaphore.WaitAsync();
+            return Model.Transaction == null
+                ? await CreateTx(address, amount)
+                : await BroadcastTx(Model.Transaction.Value.Tx);
+        }
+        catch (Exception ex)
+        {
+            return new FormResult(false, "Payment failed: " + ex.Message);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    private async Task<FormResult> CreateTx(BitcoinAddress address, Money amount)
+    {
+        try
+        {
+            var txOut = new TxOut(Money.Coins(amount.ToUnit(MoneyUnit.BTC)), address);
+            Model.Transaction = await OnChainWalletManager.CreateTransaction([txOut], null);
+            if (Model.Transaction is null) return new FormResult(false, "Transaction creation failed");
+            var transaction = Model.Transaction.Value;
+            var changeAmt = transaction.Tx.Outputs
+                .Where(o => o.IsTo(transaction.Change))
+                .Sum(o => o.Value.ToDecimal(MoneyUnit.BTC));
+            var fee = transaction.Tx.GetFee(transaction.SpentCoins).ToDecimal(MoneyUnit.BTC);
+            return new FormResult(true, $"Created transaction {transaction.Tx.GetHash()} spending {transaction.SpentCoins.Sum(c => c.TxOut.Value.ToDecimal(MoneyUnit.BTC))} BTC, with change of {changeAmt} BTC and fee of {fee} BTC");
+        }
+        catch (Exception ex)
+        {
+            Model.Transaction = null;
+            return new FormResult(false, "Creating transaction failed: " + ex.Message);
+        }
+    }
+
+    private async Task<FormResult> BroadcastTx(Transaction transaction)
+    {
+        try
+        {
+            await OnChainWalletManager.BroadcastTransaction(transaction);
+            Dispatcher.Dispatch(new StoreState.FetchBalances(StoreId!));
+            Model = new SendModel();
+            return new FormResult(true, $"Transaction {transaction.GetHash()} broadcasted");
+        }
+        catch (Exception ex)
+        {
+            return new FormResult(false, "Broadcasting transaction failed: " + ex.Message);
+        }
+    }
+
+    private async Task CancelTx()
+    {
+        if (Model.Transaction is null) return;
+
+        _successMessage = _errorMessage = null;
+        Model.Transaction = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task<FormResult> SendLightning(BOLT11PaymentRequest bolt11, LightMoney amount)
+    {
+        try
+        {
+            await _semaphore.WaitAsync();
+            // TODO
+            return new FormResult(true, "Payment sent");
+        }
+        catch (Exception ex)
+        {
+            return new FormResult(false, "Payment failed: " + ex.Message);
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
+    }
+
+    private async Task<FormResult> SendLightningExternal(BOLT11PaymentRequest bolt11, LightMoney amount)
+    {
+        var lnRequest = new PayLightningInvoiceRequest
+        {
+            BOLT11 = bolt11.ToString(),
+            Amount = amount
+        };
+        try
+        {
+            var payData = await AccountManager.GetClient().PayLightningInvoice(StoreId, "BTC", lnRequest);
+            return payData != null
+                ? new FormResult(true, $"Created transaction {payData.PaymentHash} spending {payData.TotalAmount} BTC")
+                : new FormResult(false, "Payment failed");
+        }
+        catch (Exception ex)
+        {
+            return new FormResult(false, "Payment failed: " + ex.Message);
+        }
+    }
+
+    private async Task<FormResult> SendOnchainExternal(BitcoinAddress address, Money amount)
+    {
+        var dest = new CreateOnChainTransactionRequest.CreateOnChainTransactionRequestDestination
+        {
+            Destination = address.ToString(),
+            Amount = amount.ToDecimal(MoneyUnit.BTC),
+            SubtractFromAmount = amount.ToDecimal(UnitMoney) == MaxAvailable
+        };
+        var txRequest = new CreateOnChainTransactionRequest
+        {
+            Destinations = [dest]
+        };
+        try
+        {
+            var txData = await AccountManager.GetClient().CreateOnChainTransaction(StoreId, "BTC", txRequest);
+            return txData != null
+                ? new FormResult(true, $"Created transaction {txData.TransactionHash} spending {new Money(txData.Amount, MoneyUnit.BTC)} BTC")
+                : new FormResult(false, "Payment failed");
+        }
+        catch (Exception ex)
+        {
+            return new FormResult(false, "Payment failed: " + ex.Message);
         }
     }
 }
