@@ -11,7 +11,17 @@ namespace BTCPayApp.Core.Helpers;
 
 public static class StoreHelpers
 {
-     public static async Task<(GenericPaymentMethodData? onchain, GenericPaymentMethodData? lightning)?> TryApplyingAppPaymentMethodsToCurrentStore(
+    public static async Task<(GenericPaymentMethodData? onchain, GenericPaymentMethodData? lightning)>
+        GetCurrentStorePaymentMethods(this IAccountManager accountManager)
+    {
+        var storeId = accountManager.GetCurrentStore()?.Id;
+        var pms = await accountManager.GetClient().GetStorePaymentMethods(storeId, includeConfig: true);
+        var onchain = pms.FirstOrDefault(pm => pm.PaymentMethodId == OnChainWalletManager.PaymentMethodId);
+        var lightning = pms.FirstOrDefault(pm => pm.PaymentMethodId == LightningNodeManager.PaymentMethodId);
+        return (onchain, lightning);
+    }
+
+    public static async Task<(GenericPaymentMethodData? onchain, GenericPaymentMethodData? lightning)?> TryApplyingAppPaymentMethodsToCurrentStore(
          this IAccountManager accountManager,
          OnChainWalletManager onChainWalletManager, LightningNodeManager lightningNodeService, bool applyOnchain, bool applyLighting)
     {
@@ -24,20 +34,19 @@ public static class StoreHelpers
             // is the onchain wallet configured?
             !onChainWalletManager.IsConfigured(config)) return null;
         // check the store's payment methods
-        var pms = await accountManager.GetClient().GetStorePaymentMethods(storeId, includeConfig: true);
+        var (onchain, lightning) = await GetCurrentStorePaymentMethods(accountManager);
+
         // onchain
-        var onchain = pms.FirstOrDefault(pm => pm.PaymentMethodId == OnChainWalletManager.PaymentMethodId);
         if (applyOnchain && config?.Derivations.TryGetValue(WalletDerivation.NativeSegwit, out var derivation) is true && onchain is null)
         {
-                onchain = await accountManager.GetClient().UpdateStorePaymentMethod(storeId, OnChainWalletManager.PaymentMethodId, new UpdatePaymentMethodRequest
-                {
-                    Enabled = true,
-                    Config = derivation.Descriptor
-                });
+            onchain = await accountManager.GetClient().UpdateStorePaymentMethod(storeId, OnChainWalletManager.PaymentMethodId, new UpdatePaymentMethodRequest
+            {
+                Enabled = true,
+                Config = derivation.Descriptor
+            });
         }
 
         // lightning
-        var lightning = pms.FirstOrDefault(pm => pm.PaymentMethodId == LightningNodeManager.PaymentMethodId);
         if (applyLighting && lightning is null && lightningNodeService.IsActive)
         {
             var key = await lightningNodeService.Node.ApiKeyManager.Create("Automated BTCPay Store Setup",
@@ -52,7 +61,6 @@ public static class StoreHelpers
 
         return (onchain, lightning);
     }
-
 
     public static async Task<bool> IsOnChainOurs(this OnChainWalletManager onChainWalletManager, GenericPaymentMethodData? onchain)
     {
