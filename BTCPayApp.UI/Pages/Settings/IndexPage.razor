@@ -73,11 +73,12 @@
                 @if (UserInfo?.Stores?.Count() > 1 || CurrentStore == null)
                 {
                     <li class="list-group-item">
-                        <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : null)">
+                        <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : "justify-content-start")">
                             <Icon Symbol="nav-store"/>
                             @if (CurrentStore == null)
                             {
                                 <span>Select Store</span>
+                                <Icon Symbol="caret-right"/>
                             }
                             else
                             {
