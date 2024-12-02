@@ -32,23 +32,23 @@
             Enter the encryption key of your master device.
         </p>
         <div class="box my-4 mx-auto">
-            <ValidationEditContext @ref="_validationEditContext" Model="@this" OnValidSubmit="HandleValidSubmit">
+            <ValidationEditContext @ref="_validationEditContext" Model="@Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@_errorMessage">
                 <div class="form-group">
                     <label for="EncryptionKey" class="form-label">Your Encryption Key</label>
                     <div class="d-flex gap-2">
-                        <InputText @bind-Value="EncryptionKeyValue" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" />
+                        <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" />
                         <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
                             <Icon Symbol="scan-qr"/>
                         </button>
                     </div>
-                    <ValidationMessage For="@(() => EncryptionKeyValue)"/>
+                    <ValidationMessage For="@(() => Model.EncryptionKey)"/>
                 </div>
-                <button type="submit" class="btn btn-primary w-100">Use Encryption Key</button>
+                <button type="submit" class="btn btn-primary w-100" disabled="@(!IsValidKey)">Use Encryption Key</button>
             </ValidationEditContext>
         </div>
         <QrScanModal OnScan="@OnQrCodeScan"/>
     }
-    else if (!string.IsNullOrEmpty(EncryptionKeyValue))
+    else if (!string.IsNullOrEmpty(Model.EncryptionKey))
     {
         <p class="mb-4 text-center">
             Back up your encryption key, otherwise you won't be able to restore the app and its wallet.
@@ -56,45 +56,48 @@
         </p>
         <div class="box my-4 mx-auto">
             <div class="form-floating form-group">
-                <TruncateCenter Text="@EncryptionKeyValue" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                <TruncateCenter Text="@Model.EncryptionKey" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
                 <label>Your Encryption Key</label>
             </div>
-            <QrCode Data="@EncryptionKeyValue" class="w-100"/>
+            <QrCode Data="@Model.EncryptionKey" class="w-100"/>
         </div>
     }
 </section>
 
 @code {
-    private string? EncryptionKeyValue
-    {
-        get => _encryptionKeyValue;
-        set
-        {
-            _encryptionKeyValue = value;
-            _validationEditContext?.EditContext.NotifyValidationStateChanged();
-        }
-    }
-
     private ValidationEditContext? _validationEditContext;
-    private string? _encryptionKeyValue;
+    private EncryptionKeyModel Model { get; } = new ();
+    private string? _errorMessage;
     private string? _qrInput;
+    private const int KeyLength = 64;
+
+    private class EncryptionKeyModel
+    {
+        [Required]
+        [StringLength(KeyLength, MinimumLength = KeyLength)]
+        public string? EncryptionKey { get; set; }
+    }
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
-        EncryptionKeyValue = await SyncService.GetEncryptionKey();
+
+        Model.EncryptionKey = await SyncService.GetEncryptionKey();
     }
 
     public async Task HandleValidSubmit()
     {
-        if (await SyncService.SetEncryptionKey(EncryptionKeyValue ?? string.Empty))
+        _errorMessage = null;
+        try
         {
-            NavigationManager.NavigateTo(Routes.Settings);
+            if (IsValidKey && await SyncService.SetEncryptionKey(Model.EncryptionKey!))
+                NavigationManager.NavigateTo(Routes.Index);
+            else
+                _errorMessage = "Invalid encryption key";
         }
-        else
+        catch (Exception e)
         {
-            _validationEditContext!.MessageStore.Add(() => EncryptionKeyValue, "Invalid encryption key");
-            _validationEditContext.EditContext.NotifyValidationStateChanged();
+            _errorMessage = "Invalid encryption key: " + e.Message;
         }
     }
 
@@ -105,10 +108,11 @@
         _qrInput = code;
         await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
 
-        EncryptionKeyValue = code;
+        Model!.EncryptionKey = code;
         StateHasChanged();
     }
 
     private string GetTitle() => $"{(NeedsEncryptionKey ? "Enter" : "View")} your encryption key";
     private bool NeedsEncryptionKey => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey;
+    private bool IsValidKey => !string.IsNullOrEmpty(Model.EncryptionKey) && Model.EncryptionKey.Length == KeyLength;
 }
