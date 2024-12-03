@@ -25,6 +25,7 @@ public class OnChainWalletManager : BaseHostedService
     private OnChainWalletState _state = OnChainWalletState.Init;
 
     private IBTCPayAppHubServer? HubProxy => _btcPayConnectionManager.HubProxy;
+    private Network? ReportedNetwork => _btcPayConnectionManager.ReportedNetwork;
 
     // public WalletConfig? WalletConfig { get; private set; }
     // public Task<WalletDerivation?> Derivation =>
@@ -161,17 +162,17 @@ public class OnChainWalletManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-            if (State != OnChainWalletState.NotConfigured || HubProxy == null || !IsHubConnected ||
+            if (State != OnChainWalletState.NotConfigured || ReportedNetwork == null || HubProxy == null || !IsHubConnected ||
                 IsConfigured(await GetConfig()) || await GetBestBlock() is not { } block)
                 throw new InvalidOperationException("Cannot generate wallet in current state");
 
             _logger.LogInformation("Generating wallet");
 
             var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
-            var mainnet = _btcPayConnectionManager.ReportedNetwork == Network.Main;
+            var mainnet = ReportedNetwork == Network.Main;
             var path = new KeyPath($"m/84'/{(mainnet ? "0" : "1")}'/0'");
             var fingerprint = mnemonic.DeriveExtKey().GetPublicKey().GetHDFingerPrint();
-            var xpub = mnemonic.DeriveExtKey().Derive(path).Neuter().ToString(_btcPayConnectionManager.ReportedNetwork);
+            var xpub = mnemonic.DeriveExtKey().Derive(path).Neuter().ToString(ReportedNetwork);
             var snapshot = new BlockSnapshot()
             {
                 BlockHash = uint256.Parse(block.BlockHash),
@@ -181,7 +182,7 @@ public class OnChainWalletManager : BaseHostedService
             {
                 Birthday = snapshot,
                 Mnemonic = mnemonic.ToString(),
-                Network = _btcPayConnectionManager.ReportedNetwork.ToString(),
+                Network = ReportedNetwork.ToString(),
                 Derivations = new Dictionary<string, WalletDerivation>()
                 {
                     [WalletDerivation.NativeSegwit] = new()
@@ -272,7 +273,7 @@ public class OnChainWalletManager : BaseHostedService
         var configured = IsConfigured(config);
         switch (IsHubConnected)
         {
-            case true when configured && config!.NBitcoinNetwork != _btcPayConnectionManager.ReportedNetwork:
+            case true when configured && config!.NBitcoinNetwork != ReportedNetwork:
                 State = OnChainWalletState.Error;
                 break;
             case true when configured:
@@ -374,17 +375,22 @@ public class OnChainWalletManager : BaseHostedService
     }
 
 
-    public async Task<BitcoinAddress> DeriveScript(string derivation)
+    public async Task<BitcoinAddress?> DeriveScript(string derivation)
     {
         var config = await GetConfig();
-        var identifier = config?.Derivations[derivation].Identifier;
+        if (State != OnChainWalletState.Loaded || ReportedNetwork == null || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
+            throw new InvalidOperationException("Cannot derive script in current state");
+
+        var identifier = config.Derivations[derivation].Identifier;
         var addr = await HubProxy.DeriveScript(identifier);
-        return Script.FromHex(addr).GetDestinationAddress(_btcPayConnectionManager.ReportedNetwork);
+        return Script.FromHex(addr).GetDestinationAddress(ReportedNetwork);
     }
 
     public async Task<PSBT?> SignTransaction(byte[] psbtBytes)
     {
-        var psbt = PSBT.Load(psbtBytes, _btcPayConnectionManager.ReportedNetwork);
+        if (ReportedNetwork == null)
+            throw new InvalidOperationException("Cannot sign transaction in current state: No network defined");
+        var psbt = PSBT.Load(psbtBytes, ReportedNetwork);
         psbt = await SignTransaction(psbt);
         return psbt;
     }
