@@ -17,7 +17,6 @@ public static class Routes
     public const string Dashboard = "/dashboard";
     public const string Notifications = "/notifications";
     public const string EnterPasscode = "/passcode";
-    public const string Pair = "/pair";
     public const string Funds = "/funds";
     public const string Send = "/send";
     public const string Receive = "/receive";
