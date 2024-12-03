@@ -24,6 +24,8 @@ public class OnChainWalletManager : BaseHostedService
     private readonly SyncService _syncService;
     private OnChainWalletState _state = OnChainWalletState.Init;
 
+    private IBTCPayAppHubServer? HubProxy => _btcPayConnectionManager.HubProxy;
+
     // public WalletConfig? WalletConfig { get; private set; }
     // public Task<WalletDerivation?> Derivation =>
     //     GetConfig().ContinueWith(task => task.Result?.Derivations.Values.FirstOrDefault());
@@ -116,13 +118,13 @@ public class OnChainWalletManager : BaseHostedService
     public async Task Restore()
     {
         throw new NotImplementedException("we're not there yet");
-        
+
         var config = await GetConfig();
         if (config is null || !IsConfigured(config))
         {
             throw new InvalidOperationException("Cannot restore wallet in current state");
         }
-        
+
         /*
         await _controlSemaphore.WaitAsync();
         try
@@ -159,11 +161,9 @@ public class OnChainWalletManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-            if (State != OnChainWalletState.NotConfigured || !IsHubConnected || IsConfigured(await GetConfig()) ||
-                await GetBestBlock() is not { } block)
-            {
+            if (State != OnChainWalletState.NotConfigured || HubProxy == null || !IsHubConnected ||
+                IsConfigured(await GetConfig()) || await GetBestBlock() is not { } block)
                 throw new InvalidOperationException("Cannot generate wallet in current state");
-            }
 
             _logger.LogInformation("Generating wallet");
 
@@ -198,7 +198,7 @@ public class OnChainWalletManager : BaseHostedService
                 }
             };
 
-            var result = await _btcPayConnectionManager.HubProxy.Pair(new PairRequest()
+            var result = await HubProxy.Pair(new PairRequest
             {
                 Derivations = walletConfig.Derivations.ToDictionary(pair => pair.Key, pair => pair.Value.Descriptor)
             });
@@ -213,7 +213,6 @@ public class OnChainWalletManager : BaseHostedService
                 return;
             }
 
-            ;
             await _configProvider.Set(WalletConfig.Key, walletConfig, true);
             State = OnChainWalletState.Loaded;
         }
@@ -229,15 +228,13 @@ public class OnChainWalletManager : BaseHostedService
         try
         {
             var config = await GetConfig();
-            if (State != OnChainWalletState.Loaded || !IsHubConnected || config is null || !IsConfigured(config))
-            {
+            if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
                 throw new InvalidOperationException("Cannot add deriv in current state");
-            }
 
             if (config.Derivations.ContainsKey(key))
                 throw new InvalidOperationException("Derivation already exists");
 
-            var result = await _btcPayConnectionManager.HubProxy.Pair(new PairRequest
+            var result = await HubProxy.Pair(new PairRequest
             {
                 Derivations = new Dictionary<string, string?>
                 {
@@ -295,16 +292,15 @@ public class OnChainWalletManager : BaseHostedService
 
     private async Task<string[]> Track()
     {
-        if (!IsHubConnected)
+        if (HubProxy == null || !IsHubConnected)
             return [];
+
         var config = await GetConfig();
         if (config is null ||!IsConfigured(config))
-        {
             return [];
-        }
 
         var identifiers = config.Derivations.Select(pair => pair.Value.Identifier).ToArray();
-        var response = await _btcPayConnectionManager.HubProxy.Handshake(new AppHandshake
+        var response = await HubProxy.Handshake(new AppHandshake
         {
             Identifiers = identifiers
         });
@@ -354,7 +350,7 @@ public class OnChainWalletManager : BaseHostedService
             var config = await GetConfig();
             var bb = await GetBestBlock();
             var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
-            var utxos = (await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers));
+            var utxos = await HubProxy.GetUTXOs(identifiers);
             config.CoinSnapshot = new CoinSnapshot()
             {
                 BlockSnapshot = new BlockSnapshot()
@@ -362,7 +358,7 @@ public class OnChainWalletManager : BaseHostedService
                     BlockHash = uint256.Parse(bb.BlockHash),
                     BlockHeight = (uint) bb.BlockHeight
                 },
-                Coins = utxos.ToDictionary(kv => kv.Key, 
+                Coins = utxos.ToDictionary(kv => kv.Key,
                     kv => kv.Value.Select(coin => new SavedCoin()
                 {
                     Outpoint = OutPoint.Parse(coin.Outpoint),
@@ -382,7 +378,7 @@ public class OnChainWalletManager : BaseHostedService
     {
         var config = await GetConfig();
         var identifier = config?.Derivations[derivation].Identifier;
-        var addr = await _btcPayConnectionManager.HubProxy.DeriveScript(identifier);
+        var addr = await HubProxy.DeriveScript(identifier);
         return Script.FromHex(addr).GetDestinationAddress(_btcPayConnectionManager.ReportedNetwork);
     }
 
@@ -396,8 +392,11 @@ public class OnChainWalletManager : BaseHostedService
     public async Task<PSBT?> SignTransaction(PSBT psbt)
     {
         var config = await GetConfig();
+        if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
+            throw new InvalidOperationException("Cannot sign transaction in current state");
+
         var identifiers = config.Derivations.Select(derivation => derivation.Value.Identifier).ToArray();
-        var updated = await _btcPayConnectionManager.HubProxy.UpdatePsbt(identifiers, psbt.ToHex());
+        var updated = await HubProxy.UpdatePsbt(identifiers, psbt.ToHex());
         psbt = PSBT.Parse(updated, config.NBitcoinNetwork);
         var rootKey = new Mnemonic(config.Mnemonic).DeriveExtKey();
         foreach (var deriv in config.Derivations.Values.Where(derivation => derivation.Descriptor is not null))
@@ -476,9 +475,12 @@ public class OnChainWalletManager : BaseHostedService
     public async Task<Dictionary<string, TxResp[]>?> GetTransactions()
     {
         var config = await GetConfig();
+        if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
+            throw new InvalidOperationException("Cannot get transactions in current state");
+
         var identifiersWhichWeCanDeriveKeysFor = config.Derivations.Values
             .Select(derivation => derivation.Identifier).ToArray();
-        var res = await _btcPayConnectionManager.HubProxy.GetTransactions(identifiersWhichWeCanDeriveKeysFor);
+        var res = await HubProxy.GetTransactions(identifiersWhichWeCanDeriveKeysFor);
         return res.ToDictionary(
             pair =>
             {
@@ -491,8 +493,11 @@ public class OnChainWalletManager : BaseHostedService
     public async Task<IEnumerable<ICoin>> GetUTXOS()
     {
         var config = await GetConfig();
+        if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
+            throw new InvalidOperationException("Cannot get UTXOS in current state");
+
         var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
-        var utxos = await _btcPayConnectionManager.HubProxy.GetUTXOs(identifiers);
+        var utxos = await HubProxy.GetUTXOs(identifiers);
         var identifiersWhichWeCanDeriveKeysFor = config.Derivations.Values
             .Where(derivation => derivation.Descriptor is not null).Select(derivation => derivation.Identifier.ToLowerInvariant())
             .ToArray();
@@ -521,7 +526,7 @@ public class OnChainWalletManager : BaseHostedService
             }
         }
 
-        foreach (var kv in utxos.ExceptBy(utxosThatWeCanDeriveKeysFor.Select(pair => pair.Key), kv => kv.Key).ToArray()) 
+        foreach (var kv in utxos.ExceptBy(utxosThatWeCanDeriveKeysFor.Select(pair => pair.Key), kv => kv.Key).ToArray())
         {
             foreach (var coin in kv.Value)
                 result.Add(ToCoin(coin));
@@ -600,13 +605,19 @@ public class OnChainWalletManager : BaseHostedService
 
     public async Task<BestBlockResponse?> GetBestBlock()
     {
+        if (HubProxy == null || !IsHubConnected)
+        {
+            _logger.LogWarning("Cannot get best block: Hub not connected");
+            return null;
+        }
+
         var res = await _memoryCache.GetOrCreateAsync("bestblock", async entry =>
         {
             _logger.LogInformation("Getting best block");
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
             try
             {
-                return await _btcPayConnectionManager.HubProxy.GetBestBlock();
+                return await HubProxy.GetBestBlock();
             }
             catch (Exception e)
             {
@@ -628,11 +639,20 @@ public class OnChainWalletManager : BaseHostedService
 
     public async Task BroadcastTransaction(Transaction valueTx, CancellationToken cancellationToken = default)
     {
-        await _btcPayConnectionManager.HubProxy.BroadcastTransaction(valueTx.ToHex());
+        if (HubProxy == null || !IsHubConnected)
+            throw new InvalidOperationException("Cannot broadcast transaction: Hub not connected");
+        await HubProxy.BroadcastTransaction(valueTx.ToHex());
     }
 
     public async Task<FeeRate> GetFeeRate(int blockTarget)
     {
+        var defaultRate = new FeeRate(100m);
+        if (HubProxy == null || !IsHubConnected)
+        {
+            _logger.LogWarning("Cannot get fee rate: Hub not connected, using hardcoded {DefaultRate}", defaultRate);
+            return defaultRate;
+        }
+
         try
         {
             return await _memoryCache.GetOrCreateAsync($"feerate_{blockTarget}", async entry =>
@@ -641,16 +661,16 @@ public class OnChainWalletManager : BaseHostedService
 
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
 
-                var result = new FeeRate(await _btcPayConnectionManager.HubProxy.GetFeeRate(blockTarget));
+                var result = new FeeRate(await HubProxy.GetFeeRate(blockTarget));
 
-                _logger.LogInformation($"Got fee rate for block target {blockTarget} {result}");
+                _logger.LogInformation("Got fee rate for block target {BlockTarget} {Result}", blockTarget, result);
                 return result;
-            });
+            }) ?? defaultRate;
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error getting fee rate, using hardcoded 100");
-            return new FeeRate(100m);
+            _logger.LogError(e, "Error getting fee rate, using hardcoded hardcoded {DefaultRate}", defaultRate);
+            return defaultRate;
         }
     }
 }
