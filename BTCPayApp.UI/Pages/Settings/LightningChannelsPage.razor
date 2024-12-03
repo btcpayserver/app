@@ -114,7 +114,7 @@
         @if (PeerModel != null)
         {
             <h2>Connect Peer</h2>
-            <ValidationEditContext @ref="_connectEditContext" Model="PeerModel" OnValidSubmit="() => ConnectToNewPeer()" SuccessMessage="@ConnectSuccessMessage" ErrorMessage="@ConnectErrorMessage">
+            <ValidationEditContext @ref="_connectEditContext" Model="PeerModel" OnValidSubmit="ConnectToNewPeer" SuccessMessage="@ConnectSuccessMessage" ErrorMessage="@ConnectErrorMessage">
                 <DataAnnotationsValidator/>
                 <fieldset class="box">
                     <div class="form-group">
