@@ -1,0 +1,53 @@
+@using BTCPayApp.UI.Models
+<div @attributes="InputAttributes" class="@CssClass">
+    @if (Loading)
+    {
+        <div class="p-3 text-center">
+            <LoadingIndicator/>
+        </div>
+    }
+    @if (Transactions is not null)
+    {
+        @if (Transactions.Any())
+        {
+            @foreach (var t in Transactions)
+            {
+                <div class="box">
+                    <TransactionsListItem Transaction="@t" Unit="@Unit" OnToggleDisplayCurrency="OnToggleDisplayCurrency"/>
+                </div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
+        else
+        {
+            <div class="box">
+                <p class="text-muted my-0">There are no transactions, yet.</p>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IEnumerable<TransactionModel>? Transactions { get; set; }
+
+    [Parameter, EditorRequired]
+    public string? Unit { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleDisplayCurrency { get; set; }
+
+    [Parameter]
+    public bool Loading { get; set; }
+
+    [Parameter]
+    public string? Error { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    private string CssClass => $"transactions-list {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
+}

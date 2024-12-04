@@ -42,6 +42,11 @@ public class PaymentsManager :
         _ldkNode = ldkNode;
     }
 
+    public async Task<List<AppLightningPayment>> GetTransactions(CancellationToken cancellationToken = default)
+    {
+        return await List(payments => payments, cancellationToken);
+    }
+
     public async Task<List<AppLightningPayment>> List(
         Func<IQueryable<AppLightningPayment>, IQueryable<AppLightningPayment?>> filter,
         CancellationToken cancellationToken = default)
@@ -203,10 +208,10 @@ public class PaymentsManager :
             await context.SaveChangesAsync();
             if (successSelfPay)
             {
-                
+
                 OnPaymentUpdate?.Invoke(this, inbound);
             }
-            
+
             OnPaymentUpdate?.Invoke(this, newOutbound);
             return newOutbound;
         }
@@ -250,7 +255,7 @@ public class PaymentsManager :
         }
         catch (Exception e)
         {
-            
+
             outbound.Status = LightningPaymentStatus.Failed;
             await context.SaveChangesAsync();
             throw;
@@ -383,7 +388,7 @@ public class PaymentsManager :
         {
             return;
         }
-        
+
         var paymentHash =  uint256.Parse(Convert.ToHexString(eventPaymentClaimed.payment_hash).ToLower());
         await PaymentUpdate(paymentHash, true, "default", false,
             preimage is null ? null : Convert.ToHexString(preimage).ToLower());
@@ -397,7 +402,7 @@ public class PaymentsManager :
 
     public async Task Handle(Event.Event_PaymentSent eventPaymentSent)
     {
-        
+
         var paymentHash =  uint256.Parse(Convert.ToHexString(eventPaymentSent.payment_hash).ToLower());
         await PaymentUpdate(paymentHash, false,
             Convert.ToHexString(

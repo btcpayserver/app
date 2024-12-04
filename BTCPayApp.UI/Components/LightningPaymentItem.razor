@@ -7,10 +7,12 @@
         <span class="text-muted">
             <DateDisplay DateTimeOffset="@Payment.Timestamp"/>
         </span>
-        <LightningPaymentStatusDisplay Payment="@Payment" OnCancelClick="OnCancelClick" />
+        <span class="w-100px ms-auto text-end">
+            <LightningPaymentStatusDisplay Payment="@Payment" OnCancelClick="OnCancelClick" />
+        </span>
     </div>
     <div class="collapse @(_showDetails ? "show" : null)">
-        <div class="py-3">
+        <div class="pt-3">
             <div class="form-floating">
                 <TruncateCenter Text="@Payment.PaymentRequest.ToString()" Padding="15" Copy="true" class="form-control-plaintext"/>
                 <label>Payment Request</label>

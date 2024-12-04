@@ -285,6 +285,30 @@
   font-weight: var(--btcpay-font-weight-semibold);
 }
 
+/* Definition List */
+dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--btcpay-space-m);
+}
+dl > div dt,
+dl > div dd {
+  margin: 0;
+  padding: var(--btcpay-space-xs) 0;
+  font-weight: var(--btcpay-font-weight-normal);
+}
+dl > div dt {
+  text-align: left;
+  white-space: nowrap;
+  color: var(--btcpay-body-text-muted);
+}
+dl > div dd {
+  text-align: right;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 62.5%;
+}
+
 /* Keypad */
 .keypad {
   display: grid;

@@ -267,7 +267,7 @@
                                     <span class="text-end">
                                         @p.PaymentMethod.PaymentMethodId
                                     </span>
-                                    <TruncateCenter Text="@p.Payment.Destination" class="truncate-center-id"/>
+                                    <TruncateCenter Text="@p.Payment.Destination" Copy="true" class="truncate-center-id"/>
                                     <span class="text-end text-muted" data-sensitive>
                                         Rate: @DisplayFormatter.Currency(p.PaymentMethod.Rate, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)
                                     </span>

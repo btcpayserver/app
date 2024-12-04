@@ -1,4 +1,4 @@
-﻿using BTCPayApp.Core.Backup;
+using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
@@ -542,14 +542,14 @@ public class OnChainWalletManager : BaseHostedService
     }
 
 
-    public async Task<(NBitcoin.Transaction Tx, ICoin[] SpentCoins, BitcoinAddress Change)> CreateTransaction(
-        List<TxOut> txOuts, FeeRate? feeRate, List<Coin> explicitIns = null)
+    public async Task<(Transaction Tx, ICoin[] SpentCoins, BitcoinAddress Change)> CreateTransaction(
+        List<TxOut> txOuts, FeeRate? feeRate, List<Coin>? explicitIns = null)
     {
         var availableCoins = (await GetUTXOS()).OfType<CoinWithKey>().ToList();
         feeRate ??= await GetFeeRate(1);
 
         var config = await GetConfig();
-//TODO: do not hardcode this constant
+        //TODO: do not hardcode this constant
         var changeScript = await DeriveScript(WalletDerivation.NativeSegwit);
         var txBuilder = config.NBitcoinNetwork
             .CreateTransactionBuilder()
@@ -559,7 +559,6 @@ public class OnChainWalletManager : BaseHostedService
         txBuilder = txOuts.Aggregate(txBuilder, (current, c) => current.Send(c.ScriptPubKey, c.Value));
         txBuilder.SendAllRemainingToChange();
 
-        NBitcoin.Transaction? tx;
         if (explicitIns?.Any() is true)
         {
             txBuilder.AddCoins(explicitIns.ToArray());
@@ -569,15 +568,14 @@ public class OnChainWalletManager : BaseHostedService
         {
             try
             {
-                tx = txBuilder.BuildTransaction(true);
+                var tx = txBuilder.BuildTransaction(true);
                 return (tx, txBuilder.FindSpentCoins(tx), changeScript);
             }
-            catch (NotEnoughFundsException e)
+            catch (NotEnoughFundsException)
             {
-                if (!availableCoins.Any())
-                    throw;
+                if (!availableCoins.Any()) throw;
                 var newCoin = availableCoins.First();
-                //TODO: switch to nuilding a psbt and signing with the ISignableCoin interface
+                //TODO: switch to building a PSBT and signing with the ISignableCoin interface
                 if (newCoin is CoinWithKey newCoinWithKey)
                 {
                     txBuilder.AddCoins(newCoin);
@@ -596,7 +594,7 @@ public class OnChainWalletManager : BaseHostedService
             var config = await GetConfig();
             if (State != OnChainWalletState.Loaded || config is null)
             {
-                throw new InvalidOperationException("Cannot remove deriv in current state");
+                throw new InvalidOperationException("Cannot remove derivation in current state");
             }
 
             var updated = key.Aggregate(false, (current, k) => current || config.Derivations.Remove(k));

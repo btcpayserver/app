@@ -1,0 +1,93 @@
+@using BTCPayApp.UI.Models
+@using BTCPayServer.Lightning
+
+<div>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2" @onclick="() => _showDetails = !_showDetails">
+        <span class="flex-grow-1 text-muted">
+            <DateDisplay DateTimeOffset="@Transaction.Timestamp"/>
+        </span>
+        <AmountDisplay Value="Transaction.Value.ToDecimal(UnitLightMoney)" Unit="@Unit" OnToggleDisplayCurrency="ToggleDisplayCurrency" class="@AmountClass" />
+        <span class="w-100px ms-auto text-end">
+            <span class="@BadgeClass">@UnifyStatus(Transaction.Status)</span>
+        </span>
+    </div>
+    <div class="collapse @(_showDetails ? "show" : null)">
+        <div class="pt-3">
+            <div class="form-floating">
+                <span class="truncate-center form-control-plaintext" style="padding-right:3px;padding-left:3px;padding-bottom:0;font-weight: var(--btcpay-font-weight-semibold);">
+                    <DateDisplay DateTimeOffset="@Transaction.Timestamp" Format="DateDisplay.DateDisplayFormat.Localized"/>
+                </span>
+                <label>Date</label>
+            </div>
+            @if (Transaction is { PaymentMethod: TransactionPaymentMethod.Onchain, OnchainTransaction: not null })
+            {
+                <div class="form-floating">
+                    <TruncateCenter Text="@Transaction.OnchainTransaction.TransactionId" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <label>Transaction ID</label>
+                </div>
+            }
+            else if (Transaction is { PaymentMethod: TransactionPaymentMethod.Lightning, LightningPayment: not null })
+            {
+                <div class="form-floating">
+                    <TruncateCenter Text="@Transaction.LightningPayment.PaymentRequest.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <label>Payment Request</label>
+                </div>
+                @if (Transaction.LightningPayment.Preimage != null)
+                {
+                    <div class="form-floating">
+                        <TruncateCenter Text="@Transaction.LightningPayment.Preimage" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <label>Preimage</label>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public TransactionModel Transaction { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public string? Unit { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggleDisplayCurrency { get; set; }
+
+    private bool _showDetails;
+    private LightMoneyUnit UnitLightMoney => Unit == "SATS" ? LightMoneyUnit.Satoshi : LightMoneyUnit.BTC;
+    private string AmountClass => $"flex-grow-1 text-end fw-semibold text-{(Transaction.Type == TransactionType.Receive ? "success" : "danger")}";
+    private string BadgeClass
+    {
+        get
+        {
+            var clss = "badge";
+            var status = UnifyStatus(Transaction.Status).ToLower();
+            switch (Transaction.PaymentMethod)
+            {
+                case TransactionPaymentMethod.Onchain:
+                    clss += $" badge-{(status == "unconfirmed" ? "pending" : "settled")}";
+                    break;
+                case TransactionPaymentMethod.Lightning:
+                    clss += $" badge-{status}";
+                    break;
+            }
+            return clss;
+        }
+    }
+
+    private string UnifyStatus(string original)
+    {
+        return original switch
+        {
+            "Confirmed" or "Complete" => "Settled",
+            _ => original
+        };
+    }
+
+    private async Task ToggleDisplayCurrency()
+    {
+        if (OnToggleDisplayCurrency.HasDelegate)
+            await OnToggleDisplayCurrency.InvokeAsync();
+    }
+}

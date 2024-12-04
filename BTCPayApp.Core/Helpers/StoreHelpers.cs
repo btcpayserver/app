@@ -70,8 +70,7 @@ public static class StoreHelpers
             using var jsonDoc = JsonDocument.Parse(onchain.Config.ToString());
             if (jsonDoc.RootElement.TryGetProperty("accountDerivation", out var derivationSchemeElement) &&
                 derivationSchemeElement.GetString() is { } derivationScheme &&
-                config.Derivations.Any(pair => pair.Value.Identifier ==
-                                               $"DERIVATIONSCHEME:{derivationScheme}"))
+                config.Derivations.Any(pair => pair.Value.Identifier == $"DERIVATIONSCHEME:{derivationScheme}"))
             {
                 return true;
             }
@@ -84,14 +83,14 @@ public static class StoreHelpers
     {
         if (!string.IsNullOrEmpty(lightning?.Config.ToString()))
         {
+            var node = lightningNodeManager.Node;
+            if (node == null) return false;
             using var jsonDoc = JsonDocument.Parse(lightning.Config.ToString());
             if (jsonDoc.RootElement.TryGetProperty("connectionString", out var connectionStringElement) &&
                 connectionStringElement.GetString() is { } connectionString &&
                 LightningConnectionStringHelper.ExtractValues(connectionString, out var lnConnectionString) is { } lnValues &&
-                lnConnectionString == "app" &&
-                lnValues.TryGetValue("key", out var key) &&
-                key is not null &&
-                await lightningNodeManager.Node.ApiKeyManager.CheckPermission(key, APIKeyPermission.Read))
+                lnConnectionString == "app" && lnValues.TryGetValue("key", out var key) && key is not null &&
+                await node.ApiKeyManager.CheckPermission(key, APIKeyPermission.Read))
             {
                 return true;
             }
