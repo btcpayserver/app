@@ -38,6 +38,8 @@ public static class Routes
     public const string ChannelsPeers = "/settings/lightning/channels";
     public const string User = "/settings/user";
     public const string EncryptionKey = "/settings/encryption";
+    public const string LightningSend = "/lightning/send";
+    public const string LightningReceive = "/lightning/receive";
     public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);
     public static string CheckoutPath(string invoiceId) => Checkout.Replace("{InvoiceId}", invoiceId);
     public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);

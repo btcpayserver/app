@@ -1,4 +1,4 @@
-﻿@attribute [Route(Routes.Funds)]
+﻿@attribute [Route(Routes.Send)]
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.BTCPayServer
@@ -318,7 +318,7 @@
     private decimal? MaxAvailable => Model.Bolt11 != null
         ? (LightningOffchainLocalBalance ?? 0)
         : (OnchainConfirmedBalance ?? 0);
-    private bool IsValidForm => !_validationEditContext!.Invalid && MaxAvailable is > 0 && Model.Amount is > 0 && !string.IsNullOrEmpty(Model.Destination) && (
+    private bool IsValidForm => !_validationEditContext!.Invalid && !InsufficientFunds && !string.IsNullOrEmpty(Model.Destination) && (
         (Model.Bolt11 != null && LightningState == SourceState.Supported) ||
         (Model.Address != null && OnchainState == SourceState.Supported));
     private string DestinationPlaceholder
