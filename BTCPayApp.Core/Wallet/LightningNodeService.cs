@@ -23,9 +23,9 @@ public class LightningNodeManager : BaseHostedService
     private IServiceScope? _nodeScope;
     public LDKNode? Node => _nodeScope?.ServiceProvider.GetService<LDKNode>();
     private LightningNodeState _state = LightningNodeState.Init;
-    private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
+    public bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
     private async Task<bool> IsOnchainLightningDerivationConfigured() => (await _onChainWalletManager.GetConfig())?.Derivations.ContainsKey(WalletDerivation.LightningScripts) is true;
-    public  async Task<bool>  CanConfigureLightningNode ()=> IsHubConnected && await _onChainWalletManager.IsConfigured() && !await IsOnchainLightningDerivationConfigured() && State == LightningNodeState.NotConfigured;
+    public  async Task<bool>  CanConfigureLightningNode () => IsHubConnected && await _onChainWalletManager.IsConfigured() && !await IsOnchainLightningDerivationConfigured() && State == LightningNodeState.NotConfigured;
     // public string? ConnectionString => IsOnchainLightningDerivationConfigured && _accountManager.GetUserInfo() is {} acc
     //     ? $"type=app;user={acc.UserId}": null;
 
@@ -157,7 +157,7 @@ public class LightningNodeManager : BaseHostedService
         {
             if (!IsHubConnected)
                 throw new InvalidOperationException("Cannot configure lightning node without BTCPay connection");
-          
+
             if (!await _onChainWalletManager.IsConfigured())
                 throw new InvalidOperationException("Cannot configure lightning node without on-chain wallet configuration");
             if (await IsOnchainLightningDerivationConfigured())

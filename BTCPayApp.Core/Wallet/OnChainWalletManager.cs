@@ -45,7 +45,7 @@ public class OnChainWalletManager : BaseHostedService
         return CanConfigureWallet(await GetConfig());
     }
 
-    private bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
+    public bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
     public bool IsActive => State == OnChainWalletState.Loaded;
 
     public OnChainWalletState State
