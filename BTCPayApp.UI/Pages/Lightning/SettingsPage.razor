@@ -28,11 +28,11 @@
     </Titlebar>
 </SectionContent>
 <section class="container">
-    @if (State.Value.LightningNodeState is  LightningNodeState.NotConfigured)
+    @if (State.Value.LightningNodeState is LightningNodeState.NotConfigured)
     {
         <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
     }
-    else if (State.Value.LightningNodeState is not LightningNodeState.Error)
+    else if (Node is not null && State.Value.LightningNodeState is not LightningNodeState.Error)
     {
         <h2 class="d-flex flex-wrap align-items-center gap-2">
             <span>@(_config?.Alias ?? "Lightning Node")</span>
