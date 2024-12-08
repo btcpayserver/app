@@ -1,9 +1,17 @@
+@inject IJSRuntime JS
+
 <section id="Titlebar" class="@(Fixed ? "fixed" : null)">
     <div class="container d-flex align-items-center justify-content-between">
         <div class="titlebar-start">
-            @if (!string.IsNullOrEmpty(BackLink) || Back)
+            @if (BackCallback.HasDelegate)
             {
-                <a class="btn-icon" href="@(BackLink ?? "#")" onclick="@(string.IsNullOrEmpty(BackLink) ? "history.back();return false;" : null)">
+                <button type="button" class="btn-icon" @onclick="BackCallback">
+                    <Icon Symbol="back"/>
+                </button>
+            }
+            else if (!string.IsNullOrEmpty(BackLink) || Back)
+            {
+                <a class="btn-icon" href="@(BackLink ?? "#")" onclick="history.back();return false;">
                     <Icon Symbol="back"/>
                 </a>
             }
@@ -22,6 +30,9 @@
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public EventCallback BackCallback { get; set; }
 
     [Parameter]
     public string? BackLink { get; set; }

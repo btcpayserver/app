@@ -28,7 +28,7 @@
 <PageTitle>@GetTitle()</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
-    <Titlebar Back>
+    <Titlebar BackCallback="OnBackClick">
         <h1>@GetTitle()</h1>
     </Titlebar>
 </SectionContent>
@@ -159,10 +159,6 @@
                             <span>Send @(Model.Bolt11 != null ? "via Lightning" : Model.Address != null ? "onchain" : "")</span>
                         }
                     </button>
-                    @if (Model.Transaction != null)
-                    {
-                        <button type="button" class="btn btn-outline-secondary w-100 mt-3" @onclick="CancelTx">Cancel transaction</button>
-                    }
                 </fieldset>
             </ValidationEditContext>
             <QrScanModal OnScan="@OnQrCodeScan"/>
@@ -412,6 +408,14 @@
             : SourceState.NotConfigured;
 
         _ = LoadTransactions();
+    }
+
+    private async Task OnBackClick()
+    {
+        if (Model.Transaction == null)
+            await JS.InvokeVoidAsync("history.back");
+        else
+            await CancelTx();
     }
 
     private async Task LoadTransactions()
