@@ -8,7 +8,7 @@
 @inject IAuthorizationService AuthService
 @inject AuthenticationStateProvider AuthStateProvider
 
-<div class="d-flex flex-column gap-4 w-100" disabled="@IsSubmitting">
+<div disabled="@IsSubmitting" @attributes="InputAttributes" class="@CssClass">
     @{ var amount = GetAmount(); }
     <input type="hidden" name="amount" value="@GetTotal().ToString(CultureInfo.InvariantCulture)">
     <input type="hidden" name="tip" value="@GetTip()?.ToString(CultureInfo.InvariantCulture)">
@@ -279,6 +279,8 @@
     public IEnumerable<RecentTransaction>? RecentTransactions { get; set; }
     [Parameter]
     public IEnumerable<AppItem>? Items { get; set; }
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
 
     const int DefaultFontSize = 64;
     static readonly char[] Keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '+'];
@@ -679,6 +681,7 @@
             };
             await CreateInvoice.InvokeAsync(req);
         }
+        IsSubmitting = false;
     }
 
     private async Task OnClickRecentTransaction(RecentTransaction t)
@@ -692,4 +695,6 @@
         var display = DisplayItem(item) ? "posItem--displayed" : null;
         return $"posItem p-3 {inStock} {display}".Trim();
     }
+
+    private string CssClass => $"d-flex flex-column gap-4 w-100 {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
 }

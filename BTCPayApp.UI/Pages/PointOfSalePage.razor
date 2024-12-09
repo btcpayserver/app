@@ -22,31 +22,33 @@
         <div class="fs-4">Loading</div>
     </section>
 }
-else if (!string.IsNullOrEmpty(Error))
-{
-    <section class="container">
-        <Alert Type="danger">@Error</Alert>
-    </section>
-}
-@if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(AppId) && AppData != null)
+else
 {
     <section class="container py-4">
-        <Keypad
-            StoreId="@StoreId"
-            AppId="@AppId"
-            CurrencyCode="@AppData.Currency"
-            CurrencyInfo="@CurrencyInfo"
-            IsItemlistEnabled="@(AppData.ShowItems is true)"
-            IsDiscountEnabled="@(AppData.ShowDiscount is true)"
-            IsTipEnabled="@(AppData.EnableTips is true)"
-            IsSearchEnabled="@(AppData.ShowSearch is true)"
-            IsCategoriesEnabled="@(AppData.ShowCategories is true)"
-            Items="@Items"
-            Categories="@Categories"
-            CustomTipPercentages="@AppData.CustomTipPercentages"
-            RecentTransactions="@RecentTransactions"
-            LoadRecentTransactions="@LoadRecentTransactions"
-            CreateInvoice="@CreateInvoice" />
+        @if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger" Margin="2" style="margin-top:4.5rem">@Error</Alert>
+        }
+        @if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(AppId) && AppData != null)
+        {
+            <Keypad
+                StoreId="@StoreId"
+                AppId="@AppId"
+                CurrencyCode="@AppData.Currency"
+                CurrencyInfo="@CurrencyInfo"
+                IsItemlistEnabled="@(AppData.ShowItems is true)"
+                IsDiscountEnabled="@(AppData.ShowDiscount is true)"
+                IsTipEnabled="@(AppData.EnableTips is true)"
+                IsSearchEnabled="@(AppData.ShowSearch is true)"
+                IsCategoriesEnabled="@(AppData.ShowCategories is true)"
+                Items="@Items"
+                Categories="@Categories"
+                CustomTipPercentages="@AppData.CustomTipPercentages"
+                RecentTransactions="@RecentTransactions"
+                LoadRecentTransactions="@LoadRecentTransactions"
+                CreateInvoice="@CreateInvoice"
+                class="my-auto" />
+        }
     </section>
 }
 
@@ -83,11 +85,18 @@ else if (!string.IsNullOrEmpty(Error))
     {
         _errorMessage = null;
         req.AppId = AppId;
-        var res = await AccountManager.GetClient().CreatePosInvoice(req);
-        if (res?.TryGetValue("invoiceId", out var invoiceId) is true)
-            NavigationManager.NavigateTo(Routes.CheckoutPath(invoiceId.ToString()));
-        else if (res?.TryGetValue("error", out var error) is true)
-            _errorMessage = error.ToString();
+        try
+        {
+            var res = await AccountManager.GetClient().CreatePosInvoice(req);
+            if (res?.TryGetValue("invoiceId", out var invoiceId) is true)
+                NavigationManager.NavigateTo(Routes.CheckoutPath(invoiceId.ToString()));
+            else if (res?.TryGetValue("error", out var error) is true)
+                _errorMessage = error.ToString();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
     }
 
     private async Task LoadRecentTransactions()

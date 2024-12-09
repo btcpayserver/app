@@ -1,4 +1,4 @@
-<div class="alert alert-@Type mb-@(Margin) text-break @(Dismissible ? "alert-dismissible" : null)" role="alert">
+<div role="alert" @attributes="InputAttributes" class="@CssClass">
     @ChildContent
     @if (Dismissible)
     {
@@ -20,4 +20,9 @@
 
     [Parameter]
     public int Margin { get; set; } = 4;
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    private string CssClass => $"alert alert-{Type} mb-{Margin} text-break {(Dismissible ? "alert-dismissible " : "")}{(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
 }
