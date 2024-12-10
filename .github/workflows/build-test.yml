@@ -110,13 +110,17 @@ jobs:
           p12-password: ${{ secrets.APPLE_CERT_P12_PASS }}
       
       # Verify imported certificates and extract Developer ID
-      - name: Find Developer ID Application Certificate
+      - name: Find Code Signing Certificate
         id: find-cert
         run: |
-          security find-identity -v -p codesigning
-          CERT_NAME=$(security find-identity -v -p codesigning | grep "Developer ID Application" | awk '{print substr($0, index($0, $5))}')
-          echo "Certificate Name: $CERT_NAME"
-          echo "CERT_NAME=$CERT_NAME" >> $GITHUB_ENV
+          CERT_NAME=$(security find-identity -v -p codesigning | grep "Apple Distribution" | awk -F '"Apple Distribution: ' '{print $2}' | awk -F '"' '{print $1}')
+          if [ -z "$CERT_NAME" ]; then
+            echo "No valid Apple Distribution certificate found!"
+            exit 1
+          fi
+          echo "Certificate Name: Apple Distribution: $CERT_NAME"
+          echo "CERT_NAME=Apple Distribution: $CERT_NAME" >> $GITHUB_ENV
+
       
       # Setup .NET
       - name: Setup .NET
