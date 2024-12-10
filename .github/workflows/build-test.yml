@@ -94,28 +94,137 @@ jobs:
           path: |
             publish/linux-x64
             publish/linux-arm64
-  build-desktop-mac:
-    runs-on: macos-latest
-    steps:
-      # Setup code, .NET and Android
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Build mac x64
-        run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -r osx-x64 -c Debug -o publish/osx-x64
-      - name: Build mac arm64 
-        run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -r osx-arm64  -c Debug -o publish/osx-arm64
-      - name: Upload artifact mac
-        uses: actions/upload-artifact@v4
-        with:
-          name: mac build
-          path: |
-            publish/osx-x64
-            publish/osx-arm64
+build-desktop-mac:
+  runs-on: macos-latest
+  steps:
+    # Checkout the code
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # Import code-signing certificates
+    - name: Import Code-Signing Certificates
+      uses: Apple-Actions/import-codesign-certs@v1
+      with:
+        p12-file-base64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+        p12-password: ${{ secrets.APPLE_CERT_P12_PASS }}
+
+    # Verify imported certificates and extract Developer ID
+    - name: Find Developer ID Application Certificate
+      id: find-cert
+      run: |
+        security find-identity -v -p codesigning
+        CERT_NAME=$(security find-identity -v -p codesigning | grep "Developer ID Application" | awk '{print substr($0, index($0, $5))}')
+        echo "Certificate Name: $CERT_NAME"
+        echo "CERT_NAME=$CERT_NAME" >> $GITHUB_ENV
+
+    # Setup .NET
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    # Build the app for macOS architectures
+    - name: Build mac x64
+      run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -r osx-x64 -c Release -o publish/osx-x64
+
+    - name: Build mac arm64
+      run: dotnet publish BTCPayApp.Photino/BTCPayApp.Photino.csproj -r osx-arm64 -c Release -o publish/osx-arm64
+
+    # Create the .app bundle
+    - name: Create .app bundle for x64
+      run: |
+        mkdir -p BTCPayApp_x64.app/Contents/MacOS
+        cp publish/osx-x64/BTCPayApp.Photino BTCPayApp_x64.app/Contents/MacOS/BTCPayApp
+        echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+        <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+        <plist version=\"1.0\">
+        <dict>
+          <key>CFBundleExecutable</key>
+          <string>BTCPayApp</string>
+          <key>CFBundleIdentifier</key>
+          <string>com.example.BTCPayApp</string>
+          <key>CFBundleName</key>
+          <string>BTCPayApp</string>
+          <key>CFBundleVersion</key>
+          <string>1.0</string>
+          <key>CFBundlePackageType</key>
+          <string>APPL</string>
+        </dict>
+        </plist>" > BTCPayApp_x64.app/Contents/Info.plist
+
+    - name: Create .app bundle for arm64
+      run: |
+        mkdir -p BTCPayApp_arm64.app/Contents/MacOS
+        cp publish/osx-arm64/BTCPayApp.Photino BTCPayApp_arm64.app/Contents/MacOS/BTCPayApp
+        echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+        <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
+        <plist version=\"1.0\">
+        <dict>
+          <key>CFBundleExecutable</key>
+          <string>BTCPayApp</string>
+          <key>CFBundleIdentifier</key>
+          <string>com.example.BTCPayApp</string>
+          <key>CFBundleName</key>
+          <string>BTCPayApp</string>
+          <key>CFBundleVersion</key>
+          <string>1.0</string>
+          <key>CFBundlePackageType</key>
+          <string>APPL</string>
+        </dict>
+        </plist>" > BTCPayApp_arm64.app/Contents/Info.plist
+
+    # Sign the .app bundles using the dynamic certificate name
+    - name: Sign x64 .app bundle
+      run: |
+        codesign --deep --force --options runtime --sign "$CERT_NAME" BTCPayApp_x64.app
+
+    - name: Sign arm64 .app bundle
+      run: |
+        codesign --deep --force --options runtime --sign "$CERT_NAME" BTCPayApp_arm64.app
+
+    # Verify the signing
+    - name: Verify signing for x64
+      run: spctl -a -t exec -vv BTCPayApp_x64.app
+
+    - name: Verify signing for arm64
+      run: spctl -a -t exec -vv BTCPayApp_arm64.app
+
+    # Create DMG files
+    - name: Create DMG for x64
+      run: |
+        mkdir -p dist
+        hdiutil create -volname "BTCPayApp" -srcfolder BTCPayApp_x64.app -ov -format UDZO dist/BTCPayApp_x64.dmg
+
+    - name: Create DMG for arm64
+      run: |
+        mkdir -p dist
+        hdiutil create -volname "BTCPayApp" -srcfolder BTCPayApp_arm64.app -ov -format UDZO dist/BTCPayApp_arm64.dmg
+
+    # Sign the DMG files
+    - name: Sign x64 DMG
+      run: |
+        codesign --force --sign "$CERT_NAME" dist/BTCPayApp_x64.dmg
+
+    - name: Sign arm64 DMG
+      run: |
+        codesign --force --sign "$CERT_NAME" dist/BTCPayApp_arm64.dmg
+
+    # Verify DMG signing
+    - name: Verify x64 DMG signing
+      run: spctl -a -t open --context context:primary-signature -v dist/BTCPayApp_x64.dmg
+
+    - name: Verify arm64 DMG signing
+      run: spctl -a -t open --context context:primary-signature -v dist/BTCPayApp_arm64.dmg
+
+    # Upload artifacts
+    - name: Upload DMG artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: mac-dmg
+        path: dist
+
+
   build-android:
     runs-on: windows-latest
     steps:
@@ -137,40 +246,40 @@ jobs:
           name: android build
           path: |
             publish/android
-  
-  build-ios:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-      - name: Setup Xcode version
-        uses: maxim-lobanov/setup-xcode@v1.6.0
-        with:
-          xcode-version: 16.0
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
-      - name: Install workloads
-        run: dotnet workload install maui
-      - name: Import Code-Signing Certificates
-        uses: Apple-Actions/import-codesign-certs@v1
-        with:
-          p12-file-base64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
-          p12-password: ${{ secrets.APPLE_CERT_P12_PASS }}
-      - name: Download Apple Provisioning Profiles
-        uses: Apple-Actions/download-provisioning-profiles@v1
-        with:
-          bundle-id: ${{ secrets.APPLE_BUNDLE_ID }}
-          issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
-          api-key-id: ${{ secrets.APPLE_KEY_ID }}
-          api-private-key: ${{ secrets.APPLE_KEY }}
-      - name: Build
-        run: dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net8.0-ios -c Debug -o publish/ios
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios build
-          path: |
-            publish/ios
+#  
+#  build-ios:
+#    runs-on: macos-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#        with:
+#          submodules: recursive
+#      - name: Setup Xcode version
+#        uses: maxim-lobanov/setup-xcode@v1.6.0
+#        with:
+#          xcode-version: 16.0
+#      - name: Setup .NET
+#        uses: actions/setup-dotnet@v4
+#        with:
+#          dotnet-version: 8.0.x
+#      - name: Install workloads
+#        run: dotnet workload install maui
+#      - name: Import Code-Signing Certificates
+#        uses: Apple-Actions/import-codesign-certs@v1
+#        with:
+#          p12-file-base64: ${{ secrets.APPLE_CERT_P12_BASE64 }}
+#          p12-password: ${{ secrets.APPLE_CERT_P12_PASS }}
+#      - name: Download Apple Provisioning Profiles
+#        uses: Apple-Actions/download-provisioning-profiles@v1
+#        with:
+#          bundle-id: ${{ secrets.APPLE_BUNDLE_ID }}
+#          issuer-id: ${{ secrets.APPLE_ISSUER_ID }}
+#          api-key-id: ${{ secrets.APPLE_KEY_ID }}
+#          api-private-key: ${{ secrets.APPLE_KEY }}
+#      - name: Build
+#        run: dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net8.0-ios -c Debug -o publish/ios
+#      - name: Upload artifact
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: ios build
+#          path: |
+#            publish/ios
