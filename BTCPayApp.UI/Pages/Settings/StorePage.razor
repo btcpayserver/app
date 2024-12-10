@@ -53,7 +53,7 @@
         </div>
         @if (_canView is true)
         {
-            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error" class="mb-5">
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
                 <DataAnnotationsValidator/>
                     <fieldset disabled="@(_canModify is not true)">
                         <fieldset class="box">

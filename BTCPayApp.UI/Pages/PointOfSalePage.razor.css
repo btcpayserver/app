@@ -1,18 +1,28 @@
 .container {
+  flex: 1 0 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--btcpay-space-m);
+}
+
+.container ::deep .alert {
+  width: 100%;
+  max-width: 500px;
+}
+
+.keypad-wrap {
   width: 100%;
   max-width: 500px;
   overflow: hidden;
   position: relative;
   flex: 1 0 100%;
   display: flex;
-  flex-direction: column;
   align-items: center;
 }
 
-.container ::deep .alert {
-  width: 100%;
-  align-self: start;
-  margin-top: 1.5rem;
+#MainContent > section.container:last-child > :last-child {
+  margin: auto 0 auto !important;
 }
 
 .loading-container {
@@ -24,12 +34,3 @@
   justify-content: center;
   gap: var(--btcpay-space-m);
 }
-
-/*iframe {
-  position: fixed;
-  z-index: 1;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: calc(100dvh - var(--navbar-bottom-height));
-}*/

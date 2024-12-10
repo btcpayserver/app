@@ -8,4 +8,5 @@
 
 ::deep .profile-picture {
   --profile-picture-size: 1.25rem;
+  margin-right: var(--btcpay-space-s);
 }

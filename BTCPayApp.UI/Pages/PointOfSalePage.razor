@@ -24,30 +24,31 @@
 }
 else
 {
-    <section class="container py-4">
+    <section class="container px-0">
         @if (!string.IsNullOrEmpty(Error))
         {
-            <Alert Type="danger" Margin="2" style="margin-top:4.5rem">@Error</Alert>
+            <Alert Type="danger" class="mx-3">@Error</Alert>
         }
         @if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(AppId) && AppData != null)
         {
-            <Keypad
-                StoreId="@StoreId"
-                AppId="@AppId"
-                CurrencyCode="@AppData.Currency"
-                CurrencyInfo="@CurrencyInfo"
-                IsItemlistEnabled="@(AppData.ShowItems is true)"
-                IsDiscountEnabled="@(AppData.ShowDiscount is true)"
-                IsTipEnabled="@(AppData.EnableTips is true)"
-                IsSearchEnabled="@(AppData.ShowSearch is true)"
-                IsCategoriesEnabled="@(AppData.ShowCategories is true)"
-                Items="@Items"
-                Categories="@Categories"
-                CustomTipPercentages="@AppData.CustomTipPercentages"
-                RecentTransactions="@RecentTransactions"
-                LoadRecentTransactions="@LoadRecentTransactions"
-                CreateInvoice="@CreateInvoice"
-                class="my-auto" />
+            <div class="keypad-wrap">
+                <Keypad
+                    StoreId="@StoreId"
+                    AppId="@AppId"
+                    CurrencyCode="@AppData.Currency"
+                    CurrencyInfo="@CurrencyInfo"
+                    IsItemlistEnabled="@(AppData.ShowItems is true)"
+                    IsDiscountEnabled="@(AppData.ShowDiscount is true)"
+                    IsTipEnabled="@(AppData.EnableTips is true)"
+                    IsSearchEnabled="@(AppData.ShowSearch is true)"
+                    IsCategoriesEnabled="@(AppData.ShowCategories is true)"
+                    Items="@Items"
+                    Categories="@Categories"
+                    CustomTipPercentages="@AppData.CustomTipPercentages"
+                    RecentTransactions="@RecentTransactions"
+                    LoadRecentTransactions="@LoadRecentTransactions"
+                    CreateInvoice="@CreateInvoice" />
+            </div>
         }
     </section>
 }

@@ -60,6 +60,14 @@
   min-height: 100dvh;
 }
 
+#MainContent > section.container:last-child {
+  margin-bottom: var(--btcpay-space-l);
+}
+
+#MainContent > section.container:last-child > *:last-child {
+  margin-bottom: 0 !important;
+}
+
 .public-page-wrap {
   --wrap-max-width: none;
   --wrap-padding-vertical: var(--btcpay-space-l);

@@ -14,7 +14,7 @@
     <input type="hidden" name="tip" value="@GetTip()?.ToString(CultureInfo.InvariantCulture)">
     <input type="hidden" name="discount" value="@GetDiscountPercent()">
     <input type="hidden" name="posdata" value="@GetData()">
-    <div class="d-flex flex-column align-items-center px-4 mb-auto" @ref="_keypadTop">
+    <div class="d-flex flex-column align-items-center mb-auto" @ref="_keypadTop">
         <div class="fw-semibold text-muted" id="Currency">@CurrencyCode</div>
         <div class="fw-bold lh-sm" id="Amount" style="font-size:@($"{FontSize}px")" @ref="_keypadAmount">@FormatCurrency(GetTotal(), false)</div>
         <div class="text-muted text-center mt-2" id="Calculation">@Calculation(Model)</div>
@@ -24,7 +24,7 @@
         <div id="ModeTabs" class="tab-content mb-n2">
             @if (IsDiscountEnabled)
             {
-                <div class="tab-pane fade px-2 @(Mode == InputMode.Discount ? "show active" : "")" role="tabpanel" aria-labelledby="ModeTablist-Discount">
+                <div class="tab-pane fade @(Mode == InputMode.Discount ? "show active" : "")" role="tabpanel" aria-labelledby="ModeTablist-Discount">
                     <div class="h4 fw-semibold text-muted text-center" id="Discount">
                         <span class="h3 text-body me-1">@GetDiscountPercent()%</span> discount
                     </div>
@@ -32,7 +32,7 @@
             }
             @if (IsTipEnabled)
             {
-                <div class="tab-pane fade px-2 @(Mode == InputMode.Tip ? "show active" : "")" role="tabpanel" aria-labelledby="ModeTablist-Tip">
+                <div class="tab-pane fade @(Mode == InputMode.Tip ? "show active" : "")" role="tabpanel" aria-labelledby="ModeTablist-Tip">
                     <div class="btcpay-pills d-flex flex-wrap align-items-center justify-content-center gap-2">
                         @if (CustomTipPercentages != null)
                         {
