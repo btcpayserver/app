@@ -1,4 +1,3 @@
-using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
@@ -19,13 +18,12 @@ public class LightningNodeManager : BaseHostedService
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
-
     private IServiceScope? _nodeScope;
     public LDKNode? Node => _nodeScope?.ServiceProvider.GetService<LDKNode>();
     private LightningNodeState _state = LightningNodeState.Init;
     public bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
     private async Task<bool> IsOnchainLightningDerivationConfigured() => (await _onChainWalletManager.GetConfig())?.Derivations.ContainsKey(WalletDerivation.LightningScripts) is true;
-    public  async Task<bool>  CanConfigureLightningNode () => IsHubConnected && await _onChainWalletManager.IsConfigured() && !await IsOnchainLightningDerivationConfigured() && State == LightningNodeState.NotConfigured;
+    public  async Task<bool> CanConfigureLightningNode () => IsHubConnected && await _onChainWalletManager.IsConfigured() && !await IsOnchainLightningDerivationConfigured() && State == LightningNodeState.NotConfigured;
     // public string? ConnectionString => IsOnchainLightningDerivationConfigured && _accountManager.GetUserInfo() is {} acc
     //     ? $"type=app;user={acc.UserId}": null;
 
@@ -67,7 +65,6 @@ public class LightningNodeManager : BaseHostedService
         {
             return;
         }
-
 
         _logger.LogInformation("Starting lightning node");
         await _controlSemaphore.WaitAsync();
@@ -122,7 +119,7 @@ public class LightningNodeManager : BaseHostedService
             _nodeScope = null;
             _controlSemaphore.Release();
             if (setAsStopped)
-            State = LightningNodeState.Stopped;
+                State = LightningNodeState.Stopped;
         }
     }
 

@@ -63,6 +63,7 @@ public class OnChainWalletManager : BaseHostedService
     }
 
     public event AsyncEventHandler<(OnChainWalletState Old, OnChainWalletState New)>? StateChanged;
+    public event AsyncEventHandler<CoinSnapshot>? SnapshotUpdated;
 
     public OnChainWalletManager(
         ConfigProvider configProvider,
@@ -352,9 +353,9 @@ public class OnChainWalletManager : BaseHostedService
             var bb = await GetBestBlock();
             var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
             var utxos = await HubProxy.GetUTXOs(identifiers);
-            config.CoinSnapshot = new CoinSnapshot()
+            config.CoinSnapshot = new CoinSnapshot
             {
-                BlockSnapshot = new BlockSnapshot()
+                BlockSnapshot = new BlockSnapshot
                 {
                     BlockHash = uint256.Parse(bb.BlockHash),
                     BlockHeight = (uint) bb.BlockHeight
@@ -367,6 +368,7 @@ public class OnChainWalletManager : BaseHostedService
                 }).ToArray())
             };
             await _configProvider.Set(WalletConfig.Key, config, true);
+            SnapshotUpdated?.Invoke(this, config.CoinSnapshot);
         }
         finally
         {
@@ -494,7 +496,6 @@ public class OnChainWalletManager : BaseHostedService
                     derivation.Value.Identifier.Equals(pair.Key, StringComparison.InvariantCultureIgnoreCase)).Key;
             }, pair => pair.Value.OrderByDescending(tx => tx.Timestamp).ToArray());
     }
-
 
     public async Task<IEnumerable<ICoin>> GetUTXOS()
     {

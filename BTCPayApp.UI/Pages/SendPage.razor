@@ -34,7 +34,13 @@
 </SectionContent>
 <section class="container">
     <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
-        <h2>Send from @(StoreInfo?.Name ?? "Store") Funds</h2>
+        <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+            <h2 class="mb-0">Send from @(StoreInfo?.Name ?? "Store") Funds</h2>
+            @if (BalanceLoading)
+            {
+                <LoadingIndicator/>
+            }
+        </header>
         @if (TotalBalance > 0 && (LightningOffchainLocalBalance is > 0 || OnchainConfirmedBalance is > 0) &&
              (OnchainState == SourceState.Supported && OnChainWalletManager.IsActive ||
               LightningState == SourceState.Supported && LightningNodeManager.IsActive))
@@ -162,12 +168,6 @@
                 </fieldset>
             </ValidationEditContext>
             <QrScanModal OnScan="@OnQrCodeScan"/>
-        }
-        else if (BalanceLoading)
-        {
-            <div class="p-3 text-center">
-                <LoadingIndicator/>
-            </div>
         }
         else if (!string.IsNullOrEmpty(BalanceError))
         {
@@ -297,8 +297,14 @@
 
             @if (Transactions?.Any() is true)
             {
-                <h2 class="mb-3">Recent Payments</h2>
-                <TransactionsList Transactions="Transactions" Unit="@BitcoinUnit" Loading="@TransactionsLoading" Error="@TransactionsError" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                    <h2 class="mb-0">Recent Payments</h2>
+                    @if (TransactionsLoading)
+                    {
+                        <LoadingIndicator/>
+                    }
+                </header>
+                <TransactionsList Transactions="Transactions" Unit="@BitcoinUnit" Error="@TransactionsError" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
             }
         }
     </AuthorizeView>
@@ -407,7 +413,23 @@
             ? await LightningNodeManager.IsLightningOurs(lightning) ? SourceState.Supported : SourceState.NotSupported
             : SourceState.NotConfigured;
 
+        OnChainWalletManager.SnapshotUpdated += OnSnapshotUpdated;
+
         _ = LoadTransactions();
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        OnChainWalletManager.SnapshotUpdated -= OnSnapshotUpdated;
+
+        return ValueTask.CompletedTask;
+    }
+
+    private async Task OnSnapshotUpdated(object? sender, CoinSnapshot _)
+    {
+        await LoadTransactions();
     }
 
     private async Task OnBackClick()
@@ -422,6 +444,7 @@
     {
         TransactionsError = null;
         TransactionsLoading = true;
+        await InvokeAsync(StateHasChanged);
         try
         {
             // load
@@ -594,7 +617,6 @@
             await OnChainWalletManager.BroadcastTransaction(transaction);
             Dispatcher.Dispatch(new StoreState.FetchBalances(StoreId!));
             Model = new SendModel();
-            _ = LoadTransactions();
             return new FormResult(true, $"Transaction {transaction.GetHash()} broadcasted");
         }
         catch (Exception ex)
