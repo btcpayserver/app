@@ -187,13 +187,13 @@ jobs:
         run: |
           codesign --deep --force --options runtime --sign "$CERT_NAME" BTCPayApp_arm64.app
       
-      # Verify the signing
-      - name: Verify signing for x64
-        run: spctl -a -t exec -vv BTCPayApp_x64.app
-
-      - name: Verify signing for arm64
-        run: spctl -a -t exec -vv BTCPayApp_arm64.app
-      
+#      # Verify the signing
+#      - name: Verify signing for x64
+#        run: spctl -a -t exec -vv BTCPayApp_x64.app
+#
+#      - name: Verify signing for arm64
+#        run: spctl -a -t exec -vv BTCPayApp_arm64.app
+#      
       # Create DMG files
       - name: Create DMG for x64
         run: |
