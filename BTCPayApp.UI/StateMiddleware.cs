@@ -1,4 +1,3 @@
-using System.Text.Json;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
@@ -215,10 +214,15 @@ public class StateMiddleware(
                     if (serverEvent.StoreId != null)
                     {
                         await accountManager.CheckAuthenticated(true);
-                        if (serverEvent.Type is "store-removed" or "user-store-removed" && currentStore != null && serverEvent.StoreId == currentStore.Id)
-                        {
+                        if (currentStore == null || serverEvent.StoreId != currentStore.Id) return;
+                        if (serverEvent.Type is "store-removed" or "user-store-removed")
                             await accountManager.UnsetCurrentStore();
-                        }
+                        if (serverEvent.Type is "store-updated")
+                            dispatcher.Dispatch(new StoreState.FetchStore(serverEvent.StoreId!));
+                        if (serverEvent.Type.StartsWith("user-store-"))
+                            dispatcher.Dispatch(new StoreState.FetchUsers(serverEvent.StoreId!));
+                        if (serverEvent.Type.StartsWith("store-role-"))
+                            dispatcher.Dispatch(new StoreState.FetchRoles(serverEvent.StoreId!));
                     }
                     break;
             }
