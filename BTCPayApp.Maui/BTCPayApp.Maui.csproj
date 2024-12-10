@@ -34,6 +34,7 @@
         <ArchiveOnBuild>true</ArchiveOnBuild>
         <RuntimeIdentifiers>ios-arm64</RuntimeIdentifiers>
         <UseInterpreter>True</UseInterpreter>
+        <EnableAssemblyILStripping>false</EnableAssemblyILStripping>
     </PropertyGroup>
     
     
