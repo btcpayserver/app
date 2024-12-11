@@ -9,6 +9,8 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Models
+@using BTCPayApp.UI.Pages.SignedOut
+@using BTCPayApp.UI.Util
 @using BTCPayServer.Client
 @using BTCPayServer.Client.App
 @using BTCPayServer.Client.App.Models
@@ -393,7 +395,7 @@
         public string? Destination { get; set; }
         [Required]
         public decimal? Amount { get; set; }
-        [Required]
+        [RequiredIf(nameof(Address), RequiredIfTargetValue.NotNull)]
         public decimal? FeeRate { get; set; }
 
         public BOLT11PaymentRequest? Bolt11 { get; set; }
@@ -413,7 +415,8 @@
             ? await LightningNodeManager.IsLightningOurs(lightning) ? SourceState.Supported : SourceState.NotSupported
             : SourceState.NotConfigured;
 
-        OnChainWalletManager.SnapshotUpdated += OnSnapshotUpdated;
+        OnChainWalletManager.OnSnapshotUpdate += OnTransactionUpdated;
+        if (PaymentsManager != null) PaymentsManager.OnPaymentUpdate += OnTransactionUpdated;
 
         _ = LoadTransactions();
     }
@@ -422,12 +425,13 @@
     {
         base.DisposeAsyncCore(disposing);
 
-        OnChainWalletManager.SnapshotUpdated -= OnSnapshotUpdated;
+        OnChainWalletManager.OnSnapshotUpdate -= OnTransactionUpdated;
+        if (PaymentsManager != null) PaymentsManager.OnPaymentUpdate -= OnTransactionUpdated;
 
         return ValueTask.CompletedTask;
     }
 
-    private async Task OnSnapshotUpdated(object? sender, CoinSnapshot _)
+    private async Task OnTransactionUpdated(object? sender, object _)
     {
         await LoadTransactions();
     }
@@ -501,6 +505,7 @@
         {
             Model.Bolt11 = null;
             Model.Address = null;
+            Model.FeeRate = null;
             Model.Transaction = null;
             return;
         }
@@ -509,6 +514,7 @@
         {
             Model.Bolt11 = BOLT11PaymentRequest.Parse(destination, network);
             Model.Amount = Model.Bolt11.MinimumAmount.ToDecimal(UnitLightMoney);
+            return;
         }
         catch
         {
@@ -643,12 +649,11 @@
             var result = await PaymentsManager.PayInvoice(bolt11, amount);
             SuccessMessage = $"Payment {result.PaymentId} sent with status {result.Status}";
             Model = new SendModel();
-            _ = LoadTransactions();
-            return new FormResult(true, "Payment sent");
+            return new FormResult(true, "Lightning payment sent");
         }
         catch (Exception ex)
         {
-            return new FormResult(false, "Payment failed: " + ex.Message);
+            return new FormResult(false, "Lightning p failed: " + ex.Message);
         }
         finally
         {

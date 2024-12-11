@@ -172,7 +172,6 @@ public class PaymentsManager :
         amt = Math.Max(amt, explicitAmount?.MilliSatoshi ?? 0);
 
         //check if we have a db record with same pay hash but has the preimage set
-
         await using var context = await _dbContextFactory.CreateDbContextAsync();
         var inbound = await context.LightningPayments.FirstOrDefaultAsync(lightningPayment =>
             lightningPayment.PaymentHash == paymentRequest.PaymentHash && lightningPayment.Inbound);
@@ -180,7 +179,7 @@ public class PaymentsManager :
         if (inbound is not null)
         {
             var successSelfPay = false;
-            var newOutbound = new AppLightningPayment()
+            var newOutbound = new AppLightningPayment
             {
                 Inbound = false,
                 Value = amt,
@@ -216,7 +215,7 @@ public class PaymentsManager :
             return newOutbound;
         }
 
-        var outbound = new AppLightningPayment()
+        var outbound = new AppLightningPayment
         {
             Inbound = false,
             Value = amt,

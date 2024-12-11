@@ -96,7 +96,7 @@ public class StateMiddleware(
             }
         };
 
-        onChainWalletManager.SnapshotUpdated += async (sender, args) =>
+        onChainWalletManager.OnSnapshotUpdate += async (sender, args) =>
         {
             if (accountManager.GetCurrentStore() is { } store)
             {

@@ -63,7 +63,7 @@ public class OnChainWalletManager : BaseHostedService
     }
 
     public event AsyncEventHandler<(OnChainWalletState Old, OnChainWalletState New)>? StateChanged;
-    public event AsyncEventHandler<CoinSnapshot>? SnapshotUpdated;
+    public event AsyncEventHandler<CoinSnapshot>? OnSnapshotUpdate;
 
     public OnChainWalletManager(
         ConfigProvider configProvider,
@@ -368,7 +368,7 @@ public class OnChainWalletManager : BaseHostedService
                 }).ToArray())
             };
             await _configProvider.Set(WalletConfig.Key, config, true);
-            SnapshotUpdated?.Invoke(this, config.CoinSnapshot);
+            OnSnapshotUpdate?.Invoke(this, config.CoinSnapshot);
         }
         finally
         {

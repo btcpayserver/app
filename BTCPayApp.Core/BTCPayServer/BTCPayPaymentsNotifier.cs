@@ -37,8 +37,6 @@ public class BTCPayPaymentsNotifier : IScopedHostedService
             .SendInvoiceUpdate(e.ToInvoice());
     }
 
-   
-    
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         _paymentsManager.OnPaymentUpdate -= OnPaymentUpdate;
@@ -47,6 +45,6 @@ public class BTCPayPaymentsNotifier : IScopedHostedService
     public void StartListen()
     {
         _listening = true;
-        
+
     }
 }
