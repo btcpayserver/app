@@ -216,18 +216,18 @@ public class StateMiddleware(
                 case "store-created":
                 case "store-updated":
                 case "store-removed":
-                case "user-store-added":
-                case "user-store-updated":
-                case "user-store-removed":
+                case "store-user-added":
+                case "store-user-updated":
+                case "store-user-removed":
                     if (serverEvent.StoreId != null)
                     {
                         await accountManager.CheckAuthenticated(true);
                         if (currentStore == null || serverEvent.StoreId != currentStore.Id) return;
-                        if (serverEvent.Type is "store-removed" or "user-store-removed")
+                        if (serverEvent.Type is "store-removed" or "store-user-removed")
                             await accountManager.UnsetCurrentStore();
                         if (serverEvent.Type is "store-updated")
                             dispatcher.Dispatch(new StoreState.FetchStore(serverEvent.StoreId!));
-                        if (serverEvent.Type.StartsWith("user-store-"))
+                        if (serverEvent.Type.StartsWith("store-user-"))
                             dispatcher.Dispatch(new StoreState.FetchUsers(serverEvent.StoreId!));
                         if (serverEvent.Type.StartsWith("store-role-"))
                             dispatcher.Dispatch(new StoreState.FetchRoles(serverEvent.StoreId!));
