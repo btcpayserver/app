@@ -1,0 +1,146 @@
+@using BTCPayApp.Core
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Models
+@using BTCPayServer.Client.Models
+@inject IJSRuntime JS
+@inject IAccountManager AccountManager
+@inject NavigationManager NavigationManager
+@implements IDisposable
+
+<div class="d-inline-flex align-items-center p-0 gap-3">
+    @if (false && Users?.Count() > 1)
+    {
+        <button class="d-inline-flex align-items-center btn btn-link text-body dropdown-toggle dropdown-toggle-no-caret p-0 gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <UserInfo Email="@_account!.Email" Name="@_account.Name" ImageUrl="@_account.ImageUrl" />
+            <Icon Symbol="caret-down"/>
+        </button>
+        <ul class="dropdown-menu">
+            @foreach (var user in Users)
+            {
+                if (user.UserId == _account.Id) continue;
+                <li>
+                    <button class="d-inline-flex align-items-center dropdown-item gap-2" type="button" @onclick="() => SwitchToUser(user)">
+                        <UserInfo Email="@user.Email" Name="@user.Name" ImageUrl="@user.ImageUrl" />
+                    </button>
+                </li>
+            }
+        </ul>
+        <div class="modal fade" id="UserSwitchModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                @if (Model != null)
+                {
+                    <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="SwitchAccount">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h1 class="modal-title fs-5">Switch account to @Model.Email</h1>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                                    <Icon Symbol="cross"/>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                @if (!string.IsNullOrEmpty(_errorMessage))
+                                {
+                                    <Alert Type="danger">@_errorMessage</Alert>
+                                }
+                                <div class="form-group" hidden="@Model.RequireTwoFactor">
+                                    <label for="Password" class="form-label">Password</label>
+                                    <InputText @bind-Value="Model.Password" type="password" id="Password" autocomplete="current-password" class="form-control"/>
+                                    <ValidationMessage For="@(() => Model.Password)"/>
+                                </div>
+                                @if (Model.RequireTwoFactor)
+                                {
+                                    <div class="form-group">
+                                        <label for="TwoFactorCode" class="form-label">Two Factor Code</label>
+                                        <InputText @bind-Value="Model.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin"/>
+                                        <ValidationMessage For="@(() => Model.TwoFactorCode)"/>
+                                    </div>
+                                }
+                            </div>
+                            <div class="modal-footer">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    @if (_sending)
+                                    {
+                                        <LoadingIndicator />
+                                    }
+                                    else
+                                    {
+                                        <span>Sign in as @Model.Email</span>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    }
+    else if (_account != null)
+    {
+        <UserInfo Email="@_account.Email" Name="@_account.Name" ImageUrl="@_account.ImageUrl" />
+    }
+</div>
+
+@code {
+    private BTCPayAccount? _account;
+    private bool _sending;
+    private string? _errorMessage;
+    private LoginModel? Model { get; set; }
+
+    [Parameter]
+    public IEnumerable<StoreUserData>? Users { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        AccountManager.OnAccountInfoChange += OnAccountInfoChange;
+
+        _account = AccountManager.GetAccount();
+    }
+
+    public void Dispose()
+    {
+        AccountManager.OnAccountInfoChange -= OnAccountInfoChange;
+    }
+
+    private async Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
+    {
+        _account = account;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SwitchToUser(StoreUserData user)
+    {
+        // Model = new LoginModel { Uri = account.BaseUri, Email = account.Email };
+        await JS.InvokeVoidAsync("Interop.openModal", "#UserSwitchModal");
+        AccountManager.OnBeforeAccountChange += OnBeforeAccountChange;
+    }
+
+    private async Task OnBeforeAccountChange(object? sender, BTCPayAccount? previousAccount)
+    {
+        await JS.InvokeVoidAsync("Interop.closeModal", "#UserSwitchModal");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _errorMessage = null;
+        _sending = true;
+
+        var result = await AccountManager.Login(Model!.Uri!, Model.Email!, Model.Password!, Model.TwoFactorCode);
+        _sending = false;
+        if (result.Succeeded)
+        {
+            AccountManager.OnBeforeAccountChange -= OnBeforeAccountChange;
+            NavigationManager.NavigateTo(Routes.Index);
+        }
+        else
+        {
+            if (result.Messages?.Contains("RequiresTwoFactor") is true)
+                Model.RequireTwoFactor = true;
+            else
+                _errorMessage = result.Messages?.Contains("Failed") is false
+                    ? string.Join(",", result.Messages)
+                    : "Invalid login attempt.";
+        }
+    }
+}

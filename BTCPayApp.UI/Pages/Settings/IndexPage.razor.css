@@ -1,29 +1,10 @@
-header .btn-icon {
-  --icon-size: 2rem;
-  padding: 0;
-}
-
-.user {
-  --profile-picture-size: 3rem;
-
+.theme-switch {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--btcpay-space-m);
-  color: var(--btcpay-nav-link-color);
-  font-weight: var(--btcpay-font-weight-semibold);
+  gap: var(--btcpay-space-s);
 }
 
-.user:hover {
-  color: var(--btcpay-nav-link-hover-color);
-}
-
-.user h5 {
-  font-weight: var(--btcpay-font-weight-semibold);
-  margin-bottom: var(--btcpay-space-xs);
-}
-
-.user ::deep .icon-caret-right {
-  margin-left: auto;
-  color: var(--btcpay-body-text-muted);
+.theme-switch .btn-icon {
+  --icon-size: 1.75rem;
+  padding: 0;
 }

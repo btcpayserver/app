@@ -7,6 +7,7 @@
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client
 @using BTCPayServer.Client.App.Models
+@using BTCPayServer.Client.Models
 @using Plugin.Fingerprint.Abstractions
 @inject IState<RootState> State
 @inject IState<UIState> UiState
@@ -16,8 +17,8 @@
 @inject IFingerprint Fingerprint
 @inject IState<UIState> UIState
 @inject IState<UserState> UserState
+@inject IState<StoreState> StoreState
 @inject BTCPayConnectionManager ConnectionManager
-@inject OnChainWalletManager OnChainWalletManager
 @inject LightningNodeManager LightningNodeManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -30,7 +31,7 @@
             <h1>Settings</h1>
             @if (InstanceInfo?.CustomThemeExtension is null)
             {
-                <div class="d-flex align-items-center gap-1">
+                <div class="theme-switch">
                     @foreach (var theme in ThemeList)
                     {
                         <button type="button" class="btn-icon @(Model.Theme == theme ? "active" : null)" title="@theme" @onclick="() => SetTheme(theme)">
@@ -40,23 +41,18 @@
                 </div>
             }
         </header>
-        <a href="@Routes.User" class="box user mb-2">
-            @if (!string.IsNullOrEmpty(_account.ImageUrl))
-            {
-                <img src="@_account.ImageUrl" alt="@(_account.Name ?? _account.Email)" class="profile-picture" />
-            }
-            else
-            {
-                <Icon Symbol="nav-account" class="profile-picture" />
-            }
-            <div>
-                <h5>@(_account.Name ?? _account.Email)</h5>
-                <span>@_account.Email</span>
-            </div>
-            <Icon Symbol="caret-right"/>
-        </a>
+        <div class="box user mb-2 d-flex align-items-center justify-content-between gap-3 my-4">
+            <UserSwitch Users="@StoreUsers"/>
+        </div>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
+                <li class="list-group-item">
+                    <a href="@Routes.Account">
+                        <Icon Symbol="nav-account"/>
+                        <span>Account Details</span>
+                        <Icon Symbol="caret-right"/>
+                    </a>
+                </li>
                 <li class="list-group-item">
                     <a href="@Routes.NotificationSettings">
                         <Icon Symbol="nav-notifications"/>
@@ -168,6 +164,13 @@
                         <Icon Symbol="caret-right"/>
                     </a>
                 </li>
+                <li class="list-group-item">
+                    <a href="@Routes.ChangePassword">
+                        <Icon Symbol="dots" class="p-2"/>
+                        <span>Change Password</span>
+                        <Icon Symbol="caret-right"/>
+                    </a>
+                </li>
                 @*
                 <li class="list-group-item">
                     <a href="@Routes.ChangePasscode">
@@ -221,14 +224,41 @@
                 }
             </ul>
         </div>
+
+        <h2>Logout</h2>
+        <div class="box">
+            @switch (State.Value.ConnectionState)
+            {
+                case BTCPayConnectionState.ConnectedAsMaster:
+                    <p>This device is currently connected as primary device for communication with the BTCPay Server.</p>
+                    <p>Please note, that when you sign out of the account on this device, your Lightning node will go offline and you will not be able to receive any payments.</p>
+                    break;
+                case BTCPayConnectionState.ConnectedAsSlave:
+                    <p>This device is currently connected as additional device for communication with the BTCPay Server.</p>
+                    <p>Please ensure, that your primary device is still connected to the BTCPay Server, because otherwise you will not be able to receive any payments.</p>
+                    break;
+            }
+            <button class="btn btn-outline-danger w-100 mt-2" type="button" @onclick="Logout">Logout</button>
+        </div>
     </section>
 }
 
 @code {
+    private static string[] ThemeList => [Themes.System, Themes.Light, Themes.Dark];
     private BTCPayAccount? _account;
     private BTCPayAppConfig? _config;
     private bool? _biometricAuthAvailable;
     private SettingsModel Model { get; set; } = new();
+    private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
+    private AppUserStoreInfo? CurrentStore => AccountManager.GetCurrentStore();
+    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
+    private AppUserInfo? UserInfo => UserState.Value.Info?.Data;
+    private IEnumerable<StoreUserData>? StoreUsers => StoreState.Value.Users?.Data;
+
+    private class SettingsModel
+    {
+        public string Theme { get; set; } = Themes.System;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -273,20 +303,13 @@
         Dispatcher.Dispatch(new UIState.ApplyUserTheme(Model.Theme));
     }
 
-    private class SettingsModel
-    {
-        public string Theme { get; set; } = Themes.System;
-    }
-
-    private static string[] ThemeList => [Themes.System, Themes.Light, Themes.Dark];
-    private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
-    private AppUserStoreInfo? CurrentStore => AccountManager.GetCurrentStore();
-    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
-    private AppUserInfo? UserInfo => UserState.Value.Info?.Data;
-
     private void SwitchToSlave()
     {
         _ = ConnectionManager.SwitchToSlave();
     }
 
+    private async Task Logout()
+    {
+        await AccountManager.Logout();
+    }
 }

@@ -1,0 +1,32 @@
+<div class="user-info d-flex align-items-center gap-2">
+    @if (!string.IsNullOrEmpty(ImageUrl))
+    {
+        <img src="@ImageUrl" alt="@DisplayName" class="profile-picture" />
+    }
+    else
+    {
+        <Icon Symbol="nav-account" class="profile-picture" />
+    }
+    <div class="text-start">
+        @if (string.IsNullOrEmpty(Name))
+        {
+            <h5 class="mb-0 fw-semibold">@Email</h5>
+        }
+        else
+        {
+            <h5 class="mb-1 fw-semibold">@Name</h5>
+            <span class="text-muted">@Email</span>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Email { get; set; } = null!;
+    [Parameter]
+    public string? Name { get; set; }
+    [Parameter]
+    public string? ImageUrl { get; set; }
+
+    private string DisplayName => Name ?? Email;
+}

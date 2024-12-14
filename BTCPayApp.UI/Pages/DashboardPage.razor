@@ -13,21 +13,19 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Dashboard</PageTitle>
-<section class="container">
-    <header class="d-flex align-items-center justify-content-between gap-3 mt-3 mb-4">
-        <AccountSwitch />
-        <div class="notifications">
-            @if (!string.IsNullOrEmpty(StoreId))
-            {
-                <NotificationsBell/>
-            }
-        </div>
-    </header>
+
+<section class="container py-4">
     @if (!string.IsNullOrEmpty(_successMessage))
     {
         <Alert Type="success" Margin="0" Dismissible>@_successMessage</Alert>
     }
     <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
+        @if (!string.IsNullOrEmpty(StoreId))
+        {
+            <div class="notifications d-flex justify-content-end mb-n4">
+                <NotificationsBell />
+            </div>
+        }
         <WalletOverview BitcoinBalance="@TotalBalance" BitcoinUnit="@BitcoinUnit" MoneyUnit="@UnitMoney" Histogram="@Histogram"
                         Currency="@Currency" Rate="@Rate" Error="@BalanceError" Loading="@BalanceLoading" OnBalanceClick="ToggleDisplayCurrency"
                         class="my-3"/>

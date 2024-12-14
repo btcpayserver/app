@@ -36,7 +36,8 @@ public static class Routes
     public const string WalletFunds = "/settings/wallet/funds";
     public const string LightningSettings = "/settings/lightning";
     public const string ChannelsPeers = "/settings/lightning/channels";
-    public const string User = "/settings/user";
+    public const string Account = "/settings/account";
+    public const string ChangePassword = "/settings/password";
     public const string EncryptionKey = "/settings/encryption";
     public const string LightningSend = "/lightning/send";
     public const string LightningReceive = "/lightning/receive";
