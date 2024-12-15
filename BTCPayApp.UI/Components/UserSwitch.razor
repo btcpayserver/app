@@ -8,16 +8,17 @@
 @implements IDisposable
 
 <div class="d-inline-flex align-items-center p-0 gap-3">
-    @if (false && Users?.Count() > 1)
+    @if (Users?.Count() > 1)
     {
         <button class="d-inline-flex align-items-center btn btn-link text-body dropdown-toggle dropdown-toggle-no-caret p-0 gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
             <UserInfo Email="@_account!.Email" Name="@_account.Name" ImageUrl="@_account.ImageUrl" />
-            <Icon Symbol="caret-down"/>
+            <Icon Symbol="caret-down" class="text-muted"/>
         </button>
         <ul class="dropdown-menu">
+            <li><h6 class="dropdown-header">Switch to user</h6></li>
             @foreach (var user in Users)
             {
-                if (user.UserId == _account.Id) continue;
+                if (user.Email == _account.Email) continue;
                 <li>
                     <button class="d-inline-flex align-items-center dropdown-item gap-2" type="button" @onclick="() => SwitchToUser(user)">
                         <UserInfo Email="@user.Email" Name="@user.Name" ImageUrl="@user.ImageUrl" />
@@ -32,7 +33,7 @@
                     <EditForm Model="Model" OnValidSubmit="HandleValidSubmit" FormName="SwitchAccount">
                         <div class="modal-content">
                             <div class="modal-header">
-                                <h1 class="modal-title fs-5">Switch account to @Model.Email</h1>
+                                <h1 class="modal-title fs-5">Switch to @Model.Email</h1>
                                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
                                     <Icon Symbol="cross"/>
                                 </button>
@@ -112,8 +113,8 @@
     private async Task SwitchToUser(StoreUserData user)
     {
         // Model = new LoginModel { Uri = account.BaseUri, Email = account.Email };
-        await JS.InvokeVoidAsync("Interop.openModal", "#UserSwitchModal");
-        AccountManager.OnBeforeAccountChange += OnBeforeAccountChange;
+        //await JS.InvokeVoidAsync("Interop.openModal", "#UserSwitchModal");
+        //AccountManager.OnBeforeAccountChange += OnBeforeAccountChange;
     }
 
     private async Task OnBeforeAccountChange(object? sender, BTCPayAccount? previousAccount)

@@ -1,19 +1,7 @@
-.dropdown-menu {
-  margin-left: -1rem !important;
-}
 
-.dropdown-item {
-  --btcpay-dropdown-item-padding-y: var(--btcpay-space-s);
-}
-
-::deep .profile-picture {
-  --profile-picture-size: 3rem;
-  margin-right: var(--btcpay-space-s);
-}
 
 
 .user {
-
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -26,6 +14,11 @@
   color: var(--btcpay-nav-link-hover-color);
 }
 
+.user ::deep .profile-picture {
+   --profile-picture-size: 3rem;
+   margin-right: var(--btcpay-space-s);
+}
+
 .user h5 {
   font-weight: var(--btcpay-font-weight-semibold);
   margin-bottom: var(--btcpay-space-xs);
@@ -34,4 +27,20 @@
 .user ::deep .icon-caret-right {
   margin-left: auto;
   color: var(--btcpay-body-text-muted);
+}
+
+.user .dropdown-menu {
+  margin-left: -1rem !important;
+}
+
+.user .dropdown-item {
+  --btcpay-dropdown-item-padding-y: var(--btcpay-space-s);
+}
+
+.user .dropdown-menu ::deep .profile-picture {
+  --profile-picture-size: 2rem;
+}
+
+.user .dropdown-menu ::deep h5 {
+  font-size: 1rem;
 }
