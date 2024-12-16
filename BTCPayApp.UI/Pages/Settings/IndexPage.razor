@@ -197,8 +197,10 @@
             <ul class="list-group list-group-flush list-group-links">
                 <li class="list-group-item">
                     <div class="justify-content-start">
-                        <span class="m-2 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster or BTCPayConnectionState.ConnectedAsSlave or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
-                        <span>Hub: @State.Value.ConnectionState</span>
+                        <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster or BTCPayConnectionState.ConnectedAsSlave or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                        <span>
+                            Hub: @(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster => "Connected as primary device", BTCPayConnectionState.ConnectedAsSlave => "Connected as secondary device", BTCPayConnectionState.ConnectedFinishedInitialSync => "Connected, initial sync finished", BTCPayConnectionState.Disconnected => "Disconnected", _ => "Connecting" })
+                        </span>
                         @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
                         {
                             <button type="button" class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchToSlave">
@@ -211,13 +213,13 @@
                 {
                     <li class="list-group-item">
                         <div class="justify-content-start">
-                            <span class="m-2 btcpay-status btcpay-status--@(State.Value.OnchainWalletState switch { OnChainWalletState.Loaded => "enabled", OnChainWalletState.Init => "disabled", _ => "pending" })"></span>
+                            <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.OnchainWalletState switch { OnChainWalletState.Loaded => "enabled", OnChainWalletState.Init => "disabled", _ => "pending" })"></span>
                             <span>Wallet: @State.Value.OnchainWalletState</span>
                         </div>
                     </li>
                     <li class="list-group-item">
                         <div class="justify-content-start">
-                            <span class="m-2 btcpay-status btcpay-status--@(State.Value.LightningNodeState switch { LightningNodeState.Loaded => "enabled", LightningNodeState.Error or LightningNodeState.Stopped=> "disabled", _ => "pending" })"></span>
+                            <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.LightningNodeState switch { LightningNodeState.Loaded => "enabled", LightningNodeState.Error or LightningNodeState.Stopped=> "disabled", _ => "pending" })"></span>
                             <span>Lightning: @State.Value.LightningNodeState</span>
                         </div>
                     </li>
