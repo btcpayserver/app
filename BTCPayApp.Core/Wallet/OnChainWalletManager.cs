@@ -127,6 +127,15 @@ public class OnChainWalletManager : BaseHostedService
             throw new InvalidOperationException("Cannot restore wallet in current state");
         }
 
+        // step1: Track our derivations
+        //for groups, we need to generate a new one and replace the local one with its identifier
+        //for derivations, we need to call track with the latest index
+        //for groups, we need to fetch all tracked scripts and add them to the group tracked source
+        // step2: import the UTXOS
+        // step3: sync the backup data
+        
+        
+        
         /*
         await _controlSemaphore.WaitAsync();
         try
