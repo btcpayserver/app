@@ -1,4 +1,4 @@
-﻿@attribute [Route(Routes.Send)]
+﻿@attribute [Route(Routes.Withdraw)]
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.BTCPayServer
@@ -9,7 +9,6 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Models
-@using BTCPayApp.UI.Pages.SignedOut
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client
 @using BTCPayServer.Client.App
@@ -37,7 +36,7 @@
 <section class="container">
     <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
         <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
-            <h2 class="mb-0">Send from @(StoreInfo?.Name ?? "Store") Funds</h2>
+            <h2 class="mb-0">Withdraw from @(StoreInfo?.Name ?? "Store") Funds</h2>
             @if (BalanceLoading)
             {
                 <LoadingIndicator/>
@@ -53,7 +52,7 @@
                     @if (NotSupported)
                     {
                         <div>
-                            Sending via external
+                            Withdrawing via external
                             @(Model.Bolt11 != null ? "Lightning node" : "wallet")
                             is not supported, see below.
                         </div>
@@ -63,7 +62,7 @@
                         <div>
                             Not enough
                             @(Model.Bolt11 != null ? "Lightning" : Model.Address != null ? "onchain" : "")
-                            balance to send
+                            balance to withdraw
                             <AmountDisplay Value="Model.Amount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
                         </div>
                     }
@@ -92,13 +91,13 @@
                             {
                                 <div class="form-text d-flex flex-wrap gap-1 align-items-center">
                                 <span>
-                                    Sending @(Model.Bolt11 != null ? "via Lightning" : "onchain"):
+                                    Withdrawing @(Model.Bolt11 != null ? "via Lightning" : "onchain"):
                                     <AmountDisplay Value="MaxAvailable" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
                                     available.
                                 </span>
                                     @if (CanAdjustAmount)
                                     {
-                                        <button type="button" class="btn btn-link p-0" @onclick="() => Model.Amount = MaxAvailable">Send maximum</button>
+                                        <button type="button" class="btn btn-link p-0" @onclick="() => Model.Amount = MaxAvailable">Withdraw maximum</button>
                                     }
                                 </div>
                             }
@@ -164,7 +163,7 @@
                         }
                         else
                         {
-                            <span>Send @(Model.Bolt11 != null ? "via Lightning" : Model.Address != null ? "onchain" : "")</span>
+                            <span>Withdraw @(Model.Bolt11 != null ? "via Lightning" : Model.Address != null ? "onchain" : "")</span>
                         }
                     </button>
                 </fieldset>
@@ -342,7 +341,7 @@
     private string BitcoinUnit => UIState.Value.BitcoinUnit;
     private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private LightMoneyUnit UnitLightMoney => BitcoinUnit == CurrencyUnit.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
-    private string GetTitle() => Model.Transaction == null ? "Send Bitcoin" : "Review Send";
+    private string GetTitle() => Model.Transaction == null ? "Withdraw Bitcoin" : "Review Withdrawal";
     private bool InsufficientFunds => Model.Amount is > 0 && MaxAvailable < Model.Amount;
     private bool NotSupported => Model.Bolt11 != null && LightningState != SourceState.Supported || Model.Address != null && OnchainState != SourceState.Supported;
     private bool CanAdjustAmount => Model.Bolt11?.MinimumAmount == null && MaxAvailable > 0;
@@ -375,7 +374,7 @@
     private string? SuccessMessage { get; set; }
     private string? ErrorMessage { get; set; }
     private ValidationEditContext? _validationEditContext;
-    private SendModel Model { get; set; } = new();
+    private WithdrawModel Model { get; set; } = new();
     private SourceState OnchainState { get; set; }
     private SourceState LightningState { get; set; }
     private List<TransactionModel>? Transactions { get; set; }
@@ -389,7 +388,7 @@
         Supported
     }
 
-    private class SendModel
+    private class WithdrawModel
     {
         [Required]
         public string? Destination { get; set; }
@@ -622,7 +621,7 @@
         {
             await OnChainWalletManager.BroadcastTransaction(transaction);
             Dispatcher.Dispatch(new StoreState.FetchBalances(StoreId!));
-            Model = new SendModel();
+            Model = new WithdrawModel();
             return new FormResult(true, $"Transaction {transaction.GetHash()} broadcasted");
         }
         catch (Exception ex)
@@ -648,7 +647,7 @@
             await _semaphore.WaitAsync();
             var result = await PaymentsManager.PayInvoice(bolt11, amount);
             SuccessMessage = $"Payment {result.PaymentId} sent with status {result.Status}";
-            Model = new SendModel();
+            Model = new WithdrawModel();
             return new FormResult(true, "Lightning payment sent");
         }
         catch (Exception ex)
