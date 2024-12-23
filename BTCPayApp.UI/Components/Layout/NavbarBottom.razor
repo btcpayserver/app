@@ -9,19 +9,19 @@
 <nav id="NavbarBottom">
     <div class="container d-flex align-items-center justify-content-between">
         <ul class="navbar-nav">
-            <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
-                <li class="nav-item">
-                    <NavLink href="@Routes.Dashboard" Match="NavLinkMatch.All" class="@(HasStore ? HomeCssClass() : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
-                        <Icon Symbol="nav-store"/>
-                        <span>Home</span>
-                    </NavLink>
-                </li>
-            </AuthorizeView>
             <AuthorizeView Policy="@Policies.CanCreateInvoice" Resource="StoreId">
                 <li class="nav-item">
                     <NavLink href="@Routes.PointOfSale" Match="NavLinkMatch.All" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
                         <Icon Symbol="nav-keypad"/>
                         <span>Checkout</span>
+                    </NavLink>
+                </li>
+            </AuthorizeView>
+            <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
+                <li class="nav-item">
+                    <NavLink href="@Routes.Dashboard" Match="NavLinkMatch.All" class="@(HasStore ? HomeCssClass() : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
+                        <Icon Symbol="nav-store"/>
+                        <span>Dashboard</span>
                     </NavLink>
                 </li>
             </AuthorizeView>
