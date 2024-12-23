@@ -19,58 +19,51 @@
     {
         <Alert Type="success" Margin="0" Dismissible>@_successMessage</Alert>
     }
-    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
-        @if (!string.IsNullOrEmpty(StoreId))
-        {
+    @if (string.IsNullOrEmpty(StoreId))
+    {
+        <Alert Type="info">Please configure a store first.</Alert>
+    }
+    else
+    {
+        <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
             <div class="notifications d-flex justify-content-end mb-n4">
                 <NotificationsBell />
             </div>
-        }
-        <WalletOverview BitcoinBalance="@TotalBalance" BitcoinUnit="@BitcoinUnit" MoneyUnit="@UnitMoney" Histogram="@Histogram"
-                        Currency="@Currency" Rate="@Rate" Error="@BalanceError" Loading="@BalanceLoading" OnBalanceClick="ToggleDisplayCurrency"
-                        class="my-3"/>
-        <div class="btn-group w-100 justify-content-center" role="group" aria-label="Period">
-            <InputRadioGroup Name="HistogramPeriod" @bind-Value="@HistogramPeriod">
-                <InputRadio Name="HistogramPeriod" Value="HistogramType.Day" class="btn-check" id="BalancePeriodDay"/>
-                <label class="btn btn-link" for="BalancePeriodDay">1D</label>
-                <InputRadio Name="HistogramPeriod" Value="HistogramType.Week" class="btn-check" id="BalancePeriodWeek"/>
-                <label class="btn btn-link" for="BalancePeriodWeek">1W</label>
-                <InputRadio Name="HistogramPeriod" Value="HistogramType.Month" class="btn-check" id="BalancePeriodMonth"/>
-                <label class="btn btn-link" for="BalancePeriodMonth">1M</label>
-                <InputRadio Name="HistogramPeriod" Value="HistogramType.YTD" class="btn-check" id="BalancePeriodYTD"/>
-                <label class="btn btn-link" for="BalancePeriodYTD">YTD</label>
-                <InputRadio Name="HistogramPeriod" Value="HistogramType.Year" class="btn-check" id="BalancePeriodYear"/>
-                <label class="btn btn-link" for="BalancePeriodYear">1Y</label>
-                <InputRadio Name="HistogramPeriod" Value="HistogramType.TwoYears" class="btn-check" id="BalancePeriodTwoYears"/>
-                <label class="btn btn-link" for="BalancePeriodTwoYears">2Y</label>
-            </InputRadioGroup>
-        </div>
-        @if (TotalBalance is > 0)
-        {
-            <div class="text-center mt-4 mb-5">
-                <NavLink href="@Routes.Withdraw" class="bg-light rounded-pill px-5 py-2 fw-semibold">Withdraw</NavLink>
+            <WalletOverview BitcoinBalance="@TotalBalance" BitcoinUnit="@BitcoinUnit" MoneyUnit="@UnitMoney" Histogram="@Histogram"
+                            Currency="@Currency" Rate="@Rate" Error="@BalanceError" Loading="@BalanceLoading" OnBalanceClick="ToggleDisplayCurrency"
+                            class="my-3"/>
+            <div class="btn-group w-100 justify-content-center" role="group" aria-label="Period">
+                <InputRadioGroup Name="HistogramPeriod" @bind-Value="@HistogramPeriod">
+                    <InputRadio Name="HistogramPeriod" Value="HistogramType.Day" class="btn-check" id="BalancePeriodDay"/>
+                    <label class="btn btn-link" for="BalancePeriodDay">1D</label>
+                    <InputRadio Name="HistogramPeriod" Value="HistogramType.Week" class="btn-check" id="BalancePeriodWeek"/>
+                    <label class="btn btn-link" for="BalancePeriodWeek">1W</label>
+                    <InputRadio Name="HistogramPeriod" Value="HistogramType.Month" class="btn-check" id="BalancePeriodMonth"/>
+                    <label class="btn btn-link" for="BalancePeriodMonth">1M</label>
+                    <InputRadio Name="HistogramPeriod" Value="HistogramType.YTD" class="btn-check" id="BalancePeriodYTD"/>
+                    <label class="btn btn-link" for="BalancePeriodYTD">YTD</label>
+                    <InputRadio Name="HistogramPeriod" Value="HistogramType.Year" class="btn-check" id="BalancePeriodYear"/>
+                    <label class="btn btn-link" for="BalancePeriodYear">1Y</label>
+                    <InputRadio Name="HistogramPeriod" Value="HistogramType.TwoYears" class="btn-check" id="BalancePeriodTwoYears"/>
+                    <label class="btn btn-link" for="BalancePeriodTwoYears">2Y</label>
+                </InputRadioGroup>
             </div>
-        }
-    </AuthorizeView>
-    <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="StoreId">
-        @if (InvoicesLoading || Invoices is not null)
-        {
-            <div class="invoices mt-5">
-                <h2>Recent Invoices</h2>
-                <InvoiceList Invoices="Invoices" Loading="InvoicesLoading" Error="@InvoicesError"/>
-            </div>
-        }
-    </AuthorizeView>
-    @if (PosAppId != null)
-    {
-        <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
-            @if (PosSalesStatsLoading || PosSalesStats is not null)
+            @if (TotalBalance is > 0)
             {
-                <AppSalesStats AppId="@PosAppId" Stats="PosSalesStats" Loading="PosSalesStatsLoading" Error="@PosSalesStatsError" class="mt-5"/>
+                <div class="text-center mt-4 mb-5">
+                    <NavLink href="@Routes.Withdraw" class="bg-light rounded-pill px-5 py-2 fw-semibold">Withdraw</NavLink>
+                </div>
             }
-            @if (PosItemStatsLoading || PosItemStats is not null)
+            @if (PosAppId != null)
             {
-                <AppItemStats AppId="@PosAppId" Stats="PosItemStats" Loading="PosItemStatsLoading" Error="@PosItemStatsError" class="mt-5"/>
+                @if (PosSalesStatsLoading || PosSalesStats is not null)
+                {
+                    <AppSalesStats AppId="@PosAppId" Stats="PosSalesStats" Loading="PosSalesStatsLoading" Error="@PosSalesStatsError" class="mt-5"/>
+                }
+                @if (PosItemStatsLoading || PosItemStats is not null)
+                {
+                    <AppItemStats AppId="@PosAppId" Stats="PosItemStats" Loading="PosItemStatsLoading" Error="@PosItemStatsError" class="mt-5"/>
+                }
             }
         </AuthorizeView>
     }
