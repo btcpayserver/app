@@ -88,9 +88,6 @@
         Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
     }
 
-    private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data?.Take(5);
-    private bool InvoicesLoading => StoreState.Value.Invoices?.Loading is true;
-    private string? InvoicesError => StoreState.Value.Invoices?.Error;
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private string? StoreId => StoreInfo?.Id;
     private string? PosAppId => StoreInfo?.PosAppId;
