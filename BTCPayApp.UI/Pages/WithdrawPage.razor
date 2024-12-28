@@ -35,13 +35,16 @@
 </SectionContent>
 <section class="container">
     <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
-        <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
-            <h2 class="mb-0">Withdraw from @(StoreInfo?.Name ?? "Store") Funds</h2>
-            @if (BalanceLoading)
-            {
-                <LoadingIndicator/>
-            }
-        </header>
+        @if (Model.Transaction == null)
+        {
+            <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                <h2 class="mb-0">Withdraw from @(StoreInfo?.Name ?? "Store") Funds</h2>
+                @if (BalanceLoading)
+                {
+                    <LoadingIndicator/>
+                }
+            </header>
+        }
         @if (TotalBalance > 0 && (LightningOffchainLocalBalance is > 0 || OnchainConfirmedBalance is > 0) &&
              (OnchainState == SourceState.Supported && OnChainWalletManager.IsActive ||
               LightningState == SourceState.Supported && LightningNodeManager.IsActive))
@@ -68,11 +71,11 @@
                     }
                 </Alert>
             }
-            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="SendFunds" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="SendFunds" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage" class="@(Model.Transaction == null ? "send" : "confirm")">
                 <DataAnnotationsValidator/>
-                <fieldset class="box mb-5">
-                    @if (Model.Transaction == null)
-                    {
+                @if (Model.Transaction == null)
+                {
+                    <fieldset class="box mb-5">
                         <div class="form-group">
                             <label for="Destination" class="form-label" data-required>Destination</label>
                             <div class="d-flex gap-2">
@@ -113,60 +116,65 @@
                                 <ValidationMessage For="@(() => Model.FeeRate)"/>
                             </div>
                         }
-                    }
-                    else
-                    {
-                        var transaction = Model.Transaction.Value;
-                        var spendingAmount = transaction.SpentCoins.Sum(c => c.TxOut.Value.ToDecimal(UnitMoney));
-                        var changeAmount = transaction.Tx.Outputs.Where(o => o.IsTo(transaction.Change)).Sum(o => o.Value.ToDecimal(UnitMoney));
-                        var feeAmount = transaction.Tx.GetFee(transaction.SpentCoins).ToDecimal(UnitMoney);
-                        var totalAmount = spendingAmount - changeAmount;
-                        var payAmount = totalAmount - feeAmount;
-                        <dl>
-                            <div>
-                                <dt>To</dt>
-                                <dd>@Model.Destination</dd>
-                            </div>
-                            <div>
-                                <dt>Amount</dt>
-                                <dd>
-                                    <AmountDisplay Value="payAmount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
-                                </dd>
-                            </div>
-                            <div>
-                                <dt>Onchain Fee</dt>
-                                <dd>
-                                    <span>@Model.FeeRate sat/vB =</span>
-                                    <AmountDisplay Value="feeAmount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
-                                </dd>
-                            </div>
-                            <div>
-                                <dt>Total</dt>
-                                <dd>
-                                    <AmountDisplay Value="totalAmount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
-                                </dd>
-                            </div>
-                            <div>
-                                <dt>RBF</dt>
-                                <dd>@Model.Transaction.Value.Tx.RBF</dd>
-                            </div>
-                        </dl>
-                    }
-                    <button type="submit" class="btn btn-primary w-100" disabled="@(!IsValidForm || Sending)">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@(!IsValidForm || Sending)">
+                            @if (Sending)
+                            {
+                                <LoadingIndicator/>
+                            }
+                            else
+                            {
+                                <span>Withdraw @(Model.Bolt11 != null ? "via Lightning" : Model.Address != null ? "onchain" : "")</span>
+                            }
+                        </button>
+                    </fieldset>
+                }
+                else
+                {
+                    var transaction = Model.Transaction.Value;
+                    var spendingAmount = transaction.SpentCoins.Sum(c => c.TxOut.Value.ToDecimal(UnitMoney));
+                    var changeAmount = transaction.Tx.Outputs.Where(o => o.IsTo(transaction.Change)).Sum(o => o.Value.ToDecimal(UnitMoney));
+                    var feeAmount = transaction.Tx.GetFee(transaction.SpentCoins).ToDecimal(UnitMoney);
+                    var totalAmount = spendingAmount - changeAmount;
+                    var payAmount = totalAmount - feeAmount;
+                    <h2 class="fs-2 fw-bold mt-4 mb-5 text-center">
+                        <AmountDisplay Value="totalAmount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                    </h2>
+                    <dl class="box mb-5">
+                        <div>
+                            <dt>Recipient gets</dt>
+                            <dd>
+                                <AmountDisplay Value="payAmount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>Network Fee</dt>
+                            <dd>
+                                <span>@Model.FeeRate sat/vB =</span>
+                                <AmountDisplay Value="feeAmount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>To</dt>
+                            <dd>
+                                <TruncateCenter Text="@Model.Destination" Padding="10" Copy="true" />
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>RBF</dt>
+                            <dd>@Model.Transaction.Value.Tx.RBF</dd>
+                        </div>
+                    </dl>
+                    <button type="submit" class="btn btn-primary w-100 mt-auto" disabled="@(!IsValidForm || Sending)">
                         @if (Sending)
                         {
                             <LoadingIndicator/>
                         }
                         else if (Model.Transaction != null)
                         {
-                            <span>Broadcast transaction</span>
-                        }
-                        else
-                        {
-                            <span>Withdraw @(Model.Bolt11 != null ? "via Lightning" : Model.Address != null ? "onchain" : "")</span>
+                            <span>Send</span>
                         }
                     </button>
-                </fieldset>
+                }
             </ValidationEditContext>
             <QrScanModal OnScan="@OnQrCodeScan"/>
         }
@@ -185,11 +193,11 @@
                         <AmountDisplay Value="OnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> available
                     </span>
                 </header>
-                @if (LightningState == SourceState.NotSupported || !OnChainWalletManager.IsActive || !OnChainWalletManager.IsHubConnected)
+                @if (OnchainState == SourceState.NotSupported || !OnChainWalletManager.IsActive || !OnChainWalletManager.IsHubConnected)
                 {
                     <p class="d-flex gap-2 text-warning">
                         <Icon Symbol="warning"/>
-                        @if (LightningState == SourceState.NotSupported)
+                        @if (OnchainState == SourceState.NotSupported)
                         {
                             <span>
                                 The store's onchain wallet is not provided by the app.
