@@ -24,10 +24,16 @@ public class CoreTests
         _output = output;
     }
 
+    internal string GetEnvironment(string variable, string defaultValue)
+    {
+        var var = Environment.GetEnvironmentVariable(variable);
+        return String.IsNullOrEmpty(var) ? defaultValue : var;
+    }
+
     [Fact]
     public async Task CanStartAppCore()
     {
-        var btcpayUri = new Uri("https://localhost:14142");
+        var btcpayUri = new Uri( GetEnvironment("BTCPAY_SERVER_URL", "https://localhost:14142"));
         using var node = await HeadlessTestNode.Create("Node1", _output);
 
         TestUtils.Eventually(
