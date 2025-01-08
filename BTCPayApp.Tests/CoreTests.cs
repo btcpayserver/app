@@ -1,14 +1,12 @@
-using BTCPayApp.Core.Auth;
+﻿using System.Collections.Immutable;
 using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
-using BTCPayApp.Core.LDK;
 using BTCPayApp.Core.Wallet;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using NBitcoin;
 using NBitcoin.RPC;
 using org.ldk.structs;
@@ -26,7 +24,6 @@ public class CoreTests
         _output = output;
     }
 
-
     [Fact]
     public async Task CanStartAppCore()
     {
@@ -41,7 +38,6 @@ public class CoreTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => node.OnChainWalletManager.Generate());
         await Assert.ThrowsAsync<InvalidOperationException>(() => node.LNManager.Generate());
-
 
         var username = Guid.NewGuid() + "@gg.com";
 
@@ -60,7 +56,7 @@ public class CoreTests
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.NotConfigured, node.OnChainWalletManager.State));
 
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
-           Assert.Null((await node.OnChainWalletManager.GetConfig()));
+        Assert.Null(await node.OnChainWalletManager.GetConfig());
 
         await node.AccountManager.Logout();
         TestUtils.Eventually(() =>
@@ -80,7 +76,7 @@ public class CoreTests
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Loaded, node.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.NotConfigured, node.LNManager.State));
 
-        Assert.NotNull((await node.OnChainWalletManager.GetConfig()));
+        Assert.NotNull(await node.OnChainWalletManager.GetConfig());
         Assert.NotNull((await node.OnChainWalletManager.GetConfig())?.Derivations);
         Assert.False(
             (await node.OnChainWalletManager.GetConfig())?.Derivations.ContainsKey(WalletDerivation.LightningScripts));
@@ -92,7 +88,6 @@ public class CoreTests
         Assert.NotNull(segwitDerivation.Identifier);
         Assert.NotNull(segwitDerivation.Descriptor);
         Assert.NotNull(segwitDerivation.Name);
-
 
         Assert.True(await node.LNManager.CanConfigureLightningNode());
 
@@ -109,7 +104,6 @@ public class CoreTests
 
         Assert.NotNull(node.LNManager.Node);
         Assert.NotNull(node.LNManager.Node.NodeId);
-
 
         using var node2 = await HeadlessTestNode.Create("Node2", _output);
         Assert.True((await node2.AccountManager.Login(btcpayUri.AbsoluteUri, username, username, null)).Succeeded);
@@ -136,10 +130,8 @@ public class CoreTests
         TestUtils.Eventually(() =>
             Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node2.ConnectionManager.ConnectionState));
 
-
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Loaded, node2.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.Loaded, node2.LNManager.State));
-
 
         await node2.LNManager.Node.UpdateConfig(async config =>
         {
@@ -186,14 +178,14 @@ public class CoreTests
         Assert.Equal(2, pms.Length);
 
         var pmOnchain = pms.First(p => p.PaymentMethodId == "BTC-CHAIN");
-         var pmLN = pms.First(p => p.PaymentMethodId == "BTC-LN");
+        var pmLN = pms.First(p => p.PaymentMethodId == "BTC-LN");
 
-         var requestOfInvoice =
-             Assert.Single(await node2.LNManager.Node.PaymentsManager.List(payments => payments));
-         Assert.Equal(pmLN.Destination, requestOfInvoice.PaymentRequest.ToString());
-         Assert.True(requestOfInvoice.Inbound);
+        var requestOfInvoice =
+            Assert.Single(await node2.LNManager.Node.PaymentsManager.List(payments => payments));
+        Assert.Equal(pmLN.Destination, requestOfInvoice.PaymentRequest.ToString());
+        Assert.True(requestOfInvoice.Inbound);
 
-         //let's pay onchain for now
+        //let's pay onchain for now
         await FundWallet(rpc, BitcoinAddress.Create(pmOnchain.Destination, network), Money.Coins(1));
         await TestUtils.EventuallyAsync(async () =>
         {
@@ -203,50 +195,52 @@ public class CoreTests
         });
         await TestUtils.EventuallyAsync(async () =>
         {
-             requestOfInvoice =
-                 Assert.Single(
-                     await node2.LNManager.Node.PaymentsManager.List(payments => payments));
-             Assert.Equal(pmLN.Destination, requestOfInvoice.PaymentRequest.ToString());
-             //Note: this should be failed in the future. BTCPay should cancel the invoice once btcpay invoice is paid..
-             Assert.Equal(LightningPaymentStatus.Pending, requestOfInvoice.Status);
+            requestOfInvoice =
+                Assert.Single(
+                    await node2.LNManager.Node.PaymentsManager.List(payments => payments));
+            Assert.Equal(pmLN.Destination, requestOfInvoice.PaymentRequest.ToString());
+            //Note: this should be failed in the future. BTCPay should cancel the invoice once btcpay invoice is paid..
+            Assert.Equal(LightningPaymentStatus.Pending, requestOfInvoice.Status);
+        });
 
-         });
+        //artificial self payment
+        invoice = await node2.AccountManager.GetClient().CreateInvoice(store.Id, new CreateInvoiceRequest
+        {
+            Amount = 1m,
+            Currency = "BTC"
+        });
 
-         //artificial self payment
-         invoice = await node2.AccountManager.GetClient().CreateInvoice(store.Id, new CreateInvoiceRequest()
-         {
-             Amount = 1m,
-             Currency = "BTC",
-         });
+        pms = await node2.AccountManager.GetClient().GetInvoicePaymentMethods(store.Id, invoice.Id);
+        Assert.Equal(2, pms.Length);
 
-          pms = await  node2.AccountManager.GetClient().GetInvoicePaymentMethods(store.Id, invoice.Id);
-         Assert.Equal(2, pms.Length);
-
-         pmLN = pms.First(p => p.PaymentMethodId == "BTC-LN");
-         // AppLightningPayment node2PaymentUpdate = null;
-         // node2.LNManager.Node.PaymentsManager.OnPaymentUpdate += (sender, payment) =>
-         // {
-         //     node2PaymentUpdate = (AppLightningPayment?) payment;
-         //     return Task.CompletedTask;
-         // };
-        var outbound = await node2.LNManager.Node.PaymentsManager.PayInvoice(BOLT11PaymentRequest.Parse(pmLN.Destination, network));
+        pmLN = pms.First(p => p.PaymentMethodId == "BTC-LN");
+        // AppLightningPayment node2PaymentUpdate = null;
+        // node2.LNManager.Node.PaymentsManager.OnPaymentUpdate += (sender, payment) =>
+        // {
+        //     node2PaymentUpdate = (AppLightningPayment?) payment;
+        //     return Task.CompletedTask;
+        // };
+        var outbound =
+            await node2.LNManager.Node.PaymentsManager.PayInvoice(
+                BOLT11PaymentRequest.Parse(pmLN.Destination, network));
         Assert.NotNull(outbound);
         Assert.Equal(pmLN.Destination, outbound.PaymentRequest.ToString());
         Assert.False(outbound.Inbound);
         Assert.Equal(LightningPaymentStatus.Complete, outbound.Status);
 
-      await TestUtils.EventuallyAsync(async () =>
+        await TestUtils.EventuallyAsync(async () =>
         {
             invoice = await node2.AccountManager.GetClient().GetInvoice(store.Id, invoice.Id);
             Assert.Equal(InvoiceStatus.Settled, invoice.Status);
         });
         var payments = await node2.LNManager.Node.PaymentsManager.List(payments => payments);
-         Assert.Equal(3, payments.Count);
-            Assert.Contains(payments, payment => payment.Inbound && payment.PaymentRequest.ToString() == pmLN.Destination && payment.Status == LightningPaymentStatus.Complete);
-            Assert.Contains(payments, payment => !payment.Inbound && payment.PaymentRequest.ToString() == pmLN.Destination && payment.Status == LightningPaymentStatus.Complete);
-
-
-
+        Assert.Equal(3, payments.Count);
+        Assert.Contains(payments,
+            payment => payment.Inbound && payment.PaymentRequest.ToString() == pmLN.Destination &&
+                       payment.Status == LightningPaymentStatus.Complete);
+        Assert.Contains(payments,
+            payment => !payment.Inbound && payment.PaymentRequest.ToString() == pmLN.Destination &&
+                       payment.Status == LightningPaymentStatus.Complete);
 
         using var node3 = await HeadlessTestNode.Create("Node3", _output);
         var username2 = Guid.NewGuid() + "@gg.com";
@@ -259,11 +253,11 @@ public class CoreTests
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Loaded, node3.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.Loaded, node3.LNManager.State));
 
-        await node3.LNManager.Node.Peer(node2.LNManager.Node.NodeId, new PeerInfo()
+        await node3.LNManager.Node.Peer(node2.LNManager.Node.NodeId, new PeerInfo
         {
             Label = "App2",
             Endpoint = node2.LNManager.Node.PeerHandler.Endpoint,
-            Persistent = true,
+            Persistent = true
         });
         await TestUtils.EventuallyAsync(async () =>
         {
@@ -279,23 +273,26 @@ public class CoreTests
                 (await node3.LNManager.Node.GetConfig()).Peers.TryGetValue(node2.LNManager.Node.NodeId.ToString(),
                     out var peerInfo));
             Assert.Equal("App2", peerInfo.Label);
-            Assert.Equal(node2.LNManager.Node.PeerHandler.Endpoint.ToEndpointString(), peerInfo.Endpoint.ToEndpointString());
+            Assert.Equal(node2.LNManager.Node.PeerHandler.Endpoint.ToEndpointString(),
+                peerInfo.Endpoint.ToEndpointString());
             Assert.True(peerInfo.Persistent);
             Assert.False(peerInfo.Trusted);
         });
 
-        var result =await node2.LNManager.Node.OpenChannel(Money.Coins(0.5m), node3.LNManager.Node.NodeId);
-        var _ = Convert.ToHexString(Assert.IsType<Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK>(result).res.get_a()).ToLowerInvariant();
+        var result = await node2.LNManager.Node.OpenChannel(Money.Coins(0.5m), node3.LNManager.Node.NodeId);
+        var _ = Convert
+            .ToHexString(Assert.IsType<Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK>(result).res.get_a())
+            .ToLowerInvariant();
         await TestUtils.EventuallyAsync(async () =>
         {
-
-            var node2Channel = Assert.Single( await node2.LNManager.Node.GetChannels());
-            var node3Channel= Assert.Single( await node3.LNManager.Node.GetChannels());
+            var node2Channel = Assert.Single(await node2.LNManager.Node.GetChannels());
+            var node3Channel = Assert.Single(await node3.LNManager.Node.GetChannels());
 
             Assert.Equal(node2Channel.Key, node3Channel.Key);
             Assert.Equal(
                 Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations()).some,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations()).some);
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations())
+                    .some);
 
             Assert.Equal(0,
                 Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations())
@@ -307,28 +304,26 @@ public class CoreTests
             Assert.False(node2Channel.Value.channelDetails.get_is_usable());
 
             Assert.Equal(1,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations_required())
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(
+                        node3Channel.Value.channelDetails.get_confirmations_required())
                     .some);
             Assert.Equal(1,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations_required())
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(
+                        node2Channel.Value.channelDetails.get_confirmations_required())
                     .some);
-
-
         });
 
-
         await rpc.GenerateAsync(1);
-
         await TestUtils.EventuallyAsync(async () =>
         {
-
-            var node2Channel = Assert.Single( await node2.LNManager.Node.GetChannels());
-            var node3Channel= Assert.Single( await node3.LNManager.Node.GetChannels());
+            var node2Channel = Assert.Single(await node2.LNManager.Node.GetChannels());
+            var node3Channel = Assert.Single(await node3.LNManager.Node.GetChannels());
 
             Assert.Equal(node2Channel.Key, node3Channel.Key);
             Assert.Equal(
                 Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations()).some,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations()).some);
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations())
+                    .some);
 
             Assert.True(node3Channel.Value.channelDetails.get_is_channel_ready());
             Assert.True(node2Channel.Value.channelDetails.get_is_channel_ready());
@@ -336,29 +331,27 @@ public class CoreTests
             Assert.True(node2Channel.Value.channelDetails.get_is_usable());
 
             Assert.Equal(1,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations_required())
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(
+                        node3Channel.Value.channelDetails.get_confirmations_required())
                     .some);
             Assert.Equal(1,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations_required())
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(
+                        node2Channel.Value.channelDetails.get_confirmations_required())
                     .some);
 
             var node2B = node2Channel.Value.channelDetails.get_outbound_capacity_msat();
             Assert.Equal(0, node3Channel.Value.channelDetails.get_balance_msat());
             Assert.Equal(LightMoney.Coins(0.5m).MilliSatoshi, node2Channel.Value.channelDetails.get_balance_msat());
             Assert.Equal(LightMoney.Coins(0.5m).MilliSatoshi, node2Channel.Value.channelDetails.get_balance_msat());
-
-
-
         });
-        var node3PR = await node3.LNManager.Node.PaymentsManager.RequestPayment(LightMoney.Coins(0.01m), TimeSpan.FromHours(2),
+        var node3PR = await node3.LNManager.Node.PaymentsManager.RequestPayment(LightMoney.Coins(0.01m),
+            TimeSpan.FromHours(2),
             uint256.Zero);
-
-
 
         await TestUtils.EventuallyAsync(async () =>
         {
             var node2PR = await node2.LNManager.Node.PaymentsManager.PayInvoice(node3PR.PaymentRequest);
-            while(node2PR.Status == LightningPaymentStatus.Pending)
+            while (node2PR.Status == LightningPaymentStatus.Pending)
             {
                 node2PR = (await node2.LNManager.Node.PaymentsManager.List(payments =>
                     payments.Where(payment =>
@@ -373,26 +366,25 @@ public class CoreTests
             Assert.Equal(node2PR.Preimage, node3PR.Preimage);
             Assert.NotNull(node2PR.Preimage);
             Assert.Single(await node3.LNManager.Node.PaymentsManager.List(payments =>
-                payments.Where(payment => payment.PaymentHash == node3PR.PaymentHash && payment.Inbound && payment.Status == LightningPaymentStatus.Complete)));
+                payments.Where(payment =>
+                    payment.PaymentHash == node3PR.PaymentHash && payment.Inbound &&
+                    payment.Status == LightningPaymentStatus.Complete)));
         });
     }
 
     private async Task<uint256?> FundWallet(RPCClient rpc, BitcoinAddress address, Money m)
     {
-
         var attempts = 0;
         while (attempts < 101)
-        {
             try
             {
                 return await rpc.SendToAddressAsync(address, m);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 attempts++;
                 await rpc.GenerateAsync(1);
             }
-        }
 
         return null;
     }

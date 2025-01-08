@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using BTCPayApp.Core.Auth;
@@ -134,7 +134,7 @@ public class SyncService : IDisposable
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error while setting encryption key");
+            _logger.LogError("Error while setting encryption key: {message}", e.Message);
             return false;
         }
 
@@ -450,9 +450,10 @@ public class SyncService : IDisposable
             catch (Exception e)
             {
                 _logger.LogError(e, "Error while syncing to {Local}", local ? "local" : "remote");
-            }finally 
+            }
+            finally
             {
-                if(!cancellationToken.IsCancellationRequested)
+                if (!cancellationToken.IsCancellationRequested)
                     await Task.Delay(2000, cancellationToken);
             }
         }

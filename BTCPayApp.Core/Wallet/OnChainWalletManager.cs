@@ -133,9 +133,9 @@ public class OnChainWalletManager : BaseHostedService
         //for groups, we need to fetch all tracked scripts and add them to the group tracked source
         // step2: import the UTXOS
         // step3: sync the backup data
-        
-        
-        
+
+
+
         /*
         await _controlSemaphore.WaitAsync();
         try
@@ -384,7 +384,6 @@ public class OnChainWalletManager : BaseHostedService
             _controlSemaphore.Release();
         }
     }
-
 
     public async Task<BitcoinAddress?> DeriveScript(string derivation)
     {

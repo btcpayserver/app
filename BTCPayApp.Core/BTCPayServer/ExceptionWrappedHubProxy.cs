@@ -1,4 +1,4 @@
-using BTCPayApp.Core.Helpers;
+﻿using BTCPayApp.Core.Helpers;
 using BTCPayServer.Client.App;
 using BTCPayServer.Lightning;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -41,65 +41,64 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
         }).Unwrap();
     }
 
-
     public async Task<bool> DeviceMasterSignal(long deviceIdentifier, bool active)
     {
-        return await Wrap(async ()=>  await _hubProxy.DeviceMasterSignal(deviceIdentifier, active));
+        return await Wrap(async () => await _hubProxy.DeviceMasterSignal(deviceIdentifier, active));
     }
 
     public async Task<Dictionary<string, string>> Pair(PairRequest request)
     {
-        return await Wrap(async ()=>  await _hubProxy.Pair(request));
+        return await Wrap(async () => await _hubProxy.Pair(request));
     }
 
     public async Task<AppHandshakeResponse> Handshake(AppHandshake request)
     {
-        return await Wrap(async ()=>  await _hubProxy.Handshake(request));
+        return await Wrap(async () => await _hubProxy.Handshake(request));
     }
 
     public async Task<bool> BroadcastTransaction(string tx)
     {
-        return await Wrap(async ()=>  await _hubProxy.BroadcastTransaction(tx));
+        return await Wrap(async () => await _hubProxy.BroadcastTransaction(tx));
     }
 
     public async Task<decimal> GetFeeRate(int blockTarget)
     {
-        return await Wrap(async ()=>  await _hubProxy.GetFeeRate(blockTarget));
+        return await Wrap(async () => await _hubProxy.GetFeeRate(blockTarget));
     }
 
     public async Task<BestBlockResponse> GetBestBlock()
     {
-        return await Wrap(async ()=>  await _hubProxy.GetBestBlock());
+        return await Wrap(async () => await _hubProxy.GetBestBlock());
     }
 
     public async Task<TxInfoResponse> FetchTxsAndTheirBlockHeads(string identifier, string[] txIds, string[] outpoints)
     {
-        return await Wrap(async ()=>  await _hubProxy.FetchTxsAndTheirBlockHeads(identifier, txIds, outpoints));
+        return await Wrap(async () => await _hubProxy.FetchTxsAndTheirBlockHeads(identifier, txIds, outpoints));
     }
 
     public async Task<string> DeriveScript(string identifier)
     {
-        return await Wrap(async ()=>  await _hubProxy.DeriveScript(identifier));
+        return await Wrap(async () => await _hubProxy.DeriveScript(identifier));
     }
 
     public async Task TrackScripts(string identifier, string[] scripts)
     {
-        await Wrap(()=>   Task.FromResult(_hubProxy.TrackScripts(identifier, scripts)));
+        await Wrap(() => Task.FromResult(_hubProxy.TrackScripts(identifier, scripts)));
     }
 
     public async Task<string> UpdatePsbt(string[] identifiers, string psbt)
     {
-        return await Wrap(async ()=>  await _hubProxy.UpdatePsbt(identifiers, psbt));
+        return await Wrap(async () => await _hubProxy.UpdatePsbt(identifiers, psbt));
     }
 
     public async Task<Dictionary<string, CoinResponse[]>> GetUTXOs(string[] identifiers)
     {
-        return await Wrap(async ()=>  await _hubProxy.GetUTXOs(identifiers));
+        return await Wrap(async () => await _hubProxy.GetUTXOs(identifiers));
     }
 
     public async Task<Dictionary<string, TxResp[]>> GetTransactions(string[] identifiers)
     {
-        return await Wrap(async ()=>  await _hubProxy.GetTransactions(identifiers));
+        return await Wrap(async () => await _hubProxy.GetTransactions(identifiers));
     }
 
     public async Task SendInvoiceUpdate(LightningInvoice lightningInvoice)
@@ -109,6 +108,6 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
 
     public async Task<long?> GetCurrentMaster()
     {
-        return await Wrap(async ()=>  await _hubProxy.GetCurrentMaster());
+        return await Wrap(async () => await _hubProxy.GetCurrentMaster());
     }
 }
