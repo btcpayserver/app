@@ -1,4 +1,4 @@
-﻿using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.Helpers;
 using BTCPayServer.Client.App;
 using BTCPayServer.Lightning;
 using Microsoft.AspNetCore.SignalR.Client;
@@ -11,25 +11,18 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
 {
     private readonly IBTCPayAppHubServer _hubProxy;
     private readonly ILogger _logger;
-    private readonly BTCPayConnectionManager _btcPayConnectionManager;
-    private readonly HubConnection _connection;
 
-    public ExceptionWrappedHubProxy(BTCPayConnectionManager btcPayConnectionManager ,HubConnection connection, ILogger logger)
+    public ExceptionWrappedHubProxy(HubConnection connection, ILogger logger)
     {
-        _btcPayConnectionManager = btcPayConnectionManager;
-        _connection = connection;
         _hubProxy = connection.CreateHubProxy<IBTCPayAppHubServer>();
         _logger = logger;
     }
 
-    
     private async Task<T> Wrap<T>(Func<Task<T>> func)
     {
-
-        
         return await AsyncExtensions.RunInOtherThread(async () =>
         {
-            //executes in thread pool.
+            // executes in thread pool
             try
             {
                 return await func();
@@ -43,7 +36,7 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
             {
                 _logger.LogError(e, "Error while calling hub method");
                 return default!;
-                
+
             }
         }).Unwrap();
     }

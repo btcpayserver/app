@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using BTCPayApp.Core.AspNetRip;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
 using BTCPayServer.Client.App.Models;
@@ -65,11 +64,7 @@ public class AuthStateProvider(
     {
         if (string.IsNullOrEmpty(baseUri) && string.IsNullOrEmpty(_account?.BaseUri))
             throw new ArgumentException("No base URI present or provided.", nameof(baseUri));
-        var client = new BTCPayAppClient(baseUri ?? _account!.BaseUri, clientFactory.CreateClient());
-        if (string.IsNullOrEmpty(baseUri) && !string.IsNullOrEmpty(_account?.AccessToken) && !string.IsNullOrEmpty(_account.RefreshToken))
-            client.SetAccess(_account.AccessToken, _account.RefreshToken, _account.AccessExpiry.GetValueOrDefault());
-        client.AccessRefreshed += OnAccessRefresh;
-        return client;
+        return new BTCPayAppClient(baseUri ?? _account!.BaseUri, _account?.AccessToken, clientFactory.CreateClient());
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -89,7 +84,7 @@ public class AuthStateProvider(
 
             var oldUserInfo = _userInfo;
             var needsRefresh = _refreshUserInfo || _userInfo == null;
-            if (needsRefresh && _account?.HasTokens is true)
+            if (needsRefresh && !string.IsNullOrEmpty(_account?.AccessToken))
             {
                 var cts = new CancellationTokenSource(5000);
                 _userInfo = await GetClient().GetUserInfo(cts.Token);
@@ -110,7 +105,7 @@ public class AuthStateProvider(
                 if (_userInfo.Stores?.Any() is true)
                     claims.AddRange(_userInfo.Stores.Select(store =>
                         new Claim(store.Id, string.Join(',', store.Permissions))));
-                user = new ClaimsPrincipal(new ClaimsIdentity(claims, "Greenfield.Bearer"));
+                user = new ClaimsPrincipal(new ClaimsIdentity(claims, "Greenfield"));
             }
 
             var res = new AuthenticationState(user);
@@ -157,7 +152,7 @@ public class AuthStateProvider(
     public async Task Logout()
     {
         _userInfo = null;
-        _account!.ClearAccess();
+        _account!.AccessToken = null;
         OnUserInfoChange?.Invoke(this, _userInfo);
         await UpdateAccount(_account);
         await SetCurrentAccount(null);
@@ -266,10 +261,10 @@ public class AuthStateProvider(
         };
         try
         {
-            var expiryOffset = DateTimeOffset.Now;
             var response = await GetClient(serverUrl).Login(payload, cancellation.GetValueOrDefault());
+            if (string.IsNullOrEmpty(response.AccessToken)) throw new Exception("Did not obtain valid API token.");
             var account = await GetAccount(serverUrl, email);
-            account.SetAccess(response.AccessToken, response.RefreshToken, response.ExpiresIn, expiryOffset);
+            account.AccessToken = response.AccessToken;
             await SetCurrentAccount(account);
             return new FormResult(true);
         }
@@ -283,11 +278,11 @@ public class AuthStateProvider(
     {
         try
         {
-            var expiryOffset = DateTimeOffset.Now;
             var client = GetClient(serverUrl);
             var response = await client.Login(code, cancellation.GetValueOrDefault());
+            if (string.IsNullOrEmpty(response.AccessToken)) throw new Exception("Did not obtain valid API token.");
             var account = await GetAccount(serverUrl, email);
-            account.SetAccess(response.AccessToken, response.RefreshToken, response.ExpiresIn, expiryOffset);
+            account.AccessToken = response.AccessToken;
             await SetCurrentAccount(account);
             return new FormResult(true);
         }
@@ -306,14 +301,14 @@ public class AuthStateProvider(
         };
         try
         {
-            var expiryOffset = DateTimeOffset.Now;
             var response = await GetClient(serverUrl).RegisterUser(payload, cancellation.GetValueOrDefault());
             var account = await GetAccount(serverUrl, email);
             var message = "Account created.";
             if (response.ContainsKey("accessToken"))
             {
-                var access = response.ToObject<AccessTokenResponse>();
-                account.SetAccess(access!.AccessToken, access.RefreshToken, access.ExpiresIn, expiryOffset);
+                var access = response.ToObject<AuthenticationResponse>();
+                if (string.IsNullOrEmpty(access?.AccessToken)) throw new Exception("Did not obtain valid API token.");
+                account.AccessToken = access.AccessToken;
             }
             else
             {
@@ -343,13 +338,12 @@ public class AuthStateProvider(
         try
         {
             var isForgotStep = string.IsNullOrEmpty(payload.ResetCode) && string.IsNullOrEmpty(payload.NewPassword);
-            var expiryOffset = DateTimeOffset.Now;
             var response = await GetClient(serverUrl).ResetPassword(payload, cancellation.GetValueOrDefault());
             if (response?.ContainsKey("accessToken") is true)
             {
-                var access = response.ToObject<AccessTokenResponse>();
+                var access = response.ToObject<AuthenticationResponse>();
                 var account = await GetAccount(serverUrl, email);
-                account.SetAccess(access!.AccessToken, access.RefreshToken, access.ExpiresIn, expiryOffset);
+                account.AccessToken = access!.AccessToken;
                 await SetCurrentAccount(account);
             }
 
@@ -405,26 +399,6 @@ public class AuthStateProvider(
         {
             return new FormResult<ApplicationUserData>(false, e.Message, null);
         }
-    }
-
-    public async Task<FormResult> RefreshAccess(CancellationToken? cancellation = default)
-    {
-        try
-        {
-            await GetClient().RefreshAccess(_account!.RefreshToken, cancellation);
-            return new FormResult(true);
-        }
-        catch (Exception e)
-        {
-            return new FormResult(false, e.Message);
-        }
-    }
-
-    private async void OnAccessRefresh(object? sender, AccessTokenResult access)
-    {
-        if (_account == null) return;
-        _account.SetAccess(access.AccessToken, access.RefreshToken, access.Expiry);
-        await UpdateAccount(_account);
     }
 
     private static string GetKey(string accountId) => $"{AccountKeyPrefix}:{accountId}";

@@ -124,7 +124,7 @@ public record UIState
             try
             {
                 var instance = !string.IsNullOrEmpty(action.Url)
-                    ? await new BTCPayAppClient(action.Url, httpClientFactory.CreateClient()).GetInstanceInfo()
+                    ? await new BTCPayAppClient(action.Url).GetInstanceInfo()
                     : null;
 
                 var error = !string.IsNullOrEmpty(action.Url) && instance == null

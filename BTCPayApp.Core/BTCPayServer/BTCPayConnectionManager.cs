@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.WebSockets;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Backup;
@@ -182,23 +182,20 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                 if (account is null)
                 {
                     newState = BTCPayConnectionState.WaitingForAuth;
-                    break;
-                }
-                await Kill();
-                
-                  var  connection = new HubConnectionBuilder()
+                        break;
+                    }
+                    await Kill();
+                    var url = new Uri(new Uri(account.BaseUri), "hub/btcpayapp").ToString();
+                    var connection = new HubConnectionBuilder()
                         .AddNewtonsoftJsonProtocol(options =>
                         {
-                            NBitcoin.JsonConverters.Serializer.RegisterFrontConverters(
-                                options.PayloadSerializerSettings);
-                            options.PayloadSerializerSettings.Converters.Add(
-                                new global::BTCPayServer.Lightning.JsonConverters.LightMoneyJsonConverter());
+                            NBitcoin.JsonConverters.Serializer.RegisterFrontConverters(options.PayloadSerializerSettings);
+                            options.PayloadSerializerSettings.Converters.Add(new global::BTCPayServer.Lightning.JsonConverters.LightMoneyJsonConverter());
                         })
-                        .WithUrl(new Uri(new Uri(account.BaseUri), "hub/btcpayapp").ToString(),
-                            options =>
-                            {
-                                options.AccessTokenProvider = () =>
-                                    Task.FromResult(_accountManager.GetAccount()?.AccessToken);
+                        .WithUrl(url, options =>
+                        {
+                            options.AccessTokenProvider = () =>
+                                Task.FromResult(_accountManager.GetAccount()?.AccessToken);
                                 options.HttpMessageHandlerFactory = _serviceProvider
                                     .GetService<Func<HttpMessageHandler, HttpMessageHandler>>();
                                 options.WebSocketConfiguration =
@@ -207,30 +204,21 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                         .Build();
 
                     _subscription = connection.Register(_btcPayAppServerClientInterface);
-                    HubProxy = new ExceptionWrappedHubProxy(this, connection, _logger);
-                
+                    HubProxy = new ExceptionWrappedHubProxy(connection, _logger);
 
-                if (connection.State == HubConnectionState.Disconnected)
-                {
-                    try
+                    if (connection.State == HubConnectionState.Disconnected)
                     {
-                        await connection.StartAsync();
-                       
-                    }
-                    catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized)
-                    {
-                        var result = await _accountManager.RefreshAccess();
-                        if (result.Succeeded)
+                        try
                         {
-                            _logger.LogInformation("Successfully refreshed access token");
+                            await connection.StartAsync();
                         }
-                        else
+                        catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized)
                         {
-                            _logger.LogError(ex, $"Could not refresh access token because: {string.Join(',', result.Messages)}");
+                            await _accountManager.Logout();
+                            _logger.LogInformation("Signed out user because of unauthorized response");
                         }
-                    }
-                    catch (Exception ex)
-                    {
+                        catch (Exception ex)
+                        {
                         await Task.Delay(500);
                         if (ex is not TaskCanceledException)
                             _logger.LogError(ex, "Error while connecting to hub");

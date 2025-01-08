@@ -19,7 +19,6 @@ public interface IAccountManager
     public Task<FormResult> ResetPassword(string serverUrl, string email, string? resetCode, string? newPassword, CancellationToken? cancellation = default);
     public Task<FormResult<ApplicationUserData>> ChangePassword(string currentPassword, string newPassword, CancellationToken? cancellation = default);
     public Task<FormResult<ApplicationUserData>> ChangeAccountInfo(string email, string? name, string? imageUrl, CancellationToken? cancellation = default);
-    public Task<FormResult> RefreshAccess(CancellationToken? cancellation = default);
     public Task<FormResult> SetCurrentStoreId(string storeId);
     public Task UnsetCurrentStore();
     public AppUserStoreInfo? GetCurrentStore();

@@ -1,4 +1,4 @@
-﻿using BTCPayApp.Core.Auth;
+using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
@@ -48,7 +48,7 @@ public static class StartupExtensions
         serviceCollection.AddSingleton(sp => (IAccountManager) sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddLDK();
-        serviceCollection.AddSingleton<IAuthorizationHandler, BearerAuthorizationHandler>();
+        serviceCollection.AddSingleton<IAuthorizationHandler, AuthorizationHandler>();
         serviceCollection.AddAuthorizationCore(options => options.AddBTCPayPolicies());
         return serviceCollection;
     }

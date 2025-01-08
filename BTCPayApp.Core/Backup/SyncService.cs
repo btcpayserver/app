@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using BTCPayApp.Core.Auth;
@@ -162,10 +162,9 @@ public class SyncService : IDisposable
             throw new InvalidOperationException("Account not found");
         var vssUri = new Uri(new Uri(account.BaseUri), "vss/");
         var httpClient = _httpClientFactory.CreateClient("vss");
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", account.AccessToken);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("token", account.AccessToken);
         var vssClient = new HttpVSSAPIClient(vssUri, httpClient);
-
-        return Task.FromResult<IVSSAPI>(new AccountAwareVssClient(vssClient, _accountManager));
+        return Task.FromResult<IVSSAPI>(vssClient);
     }
 
     private async Task<IVSSAPI?> GetVSSAPI()

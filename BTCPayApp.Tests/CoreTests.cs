@@ -1,4 +1,4 @@
-﻿using BTCPayApp.Core.Auth;
+using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Data;
@@ -51,7 +51,7 @@ public class CoreTests
         Assert.False(await node.AuthStateProvider.CheckAuthenticated());
         Assert.True((await node.AccountManager.Login(btcpayUri.AbsoluteUri, username, username, null)).Succeeded);
         Assert.True(await node.AuthStateProvider.CheckAuthenticated());
-        Assert.NotNull(node.AccountManager.GetAccount()?.RefreshToken);
+        Assert.NotNull(node.AccountManager.GetAccount()?.AccessToken);
 
         TestUtils.Eventually(() =>
             Assert.Equal(BTCPayConnectionState.Connecting, node.ConnectionManager.ConnectionState));
@@ -68,7 +68,7 @@ public class CoreTests
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
         Assert.True((await node.AccountManager.Login(btcpayUri.AbsoluteUri, username, username, null)).Succeeded);
         Assert.True(await node.AuthStateProvider.CheckAuthenticated());
-        Assert.NotNull(node.AccountManager.GetAccount()?.RefreshToken);
+        Assert.NotNull(node.AccountManager.GetAccount()?.AccessToken);
 
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.NotConfigured, node.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
@@ -127,6 +127,7 @@ public class CoreTests
         TestUtils.Eventually(() =>
             Assert.Equal(BTCPayConnectionState.ConnectedAsSlave, node2.ConnectionManager.ConnectionState));
 
+        var address = await node.OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);
 
         await node.ConnectionManager.SwitchToSlave();
         _output.WriteLine("SLAVE CHECKPOINT");
@@ -150,45 +151,41 @@ public class CoreTests
         TestUtils.Eventually(() => Assert.NotNull(node2.LNManager.Node?.PeerHandler.Endpoint));
 
         //test onchain wallet
-        var address = await node.OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);
         var address2 = await node2.OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);
-
         var network = node.ConnectionManager.ReportedNetwork;
         Assert.NotNull(network);
+
         var rpc = new RPCClient(RPCCredentialString.Parse("server=http://localhost:43782;ceiwHEbqWI83:DwubwWsoo3"), network);
         Assert.NotNull(await FundWallet(rpc, address, Money.Coins(1)));
         Assert.NotNull(await FundWallet(rpc, address2, Money.Coins(1)));
         await TestUtils.EventuallyAsync(async () =>
         {
-            var utxos = await node.OnChainWalletManager.GetUTXOS();
-            Assert.Equal(2, utxos.Count());
-
-            Assert.Equal(Money.Coins(2).Satoshi, utxos.Sum(coin => (Money) coin.Amount));
+            var utxos = (await node2.OnChainWalletManager.GetUTXOS()).ToList();
+            Assert.Equal(2, utxos.Count);
+            Assert.Equal(Money.Coins(2).Satoshi, utxos.Sum(coin => (Money)coin.Amount));
         });
 
-       Assert.Null( node2.AccountManager.GetCurrentStore());
-       var store = await node2.AccountManager.GetClient().CreateStore(new CreateStoreRequest()
-       {
-           Name = "Store1"
-       });
-       Assert.True(await node2.AccountManager.CheckAuthenticated(true));
-       Assert.True((await node2.AccountManager.SetCurrentStoreId(store.Id)).Succeeded);
-       Assert.Equal(store.Id, node2.AccountManager.GetCurrentStore()?.Id);
+        Assert.Null(node2.AccountManager.GetCurrentStore());
+        var store = await node2.AccountManager.GetClient().CreateStore(new CreateStoreRequest { Name = "Store1" });
+        Assert.True(await node2.AccountManager.CheckAuthenticated(true));
+        Assert.True((await node2.AccountManager.SetCurrentStoreId(store.Id)).Succeeded);
+        Assert.Equal(store.Id, node2.AccountManager.GetCurrentStore()?.Id);
 
-         var res = await node2.AccountManager.TryApplyingAppPaymentMethodsToCurrentStore(node2.OnChainWalletManager, node2.LNManager, true, true);
-         Assert.NotNull(res);
-         Assert.True(await node2.OnChainWalletManager.IsOnChainOurs(res.Value.onchain));
-         Assert.True(await node2.LNManager.IsLightningOurs(res.Value.lightning));
+        var res = await node2.AccountManager.TryApplyingAppPaymentMethodsToCurrentStore(node2.OnChainWalletManager,
+            node2.LNManager, true, true);
+        Assert.NotNull(res);
+        Assert.True(await node2.OnChainWalletManager.IsOnChainOurs(res.Value.onchain));
+        Assert.True(await node2.LNManager.IsLightningOurs(res.Value.lightning));
 
-         var invoice = await node2.AccountManager.GetClient().CreateInvoice(store.Id, new CreateInvoiceRequest()
-         {
-             Amount = 1m,
-             Currency = "BTC",
-         });
-         var pms = await  node2.AccountManager.GetClient().GetInvoicePaymentMethods(store.Id, invoice.Id);
-         Assert.Equal(2, pms.Length);
+        var invoice = await node2.AccountManager.GetClient().CreateInvoice(store.Id, new CreateInvoiceRequest
+        {
+            Amount = 1m,
+            Currency = "BTC"
+        });
+        var pms = await node2.AccountManager.GetClient().GetInvoicePaymentMethods(store.Id, invoice.Id);
+        Assert.Equal(2, pms.Length);
 
-         var pmOnchain = pms.First(p => p.PaymentMethodId == "BTC-CHAIN");
+        var pmOnchain = pms.First(p => p.PaymentMethodId == "BTC-CHAIN");
          var pmLN = pms.First(p => p.PaymentMethodId == "BTC-LN");
 
          var requestOfInvoice =
@@ -197,16 +194,15 @@ public class CoreTests
          Assert.True(requestOfInvoice.Inbound);
 
          //let's pay onchain for now
-         await FundWallet(rpc, BitcoinAddress.Create(pmOnchain.Destination, network), Money.Coins(1));
-         await TestUtils.EventuallyAsync(async () =>
-         {
-             var utxos = await node.OnChainWalletManager.GetUTXOS();
-             Assert.Equal(3, utxos.Count());
-
-             Assert.Equal(Money.Coins(3).Satoshi, utxos.Sum(coin => (Money) coin.Amount));
-         });
-         await TestUtils.EventuallyAsync(async () =>
-         {
+        await FundWallet(rpc, BitcoinAddress.Create(pmOnchain.Destination, network), Money.Coins(1));
+        await TestUtils.EventuallyAsync(async () =>
+        {
+            var utxos = (await node2.OnChainWalletManager.GetUTXOS()).ToList();
+            Assert.Equal(3, utxos.Count);
+            Assert.Equal(Money.Coins(3).Satoshi, utxos.Sum(coin => (Money)coin.Amount));
+        });
+        await TestUtils.EventuallyAsync(async () =>
+        {
              requestOfInvoice =
                  Assert.Single(
                      await node2.LNManager.Node.PaymentsManager.List(payments => payments));
