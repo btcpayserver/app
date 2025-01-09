@@ -5,6 +5,8 @@ namespace BTCPayApp.Maui.Services;
 
 public class MauiEssentialsSecureConfigProvider : ISecureConfigProvider
 {
+    private static string IndexKey => "SecureConfigProviderIndex";
+
     public async Task<T?> Get<T>(string key)
     {
         var raw = await SecureStorage.GetAsync(key);
@@ -33,21 +35,19 @@ public class MauiEssentialsSecureConfigProvider : ISecureConfigProvider
             }
         }
     }
-    
-    private  async Task<string[]> GetIndex()
+
+    private static async Task<string[]> GetIndex()
     {
         var index = await SecureStorage.GetAsync(IndexKey);
-        return string.IsNullOrEmpty(index) ? Array.Empty<string>() : JsonSerializer.Deserialize<string[]>(index);
+        return string.IsNullOrEmpty(index) ? [] : JsonSerializer.Deserialize<string[]>(index)!;
     }
-    
-    private async Task SetIndex(string[] index)
+
+    private static async Task SetIndex(string[] index)
     {
         await SecureStorage.SetAsync(IndexKey, JsonSerializer.Serialize(index));
     }
 
-    private string IndexKey => $"SecureConfigProviderIndex";
-
-    public async Task<IEnumerable<string>> List(string prefix)
+    public static async Task<IEnumerable<string>> List(string prefix)
     {
         var index = await GetIndex();
         return index.Where(key => key.StartsWith(prefix));

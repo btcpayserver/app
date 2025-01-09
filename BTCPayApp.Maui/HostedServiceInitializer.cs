@@ -23,7 +23,6 @@ public class HostedServiceInitializer : IMauiInitializeService, IDisposable
         StartDirectly().GetAwaiter().GetResult();
     }
 
-
     private Task OnStop()
     {
         return LockWaitRunExecute(async () =>
@@ -37,7 +36,7 @@ public class HostedServiceInitializer : IMauiInitializeService, IDisposable
                 }
 
             }
-         
+
             _running = false;
             _logger?.LogInformation("Service stopped");
         });
@@ -57,7 +56,6 @@ public class HostedServiceInitializer : IMauiInitializeService, IDisposable
             _logger?.LogInformation("Service started");
         });
     }
-
 
     private async Task LockWaitRunExecute(Func<Task> action)
     {

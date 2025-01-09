@@ -1,4 +1,4 @@
-﻿﻿using Android;
+﻿using Android;
 using Android.App;
 using Android.Content.PM;
 using Android.Graphics;
@@ -12,7 +12,7 @@ using Java.Interop;
 using View = Android.Views.View;
 using WebView = Android.Webkit.WebView;
 
-namespace BTCPayApp.Maui.Platforms.Android;
+namespace BTCPayApp.Maui;
 
 internal class PermissionManagingBlazorWebChromeClient : WebChromeClient, IActivityResultCallback
 {
@@ -177,11 +177,12 @@ internal class PermissionManagingBlazorWebChromeClient : WebChromeClient, IActiv
         _requestPermissionLauncher.Launch(permission);
     }
 
-    void IActivityResultCallback.OnActivityResult(Java.Lang.Object isGranted)
+    void IActivityResultCallback.OnActivityResult(Java.Lang.Object? isGranted)
     {
         var callback = _pendingPermissionRequestCallback;
+        var granted = isGranted is Java.Lang.Boolean;
         _pendingPermissionRequestCallback = null;
-        callback?.Invoke((bool)isGranted);
+        callback?.Invoke(granted);
     }
 
     #region Unremarkable overrides

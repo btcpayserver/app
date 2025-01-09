@@ -9,15 +9,14 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 public class DangerousHttpClientFactory : IHttpClientFactory
 {
-    public static bool ServerValidate(object sender, X509Certificate certificate, X509Chain chain,
-        SslPolicyErrors errors)
+    public static bool ServerValidate(object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors errors)
     {
-        return certificate.Issuer.Equals("CN=localhost") || errors == SslPolicyErrors.None;
+        return certificate?.Issuer.Equals("CN=localhost") is true || errors == SslPolicyErrors.None;
     }
 
-    public static HttpClientHandler GetInsecureHandler()
+    private static HttpClientHandler GetInsecureHandler()
     {
-        HttpClientHandler handler = new HttpClientHandler();
+        var handler = new HttpClientHandler();
         handler.ServerCertificateCustomValidationCallback = ServerValidate;
         return handler;
     }
@@ -27,6 +26,7 @@ public class DangerousHttpClientFactory : IHttpClientFactory
         return new HttpClient(GetInsecureHandler());
     }
 }
+
 #if ANDROID
 public class DangerousAndroidMessageHandler :Xamarin.Android.Net.AndroidMessageHandler
 {
@@ -37,12 +37,11 @@ public class DangerousAndroidMessageHandler :Xamarin.Android.Net.AndroidMessageH
     {
         public bool Verify(string? hostname, Javax.Net.Ssl.ISSLSession? session)
         {
-            return session.PeerPrincipal?.Name == "CN=localhost";
+            return session?.PeerPrincipal?.Name == "CN=localhost";
         }
     }
 }
 #endif
-
 
 public static class DebugExtensions
 {

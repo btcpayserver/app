@@ -1,5 +1,4 @@
-﻿#nullable enable
-using BTCPayApp.Core.Contracts;
+﻿using BTCPayApp.Core.Contracts;
 
 namespace BTCPayApp.Maui.Services;
 

@@ -1,6 +1,5 @@
 ﻿#if ANDROID
 using AndroidX.Activity;
-using BTCPayApp.Maui.Platforms.Android;
 #endif
 using Microsoft.AspNetCore.Components.WebView;
 using Microsoft.Maui.Platform;

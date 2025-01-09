@@ -42,12 +42,12 @@ public static class MauiProgram
                 .OnCreate((activity, bundle) =>
                 {
                     CrossFingerprint.SetCurrentActivityResolver(() => activity);
-                    
+
                     LogEvent(nameof(AndroidLifecycle.OnCreate));
                 })
                 .OnStop((activity) => { LogEvent(nameof(AndroidLifecycle.OnStop)); }).OnDestroy(activity =>
                 {
-                    IPlatformApplication.Current.Services.GetRequiredService<HostedServiceInitializer>().Dispose();
+                    IPlatformApplication.Current?.Services.GetRequiredService<HostedServiceInitializer>().Dispose();
                 }));
 
 
