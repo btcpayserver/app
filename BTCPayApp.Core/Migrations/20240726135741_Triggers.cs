@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace BTCPayApp.Core.Migrations
 {
     /// <inheritdoc />
-    public partial class triggers : Migration
+    public partial class Triggers : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -114,11 +114,41 @@ namespace BTCPayApp.Core.Migrations
             migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_INSERT_SETTING\r\nAFTER INSERT ON \"Settings\"\r\nFOR EACH ROW\r\nWHEN \r\n  \r\n  NEW.\"Backup\" IS TRUE\r\nBEGIN\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  NEW.\"Version\", \r\n  NEW.\"EntityKey\", \r\n  0;\r\nEND;");
 
             migrationBuilder.Sql("CREATE TRIGGER LC_TRIGGER_AFTER_UPDATE_SETTING\r\nAFTER UPDATE ON \"Settings\"\r\nFOR EACH ROW\r\nWHEN \r\n  \r\n  OLD.\"Backup\" IS TRUE\r\nBEGIN\r\n  UPDATE \"Settings\"\r\n  SET \"Version\" = OLD.\"Version\" + 1\r\n  WHERE OLD.\"Key\" = \"Settings\".\"Key\";\r\n  INSERT INTO \"OutboxItems\" (\"Entity\", \"Version\", \"Key\", \"ActionType\") SELECT 'Setting', \r\n  OLD.\"Version\" + 1, \r\n  NEW.\"EntityKey\", \r\n  1;\r\nEND;");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Settings_EntityKey",
+                table: "Settings",
+                column: "EntityKey",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LightningPayments_EntityKey",
+                table: "LightningPayments",
+                column: "EntityKey",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_LightningChannels_EntityKey",
+                table: "LightningChannels",
+                column: "EntityKey",
+                unique: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropIndex(
+                name: "IX_Settings_EntityKey",
+                table: "Settings");
+
+            migrationBuilder.DropIndex(
+                name: "IX_LightningPayments_EntityKey",
+                table: "LightningPayments");
+
+            migrationBuilder.DropIndex(
+                name: "IX_LightningChannels_EntityKey",
+                table: "LightningChannels");
+
             migrationBuilder.Sql("PRAGMA writable_schema = 1; \r\nDELETE FROM sqlite_master WHERE type = 'trigger' AND name like 'LC_TRIGGER_AFTER_DELETE_APPLIGHTNINGPAYMENT%';\r\nPRAGMA writable_schema = 0;");
 
             migrationBuilder.Sql("PRAGMA writable_schema = 1; \r\nDELETE FROM sqlite_master WHERE type = 'trigger' AND name like 'LC_TRIGGER_AFTER_INSERT_APPLIGHTNINGPAYMENT%';\r\nPRAGMA writable_schema = 0;");

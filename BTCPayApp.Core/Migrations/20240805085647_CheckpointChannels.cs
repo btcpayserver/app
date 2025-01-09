@@ -5,11 +5,18 @@
 namespace BTCPayApp.Core.Migrations
 {
     /// <inheritdoc />
-    public partial class channelpimp : Migration
+    public partial class CheckpointChannels : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.AddColumn<long>(
+                name: "Checkpoint",
+                table: "LightningChannels",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: 0L);
+
             migrationBuilder.AddColumn<string>(
                 name: "AdditionalData",
                 table: "LightningChannels",
@@ -34,6 +41,10 @@ namespace BTCPayApp.Core.Migrations
 
             migrationBuilder.DropColumn(
                 name: "Archived",
+                table: "LightningChannels");
+
+            migrationBuilder.DropColumn(
+                name: "Checkpoint",
                 table: "LightningChannels");
         }
     }
