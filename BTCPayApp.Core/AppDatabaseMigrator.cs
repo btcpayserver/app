@@ -5,27 +5,22 @@ using Microsoft.Extensions.Logging;
 
 namespace BTCPayApp.Core;
 
-public class AppDatabaseMigrator: IHostedService
+public class AppDatabaseMigrator(ILogger<AppDatabaseMigrator> logger, IDbContextFactory<AppDbContext> dbContextFactory) : IHostedService
 {
-    private readonly ILogger<AppDatabaseMigrator> _logger;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-
-    public AppDatabaseMigrator(ILogger<AppDatabaseMigrator> logger, IDbContextFactory<AppDbContext> dbContextFactory)
-    {
-        _logger = logger;
-        _dbContextFactory = dbContextFactory;
-    }
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var pendingMigrationsAsync = (await dbContext.Database.GetPendingMigrationsAsync(cancellationToken: cancellationToken)).ToArray();
-        if (pendingMigrationsAsync.Any())
+        if (pendingMigrationsAsync.Length != 0)
         {
-            _logger.LogInformation($"Applying {pendingMigrationsAsync.Length} migrations");
+            logger.LogInformation("Applying {Length} migrations", pendingMigrationsAsync.Length);
             await dbContext.Database.MigrateAsync(cancellationToken);
-            _logger.LogInformation("Migrations applied: " + string.Join(", ", pendingMigrationsAsync));
+            logger.LogInformation("Migrations applied: {Migrations}", string.Join(", ", pendingMigrationsAsync));
         }
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken) { }
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
 }

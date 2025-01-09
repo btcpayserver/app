@@ -104,7 +104,7 @@ public class AuthStateProvider(
                         new Claim(identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, role)));
                 if (_userInfo.Stores?.Any() is true)
                     claims.AddRange(_userInfo.Stores.Select(store =>
-                        new Claim(store.Id, string.Join(',', store.Permissions))));
+                        new Claim(store.Id, string.Join(',', store.Permissions ?? []))));
                 user = new ClaimsPrincipal(new ClaimsIdentity(claims, "Greenfield"));
             }
 

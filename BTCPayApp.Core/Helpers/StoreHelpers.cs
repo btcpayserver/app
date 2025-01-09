@@ -32,7 +32,7 @@ public static class StoreHelpers
             // is user permitted? (store owner)
             !await accountManager.IsAuthorized(Policies.CanModifyStoreSettings, storeId) ||
             // is the onchain wallet configured?
-            !onChainWalletManager.IsConfigured(config)) return null;
+            !OnChainWalletManager.IsConfigured(config)) return null;
         // check the store's payment methods
         var (onchain, lightning) = await GetCurrentStorePaymentMethods(accountManager);
 

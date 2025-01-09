@@ -66,7 +66,7 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
         return await Wrap(async () => await _hubProxy.GetFeeRate(blockTarget));
     }
 
-    public async Task<BestBlockResponse> GetBestBlock()
+    public async Task<BestBlockResponse?> GetBestBlock()
     {
         return await Wrap(async () => await _hubProxy.GetBestBlock());
     }

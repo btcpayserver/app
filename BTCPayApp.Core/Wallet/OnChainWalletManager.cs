@@ -32,10 +32,10 @@ public class OnChainWalletManager : BaseHostedService
     //     GetConfig().ContinueWith(task => task.Result?.Derivations.Values.FirstOrDefault());
     public Task<bool> IsConfigured() => GetConfig().ContinueWith(task => IsConfigured(task.Result));
 
-    public bool IsConfigured(WalletConfig? walletConfig) =>
+    public static bool IsConfigured(WalletConfig? walletConfig) =>
         walletConfig?.Derivations.TryGetValue(WalletDerivation.NativeSegwit, out _) is true;
 
-    public bool CanConfigureWallet(WalletConfig walletConfig)
+    private bool CanConfigureWallet(WalletConfig? walletConfig)
     {
         return IsHubConnected && !IsConfigured(walletConfig);
     }
@@ -117,6 +117,7 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
+    /*
     public async Task Restore()
     {
         throw new NotImplementedException("we're not there yet");
@@ -134,9 +135,6 @@ public class OnChainWalletManager : BaseHostedService
         // step2: import the UTXOS
         // step3: sync the backup data
 
-
-
-        /*
         await _controlSemaphore.WaitAsync();
         try
         {
@@ -163,8 +161,8 @@ public class OnChainWalletManager : BaseHostedService
         {
             _controlSemaphore.Release();
         }
-        */
     }
+    */
 
 
     public async Task Generate()
