@@ -1,5 +1,4 @@
 ﻿using BTCPayApp.Core.Contracts;
-using BTCPayApp.Core.Helpers;
 using org.ldk.structs;
 using Script = NBitcoin.Script;
 
@@ -32,8 +31,14 @@ public class LDKFilter : FilterInterface
 
     public async Task<List<LDKWatchedOutput>> GetWatchedOutputs()
     {
-        return await _configProvider.Get<List<LDKWatchedOutput>?>("ln:watchedOutputs")?? [];
+        return await GetWatchedOutputs(_configProvider);
     }
+
+    public static async Task<List<LDKWatchedOutput>> GetWatchedOutputs(ConfigProvider configProvider)
+    {
+        return await configProvider.Get<List<LDKWatchedOutput>?>("ln:watchedOutputs") ?? [];
+    }
+    
 
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 

@@ -15,7 +15,7 @@ public class LDKWatchedOutput
     public uint256? BlockHash { get; set; }
 
     [JsonConverter(typeof(BitcoinSerializableJsonConverterFactory))]
-    public OutPoint Outpoint { get; set; }
+    public OutPoint? Outpoint { get; set; }
 
     public LDKWatchedOutput()
     {
@@ -28,5 +28,9 @@ public class LDKWatchedOutput
             ? new uint256(some.some)
             : null;
         Outpoint = watchedOutput.get_outpoint().Outpoint();
+    } 
+    public LDKWatchedOutput(Script script)
+    {
+        Script = script;
     }
 }
