@@ -1,4 +1,5 @@
-﻿using BTCPayServer.Lightning;
+﻿using BTCPayServer.Abstractions.Extensions;
+using BTCPayServer.Lightning;
 using BTCPayServer.Plugins.App.Data;
 using Laraue.EfCoreTriggers.PostgreSql.Extensions;
 using Microsoft.AspNetCore.Builder;
@@ -21,7 +22,7 @@ public static class AppExtensions
             o.UsePostgreSqlTriggers();
         });
         serviceCollection.AddHostedService(serviceProvider => serviceProvider.GetRequiredService<BTCPayAppState>());
-        serviceCollection.AddHostedService<AppPluginMigrationRunner>();
+        serviceCollection.AddStartupTask<AppPluginMigrationRunner>();
         return serviceCollection;
     }
 

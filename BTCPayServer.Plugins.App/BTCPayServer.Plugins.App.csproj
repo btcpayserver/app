@@ -19,23 +19,20 @@
     <GenerateEmbeddedFilesManifest>true</GenerateEmbeddedFilesManifest>
   </PropertyGroup>
 
-  <!-- This will make sure that referencing BTCPayServer doesn't put any artifact in the published directory -->
-  <ItemDefinitionGroup>
-    <ProjectReference>
-      <Properties>StaticWebAssetsEnabled=false</Properties>
-      <Private>false</Private>
-      <ExcludeAssets>runtime;native;build;buildTransitive;contentFiles</ExcludeAssets>
-    </ProjectReference>
-  </ItemDefinitionGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj" />
-    <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Abstractions\BTCPayServer.Abstractions.csproj" />
     <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer\BTCPayServer.csproj" />
+    <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj" />
+    <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Data\BTCPayServer.Data.csproj" />
+    <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Rating\BTCPayServer.Rating.csproj" />
     <EmbeddedResource Include="Resources\**" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.65.0"/>
     <PackageReference Include="Laraue.EfCoreTriggers.PostgreSql" Version="8.0.3" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.12.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
     <PackageReference Include="VSS" Version="1.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.12">
+    </PackageReference>
     <!--
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.6" />
