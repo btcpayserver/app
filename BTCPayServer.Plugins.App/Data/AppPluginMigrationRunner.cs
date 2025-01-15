@@ -12,7 +12,6 @@ public class AppPluginMigrationRunner(
     AppPluginDbContextFactory dbContextFactory,
     ISettingsRepository settingsRepository) : IStartupTask
 {
-
     private class AppPluginDataMigrationHistory
     {
         public bool InitialSetup { get; set; }
@@ -23,14 +22,12 @@ public class AppPluginMigrationRunner(
         var settings =
             await settingsRepository.GetSettingAsync<AppPluginDataMigrationHistory>() ??
             new AppPluginDataMigrationHistory();
-        
+
         await using var ctx = dbContextFactory.CreateContext();
-        var migrations = await ctx.Database.GetAppliedMigrationsAsync(cancellationToken: cancellationToken);
-        var allMigrations = ctx.Database.GetMigrations();
-        var pendingMigrations = await ctx.Database.GetPendingMigrationsAsync(cancellationToken: cancellationToken);
-        if (pendingMigrations.Any())
+        var pendingMigrations = (await ctx.Database.GetPendingMigrationsAsync(cancellationToken: cancellationToken)).ToList();
+        if (pendingMigrations.Count != 0)
         {
-            logger.LogInformation("Applying {Count} migrations", pendingMigrations.Count());
+            logger.LogInformation("Applying {Count} migrations", pendingMigrations.Count);
             await ctx.Database.MigrateAsync(cancellationToken: cancellationToken);
         }
         else

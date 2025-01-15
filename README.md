@@ -42,17 +42,11 @@ error, and you may find a solution at the [following link](https://learn.microso
 
 ## Missing dependencies in development environment
 
-If BTCPay Server does nopt start up with the app and its dependencies, add the file `submodules/btcpayserver/BTCPayServer/appsettings.dev.json` with the following content:
-
-```
-{ "DEBUG_PLUGINS": "FULL_PATH_TO_PROJECT_DIRECTORY/BTCPayServer.Plugins.App/bin/Debug/net8.0/BTCPayServer.Plugins.App.dll" }
-```
-
-Note that you need to replace the `FULL_PATH_TO_PROJECT_DIRECTORY`.
+If BTCPay Server does not start up with the app and its dependencies, run this:
 
 ```bash
 cd BTCPayServer.Plugins.App
-dotnet publish -o bin/Debug/net8.0/
+dotnet publish /p:RazorCompileOnBuild=true -o bin/Debug/net8.0
 ```
 
 ## Lightning Channels
