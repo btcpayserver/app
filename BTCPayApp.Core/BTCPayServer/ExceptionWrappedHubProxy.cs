@@ -76,7 +76,7 @@ public class ExceptionWrappedHubProxy : IBTCPayAppHubServer
         return await Wrap(async () => await _hubProxy.FetchTxsAndTheirBlockHeads(identifier, txIds, outpoints));
     }
 
-    public async Task<string> DeriveScript(string identifier)
+    public async Task<ScriptResponse> DeriveScript(string identifier)
     {
         return await Wrap(async () => await _hubProxy.DeriveScript(identifier));
     }

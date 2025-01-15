@@ -9,6 +9,7 @@ public class LDKFilter : FilterInterface
 {
     private readonly LDKNode _ldkNode;
     private readonly ConfigProvider _configProvider;
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
 
     public LDKFilter(LDKNode ldkNode, ConfigProvider configProvider)
     {
@@ -32,10 +33,13 @@ public class LDKFilter : FilterInterface
 
     public async Task<List<LDKWatchedOutput>> GetWatchedOutputs()
     {
-        return await _configProvider.Get<List<LDKWatchedOutput>?>("ln:watchedOutputs")?? [];
+        return await GetWatchedOutputs(_configProvider);
     }
 
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    public static async Task<List<LDKWatchedOutput>> GetWatchedOutputs(ConfigProvider configProvider)
+    {
+        return await configProvider.Get<List<LDKWatchedOutput>?>("ln:watchedOutputs") ?? [];
+    }
 
     private async Task AddOrUpdateWatchedOutput(LDKWatchedOutput output)
     {

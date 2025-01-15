@@ -23,6 +23,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBXplorer;
+using NBXplorer.DerivationStrategy;
 using NBXplorer.Models;
 using NewBlockEvent = BTCPayServer.Events.NewBlockEvent;
 
@@ -205,13 +206,13 @@ public class BTCPayAppState : IHostedService
 
     private async Task StoreUpdatedEvent(StoreEvent.Updated arg)
     {
-        var ev = new ServerEvent { Type ="store-updated", StoreId = arg.StoreId, Detail = arg.Detail };
+        var ev = new ServerEvent { Type = "store-updated", StoreId = arg.StoreId, Detail = arg.Detail };
         await _hubContext.Clients.Group(arg.StoreId).NotifyServerEvent(ev);
     }
 
     private async Task StoreRemovedEvent(StoreEvent.Removed arg)
     {
-        var ev = new ServerEvent { Type = "store-removed", StoreId = arg.StoreId};
+        var ev = new ServerEvent { Type = "store-removed", StoreId = arg.StoreId };
         await _hubContext.Clients.Group(arg.StoreId).NotifyServerEvent(ev);
     }
 
@@ -352,9 +353,9 @@ public class BTCPayAppState : IHostedService
         return Task.CompletedTask;
     }
 
-    private Task<bool> IsTracked(TrackedSource trackedSource)
+    private async Task<bool> IsTracked(TrackedSource trackedSource)
     {
-        return Task.FromResult(true);
+        return await _explorerClient.IsTrackedAsync(trackedSource, CancellationToken.None);
     }
 
     public async Task<AppHandshakeResponse> Handshake(string contextConnectionId, AppHandshake handshake)
@@ -364,12 +365,9 @@ public class BTCPayAppState : IHostedService
         {
             try
             {
-                if (TrackedSource.TryParse(ts, out var trackedSource, _explorerClient.Network) && await IsTracked(trackedSource))
-                {
-                    ack.Add(ts);
-                    await AddToGroup(ts, contextConnectionId);
-                }
-
+                if (!TrackedSource.TryParse(ts, out var trackedSource, _explorerClient.Network) || !await IsTracked(trackedSource)) continue;
+                ack.Add(ts);
+                await AddToGroup(ts, contextConnectionId);
             }
             catch (Exception e)
             {
@@ -377,8 +375,7 @@ public class BTCPayAppState : IHostedService
                 throw;
             }
         }
-
-        return new AppHandshakeResponse {IdentifiersAcknowledged = ack.ToArray()};
+        return new AppHandshakeResponse { IdentifiersAcknowledged = ack.ToArray() };
     }
 
     public async Task<Dictionary<string, string>> Pair(string contextConnectionId, PairRequest request)
@@ -394,12 +391,24 @@ public class BTCPayAppState : IHostedService
             }
             else
             {
-                var strategy = _derivationSchemeParser.ParseOutputDescriptor(derivation.Value);
+                var strategy = _derivationSchemeParser.ParseOutputDescriptor(derivation.Value.Descriptor);
+                await _explorerClient.TrackAsync(strategy.Item1,
+                    new TrackWalletRequest
+                    {
+                        DerivationOptions =
+                        [
+                            new TrackDerivationOption
+                            {
+                                Feature = DerivationFeature.Deposit, MinAddresses = derivation.Value.Index
+                            }
+                        ],
+                        Wait = true
+                    });
                 result.Add(derivation.Key, TrackedSource.Create(strategy.Item1).ToString());
             }
+            await _explorerClient.ImportUTXOs("BTC", new ImportUTXORequest { Utxos = derivation.Value?.KnownCoins });
         }
-
-        await Handshake(contextConnectionId, new AppHandshake {Identifiers = result.Values.ToArray()});
+        await Handshake(contextConnectionId, new AppHandshake { Identifiers = result.Values.ToArray() });
         return result;
     }
 
@@ -429,7 +438,7 @@ public class BTCPayAppState : IHostedService
             {
                 _logger.LogInformation("DeviceMasterSignal called with device identifier {DeviceIdentifier}",
                     deviceIdentifier);
-                connectedInstance = connectedInstance with {DeviceIdentifier = deviceIdentifier};
+                connectedInstance = connectedInstance with { DeviceIdentifier = deviceIdentifier };
                 Connections[contextConnectionId] = connectedInstance;
             }
 
@@ -455,7 +464,7 @@ public class BTCPayAppState : IHostedService
                     _logger.LogWarning(
                         "DeviceMasterSignal called with active state but the master connection was ungracefully disconnected");
 
-                    connectedInstance = connectedInstance with {Master = false};
+                    connectedInstance = connectedInstance with { Master = false };
                     Connections[contextConnectionId] = connectedInstance;
                     result = false;
                     return result;
@@ -463,7 +472,7 @@ public class BTCPayAppState : IHostedService
                 else
                 {
                     _logger.LogInformation("DeviceMasterSignal called with active state");
-                    connectedInstance = connectedInstance with {Master = true};
+                    connectedInstance = connectedInstance with { Master = true };
                     Connections[contextConnectionId] = connectedInstance;
                     await RemoveGracefulDisconnectDeviceIdentifier(connectedInstance.UserId);
                     result = true;
@@ -474,7 +483,7 @@ public class BTCPayAppState : IHostedService
             else
             {
                 _logger.LogInformation("DeviceMasterSignal called with inactive state");
-                connectedInstance = connectedInstance with {Master = false};
+                connectedInstance = connectedInstance with { Master = false };
                 Connections[contextConnectionId] = connectedInstance;
 
                 MasterUserDisconnected?.Invoke(this, connectedInstance.UserId);

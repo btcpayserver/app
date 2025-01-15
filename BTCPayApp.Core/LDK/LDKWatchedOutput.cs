@@ -15,10 +15,15 @@ public class LDKWatchedOutput
     public uint256? BlockHash { get; set; }
 
     [JsonConverter(typeof(BitcoinSerializableJsonConverterFactory))]
-    public OutPoint Outpoint { get; set; }
+    public OutPoint? Outpoint { get; set; }
 
     public LDKWatchedOutput()
     {
+    }
+
+    public LDKWatchedOutput(Script script)
+    {
+        Script = script;
     }
 
     public LDKWatchedOutput(WatchedOutput watchedOutput)

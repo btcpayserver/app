@@ -3,6 +3,7 @@ using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
+using BTCPayApp.Core.LDK;
 using BTCPayServer.Client.App;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -117,53 +118,74 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
-    /*
     public async Task Restore()
     {
-        throw new NotImplementedException("we're not there yet");
-
-        var config = await GetConfig();
-        if (config is null || !IsConfigured(config))
-        {
-            throw new InvalidOperationException("Cannot restore wallet in current state");
-        }
-
-        // step1: Track our derivations
-        //for groups, we need to generate a new one and replace the local one with its identifier
-        //for derivations, we need to call track with the latest index
-        //for groups, we need to fetch all tracked scripts and add them to the group tracked source
-        // step2: import the UTXOS
-        // step3: sync the backup data
-
-        await _controlSemaphore.WaitAsync();
         try
         {
-
+            if (_state != OnChainWalletState.WaitingForConnection)
+            {
+                throw new InvalidOperationException("Cannot restore wallet in current state");
+            }
+            await _controlSemaphore.WaitAsync();
 
             var config = await GetConfig();
-            var missingIds = await Track();
-            foreach (var missing in missingIds)
+            if (config is null || !IsConfigured(config))
             {
-                var wd = config.Derivations.First(pair => pair.Value.Identifier == missing).Value;
-                if (wd.Descriptor is null)
-                {
-                    // track and take the new identifier
-
-                }
-
-                //import utxos for the missing id
-                //ask ldk for the scipts we should be tacking and add them all
+                throw new InvalidOperationException("Cannot restore wallet in current state");
             }
 
-            //if it is a wallet without a derivation, we generate a new goup for it
+            // step1: Track our derivations
+            //for groups, we need to generate a new one and replace the local one with its identifier
+            //for derivations, we need to call track with the latest index
+            //for groups, we need to fetch all tracked scripts and add them to the group tracked source
+            // step2: import the UTXOS
+            // step3: sync the backup data
+            var identifiers = config.Derivations.Select(pair => pair.Value.Identifier).ToArray();
+            var response = await HubProxy.Handshake(new AppHandshake
+            {
+                Identifiers = identifiers
+            });
+
+            var missing = config.Derivations
+                .Where(pair => response.IdentifiersAcknowledged?.Contains(pair.Value.Identifier) is not true)
+                .ToList();
+
+            foreach (var x in missing)
+            {
+                var result = await HubProxy.Pair(new PairRequest
+                {
+                    Derivations = new Dictionary<string, DerivationItem?>()
+                    {
+                        [x.Key] = new()
+                        {
+                            Descriptor = x.Value.Descriptor,
+                            Index = x.Value.LastKnownIndex ?? 0
+                        }
+                    }
+                });
+
+                config.Derivations[x.Key] = new WalletDerivation
+                {
+                    Name = x.Value.Name,
+                    Descriptor = x.Value.Descriptor,
+                    Identifier = result[x.Key]
+                };
+
+                if (x.Key == WalletDerivation.LightningScripts)
+                {
+                    var scripts = await LDKFilter.GetWatchedOutputs(_configProvider);
+                    await HubProxy.TrackScripts(config.Derivations[x.Key].Identifier,
+                        scripts.Select(output => output.Script.ToHex()).ToArray());
+                }
+            }
+
+            await _configProvider.Set(WalletConfig.Key, config, true);
         }
         finally
         {
             _controlSemaphore.Release();
         }
     }
-    */
-
 
     public async Task Generate()
     {
@@ -181,17 +203,17 @@ public class OnChainWalletManager : BaseHostedService
             var path = new KeyPath($"m/84'/{(mainnet ? "0" : "1")}'/0'");
             var fingerprint = mnemonic.DeriveExtKey().GetPublicKey().GetHDFingerPrint();
             var xpub = mnemonic.DeriveExtKey().Derive(path).Neuter().ToString(ReportedNetwork);
-            var snapshot = new BlockSnapshot()
+            var snapshot = new BlockSnapshot
             {
                 BlockHash = uint256.Parse(block.BlockHash),
-                BlockHeight = (uint) block.BlockHeight
+                BlockHeight = (uint)block.BlockHeight
             };
             var walletConfig = new WalletConfig
             {
                 Birthday = snapshot,
                 Mnemonic = mnemonic.ToString(),
                 Network = ReportedNetwork.ToString(),
-                Derivations = new Dictionary<string, WalletDerivation>()
+                Derivations = new Dictionary<string, WalletDerivation>
                 {
                     [WalletDerivation.NativeSegwit] = new()
                     {
@@ -200,16 +222,19 @@ public class OnChainWalletManager : BaseHostedService
                             $"wpkh([{fingerprint.ToString()}/{path}]{xpub}/0/*)")
                     }
                 },
-                CoinSnapshot = new CoinSnapshot()
+                CoinSnapshot = new CoinSnapshot
                 {
-                    Coins = new(),
+                    Coins = new Dictionary<string, SavedCoin[]>(),
                     BlockSnapshot = snapshot
                 }
             };
 
             var result = await HubProxy.Pair(new PairRequest
             {
-                Derivations = walletConfig.Derivations.ToDictionary(pair => pair.Key, pair => pair.Value.Descriptor)
+                Derivations = walletConfig.Derivations.ToDictionary(pair => pair.Key, pair => new DerivationItem
+                {
+                    Descriptor = pair.Value.Descriptor
+                })
             });
             foreach (var keyValuePair in result)
             {
@@ -245,9 +270,9 @@ public class OnChainWalletManager : BaseHostedService
 
             var result = await HubProxy.Pair(new PairRequest
             {
-                Derivations = new Dictionary<string, string?>
+                Derivations = new Dictionary<string, DerivationItem?>
                 {
-                    [key] = descriptor
+                    [key] = new() { Descriptor = descriptor }
                 }
             });
 
@@ -305,7 +330,7 @@ public class OnChainWalletManager : BaseHostedService
             return [];
 
         var config = await GetConfig();
-        if (config is null ||!IsConfigured(config))
+        if (config is null || !IsConfigured(config))
             return [];
 
         var identifiers = config.Derivations.Select(pair => pair.Value.Identifier).ToArray();
@@ -325,7 +350,6 @@ public class OnChainWalletManager : BaseHostedService
         }
 
         return missing.Select(pair => pair.Key).ToArray();
-
     }
 
     protected override Task ExecuteStopAsync(CancellationToken cancellationToken)
@@ -365,7 +389,7 @@ public class OnChainWalletManager : BaseHostedService
                 BlockSnapshot = new BlockSnapshot
                 {
                     BlockHash = uint256.Parse(bb.BlockHash),
-                    BlockHeight = (uint) bb.BlockHeight
+                    BlockHeight = (uint)bb.BlockHeight
                 },
                 Coins = utxos.ToDictionary(kv => kv.Key,
                     kv => kv.Value.Select(coin => new SavedCoin()
@@ -385,13 +409,25 @@ public class OnChainWalletManager : BaseHostedService
 
     public async Task<BitcoinAddress?> DeriveScript(string derivation)
     {
-        var config = await GetConfig();
-        if (State != OnChainWalletState.Loaded || ReportedNetwork == null || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
-            throw new InvalidOperationException("Cannot derive script in current state");
+        try
+        {
+            await _controlSemaphore.WaitAsync();
+            var config = await GetConfig();
+            if (State != OnChainWalletState.Loaded || ReportedNetwork == null || HubProxy == null || !IsHubConnected ||
+                config is null || !IsConfigured(config))
+                throw new InvalidOperationException("Cannot derive script in current state");
 
-        var identifier = config.Derivations[derivation].Identifier;
-        var addr = await HubProxy.DeriveScript(identifier);
-        return Script.FromHex(addr).GetDestinationAddress(ReportedNetwork);
+            var identifier = config.Derivations[derivation].Identifier;
+            var addr = await HubProxy.DeriveScript(identifier);
+            var keyPath = KeyPath.Parse(addr.KeyPath);
+            config.Derivations[derivation].LastKnownIndex = (int?)keyPath.Indexes.Last();
+            await _configProvider.Set(WalletConfig.Key, config, true);
+            return Script.FromHex(addr.Script).GetDestinationAddress(ReportedNetwork);
+        }
+        finally
+        {
+            _controlSemaphore.Release();
+        }
     }
 
     public async Task<PSBT?> SignTransaction(byte[] psbtBytes)
@@ -512,20 +548,22 @@ public class OnChainWalletManager : BaseHostedService
         var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
         var utxos = await HubProxy.GetUTXOs(identifiers);
         var identifiersWhichWeCanDeriveKeysFor = config.Derivations.Values
-            .Where(derivation => derivation.Descriptor is not null).Select(derivation => derivation.Identifier.ToLowerInvariant())
+            .Where(derivation => derivation.Descriptor is not null)
+            .Select(derivation => derivation.Identifier.ToLowerInvariant())
             .ToArray();
         var result = new List<ICoin>();
 
         var utxosThatWeCanDeriveKeysFor =
-            utxos.Where(utxo => identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Key.ToLowerInvariant())).ToDictionary(pair => pair.Key, pair => pair.Value);
+            utxos.Where(utxo => identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Key.ToLowerInvariant()))
+                .ToDictionary(pair => pair.Key, pair => pair.Value);
         foreach (var kp in utxosThatWeCanDeriveKeysFor)
         {
             var derivation =
-                config.Derivations.Values.First(derivation => derivation.Identifier.Equals(kp.Key, StringComparison.InvariantCultureIgnoreCase));
+                config.Derivations.Values.First(derivation =>
+                    derivation.Identifier.Equals(kp.Key, StringComparison.InvariantCultureIgnoreCase));
             var data = derivation.Descriptor.ExtractFromDescriptor(config.NBitcoinNetwork);
             if (data is null)
                 continue;
-
 
             foreach (var coin in kp.Value)
             {

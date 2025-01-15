@@ -240,12 +240,12 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
         };
     }
 
-    public async Task<string> DeriveScript(string identifier)
+    public async Task<ScriptResponse> DeriveScript(string identifier)
     {
         var cancellationToken = Context.ConnectionAborted;
         var ts = TrackedSource.Parse(identifier,_explorerClient.Network) as DerivationSchemeTrackedSource;
         var kpi = await _explorerClient.GetUnusedAsync(ts!.DerivationStrategy, DerivationFeature.Deposit, 0, true, cancellationToken);
-        return kpi.ScriptPubKey.ToHex();
+        return new ScriptResponse() { KeyPath = kpi.KeyPath.ToString(), Script = kpi.ScriptPubKey.ToHex() };
     }
 
     public async Task TrackScripts(string identifier, string[] scripts)

@@ -82,6 +82,7 @@ public class VSSController : Controller, IVSSAPI
     [MediaTypeConstraint("application/octet-stream")]
     public async Task<PutObjectResponse> PutObjectAsync(PutObjectRequest request, CancellationToken cancellationToken)
     {
+        //TODO: change to use the jwt claims for the device identifier and remove this usage of GlobalVersion
         if (!await VerifyMaster(request.GlobalVersion))
             return SetResult<PutObjectResponse>(BadRequest(new ErrorResponse()
             {
