@@ -383,7 +383,7 @@ public class BTCPayAppState : IHostedService
         var result = new Dictionary<string, string>();
         foreach (var derivation in request.Derivations)
         {
-            if (derivation.Value is null)
+            if (string.IsNullOrEmpty(derivation.Value?.Descriptor))
             {
                 var id = await _explorerClient.CreateGroupAsync();
 

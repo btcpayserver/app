@@ -141,10 +141,10 @@ public class PairRequest
 
 public class DerivationItem
 {
-    public string Descriptor { get; set; }
+    public string? Descriptor { get; set; }
     public int Index { get; set; }
 
-    public OutPoint[] KnownCoins { get; set; } = Array.Empty<OutPoint>();
+    public OutPoint[] KnownCoins { get; set; } = [];
 
 
 }
