@@ -46,10 +46,10 @@ If BTCPay Server does not start up with the app and its dependencies, run this:
 
 ```bash
 cd BTCPayApp.Core
-dotnet publish /p:RazorCompileOnBuild=true -o ../BTCPayServer.Plugins.App/bin/Debug/net8.0
+dotnet publish -c Debug -o ../BTCPayServer.Plugins.App/bin/Debug/net8.0
 cd -
 cd BTCPayServer.Plugins.App
-dotnet publish /p:RazorCompileOnBuild=true -o bin/Debug/net8.0
+dotnet publish -c Debug -o bin/Debug/net8.0
 cd -
 ```
 

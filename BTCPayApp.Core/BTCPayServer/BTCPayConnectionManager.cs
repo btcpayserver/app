@@ -269,6 +269,11 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                     break;
             }
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error while changing connection state from {Old} to {New}", e.Old, e.New);
+            throw;
+        }
         finally
         {
             _ = Task.Run(() => ConnectionState = newState);
