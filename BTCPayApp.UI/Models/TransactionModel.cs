@@ -1,5 +1,5 @@
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Data;
-using BTCPayServer.Client.App;
 using BTCPayServer.Lightning;
 
 namespace BTCPayApp.UI.Models;

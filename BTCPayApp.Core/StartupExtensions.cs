@@ -6,7 +6,6 @@ using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
 using BTCPayApp.Core.Wallet;
-using BTCPayServer.Client.App;
 using Laraue.EfCoreTriggers.SqlLite.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using BTCPayApp.Core;
-using BTCPayServer.Client.App.Models;
+using BTCPayApp.Core.Models;
 using BTCPayServer.Client.Models;
 using Fluxor;
 using Microsoft.JSInterop;

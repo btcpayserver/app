@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics.CodeAnalysis;
-using BTCPayServer.Client.App;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayServer.Lightning;
 using Microsoft.AspNetCore.SignalR;
 using NBitcoin;

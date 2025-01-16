@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Headers;
+using BTCPayApp.Core.Models;
 using BTCPayServer.Client;
-using BTCPayServer.Client.App.Models;
 using BTCPayServer.Client.Models;
 using Newtonsoft.Json.Linq;
 

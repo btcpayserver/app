@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using BTCPayApp.Core.Models;
 using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Client;
-using BTCPayServer.Client.App.Models;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Data;
 using BTCPayServer.Events;
@@ -20,9 +20,9 @@ using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.DataEncoders;
 using NicolasDorier.RateLimits;
-using LoginRequest = BTCPayServer.Client.App.Models.LoginRequest;
+using LoginRequest = BTCPayApp.Core.Models.LoginRequest;
 using PosViewType = BTCPayServer.Plugins.PointOfSale.PosViewType;
-using ResetPasswordRequest = BTCPayServer.Client.App.Models.ResetPasswordRequest;
+using ResetPasswordRequest = BTCPayApp.Core.Models.ResetPasswordRequest;
 using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
 namespace BTCPayServer.Plugins.App.API;

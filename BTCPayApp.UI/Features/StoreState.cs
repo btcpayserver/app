@@ -1,5 +1,5 @@
 ﻿using BTCPayApp.Core.Auth;
-using BTCPayServer.Client.App.Models;
+using BTCPayApp.Core.Models;
 using BTCPayServer.Client.Models;
 using Fluxor;
 

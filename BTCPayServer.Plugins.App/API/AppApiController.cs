@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
+using BTCPayApp.Core.Models;
 using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Abstractions.Extensions;
-using BTCPayServer.Client.App.Models;
 using BTCPayServer.Controllers.Greenfield;
 using BTCPayServer.Data;
 using BTCPayServer.Fido2;

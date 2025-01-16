@@ -45,8 +45,12 @@ error, and you may find a solution at the [following link](https://learn.microso
 If BTCPay Server does not start up with the app and its dependencies, run this:
 
 ```bash
+cd BTCPayApp.Core
+dotnet publish /p:RazorCompileOnBuild=true -o ../BTCPayServer.Plugins.App/bin/Debug/net8.0
+cd -
 cd BTCPayServer.Plugins.App
 dotnet publish /p:RazorCompileOnBuild=true -o bin/Debug/net8.0
+cd -
 ```
 
 ## Lightning Channels

@@ -2,7 +2,6 @@ using System.Text;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
 using BTCPayApp.Core.Wallet;
-using BTCPayServer.Client.App;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using Microsoft.AspNetCore.SignalR;

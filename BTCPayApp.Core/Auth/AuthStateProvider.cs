@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
-using BTCPayServer.Client.App.Models;
+using BTCPayApp.Core.Models;
 using BTCPayServer.Client.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;

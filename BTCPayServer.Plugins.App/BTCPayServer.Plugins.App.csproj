@@ -33,6 +33,7 @@
     <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj" />
     <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Data\BTCPayServer.Data.csproj" />
     <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Rating\BTCPayServer.Rating.csproj" />
+    <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
     <EmbeddedResource Include="Resources\**" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.65.0"/>
     <PackageReference Include="Laraue.EfCoreTriggers.PostgreSql" Version="8.0.3" />
