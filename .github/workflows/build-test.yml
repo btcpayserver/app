@@ -36,9 +36,15 @@ jobs:
         run: docker compose -f "submodules/btcpayserver/BTCPayServer.Tests/docker-compose.yml" up -d dev
       - name: Start BTCPay
         run: |
+          cd BTCPayApp.Core
+          dotnet publish -c Debug -o ../BTCPayServer.Plugins.App/bin/Debug/net8.0
+          cd -
+          cd BTCPayServer.Plugins.App
+          dotnet publish -c Debug -o bin/Debug/net8.0
+          cd -
           cd submodules/btcpayserver
           # Start non-HTTPS to avoid certificate errors
-          nohup dotnet run -c Release --project BTCPayServer --launch-profile Bitcoin &
+          nohup dotnet run -c Debug --project BTCPayServer --launch-profile Bitcoin &
           while ! curl -s -k http://localhost:14142/api/v1/health > /dev/null; do
             echo "Waiting for BTCPay Server to start..."
             sleep 10
@@ -47,6 +53,7 @@ jobs:
       - name: Run tests
         env:
           BTCPAY_SERVER_URL: http://localhost:14142
+          BTCPAY_DEBUG_PLUGINS: ../../../BTCPayServer.Plugins.App/bin/Debug/net8.0/BTCPayServer.Plugins.App.dll
         run: |
           dotnet test -c Release -v n --logger "console;verbosity=normal" BTCPayApp.Tests
 
