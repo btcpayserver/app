@@ -23,64 +23,42 @@ namespace BTCPayServer.Plugins.App.API;
 [ProtobufFormatter]
 [Authorize(AuthenticationSchemes = AuthenticationSchemes.GreenfieldAPIKeys)]
 [Route("vss")]
-public class VSSController : Controller, IVSSAPI
+public class VSSController(
+    AppPluginDbContextFactory dbContextFactory,
+    UserManager<ApplicationUser> userManager,
+    BTCPayAppState appState,
+    ILogger<VSSController> logger)
+    : Controller, IVSSAPI
 {
-    private readonly AppPluginDbContextFactory _dbContextFactory;
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly BTCPayAppState _appState;
-    private readonly ILogger<VSSController> _logger;
-
-    public VSSController(AppPluginDbContextFactory dbContextFactory,
-        UserManager<ApplicationUser> userManager, BTCPayAppState appState, ILogger<VSSController> logger)
-    {
-        _dbContextFactory = dbContextFactory;
-        _userManager = userManager;
-        _appState = appState;
-        _logger = logger;
-    }
-
     [HttpPost(HttpVSSAPIClient.GET_OBJECT)]
     [MediaTypeConstraint("application/octet-stream")]
-    public async Task<GetObjectResponse> GetObjectAsync(GetObjectRequest request, CancellationToken cancellationToken)
+    public async Task<GetObjectResponse> GetObjectAsync(GetObjectRequest request, CancellationToken cancellationToken = default)
     {
-        var userId = _userManager.GetUserId(User);
-        await using var dbContext = _dbContextFactory.CreateContext();
+        var userId = userManager.GetUserId(User);
+        await using var dbContext = dbContextFactory.CreateContext();
         var store = await dbContext.AppStorageItems.SingleOrDefaultAsync(data =>
             data.Key == request.Key && data.UserId == userId, cancellationToken: cancellationToken);
         if (store == null)
         {
             return SetResult<GetObjectResponse>(
-                new NotFoundObjectResult(new ErrorResponse()
+                new NotFoundObjectResult(new ErrorResponse
                 {
                     ErrorCode = ErrorCode.NoSuchKeyException, Message = "Key not found"
                 }));
         }
 
-        return new GetObjectResponse()
+        return new GetObjectResponse
         {
-            Value = new KeyValue()
+            Value = new KeyValue
             {
                 Key = store.Key, Value = ByteString.CopyFrom(store.Value), Version = store.Version
             }
         };
     }
 
-
-    private T SetResult<T>(IActionResult result)
-    {
-        HttpContext.Items["Result"] = result;
-        return default;
-    }
-
-    private async Task<bool> VerifyMaster(long deviceIdentifier)
-    {
-        var userId = _userManager.GetUserId(User);
-        return await _appState.IsMaster(userId, deviceIdentifier);
-    }
-
     [HttpPost(HttpVSSAPIClient.PUT_OBJECTS)]
     [MediaTypeConstraint("application/octet-stream")]
-    public async Task<PutObjectResponse> PutObjectAsync(PutObjectRequest request, CancellationToken cancellationToken)
+    public async Task<PutObjectResponse> PutObjectAsync(PutObjectRequest request, CancellationToken cancellationToken = default)
     {
         //TODO: change to use the jwt claims for the device identifier and remove this usage of GlobalVersion
         if (!await VerifyMaster(request.GlobalVersion))
@@ -89,9 +67,9 @@ public class VSSController : Controller, IVSSAPI
                 ErrorCode = ErrorCode.ConflictException, Message = "Global version mismatch"
             }));
 
-        var userId = _userManager.GetUserId(User);
+        var userId = userManager.GetUserId(User);
 
-        await using var dbContext = _dbContextFactory.CreateContext();
+        await using var dbContext = dbContextFactory.CreateContext();
         return await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async async =>
         {
             await using var dbContextTransaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
@@ -99,7 +77,7 @@ public class VSSController : Controller, IVSSAPI
             {
                 if (request.TransactionItems.Any())
                 {
-                    var items = request.TransactionItems.Select(data => new AppStorageItemData()
+                    var items = request.TransactionItems.Select(data => new AppStorageItemData
                     {
                         Key = data.Key, Value = data.Value.ToByteArray(), UserId = userId, Version = data.Version
                     });
@@ -116,14 +94,14 @@ public class VSSController : Controller, IVSSAPI
 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await dbContextTransaction.CommitAsync(cancellationToken);
-                _logger.LogInformation(
+                logger.LogInformation(
                     $"VSS backup request processed: {string.Join(", ", request.TransactionItems.Select(data => data.Key))}");
-                await _appState.GracefulDisconnect(userId);
+                await appState.GracefulDisconnect(userId);
                 return new PutObjectResponse();
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error while processing vss backup request");
+                logger.LogError(e, "Error while processing vss backup request");
                 await dbContextTransaction.RollbackAsync(cancellationToken);
                 return SetResult<PutObjectResponse>(BadRequest(new ErrorResponse()
                 {
@@ -135,18 +113,17 @@ public class VSSController : Controller, IVSSAPI
 
     [HttpPost(HttpVSSAPIClient.DELETE_OBJECT)]
     [MediaTypeConstraint("application/octet-stream")]
-    public async Task<DeleteObjectResponse> DeleteObjectAsync(DeleteObjectRequest request,
-        CancellationToken cancellationToken)
+    public async Task<DeleteObjectResponse> DeleteObjectAsync(DeleteObjectRequest request, CancellationToken cancellationToken = default)
     {
-        var userId = _userManager.GetUserId(User);
-        await using var dbContext = _dbContextFactory.CreateContext();
+        var userId = userManager.GetUserId(User);
+        await using var dbContext = dbContextFactory.CreateContext();
         var store = await dbContext.AppStorageItems
             .Where(data => data.Key == request.KeyValue.Key && data.UserId == userId &&
                            data.Version == request.KeyValue.Version)
             .ExecuteDeleteAsync(cancellationToken: cancellationToken);
         return store == 0
             ? SetResult<DeleteObjectResponse>(
-                new NotFoundObjectResult(new ErrorResponse()
+                new NotFoundObjectResult(new ErrorResponse
                 {
                     ErrorCode = ErrorCode.NoSuchKeyException, Message = "Key not found"
                 }))
@@ -154,15 +131,25 @@ public class VSSController : Controller, IVSSAPI
     }
 
     [HttpPost(HttpVSSAPIClient.LIST_KEY_VERSIONS)]
-    public async Task<ListKeyVersionsResponse> ListKeyVersionsAsync(ListKeyVersionsRequest request,
-        CancellationToken cancellationToken)
+    public async Task<ListKeyVersionsResponse> ListKeyVersionsAsync(ListKeyVersionsRequest? request = null, CancellationToken cancellationToken = default)
     {
-        var userId = _userManager.GetUserId(User);
-        await using var dbContext = _dbContextFactory.CreateContext();
+        var userId = userManager.GetUserId(User);
+        await using var dbContext = dbContextFactory.CreateContext();
         var items = await dbContext.AppStorageItems
             .Where(data => data.UserId == userId && data.Key != "masterDevice")
             .Select(data => new KeyValue() {Key = data.Key, Version = data.Version})
             .ToListAsync(cancellationToken: cancellationToken);
         return new ListKeyVersionsResponse {KeyVersions = {items}};
+    }
+    private T SetResult<T>(IActionResult result)
+    {
+        HttpContext.Items["Result"] = result;
+        return default;
+    }
+
+    private async Task<bool> VerifyMaster(long deviceIdentifier)
+    {
+        var userId = userManager.GetUserId(User);
+        return await appState.IsMaster(userId, deviceIdentifier);
     }
 }
