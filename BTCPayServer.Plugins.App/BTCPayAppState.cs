@@ -55,6 +55,7 @@ public class BTCPayAppState : IHostedService
     internal ConcurrentDictionary<string, ConnectedInstance> Connections { get; set; } = new();
     private static readonly SemaphoreSlim _lock = new(1, 1);
     public event EventHandler<(string, LightningInvoice)>? OnInvoiceUpdate;
+    public event EventHandler<string>? MasterUserDisconnected;
 
     public BTCPayAppState(
         IMemoryCache memoryCache,
@@ -399,7 +400,8 @@ public class BTCPayAppState : IHostedService
                         [
                             new TrackDerivationOption
                             {
-                                Feature = DerivationFeature.Deposit, MinAddresses = derivation.Value.Index
+                                Feature = DerivationFeature.Deposit,
+                                MinAddresses = derivation.Value.Index
                             }
                         ],
                         Wait = true
@@ -516,8 +518,6 @@ public class BTCPayAppState : IHostedService
         }
     }
 
-    public event EventHandler<string>? MasterUserDisconnected;
-
     public async Task Connected(string contextConnectionId, string userId)
     {
         Connections.TryAdd(contextConnectionId, new ConnectedInstance(userId, null, false, new HashSet<string>()));
@@ -537,14 +537,13 @@ public class BTCPayAppState : IHostedService
         }
     }
 
-    public async Task InvoiceUpdate(string contextConnectionId, LightningInvoice lightningInvoice)
+    public Task InvoiceUpdate(string contextConnectionId, LightningInvoice lightningInvoice)
     {
         if (!Connections.TryGetValue(contextConnectionId, out var connectedInstance) || !connectedInstance.Master)
-        {
-            return;
-        }
+            return Task.CompletedTask;
 
         OnInvoiceUpdate?.Invoke(this, (connectedInstance.UserId, lightningInvoice));
+        return Task.CompletedTask;
     }
 
     //what are we adding to groups?

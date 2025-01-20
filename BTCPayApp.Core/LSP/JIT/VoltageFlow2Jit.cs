@@ -26,7 +26,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     private readonly ILogger<VoltageFlow2Jit> _logger;
     private readonly LDKOpenChannelRequestEventHandler _openChannelRequestEventHandler;
     private CancellationTokenSource _cts = new();
-    
+
 
 
     public virtual Uri? BaseAddress(Network network)
@@ -148,13 +148,11 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
             if (lightningPayment.AdditionalData?.ContainsKey(LightningPaymentLSPKey) is true)
                 return false;
 
-
             fee ??= await CalculateInvoiceAmount(new LightMoney(lightningPayment.Value), cancellationToken);
-
             if (fee is null)
                 return false;
-            var invoice = lightningPayment.PaymentRequest;
 
+            var invoice = lightningPayment.PaymentRequest!;
             var proposal = await GetProposal(invoice, null, fee!.FeeIdentifier, cancellationToken);
             if (proposal.MinimumAmount != fee.AmountToRequestPayer || proposal.PaymentHash != invoice.PaymentHash)
                 return false;
@@ -256,7 +254,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
                 var pubkey = new PubKey(_info.PubKey);
                 if (configPeers.Peers.TryGetValue(_info.PubKey, out var peer))
                 {
-                    //check if the endpoint matches any of the info ones 
+                    //check if the endpoint matches any of the info ones
                     if (!_info.ConnectionMethods.Any(a =>
                             a.ToEndpoint().ToEndpointString().Equals(peer.Endpoint.ToEndpointString(), StringComparison.OrdinalIgnoreCase)))
                     {
@@ -297,7 +295,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         {
             _semaphore.Release();
         }
-      
+
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -307,7 +305,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         await _cts.CancelAsync();
     }
 
-    public async Task Handle(Event.Event_ChannelPending @event)
+    public Task Handle(Event.Event_ChannelPending @event)
     {
         var nodeId = new PubKey(@event.counterparty_node_id);
         if (nodeId.ToString() == _info?.PubKey)
@@ -316,11 +314,12 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
                 .list_channels_with_counterparty(@event.counterparty_node_id)
                 .FirstOrDefault(a => a.get_channel_id().eq(@event.channel_id));
             if (channel is null)
-                return;
+                return Task.CompletedTask;
             var channelConfig = channel.get_config();
             channelConfig.set_accept_underpaying_htlcs(true);
             _channelManager.update_channel_config(@event.counterparty_node_id, new[] {@event.channel_id},
                 channelConfig);
         }
+        return Task.CompletedTask;
     }
 }

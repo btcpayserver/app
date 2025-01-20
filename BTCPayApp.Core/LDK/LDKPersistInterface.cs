@@ -45,9 +45,9 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
         return Task.CompletedTask;
     }
 
-    
-    
-    
+
+
+
     public ChannelMonitorUpdateStatus persist_new_channel(OutPoint channel_funding_outpoint, ChannelMonitor data,
         MonitorUpdateId update_id)
     {
@@ -55,7 +55,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
         {
             _logger.LogDebug(
                 $"Persisting new channel, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
-            
+
             var updateId = update_id.hash();
 
             var taskResult = updateTasks.GetOrAdd(updateId, async l =>
@@ -66,28 +66,30 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
                 _updateTaskCompletionSources.TryAdd(updateId, new TaskCompletionSource());
                 var fundingId = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()).ToLower();
-                
-                var identifiers = new  List<ChannelAlias>();
-                identifiers.Add(new ChannelAlias()
+
+                var identifiers = new List<ChannelAlias>
                 {
-                    Id = fundingId,
-                    Type = "funding_outpoint"
-                });
+                    new()
+                    {
+                        Id = fundingId,
+                        Type = "funding_outpoint"
+                    }
+                };
                 var otherId = data.channel_id().is_zero()? null: Convert.ToHexString(data.channel_id().get_a()).ToLower();
-                if(otherId == fundingId)
+                if (otherId == fundingId)
                 {
                     otherId = null;
-                    
+
                 }
-                if(otherId != null)
+                if (otherId != null)
                 {
-                    identifiers.Add(new ChannelAlias()
+                    identifiers.Add(new ChannelAlias
                     {
                         Id = otherId,
                         Type = "arbitrary_id"
                     });
                 }
-                
+
                 // var trackTask = _node.TrackScripts(outs).ContinueWith(task => _logger.LogDebug($"Tracking scripts finished for  updateid: {update_id.hash()}"));;
                 var updateTask = _node.UpdateChannel(identifiers, data.write(), updateId).ContinueWith(task => _logger.LogDebug($"Updating channel finished for  updateid: {update_id.hash()}"));;
                 await updateTask;
@@ -98,7 +100,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
                 {
                     try
                     {
-                         
+
                     _logger.LogDebug(
                         $"Calling channel_monitor_updated, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
 
@@ -127,18 +129,18 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
             if (taskResult.IsCompleted)
             {
-                
+
                 updateTasks.TryRemove(updateId, out _);
                 return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_Completed;
-                
+
             }
-            
+
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_InProgress;
-            
+
         }
         catch (Exception e)
         {
-            
+
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_UnrecoverableError;
         }
 
@@ -148,15 +150,15 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
     public ChannelMonitorUpdateStatus update_persisted_channel(OutPoint channel_funding_outpoint, ChannelMonitorUpdate update,
         ChannelMonitor data, MonitorUpdateId update_id)
     {
-        
+
         var updateId = update_id.hash();
 
         _updateTaskCompletionSources.TryAdd(updateId, new TaskCompletionSource());
         var taskResult = updateTasks.GetOrAdd(updateId, async l =>
         {
-            
+
             var fundingId = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()).ToLower();
-                
+
             var identifiers = new  List<ChannelAlias>();
             identifiers.Add(new ChannelAlias()
             {
@@ -167,7 +169,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
             if(otherId == fundingId)
             {
                 otherId = null;
-                    
+
             }
             if(otherId != null)
             {
@@ -177,7 +179,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
                     Type = "arbitrary_id"
                 });
             }
-            
+
             await _node.UpdateChannel(identifiers, data.write(), updateId);
             _logger.LogDebug("channel updated to local, waiting for remote sync to finish");
             // await _updateTaskCompletionSources[updateId].Task;
@@ -206,12 +208,12 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
         if (taskResult.IsCompleted)
         {
-                
+
             updateTasks.TryRemove(updateId, out _);
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_Completed;
-                
+
         }
-        
+
         return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_InProgress;
     }
 

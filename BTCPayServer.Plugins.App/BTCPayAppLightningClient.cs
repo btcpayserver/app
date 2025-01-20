@@ -27,12 +27,12 @@ public class BTCPayAppLightningClient(
         ? hubContext.Clients.Client(connection.Key)
         : throw new InvalidOperationException("Connection not found");
 
-    public async Task<LightningInvoice> GetInvoice(string invoiceId, CancellationToken cancellation = new())
+    public async Task<LightningInvoice?> GetInvoice(string invoiceId, CancellationToken cancellation = new())
     {
         return await GetInvoice(uint256.Parse(invoiceId), cancellation);
     }
 
-    public async Task<LightningInvoice> GetInvoice(uint256 paymentHash, CancellationToken cancellation = new())
+    public async Task<LightningInvoice?> GetInvoice(uint256 paymentHash, CancellationToken cancellation = new())
     {
         return await HubClient.GetLightningInvoice(key, paymentHash);
     }
@@ -47,7 +47,7 @@ public class BTCPayAppLightningClient(
         return (await HubClient.GetLightningInvoices(key, request)).ToArray();
     }
 
-    public async Task<LightningPayment> GetPayment(string paymentHash, CancellationToken cancellation = new())
+    public async Task<LightningPayment?> GetPayment(string paymentHash, CancellationToken cancellation = new())
     {
         return await HubClient.GetLightningPayment(key, uint256.Parse(paymentHash));
     }
@@ -100,13 +100,13 @@ public class BTCPayAppLightningClient(
             _btcPayAppState.OnInvoiceUpdate += BtcPayAppStateOnOnInvoiceUpdate;
         }
 
-        private void MasterUserDisconnected(object sender, string e)
+        private void MasterUserDisconnected(object? sender, string e)
         {
             if (e == _userId)
                 _channel.Writer.Complete();
         }
 
-        private void BtcPayAppStateOnOnInvoiceUpdate(object sender, (string, LightningInvoice) e)
+        private void BtcPayAppStateOnOnInvoiceUpdate(object? sender, (string, LightningInvoice) e)
         {
             if (e.Item1.Equals(_userId, StringComparison.InvariantCultureIgnoreCase))
                 _channel.Writer.TryWrite(e.Item2);
@@ -114,7 +114,7 @@ public class BTCPayAppLightningClient(
 
         public void Dispose()
         {
-            _cts?.Cancel();
+            _cts.Cancel();
             _btcPayAppState.OnInvoiceUpdate -= BtcPayAppStateOnOnInvoiceUpdate;
             _btcPayAppState.MasterUserDisconnected -= MasterUserDisconnected;
             _channel.Writer.TryComplete();

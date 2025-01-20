@@ -143,7 +143,10 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
         if (PaymentsManager is null) throw new HubException("Payments Manager not available");
 
         var config = await _serviceProvider.GetRequiredService<OnChainWalletManager>().GetConfig();
-        var bolt = BOLT11PaymentRequest.Parse(bolt11, config.NBitcoinNetwork);
+        var network = config?.NBitcoinNetwork;
+        if (network is null) throw new HubException("Network info not available");
+
+        var bolt = BOLT11PaymentRequest.Parse(bolt11, network);
         try
         {
             var result = await PaymentsManager.PayInvoice(bolt,

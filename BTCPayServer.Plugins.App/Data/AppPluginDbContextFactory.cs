@@ -22,7 +22,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<AppPluginD
 
 public class AppPluginDbContextFactory(IOptions<DatabaseOptions> options) : BaseDbContextFactory<AppPluginDbContext>(options, "BTCPayServer.Plugins.App")
 {
-    public override AppPluginDbContext CreateContext(Action<NpgsqlDbContextOptionsBuilder> npgsqlOptionsAction = null)
+    public override AppPluginDbContext CreateContext(Action<NpgsqlDbContextOptionsBuilder>? npgsqlOptionsAction = null)
     {
         var builder = new DbContextOptionsBuilder<AppPluginDbContext>();
         ConfigureBuilder(builder);

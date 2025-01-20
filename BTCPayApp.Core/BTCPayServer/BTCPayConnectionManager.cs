@@ -51,7 +51,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                 if (_connectionState == value) return;
                 var old = _connectionState;
                 _connectionState = value;
-                _logger.LogInformation($"Connection state changed: {_connectionState} from {old}" );
+                _logger.LogInformation("Connection state changed: {Old} -> {ConnectionState}", old, _connectionState);
                 ConnectionChanged?.Invoke(this, (old, _connectionState));
             }
             finally
@@ -234,7 +234,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                     else
                     {
                         //check if we are the master previously to process outbox items
-                        var masterDevice = await HubProxy.GetCurrentMaster();
+                        var masterDevice = await HubProxy!.GetCurrentMaster();
                         if (deviceIdentifier == masterDevice)
                         {
                             await _syncService.SyncToRemote(CancellationToken.None);
@@ -249,11 +249,11 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                 case BTCPayConnectionState.ConnectedFinishedInitialSync:
                     if (ForceSlaveMode)
                     {
-                        await HubProxy.DeviceMasterSignal(deviceIdentifier, false);
+                        await HubProxy!.DeviceMasterSignal(deviceIdentifier, false);
                         ForceSlaveMode = false;
                         newState = BTCPayConnectionState.ConnectedAsSlave;
                     }
-                    else if (!await HubProxy.DeviceMasterSignal(deviceIdentifier, true))
+                    else if (!await HubProxy!.DeviceMasterSignal(deviceIdentifier, true))
                     {
                         newState = BTCPayConnectionState.ConnectedAsSlave;
                     }
@@ -396,7 +396,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
             _logger.LogInformation("Sending device master signal to turn off");
             await _syncService.StopSync();
             await _syncService.SyncToRemote( CancellationToken.None);
-            await HubProxy.DeviceMasterSignal(await _configProvider.GetDeviceIdentifier(), false);
+            await HubProxy!.DeviceMasterSignal(await _configProvider.GetDeviceIdentifier(), false);
         }
     }
 }

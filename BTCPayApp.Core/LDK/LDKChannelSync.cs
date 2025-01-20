@@ -1,4 +1,4 @@
-﻿using BTCPayApp.Core.BTCPayServer;
+using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.Wallet;
 using Microsoft.Extensions.Logging;
@@ -47,7 +47,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
     }
 
     /// <summary>
-    /// 
+    ///
     /// </summary>
     /// <param name="txIds">The specific transaction ids we should check the status of. If null, we get a list of transaction ids from LDK, and also a list of utxos that we are watching </param>
     private async Task PollForTransactionUpdates(uint256[]? txIds = null)
@@ -156,7 +156,7 @@ public class LDKChannelSync : IScopedHostedService, IDisposable
         foreach (var block in blockToTxList)
         {
             var header = blockHeaders[block.Key];
-            var height = result.BlockHeghts[block.Key.ToString()];
+            var height = result.BlockHeights[block.Key.ToString()];
             var headerBytes = header.ToBytes();
             // if(block.Key.ToString() == "00000000000000086130942075335f4937cd89cb183d69cce612eb780c838f7c")
             //     continue;

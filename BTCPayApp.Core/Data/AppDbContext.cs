@@ -75,7 +75,7 @@ public class AppDbContext : DbContext
                         .Condition(@ref => @ref.New.Backup)
                         .Insert(
                             // .InsertIfNotExists( (@ref, outbox) => outbox.Version == @ref.New.Version && outbox.ActionType == OutboxAction.Insert && outbox.Entity == "Setting" && outbox.Key == @ref.New.Key,
-                            @ref => new Outbox()
+                            @ref => new Outbox
                             {
                                 Entity = "Setting",
                                 Version = @ref.New.Version,
@@ -88,7 +88,7 @@ public class AppDbContext : DbContext
                     .Condition(@ref => @ref.Old.Backup)
                     .Insert(
                         // .InsertIfNotExists( (@ref, outbox) => @ref.Old.Version == outbox.Version && outbox.ActionType == OutboxAction.Delete && outbox.Entity == "Setting" && outbox.Key == @ref.Old.Key,
-                        @ref => new Outbox()
+                        @ref => new Outbox
                         {
                             Entity = "Setting",
                             Version = @ref.Old.Version,
@@ -101,10 +101,10 @@ public class AppDbContext : DbContext
                     // .Condition(@ref => @ref.Old.Value != @ref.New.Value)
                     .Update<Setting>(
                         (tableRefs, setting) => tableRefs.Old.Key == setting.Key,
-                        (tableRefs, setting) => new Setting() {Version = tableRefs.Old.Version + 1})
+                        (tableRefs, setting) => new Setting { Version = tableRefs.Old.Version + 1 })
                     .Insert(
                         // .InsertIfNotExists( (@ref, outbox) => @ref.New.Version == outbox.Version && outbox.ActionType == OutboxAction.Update && outbox.Entity == "Setting" && outbox.Key == @ref.New.Key,
-                        @ref => new Outbox()
+                        @ref => new Outbox
                         {
                             Entity = "Setting",
                             Version = @ref.Old.Version + 1,
@@ -128,7 +128,7 @@ public class AppDbContext : DbContext
                 .Action(group => group
                     .Insert(
                         // .InsertIfNotExists( (@ref, outbox) => outbox.Version == @ref.New.Version && outbox.ActionType == OutboxAction.Insert && outbox.Entity == "Channel" && outbox.Key == @ref.New.Id,
-                        @ref => new Outbox()
+                        @ref => new Outbox
                         {
                             Entity = "Channel",
                             Version = @ref.New.Version,
@@ -139,7 +139,7 @@ public class AppDbContext : DbContext
                 .Action(group => group
                     .Insert(
                         // .InsertIfNotExists( (@ref, outbox) => @ref.Old.Version == outbox.Version && outbox.ActionType == OutboxAction.Delete && outbox.Entity == "Channel" && outbox.Key == @ref.Old.Id,
-                        @ref => new Outbox()
+                        @ref => new Outbox
                         {
                             Entity = "Channel",
                             Version = @ref.Old.Version,
@@ -149,9 +149,9 @@ public class AppDbContext : DbContext
             .AfterUpdate(trigger => trigger
                 .Action(group => group.Update<Channel>(
                     (tableRefs, setting) => tableRefs.Old.Id == setting.Id,
-                    (tableRefs, setting) => new Channel() {Version = tableRefs.Old.Version + 1}).Insert(
+                    (tableRefs, setting) => new Channel { Id = tableRefs.Old.Id, Version = tableRefs.Old.Version + 1 }).Insert(
                         // .InsertIfNotExists( (@ref, outbox) => @ref.New.Version == outbox.Version && outbox.ActionType == OutboxAction.Update && outbox.Entity == "Channel" && outbox.Key == @ref.New.Id,
-                        @ref => new Outbox()
+                        @ref => new Outbox
                         {
                             Entity = "Channel",
                             Version = @ref.Old.Version +1,
@@ -164,7 +164,7 @@ public class AppDbContext : DbContext
                 .Action(group => group
                     .Insert(
                         // .InsertIfNotExists( (@ref, outbox) => outbox.Version == @ref.New.Version && outbox.ActionType == OutboxAction.Insert && outbox.Entity == "Payment" && outbox.Key == @ref.New.PaymentHash+ "_"+@ref.New.PaymentId+ "_"+@ref.New.Inbound,
-                        @ref => new Outbox()
+                        @ref => new Outbox
                         {
                             Entity = "Payment",
                             Version = @ref.New.Version,
@@ -175,7 +175,7 @@ public class AppDbContext : DbContext
                 .Action(group => group
                     .Insert(
                         // .InsertIfNotExists( (@ref, outbox) => @ref.Old.Version == outbox.Version && outbox.ActionType == OutboxAction.Delete && outbox.Entity == "Payment" && outbox.Key == @ref.Old.PaymentHash+ "_"+@ref.Old.PaymentId+ "_"+@ref.Old.Inbound,
-                        @ref => new Outbox()
+                        @ref => new Outbox
                         {
                             Entity = "Payment",
                             Version = @ref.Old.Version,
@@ -190,7 +190,7 @@ public class AppDbContext : DbContext
                     (tableRefs, setting) => new AppLightningPayment {Version = tableRefs.Old.Version + 1}).Insert(
                         // .InsertIfNotExists( (@ref, outbox) =>
                         // outbox.Version != @ref.New.Version || outbox.ActionType != OutboxAction.Update || outbox.Entity != "Payment" || outbox.Key != @ref.New.PaymentHash+ "_"+@ref.New.PaymentId+ "_"+@ref.New.Inbound,
-                        @ref => new Outbox()
+                        @ref => new Outbox
                         {
                             Entity = "Payment",
                             Version = @ref.Old.Version +1,

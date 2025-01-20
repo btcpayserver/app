@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -236,7 +236,7 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
                 Transaction = tx.Transaction.ToHex()
             }),
             BlockHeaders = headersTask.ToDictionary(kv => kv.Key.ToString(), kv => Convert.ToHexString(kv.Value.Item1.Result.ToBytes()).ToLower()),
-            BlockHeghts = headersTask.ToDictionary(kv => kv.Key.ToString(), kv => (int) kv.Value.Item2!)
+            BlockHeights = headersTask.ToDictionary(kv => kv.Key.ToString(), kv => (int) kv.Value.Item2!)
         };
     }
 
@@ -245,7 +245,7 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
         var cancellationToken = Context.ConnectionAborted;
         var ts = TrackedSource.Parse(identifier,_explorerClient.Network) as DerivationSchemeTrackedSource;
         var kpi = await _explorerClient.GetUnusedAsync(ts!.DerivationStrategy, DerivationFeature.Deposit, 0, true, cancellationToken);
-        return new ScriptResponse() { KeyPath = kpi.KeyPath.ToString(), Script = kpi.ScriptPubKey.ToHex() };
+        return new ScriptResponse { KeyPath = kpi.KeyPath.ToString(), Script = kpi.ScriptPubKey.ToHex() };
     }
 
     public async Task TrackScripts(string identifier, string[] scripts)
@@ -283,23 +283,20 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
     public async Task<Dictionary<string, CoinResponse[]>> GetUTXOs(string[] identifiers)
     {
         var result = new Dictionary<string, CoinResponse[]>();
-        foreach (string identifier in identifiers)
+        foreach (var identifier in identifiers)
         {
             var ts = TrackedSource.Parse(identifier,_explorerClient.Network);
-            if (ts is null)
-            {
-                continue;
-            }
+            if (ts is null) continue;
+
             var utxos = await _explorerClient.GetUTXOsAsync(ts);
-            result.Add(identifier, utxos.GetUnspentUTXOs(0).Select(utxo => new CoinResponse()
+            result.Add(identifier, utxos.GetUnspentUTXOs(0).Select(utxo => new CoinResponse
             {
-                Confirmed = utxo.Confirmations >0,
+                Confirmed = utxo.Confirmations > 0,
                 Script = utxo.ScriptPubKey.ToHex(),
                 Outpoint = utxo.Outpoint.ToString(),
                 Value = utxo.Value.GetValue(_network),
                 Path = utxo.KeyPath?.ToString()
             }).ToArray());
-
         }
         return result;
     }
@@ -318,7 +315,15 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
                 .Concat(txs.UnconfirmedTransactions.Transactions)
                 .Concat(txs.ImmatureTransactions.Transactions)
                 .Concat(txs.ReplacedTransactions.Transactions)
-                .Select(tx => new TxResp(tx.Confirmations, tx.Height, tx.BalanceChange.GetValue(_network), tx.Timestamp, tx.TransactionId.ToString())).OrderByDescending(arg => arg.Timestamp);
+                .Select(tx => new TxResp
+                {
+                    TransactionId = tx.TransactionId.ToString(),
+                    Height = tx.Height,
+                    Timestamp = tx.Timestamp,
+                    Confirmations = tx.Confirmations,
+                    BalanceChange = tx.BalanceChange.GetValue(_network)
+                })
+                .OrderByDescending(arg => arg.Timestamp);
             result.Add(identifier,items.ToArray());
         }
         return result;

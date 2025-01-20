@@ -9,10 +9,10 @@ namespace BTCPayApp.Core.Helpers;
 
 public static class ChannelExtensions
 {
-    
+
     public static IDisposable SubscribeToEventWithChannelQueue<TEvent>(
         Action<AsyncEventHandler<TEvent>> add,
-        Action<AsyncEventHandler<TEvent>> remove, 
+        Action<AsyncEventHandler<TEvent>> remove,
         Func<TEvent, CancellationToken, Task> processor,
         CancellationToken cancellationToken)
     {
@@ -26,14 +26,15 @@ public static class ChannelExtensions
         add(OnEvent);
         _ = channel.ProcessChannel(processor, cancellationToken);
 
-        return new DisposableWrapper(async () =>
+        return new DisposableWrapper(() =>
         {
             remove(OnEvent);
             channel.Writer.Complete();
+            return Task.CompletedTask;
         });
     }
 
-    public  static async Task ProcessChannel<TEvent>(this Channel<TEvent> channel, Func<TEvent, CancellationToken, Task> processor, CancellationToken cancellationToken)
+    private static async Task ProcessChannel<TEvent>(this Channel<TEvent> channel, Func<TEvent, CancellationToken, Task> processor, CancellationToken cancellationToken)
     {
         while (await channel.Reader.WaitToReadAsync(cancellationToken))
         {
@@ -43,7 +44,6 @@ public static class ChannelExtensions
             }
         }
     }
-
 
     public static (BitcoinExtPubKey, RootedKeyPath, ScriptPubKeyType)? ExtractFromDescriptor(this string descriptor, Network? network)
     {
@@ -99,7 +99,7 @@ public static class ChannelExtensions
         result.set_channel_handshake_limits(channelHandshakeLimits);
         return result;
     }
-    
+
     // public static async Task Process<T>(this Channel<T> channel, Func<T, CancellationToken, Task> processor,
     //     CancellationToken cancellationToken)
     // {

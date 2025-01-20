@@ -5,12 +5,8 @@ using Microsoft.Extensions.Logging;
 
 namespace BTCPayServer.Plugins.App.API;
 
-public class ProtobufFormatterModelBinder : BodyModelBinder
+public class ProtobufFormatterModelBinder(ILoggerFactory loggerFactory, IHttpRequestStreamReaderFactory readerFactory)
+    : BodyModelBinder(InputFormatter, readerFactory, loggerFactory)
 {
-    private static readonly IInputFormatter[] _inputFormatter = [new ProtobufInputFormatter()];
-
-    public ProtobufFormatterModelBinder(ILoggerFactory loggerFactory, IHttpRequestStreamReaderFactory readerFactory) :
-        base(_inputFormatter, readerFactory, loggerFactory)
-    {
-    }
+    private static readonly IInputFormatter[] InputFormatter = [new ProtobufInputFormatter()];
 }

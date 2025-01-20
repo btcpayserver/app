@@ -261,11 +261,12 @@
         }
     }
 
-    private async Task UnsetImage()
+    private Task UnsetImage()
     {
         SelectedItem!.ImageUrl = null;
         SelectedItem.ImagePath = null;
         _inputFileId = Guid.NewGuid();
+        return Task.CompletedTask;
     }
 
     private string CssClass => $"editor {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();

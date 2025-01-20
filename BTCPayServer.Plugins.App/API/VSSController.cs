@@ -43,7 +43,8 @@ public class VSSController(
             return SetResult<GetObjectResponse>(
                 new NotFoundObjectResult(new ErrorResponse
                 {
-                    ErrorCode = ErrorCode.NoSuchKeyException, Message = "Key not found"
+                    ErrorCode = ErrorCode.NoSuchKeyException,
+                    Message = "Key not found"
                 }));
         }
 
@@ -62,12 +63,12 @@ public class VSSController(
     {
         //TODO: change to use the jwt claims for the device identifier and remove this usage of GlobalVersion
         if (!await VerifyMaster(request.GlobalVersion))
-            return SetResult<PutObjectResponse>(BadRequest(new ErrorResponse()
+            return SetResult<PutObjectResponse>(BadRequest(new ErrorResponse
             {
                 ErrorCode = ErrorCode.ConflictException, Message = "Global version mismatch"
             }));
 
-        var userId = userManager.GetUserId(User);
+        var userId = userManager.GetUserId(User)!;
 
         await using var dbContext = dbContextFactory.CreateContext();
         return await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async async =>
@@ -79,7 +80,10 @@ public class VSSController(
                 {
                     var items = request.TransactionItems.Select(data => new AppStorageItemData
                     {
-                        Key = data.Key, Value = data.Value.ToByteArray(), UserId = userId, Version = data.Version
+                        Key = data.Key,
+                        Value = data.Value.ToByteArray(),
+                        UserId = userId,
+                        Version = data.Version
                     });
                     await dbContext.AppStorageItems.AddRangeAsync(items, cancellationToken);
                 }
@@ -94,8 +98,7 @@ public class VSSController(
 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await dbContextTransaction.CommitAsync(cancellationToken);
-                logger.LogInformation(
-                    $"VSS backup request processed: {string.Join(", ", request.TransactionItems.Select(data => data.Key))}");
+                logger.LogInformation("VSS backup request processed: {Items}", string.Join(", ", request.TransactionItems.Select(data => data.Key)));
                 await appState.GracefulDisconnect(userId);
                 return new PutObjectResponse();
             }
@@ -105,7 +108,8 @@ public class VSSController(
                 await dbContextTransaction.RollbackAsync(cancellationToken);
                 return SetResult<PutObjectResponse>(BadRequest(new ErrorResponse()
                 {
-                    ErrorCode = ErrorCode.ConflictException, Message = e.Message
+                    ErrorCode = ErrorCode.ConflictException,
+                    Message = e.Message
                 }));
             }
         }, cancellationToken);
@@ -125,7 +129,8 @@ public class VSSController(
             ? SetResult<DeleteObjectResponse>(
                 new NotFoundObjectResult(new ErrorResponse
                 {
-                    ErrorCode = ErrorCode.NoSuchKeyException, Message = "Key not found"
+                    ErrorCode = ErrorCode.NoSuchKeyException,
+                    Message = "Key not found"
                 }))
             : new DeleteObjectResponse();
     }
@@ -137,7 +142,7 @@ public class VSSController(
         await using var dbContext = dbContextFactory.CreateContext();
         var items = await dbContext.AppStorageItems
             .Where(data => data.UserId == userId && data.Key != "masterDevice")
-            .Select(data => new KeyValue() {Key = data.Key, Version = data.Version})
+            .Select(data => new KeyValue { Key = data.Key, Version = data.Version })
             .ToListAsync(cancellationToken: cancellationToken);
         return new ListKeyVersionsResponse {KeyVersions = {items}};
     }
@@ -150,6 +155,6 @@ public class VSSController(
     private async Task<bool> VerifyMaster(long deviceIdentifier)
     {
         var userId = userManager.GetUserId(User);
-        return await appState.IsMaster(userId, deviceIdentifier);
+        return userId != null && await appState.IsMaster(userId, deviceIdentifier);
     }
 }

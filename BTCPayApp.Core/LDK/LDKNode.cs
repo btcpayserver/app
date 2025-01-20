@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using AsyncKeyedLock;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
@@ -30,7 +30,7 @@ public partial class LDKNode :
             using var dbContext =  await _dbContextFactory.CreateDbContextAsync(cancellationToken);
             var dbChannels = dbContext.LightningChannels.AsNoTracking().Include(channel => channel.Aliases).AsAsyncEnumerable();
             var channels = ServiceProvider.GetRequiredService<ChannelManager>().list_channels();
-            
+
             var result = new Dictionary<string, (Channel channel, ChannelDetails? channelDetails)>();
             await foreach (var dbChannel in dbChannels)
             {
@@ -48,7 +48,7 @@ public partial class LDKNode :
 
     public async Task Handle(Event.Event_ChannelClosed evt)
     {
-        
+
         _logger.LogInformation($"Channel {Convert.ToHexString(evt.channel_id.get_a()).ToLowerInvariant()} closed: {evt.GetReason()}");
         await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>()
         {
@@ -65,7 +65,7 @@ public partial class LDKNode :
         {
             {"PendingTimestamp", JsonSerializer.SerializeToElement(DateTimeOffset.UtcNow.ToUnixTimeSeconds())}
         });
-        
+
         _memoryCache.Remove(nameof(GetChannels));
     }
 
@@ -108,15 +108,15 @@ public partial class LDKNode :
 
 
         var temporaryChannelId = ChannelId.temporary_from_entropy_source(entropySource);
-     
+
         var userChannelId = new UInt128(temporaryChannelId.get_a().Take(16).ToArray());
         try
         {
             return await AsyncExtensions.RunInOtherThread(() => channelManager.create_channel(nodeId.ToBytes(),
-                amount.Satoshi, 
+                amount.Satoshi,
                 0,
                 userChannelId,
-                temporaryChannelId, 
+                temporaryChannelId,
                 userConfig));
         }
         finally
@@ -137,7 +137,7 @@ public partial class LDKNode :
         else
         {
             result =  channelManager.close_channel(channelId, counterparty.ToBytes());
-            
+
         }
         if(result.is_ok())
         {
@@ -148,9 +148,9 @@ public partial class LDKNode :
         {
             _logger.LogError($"Error closing channel {Convert.ToHexString(channelId.get_a()).ToLowerInvariant()}: {message}");
         }
-        
+
     }
-    
+
 
     public async Task<IJITService?> GetJITLSPService()
     {
@@ -227,8 +227,8 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         var lightningConfig = await _configProvider.Get<LightningConfig>(key: LightningConfig.Key) ?? new LightningConfig();
 
         var keyPath = KeyPath.Parse(lightningConfig.LightningDerivationPath);
-        
-        
+
+
         Seed = new Mnemonic(walletConfig.Mnemonic).DeriveExtKey().Derive(keyPath).PrivateKey
             .ToBytes();
         _logger.LogInformation($"Node {walletConfig.Mnemonic} SEED: {Convert.ToHexString(Seed)}");
@@ -283,22 +283,22 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         {
             var current = await GetConfig();
             var updated = await config(current);
-        
+
             if (!updated.Item2)
             {
                 return;
             }
             await _configProvider.Set(LightningConfig.Key, updated.Item1, true);
-            
+
 
             ConfigUpdated?.Invoke(this, updated.Item1);
         }
         finally
         {
-            
+
             _semaphore.Release();
         }
-        
+
     }
 
 
@@ -335,9 +335,9 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         var services = ServiceProvider.GetServices<IScopedHostedService>();
         var tasks = services.Select(async service =>
         {
-            _logger.LogInformation($"Stopping {service.GetType().Name}");
+            _logger.LogInformation("Stopping {Name}", service.GetType().Name);
             await service.StopAsync(cancellationToken);
-            _logger.LogInformation($"Stopped {service.GetType().Name}");
+            _logger.LogInformation("Stopped {Name}", service.GetType().Name);
         }).ToArray();
         await Task.WhenAll(tasks);
         // _configProvider.Updated -= Updated;
@@ -417,28 +417,28 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     }
 
     public Task<string?> Identifier => _onChainWalletManager.GetConfig().ContinueWith(task => task.Result?.Derivations[WalletDerivation.LightningScripts].Identifier);
-    
+
 
     public async Task TrackScripts(Script[] scripts, string derivation = WalletDerivation.LightningScripts)
     {
         try
         {
-            _logger.LogDebug("Tracking scripts {scripts}", string.Join(",", scripts.Select(script => script.ToHex())));
+            _logger.LogDebug("Tracking scripts {Scripts}", string.Join(",", scripts.Select(script => script.ToHex())));
             var config = await _onChainWalletManager.GetConfig();
             var identifier = config.Derivations[derivation].Identifier;
 
             await _connectionManager.HubProxy.TrackScripts(identifier,
                 scripts.Select(script => script.ToHex()).ToArray()).RunInOtherThread();
-            _logger.LogDebug("Tracked scripts {scripts}", string.Join(",", scripts.Select(script => script.ToHex())));
+            _logger.LogDebug("Tracked scripts {Scripts}", string.Join(",", scripts.Select(script => script.ToHex())));
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error tracking scripts {scripts}",
+            _logger.LogError(e, "Error tracking scripts {Scripts}",
                 string.Join(",", scripts.Select(script => script.ToHex())));
         }
     }
     AsyncKeyedLocker<string> channelLocker = new();
-    
+
     public async Task UpdateChannel(List<ChannelAlias> identifiers, byte[] write, long checkpoint)
     {
         using var releaser = await channelLocker.LockAsync(identifiers.First().Id);
@@ -464,7 +464,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         }
         else
         {
-            channel = new Channel()
+            channel = new Channel
             {
                 Id = ids.First(),
                 Data = write,
@@ -479,7 +479,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             }
         }
 
-        _logger.LogDebug($"Updating channel {channel.Id} with checkpoint {checkpoint}");
+        _logger.LogDebug("Updating channel {ChannelId} with checkpoint {Checkpoint}", channel.Id, checkpoint);
         await context.SaveChangesAsync();
     }
 
@@ -493,7 +493,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             {
                 if (config.Peers.Remove(toString))
                 {
-                    
+
                     return (config, true);
                 }
             }
@@ -536,15 +536,15 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
                 Checkpoint = 0
             };
 
-            
+
             await context.LightningChannels.AddAsync(channel);
         }
-        
-        
+
+
         channel.AdditionalData =  JsonSerializer.SerializeToNode(channel.AdditionalData)!.MergeDictionary(data).Deserialize<Dictionary<string, JsonElement>>();
         await context.SaveChangesAsync();
 
 
     }
-    
+
 }

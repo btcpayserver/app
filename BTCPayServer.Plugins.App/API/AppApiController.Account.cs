@@ -50,7 +50,7 @@ public partial class AppApiController
 
         if (signInResult?.Succeeded is true)
         {
-            LoggerExtensions.LogInformation(_logger, "User {Email} logged in", user.Email);
+            _logger.LogInformation("User {Email} logged in", user.Email);
             return await UserAuthenticated(user);
         }
         return Ok(new ApplicationUserData
@@ -71,12 +71,12 @@ public partial class AppApiController
         if (string.IsNullOrEmpty(login.Password))
             ModelState.AddModelError(nameof(login.Password), "Missing password");
         if (!ModelState.IsValid)
-            return GreenfieldExtensions.CreateValidationError(this, ModelState);
+            return this.CreateValidationError(ModelState);
 
         // Require the user to pass basic checks (approval, confirmed email, not disabled) before they can log on
         var user = await userManager.FindByEmailAsync(login.Email!);
         if (!UserService.TryCanLogin(user, out var message))
-            return GreenfieldExtensions.CreateAPIError(this, 401, "unauthenticated", message);
+            return this.CreateAPIError(401, "unauthenticated", message);
 
         var signInResult = await signInManager.PasswordSignInAsync(login.Email!, login.Password!, true, true);
         if (signInResult.RequiresTwoFactor)
@@ -91,14 +91,14 @@ public partial class AppApiController
 
         if (signInResult.IsLockedOut)
         {
-            LoggerExtensions.LogWarning(_logger, "User {Email} tried to log in, but is locked out", user.Email);
+            _logger.LogWarning("User {Email} tried to log in, but is locked out", user.Email);
         }
         else if (signInResult.Succeeded)
         {
-            LoggerExtensions.LogInformation(_logger, "User {Email} logged in", user.Email);
+            _logger.LogInformation("User {Email} logged in", user.Email);
             return await UserAuthenticated(user);
         }
-        return GreenfieldExtensions.CreateAPIError(this, 401, "unauthenticated", signInResult.ToString());
+        return this.CreateAPIError(401, "unauthenticated", signInResult.ToString());
     }
 
     [AllowAnonymous]
@@ -113,14 +113,14 @@ public partial class AppApiController
             var userId = userLoginCodeService.Verify(code);
             var user = userId is null ? null : await userManager.FindByIdAsync(userId);
             if (!UserService.TryCanLogin(user, out var message))
-                return GreenfieldExtensions.CreateAPIError(this, 401, "unauthenticated", message);
+                return this.CreateAPIError(401, "unauthenticated", message);
 
             await signInManager.SignInAsync(user, false, "LoginCode");
 
-            LoggerExtensions.LogInformation(_logger, "User {Email} logged in with a login code", user.Email);
+            _logger.LogInformation("User {Email} logged in with a login code", user.Email);
             return await UserAuthenticated(user);
         }
-        return GreenfieldExtensions.CreateAPIError(this, 401, "unauthenticated", errorMessage);
+        return this.CreateAPIError(401, "unauthenticated", errorMessage);
     }
 
     [AllowAnonymous]
@@ -130,14 +130,14 @@ public partial class AppApiController
     {
         if (string.IsNullOrEmpty(invite.UserId) || string.IsNullOrEmpty(invite.Code)) return NotFound();
 
-        var user = await UserManagerExtensions.FindByInvitationTokenAsync<ApplicationUser>(userManager, invite.UserId, Uri.UnescapeDataString(invite.Code));
+        var user = await userManager.FindByInvitationTokenAsync<ApplicationUser>(invite.UserId, Uri.UnescapeDataString(invite.Code));
         if (user == null) return NotFound();
 
         var requiresEmailConfirmation = user is { RequiresEmailConfirmation: true, EmailConfirmed: false };
         var requiresUserApproval = user is { RequiresApproval: true, Approved: false };
         bool? emailHasBeenConfirmed = requiresEmailConfirmation ? false : null;
         var requiresSetPassword = !await userManager.HasPasswordAsync(user);
-        string? passwordSetCode = requiresSetPassword ? await userManager.GeneratePasswordResetTokenAsync(user) : null;
+        var passwordSetCode = requiresSetPassword ? await userManager.GeneratePasswordResetTokenAsync(user) : null;
 
         // This is a placeholder, the real storeIds will be set by the UserEventHostedService
         var storeUsersLink = callbackGenerator.StoreUsersLink("{0}", Request);
@@ -172,7 +172,7 @@ public partial class AppApiController
         if (user != null)
         {
             await signInManager.SignOutAsync();
-            LoggerExtensions.LogInformation(_logger, "User {Email} logged out", user.Email);
+            _logger.LogInformation("User {Email} logged out", user.Email);
             return Ok();
         }
         return Unauthorized();
@@ -190,8 +190,8 @@ public partial class AppApiController
         {
             var userStore = store.UserStores.Find(us => us.ApplicationUserId == user.Id && us.StoreDataId == store.Id)!;
             var apps = await appService.GetAllApps(user.Id, false, store.Id);
-            var posApp = Enumerable.FirstOrDefault<ListAppsViewModel.ListAppViewModel>(apps, app => app.AppType == PointOfSaleAppType.AppType && app.App.GetSettings<PointOfSaleSettings>().DefaultView == PosViewType.Light);
-            var storeBlob = StoreDataExtensions.GetStoreBlob(userStore.StoreData);
+            var posApp = apps.FirstOrDefault(app => app.AppType == PointOfSaleAppType.AppType && app.App.GetSettings<PointOfSaleSettings>().DefaultView == PosViewType.Light);
+            var storeBlob = userStore.StoreData.GetStoreBlob();
             stores.Add(new AppUserStoreInfo
             {
                 Id = store.Id,
@@ -202,18 +202,18 @@ public partial class AppApiController
                 DefaultCurrency = storeBlob.DefaultCurrency,
                 Permissions = userStore.StoreRole.Permissions,
                 LogoUrl = storeBlob.LogoUrl != null
-                    ? await uriResolver.Resolve(HttpRequestExtensions.GetAbsoluteRootUri(Request), storeBlob.LogoUrl)
+                    ? await uriResolver.Resolve(Request.GetAbsoluteRootUri(), storeBlob.LogoUrl)
                     : null,
             });
         }
 
-        var userBlob = IHasBlobExtensions.GetBlob<UserBlob>(user);
+        var userBlob = user.GetBlob<UserBlob>();
         var info = new AppUserInfo
         {
             UserId = user.Id,
             Name = userBlob?.Name,
             ImageUrl = !string.IsNullOrEmpty(userBlob?.ImageUrl)
-                ? await uriResolver.Resolve(HttpRequestExtensions.GetAbsoluteRootUri(Request), UnresolvedUri.Create(userBlob.ImageUrl))
+                ? await uriResolver.Resolve(Request.GetAbsoluteRootUri(), UnresolvedUri.Create(userBlob.ImageUrl))
                 : null,
             Email = await userManager.GetEmailAsync(user),
             Roles = await userManager.GetRolesAsync(user),
@@ -227,7 +227,13 @@ public partial class AppApiController
     [RateLimitsFilter(ZoneLimits.ForgotPassword, Scope = RateLimitsScope.RemoteAddress)]
     public async Task<IActionResult> ForgotPassword(ResetPasswordRequest resetRequest)
     {
-        var user = await userManager.FindByEmailAsync(resetRequest.Email);
+        var email = resetRequest.Email;
+        if (string.IsNullOrEmpty(email))
+            ModelState.AddModelError(nameof(email), "Missing email");
+        if (!ModelState.IsValid)
+            return this.CreateValidationError(ModelState);
+
+        var user = await userManager.FindByEmailAsync(email!);
         if (UserService.TryCanLogin(user, out _))
         {
             var callbackUri = await callbackGenerator.ForPasswordReset(user, Request);
@@ -240,34 +246,43 @@ public partial class AppApiController
     [HttpPost("reset-password")]
     public async Task<IActionResult> SetPassword(ResetPasswordRequest resetRequest)
     {
-        var user = await userManager.FindByEmailAsync(resetRequest.Email);
+        if (string.IsNullOrEmpty(resetRequest.Email))
+            ModelState.AddModelError(nameof(resetRequest.Email), "Missing email");
+        if (string.IsNullOrEmpty(resetRequest.ResetCode))
+            ModelState.AddModelError(nameof(resetRequest.ResetCode), "Missing reset code");
+        if (string.IsNullOrEmpty(resetRequest.NewPassword))
+            ModelState.AddModelError(nameof(resetRequest.NewPassword), "Missing new password");
+        if (!ModelState.IsValid)
+            return this.CreateValidationError(ModelState);
+
+        var user = await userManager.FindByEmailAsync(resetRequest.Email!);
         var needsInitialPassword = user != null && !await userManager.HasPasswordAsync(user);
         // Let unapproved users set a password. Otherwise, don't reveal that the user does not exist.
         if (!UserService.TryCanLogin(user, out var message) && !needsInitialPassword || user == null)
         {
-            LoggerExtensions.LogWarning(_logger, "User {Email} tried to reset password, but failed: {Message}", user?.Email ?? "(NO EMAIL)", message);
-            return GreenfieldExtensions.CreateAPIError(this, 401, "unauthenticated", "Invalid request");
+            _logger.LogWarning("User {Email} tried to reset password, but failed: {Message}", user?.Email ?? "(NO EMAIL)", message);
+            return this.CreateAPIError(401, "unauthenticated", "Invalid request");
         }
 
         IdentityResult result;
         try
         {
-            result = await userManager.ResetPasswordAsync(user, resetRequest.ResetCode, resetRequest.NewPassword);
+            result = await userManager.ResetPasswordAsync(user, resetRequest.ResetCode!, resetRequest.NewPassword!);
         }
         catch (FormatException)
         {
             result = IdentityResult.Failed(userManager.ErrorDescriber.InvalidToken());
         }
 
-        if (!result.Succeeded) return GreenfieldExtensions.CreateAPIError(this, 401, "unauthenticated", result.ToString().Split(": ").Last());
+        if (!result.Succeeded) return this.CreateAPIError(401, "unauthenticated", result.ToString().Split(": ").Last());
 
         // see if we can sign in user after accepting an invitation and setting the password
         if (needsInitialPassword && UserService.TryCanLogin(user, out _))
         {
-            var signInResult = await signInManager.PasswordSignInAsync(user.Email!, resetRequest.NewPassword, true, true);
+            var signInResult = await signInManager.PasswordSignInAsync(user.Email!, resetRequest.NewPassword!, true, true);
             if (signInResult.Succeeded)
             {
-                LoggerExtensions.LogInformation(_logger, "User {Email} logged in", user.Email);
+                _logger.LogInformation("User {Email} logged in", user.Email);
                 return await UserAuthenticated(user);
             }
         }
@@ -279,7 +294,7 @@ public partial class AppApiController
     {
         var identifier = "BTCPay App";
         var keys = await apiKeyRepository.GetKeys(new APIKeyRepository.APIKeyQuery { UserId = [user.Id] });
-        var key = Enumerable.FirstOrDefault<APIKeyData>(keys, k => IHasBlobExtensions.GetBlob<APIKeyBlob>(k)?.ApplicationIdentifier == identifier);
+        var key = keys.FirstOrDefault<APIKeyData>(k => k.GetBlob<APIKeyBlob>()?.ApplicationIdentifier == identifier);
         if (key == null)
         {
             key = new APIKeyData

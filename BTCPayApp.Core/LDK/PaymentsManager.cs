@@ -252,7 +252,7 @@ public class PaymentsManager :
                 await context.SaveChangesAsync();
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
 
             outbound.Status = LightningPaymentStatus.Failed;
@@ -267,11 +267,11 @@ public class PaymentsManager :
     {
         if (lightningPayment.Inbound)
         {
-            await CancelInbound(lightningPayment.PaymentHash);
+            await CancelInbound(lightningPayment.PaymentHash!);
         }
         else
         {
-            await CancelOutbound(lightningPayment.PaymentId);
+            await CancelOutbound(lightningPayment.PaymentId!);
         }
     }
 

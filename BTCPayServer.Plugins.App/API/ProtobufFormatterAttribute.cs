@@ -22,7 +22,7 @@ public class ProtobufFormatterAttribute : ActionFilterAttribute, IControllerMode
         var parameters = action.Parameters.Where(p => p.BindingInfo?.BindingSource == BindingSource.Body);
         foreach (var p in parameters)
         {
-            p.BindingInfo.BinderType = typeof(ProtobufFormatterModelBinder);
+            if (p.BindingInfo != null) p.BindingInfo.BinderType = typeof(ProtobufFormatterModelBinder);
         }
     }
 

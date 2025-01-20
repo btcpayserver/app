@@ -5,13 +5,11 @@ namespace BTCPayApp.Core.Data;
 
 public class Channel:VersionedData
 {
-    public string Id { get; set; }
+    public required string Id { get; init; }
     public byte[] Data { get; set; }
     public List<ChannelAlias> Aliases { get; set; }
     public long Checkpoint { get; set; }
     public bool Archived { get; set; }
-    
-    
 
     [JsonExtensionData] public Dictionary<string, JsonElement> AdditionalData { get; set; } = new();
 
@@ -24,8 +22,8 @@ public class Channel:VersionedData
 
 public class ChannelAlias
 {
-    public string Id { get; set; }
-    public string Type { get; set; }
+    public required string Id { get; init; }
+    public required string Type { get; init; }
     public string ChannelId { get; set; }
     [JsonIgnore]
     public Channel Channel { get; set; }

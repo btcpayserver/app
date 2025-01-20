@@ -57,7 +57,7 @@ public class OnChainWalletManager : BaseHostedService
                 return;
             var old = _state;
             _state = value;
-            _logger.LogInformation($"Wallet state changed: {_state} from {old}");
+            _logger.LogInformation("Wallet state changed: {Old} -> {State}", old, _state);
             StateChanged?.Invoke(this, (old, value));
         }
     }
@@ -122,16 +122,13 @@ public class OnChainWalletManager : BaseHostedService
         try
         {
             if (_state != OnChainWalletState.WaitingForConnection)
-            {
                 throw new InvalidOperationException("Cannot restore wallet in current state");
-            }
-            await _controlSemaphore.WaitAsync();
 
             var config = await GetConfig();
-            if (config is null || !IsConfigured(config))
-            {
+            if (config is null || !IsConfigured(config) || HubProxy == null)
                 throw new InvalidOperationException("Cannot restore wallet in current state");
-            }
+
+            await _controlSemaphore.WaitAsync();
 
             // step1: Track our derivations
             //for groups, we need to generate a new one and replace the local one with its identifier
@@ -139,21 +136,18 @@ public class OnChainWalletManager : BaseHostedService
             //for groups, we need to fetch all tracked scripts and add them to the group tracked source
             // step2: import the UTXOS
             // step3: sync the backup data
-            var identifiers = config.Derivations.Select(pair => pair.Value.Identifier).ToArray();
-            var response = await HubProxy.Handshake(new AppHandshake
-            {
-                Identifiers = identifiers
-            });
+            var identifiers = config.Derivations.Select(pair => pair.Value.Identifier!).ToArray();
+            var response = await HubProxy.Handshake(new AppHandshake { Identifiers = identifiers });
 
             var missing = config.Derivations
-                .Where(pair => response.IdentifiersAcknowledged?.Contains(pair.Value.Identifier) is not true)
+                .Where(pair => !response.IdentifiersAcknowledged.Contains(pair.Value.Identifier))
                 .ToList();
 
             foreach (var x in missing)
             {
                 var result = await HubProxy.Pair(new PairRequest
                 {
-                    Derivations = new Dictionary<string, DerivationItem?>()
+                    Derivations = new Dictionary<string, DerivationItem>
                     {
                         [x.Key] = new()
                         {
@@ -173,8 +167,11 @@ public class OnChainWalletManager : BaseHostedService
                 if (x.Key == WalletDerivation.LightningScripts)
                 {
                     var scripts = await LDKFilter.GetWatchedOutputs(_configProvider);
-                    await HubProxy.TrackScripts(config.Derivations[x.Key].Identifier,
-                        scripts.Select(output => output.Script.ToHex()).ToArray());
+                    var identifier = config.Derivations[x.Key].Identifier;
+                    if (!string.IsNullOrEmpty(identifier))
+                    {
+                        await HubProxy.TrackScripts(identifier, scripts.Select(output => output.Script.ToHex()).ToArray());
+                    }
                 }
             }
 
@@ -270,7 +267,7 @@ public class OnChainWalletManager : BaseHostedService
 
             var result = await HubProxy.Pair(new PairRequest
             {
-                Derivations = new Dictionary<string, DerivationItem?>
+                Derivations = new Dictionary<string, DerivationItem>
                 {
                     [key] = new() { Descriptor = descriptor }
                 }
@@ -338,13 +335,9 @@ public class OnChainWalletManager : BaseHostedService
             .Where(i => i != null)
             .OfType<string>()
             .ToArray();
-        var response = await HubProxy.Handshake(new AppHandshake
-        {
-            Identifiers = identifiers
-        });
-
+        var response = await HubProxy.Handshake(new AppHandshake { Identifiers = identifiers });
         var missing = config.Derivations
-            .Where(pair => response.IdentifiersAcknowledged?.Contains(pair.Value.Identifier) is not true)
+            .Where(pair => !response.IdentifiersAcknowledged.Contains(pair.Value.Identifier))
             .ToList();
 
         if (missing.Count != 0)
@@ -389,7 +382,10 @@ public class OnChainWalletManager : BaseHostedService
         await _controlSemaphore.WaitAsync();
         try
         {
-            var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
+            var identifiers = config.Derivations.Values
+                .Where(d => !string.IsNullOrEmpty(d.Identifier))
+                .Select(d => d.Identifier!)
+                .ToArray();
             var utxos = await HubProxy.GetUTXOs(identifiers);
             config.CoinSnapshot = new CoinSnapshot
             {
@@ -413,20 +409,24 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
-    public async Task<BitcoinAddress?> DeriveScript(string derivation)
+    public async Task<BitcoinAddress?> DeriveScript(string derivationId)
     {
+        await _controlSemaphore.WaitAsync();
         try
         {
-            await _controlSemaphore.WaitAsync();
             var config = await GetConfig();
             if (State != OnChainWalletState.Loaded || ReportedNetwork == null || HubProxy == null || !IsHubConnected ||
-                config is null || !IsConfigured(config))
+                config == null || !IsConfigured(config))
                 throw new InvalidOperationException("Cannot derive script in current state");
 
-            var identifier = config.Derivations[derivation].Identifier;
+            var derivation = config.Derivations[derivationId];
+            var identifier = derivation?.Identifier;
+            if (derivation == null || identifier == null)
+                throw new InvalidOperationException("Missing identifier");
+
             var addr = await HubProxy.DeriveScript(identifier);
             var keyPath = KeyPath.Parse(addr.KeyPath);
-            config.Derivations[derivation].LastKnownIndex = (int?)keyPath.Indexes.Last();
+            derivation.LastKnownIndex = (int?)keyPath.Indexes.Last();
             await _configProvider.Set(WalletConfig.Key, config, true);
             return Script.FromHex(addr.Script).GetDestinationAddress(ReportedNetwork);
         }
@@ -445,19 +445,23 @@ public class OnChainWalletManager : BaseHostedService
         return psbt;
     }
 
-    public async Task<PSBT?> SignTransaction(PSBT psbt)
+    private async Task<PSBT?> SignTransaction(PSBT psbt)
     {
         var config = await GetConfig();
-        if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
+        var network = config?.NBitcoinNetwork;
+        if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config == null || !IsConfigured(config) || network == null)
             throw new InvalidOperationException("Cannot sign transaction in current state");
 
-        var identifiers = config.Derivations.Select(derivation => derivation.Value.Identifier).ToArray();
+        var identifiers = config.Derivations
+            .Where(d => !string.IsNullOrEmpty(d.Value.Identifier))
+            .Select(d => d.Value.Identifier!)
+            .ToArray();
         var updated = await HubProxy.UpdatePsbt(identifiers, psbt.ToHex());
-        psbt = PSBT.Parse(updated, config.NBitcoinNetwork);
+        psbt = PSBT.Parse(updated, network);
         var rootKey = new Mnemonic(config.Mnemonic).DeriveExtKey();
         foreach (var deriv in config.Derivations.Values.Where(derivation => derivation.Descriptor is not null))
         {
-            var data = deriv.Descriptor?.ExtractFromDescriptor(config.NBitcoinNetwork);
+            var data = deriv.Descriptor?.ExtractFromDescriptor(network);
             if (data is null) continue;
             var accKey = rootKey.Derive(data.Value.Item2);
             psbt = psbt.SignAll(data.Value.Item1.AsHDScriptPubKey(data.Value.Item3), accKey);
@@ -507,18 +511,13 @@ public class OnChainWalletManager : BaseHostedService
     //     }
     // }
 
-    public class CoinWithKey : Coin, ISignableCoin
+    public class CoinWithKey(OutPoint fromOutpoint, TxOut fromTxOut, Key key) : Coin(fromOutpoint, fromTxOut), ISignableCoin
     {
-        public Key Key { get; }
+        public Key Key { get; } = key;
 
-        public CoinWithKey(OutPoint fromOutpoint, TxOut fromTxOut, Key key) : base(fromOutpoint, fromTxOut)
+        public Task<PSBT> Sign(PSBT psbt)
         {
-            Key = key;
-        }
-
-        public async Task<PSBT> Sign(PSBT psbt)
-        {
-            return psbt.SignWithKeys(Key);
+            return Task.FromResult(psbt.SignWithKeys(Key));
         }
     }
 
@@ -534,7 +533,9 @@ public class OnChainWalletManager : BaseHostedService
             throw new InvalidOperationException("Cannot get transactions in current state");
 
         var identifiersWhichWeCanDeriveKeysFor = config.Derivations.Values
-            .Select(derivation => derivation.Identifier).ToArray();
+            .Where(d => !string.IsNullOrEmpty(d.Identifier))
+            .Select(d => d.Identifier!)
+            .ToArray();
         var res = await HubProxy.GetTransactions(identifiersWhichWeCanDeriveKeysFor);
         return res.ToDictionary(
             pair =>
@@ -550,29 +551,31 @@ public class OnChainWalletManager : BaseHostedService
         if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
             throw new InvalidOperationException("Cannot get UTXOS in current state");
 
-        var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
-        var utxos = await HubProxy.GetUTXOs(identifiers);
-        var identifiersWhichWeCanDeriveKeysFor = config.Derivations.Values
-            .Where(derivation => derivation.Descriptor is not null)
-            .Select(derivation => derivation.Identifier.ToLowerInvariant())
+        var identifiers = config.Derivations.Values
+            .Where(d => !string.IsNullOrEmpty(d.Identifier))
+            .Select(d => d.Identifier!)
             .ToArray();
+        var identifiersWhichWeCanDeriveKeysFor = config.Derivations.Values
+            .Where(d => !string.IsNullOrEmpty(d.Descriptor) && !string.IsNullOrEmpty(d.Identifier))
+            .Select(d => d.Identifier!.ToLowerInvariant())
+            .ToArray();
+        var utxos = await HubProxy.GetUTXOs(identifiers);
+        var utxosThatWeCanDeriveKeysFor = utxos
+            .Where(utxo => identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Key.ToLowerInvariant()))
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
         var result = new List<ICoin>();
-
-        var utxosThatWeCanDeriveKeysFor =
-            utxos.Where(utxo => identifiersWhichWeCanDeriveKeysFor.Contains(utxo.Key.ToLowerInvariant()))
-                .ToDictionary(pair => pair.Key, pair => pair.Value);
         foreach (var kp in utxosThatWeCanDeriveKeysFor)
         {
             var derivation =
                 config.Derivations.Values.First(derivation =>
-                    derivation.Identifier.Equals(kp.Key, StringComparison.InvariantCultureIgnoreCase));
-            var data = derivation.Descriptor.ExtractFromDescriptor(config.NBitcoinNetwork);
+                    derivation.Identifier!.Equals(kp.Key, StringComparison.InvariantCultureIgnoreCase));
+            var data = derivation.Descriptor!.ExtractFromDescriptor(config.NBitcoinNetwork);
             if (data is null)
                 continue;
 
             foreach (var coin in kp.Value)
             {
-                var coinKeyPath = KeyPath.Parse(coin.Path);
+                var coinKeyPath = KeyPath.Parse(coin.Path!);
                 var key = new Mnemonic(config.Mnemonic).DeriveExtKey().Derive(data.Value.Item2.KeyPath).Derive(coinKeyPath).PrivateKey;
                 var c = ToCoin(coin);
                 result.Add(new CoinWithKey(c.Outpoint, c.TxOut, key));

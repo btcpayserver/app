@@ -304,14 +304,14 @@
 
     private async Task CreateTx()
     {
-        if (_totalBalance is null || Model?.Amount is <= 0 || string.IsNullOrWhiteSpace(Model?.Destination)) return;
+        if (_totalBalance is null || Model?.Amount is <= 0 || string.IsNullOrWhiteSpace(Model?.Destination) || _network is null) return;
         Sending = true;
         await InvokeAsync(StateHasChanged);
         try
         {
             var amount = new Money(Model.Amount!.Value, MoneyUnit.Satoshi).ToUnit(MoneyUnit.BTC);
             var txout = new TxOut(Money.Coins(amount), BitcoinAddress.Create(Model.Destination, _network));
-            Model.Transaction = await OnChainWalletManager.CreateTransaction([txout], null, null);
+            Model.Transaction = await OnChainWalletManager.CreateTransaction([txout], null);
             if (Model.Transaction is null)
                 throw new Exception("Transaction creation failed");
             var changeAmt = Model.Transaction.Value.Tx.Outputs
@@ -334,7 +334,7 @@
 
     private async Task BroadcastTx()
     {
-        if (Model.Transaction is null) return;
+        if (Model?.Transaction is null) return;
         Sending = true;
         await InvokeAsync(StateHasChanged);
         try

@@ -385,8 +385,6 @@
     private SourceState OnchainState { get; set; }
     private SourceState LightningState { get; set; }
     private List<TransactionModel>? Transactions { get; set; }
-    private List<AppLightningPayment>? LightningTransactions;
-    private Dictionary<string, TxResp[]>? OnchainTransactions;
 
     private enum SourceState
     {

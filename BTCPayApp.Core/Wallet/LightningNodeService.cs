@@ -38,7 +38,7 @@ public class LightningNodeManager : BaseHostedService
                 return;
             var old = _state;
             _state = value;
-            _logger.LogInformation($"Lightning node state changed: {_state} from {old}");
+            _logger.LogInformation("Lightning node state changed: {Old} -> {State}", old, _state);
             StateChanged?.Invoke(this, (old, value));
         }
     }

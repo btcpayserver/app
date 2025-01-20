@@ -40,7 +40,7 @@ public class ProtobufInputFormatter : InputFormatter
         await request.Body.CopyToAsync(ms);
         var bytes = ms.ToArray();
         var messageType = context.ModelType;
-        var message = (IMessage)Activator.CreateInstance(messageType);
+        var message = (IMessage)Activator.CreateInstance(messageType)!;
         message.MergeFrom(bytes);
         return await InputFormatterResult.SuccessAsync(message);
     }

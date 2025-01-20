@@ -1,4 +1,4 @@
-﻿using BTCPayServer.Client.Models;
+using BTCPayServer.Client.Models;
 using BTCPayServer.Lightning;
 using NBitcoin;
 
@@ -30,7 +30,6 @@ public interface IBTCPayAppHubClient
 public interface IBTCPayAppHubServer
 {
     Task<bool> DeviceMasterSignal(long deviceIdentifier, bool active);
-
     Task<Dictionary<string,string>> Pair(PairRequest request);
     Task<AppHandshakeResponse> Handshake(AppHandshake request);
     Task<bool> BroadcastTransaction(string tx);
@@ -48,7 +47,7 @@ public interface IBTCPayAppHubServer
 
 public class ServerEvent
 {
-    public string? Type { get; set; }
+    public string Type { get; set; } = null!;
     public string? StoreId { get; set; }
     public string? UserId { get; set; }
     public string? AppId { get; set; }
@@ -58,20 +57,11 @@ public class ServerEvent
 
 public record TxResp
 {
-    public TxResp(long confirmations, long? height, decimal balanceChange, DateTimeOffset timestamp, string transactionId)
-    {
-        Confirmations = confirmations;
-        Height = height;
-        BalanceChange = balanceChange;
-        Timestamp = timestamp;
-        TransactionId = transactionId;
-    }
-
+    public string TransactionId { get; set; } = null!;
     public long Confirmations { get; set; }
     public long? Height { get; set; }
     public decimal BalanceChange { get; set; }
     public DateTimeOffset Timestamp { get; set; }
-    public string TransactionId { get; set; }
 
     public override string ToString()
     {
@@ -101,7 +91,7 @@ public class TxInfoResponse
 {
     public Dictionary<string,TransactionResponse>? Txs { get; set; }
     public Dictionary<string,string>? BlockHeaders { get; set; }
-    public Dictionary<string,int>? BlockHeghts { get; set; }
+    public Dictionary<string,int>? BlockHeights { get; set; }
 }
 
 public class TransactionResponse
@@ -119,8 +109,8 @@ public class BestBlockResponse
 
 public class ScriptResponse
 {
-    public string Script { get; set; }
-    public string KeyPath { get; set; }
+    public string Script { get; set; } = null!;
+    public string KeyPath { get; set; } = null!;
 }
 
 public class AppHandshake
@@ -128,9 +118,9 @@ public class AppHandshake
     public string[]? Identifiers { get; set; }
 }
 
+//response about identifiers being tracked successfully
 public class AppHandshakeResponse
 {
-    //response about identifiers being tracked successfully
     public string[]? IdentifiersAcknowledged { get; set; }
 }
 
@@ -143,8 +133,5 @@ public class DerivationItem
 {
     public string? Descriptor { get; set; }
     public int Index { get; set; }
-
     public OutPoint[] KnownCoins { get; set; } = [];
-
-
 }

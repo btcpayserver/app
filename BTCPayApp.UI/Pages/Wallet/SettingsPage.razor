@@ -55,10 +55,10 @@
         @foreach (var d in Config.Derivations)
         {
             var identifier = d.Value.Identifier;
+            if (string.IsNullOrEmpty(identifier)) continue;
             var descriptor = d.Value.Descriptor;
             var isStorePM = IsStorePaymentMethodId(identifier);
             <div class="box mb-3">
-
                 <h4 class="d-flex flex-wrap align-items-center gap-2">
                     @(d.Value.Name)
                     @if (isStorePM is true)
@@ -186,6 +186,6 @@
             : null;
     }
 
-    private string GetTitle() => $"{Config?.NBitcoinNetwork.Name ?? ""} Onchain Wallet".Trim();
+    private string GetTitle() => $"{Config?.NBitcoinNetwork?.Name ?? ""} Onchain Wallet".Trim();
 }
 
