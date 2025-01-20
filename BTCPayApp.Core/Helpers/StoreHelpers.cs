@@ -26,8 +26,10 @@ public static class StoreHelpers
          OnChainWalletManager onChainWalletManager, LightningNodeManager lightningNodeService, bool applyOnchain, bool applyLighting)
     {
         var storeId = accountManager.GetCurrentStore()?.Id;
+        var userId = accountManager.GetUserInfo()?.UserId;
         var config = await onChainWalletManager.GetConfig();
-        if (// is a store present?
+        if (// are user and store present?
+            string.IsNullOrEmpty(userId) ||
             string.IsNullOrEmpty(storeId) ||
             // is user permitted? (store owner)
             !await accountManager.IsAuthorized(Policies.CanModifyStoreSettings, storeId) ||
@@ -47,15 +49,14 @@ public static class StoreHelpers
         }
 
         // lightning
-        if (applyLighting && lightning is null && lightningNodeService.IsActive)
+        if (applyLighting && lightning is null && lightningNodeService is { IsActive: true, Node.ApiKeyManager: { } apiKeyManager })
         {
-            var key = await lightningNodeService.Node.ApiKeyManager.Create("Automated BTCPay Store Setup",
-                APIKeyPermission.Write);
+            var key = await apiKeyManager.Create("Automated BTCPay Store Setup", APIKeyPermission.Write);
             lightning = await accountManager.GetClient().UpdateStorePaymentMethod(storeId,
                 LightningNodeManager.PaymentMethodId, new UpdatePaymentMethodRequest
                 {
                     Enabled = true,
-                    Config = key.ConnectionString(accountManager.GetUserInfo().UserId)
+                    Config = key.ConnectionString(userId)
                 });
         }
 
@@ -70,7 +71,7 @@ public static class StoreHelpers
             using var jsonDoc = JsonDocument.Parse(onchain.Config.ToString());
             if (jsonDoc.RootElement.TryGetProperty("accountDerivation", out var derivationSchemeElement) &&
                 derivationSchemeElement.GetString() is { } derivationScheme &&
-                config.Derivations.Any(pair => pair.Value.Identifier == $"DERIVATIONSCHEME:{derivationScheme}"))
+                config?.Derivations.Any(pair => pair.Value.Identifier == $"DERIVATIONSCHEME:{derivationScheme}") is true)
             {
                 return true;
             }
@@ -84,13 +85,14 @@ public static class StoreHelpers
         if (!string.IsNullOrEmpty(lightning?.Config.ToString()))
         {
             var node = lightningNodeManager.Node;
-            if (node == null) return false;
+            var apiKeyManager = node?.ApiKeyManager;
+            if (apiKeyManager == null) return false;
             using var jsonDoc = JsonDocument.Parse(lightning.Config.ToString());
             if (jsonDoc.RootElement.TryGetProperty("connectionString", out var connectionStringElement) &&
                 connectionStringElement.GetString() is { } connectionString &&
                 LightningConnectionStringHelper.ExtractValues(connectionString, out var lnConnectionString) is { } lnValues &&
                 lnConnectionString == "app" && lnValues.TryGetValue("key", out var key) && key is not null &&
-                await node.ApiKeyManager.CheckPermission(key, APIKeyPermission.Read))
+                await node!.ApiKeyManager!.CheckPermission(key, APIKeyPermission.Read))
             {
                 return true;
             }

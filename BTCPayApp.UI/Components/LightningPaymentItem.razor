@@ -13,10 +13,13 @@
     </div>
     <div class="collapse @(_showDetails ? "show" : null)">
         <div class="pt-3">
-            <div class="form-floating">
-                <TruncateCenter Text="@Payment.PaymentRequest.ToString()" Padding="15" Copy="true" class="form-control-plaintext"/>
-                <label>Payment Request</label>
-            </div>
+            @if (Payment.PaymentRequest != null)
+            {
+                <div class="form-floating">
+                    <TruncateCenter Text="@Payment.PaymentRequest.ToString()" Padding="15" Copy="true" class="form-control-plaintext"/>
+                    <label>Payment Request</label>
+                </div>
+            }
             @if (Payment.Preimage != null)
             {
                 <div class="form-floating">

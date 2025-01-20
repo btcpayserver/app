@@ -16,19 +16,13 @@ public class EndPointJsonConverter : GenericStringJsonConverter<EndPoint?>
 {
     public override EndPoint? Create(string str)
     {
-        if(string.IsNullOrEmpty(str))
-            return null;
-        if(EndPointParser.TryParse(str, 9735, out var endpoint))
-        {
-            return endpoint;
-        }
+        if (string.IsNullOrEmpty(str)) return null;
+        if (EndPointParser.TryParse(str, 9735, out var endpoint)) return endpoint;
         throw new FormatException("Invalid endpoint");
     }
 
-    public override string ToString(EndPoint? value)
+    public override string? ToString(EndPoint? value)
     {
-        if (value is null)
-            return null;
-        return value.ToEndpointString();
+        return value?.ToEndpointString();
     }
 }

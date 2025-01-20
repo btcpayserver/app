@@ -30,7 +30,7 @@ public abstract class GenericStringJsonConverter<T> : JsonConverter<T>
         writer.WriteStringValue(ToString(value));
     }
 
-    public virtual string ToString(T? value)
+    public virtual string? ToString(T? value)
     {
         return value?.ToString() ?? string.Empty;
     }

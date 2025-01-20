@@ -187,7 +187,7 @@ public class AppDbContext : DbContext
 
                     group.Update<AppLightningPayment>(
                     (tableRefs, setting) => tableRefs.Old.PaymentHash == setting.PaymentHash,
-                    (tableRefs, setting) => new AppLightningPayment() {Version = tableRefs.Old.Version + 1}).Insert(
+                    (tableRefs, setting) => new AppLightningPayment {Version = tableRefs.Old.Version + 1}).Insert(
                         // .InsertIfNotExists( (@ref, outbox) =>
                         // outbox.Version != @ref.New.Version || outbox.ActionType != OutboxAction.Update || outbox.Entity != "Payment" || outbox.Key != @ref.New.PaymentHash+ "_"+@ref.New.PaymentId+ "_"+@ref.New.Inbound,
                         @ref => new Outbox()

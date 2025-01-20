@@ -306,8 +306,8 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
     public byte[] Seed { get; private set; }
 
-    public PaymentsManager PaymentsManager => ServiceProvider.GetRequiredService<PaymentsManager>();
-    public LightningAPIKeyManager ApiKeyManager => ServiceProvider.GetRequiredService<LightningAPIKeyManager>();
+    public PaymentsManager? PaymentsManager => ServiceProvider.GetRequiredService<PaymentsManager>();
+    public LightningAPIKeyManager? ApiKeyManager => ServiceProvider.GetRequiredService<LightningAPIKeyManager>();
     public LDKPeerHandler PeerHandler => ServiceProvider.GetRequiredService<LDKPeerHandler>();
 
     public PubKey NodeId => new(ServiceProvider.GetRequiredService<ChannelManager>().get_our_node_id());

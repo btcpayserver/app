@@ -4,24 +4,19 @@ using BTCPayApp.Core.LDK;
 
 namespace BTCPayApp.Core.BTCPayServer;
 
-public class BTCPayPaymentsNotifier : IScopedHostedService
+public class BTCPayPaymentsNotifier(
+    PaymentsManager paymentsManager,
+    BTCPayConnectionManager connectionManager)
+    : IScopedHostedService
 {
-    private readonly PaymentsManager _paymentsManager;
-    private readonly BTCPayConnectionManager _connectionManager;
+    private bool _listening;
 
-    public BTCPayPaymentsNotifier(
-        PaymentsManager paymentsManager, BTCPayConnectionManager connectionManager)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
-        _paymentsManager = paymentsManager;
-        _connectionManager = connectionManager;
+        paymentsManager.OnPaymentUpdate += OnPaymentUpdate;
+        connectionManager.ConnectionChanged += ConnectionManagerOnConnectionChanged;
+        return Task.CompletedTask;
     }
-
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        _paymentsManager.OnPaymentUpdate += OnPaymentUpdate;
-        _connectionManager.ConnectionChanged += ConnectionManagerOnConnectionChanged;
-    }
-    private bool _listening = false;
 
     private Task ConnectionManagerOnConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) e)
     {
@@ -31,20 +26,18 @@ public class BTCPayPaymentsNotifier : IScopedHostedService
 
     private async Task OnPaymentUpdate(object? sender, AppLightningPayment e)
     {
-        if (!_listening)
-            return;
-        await _connectionManager.HubProxy
-            .SendInvoiceUpdate(e.ToInvoice());
+        if (!_listening || connectionManager.HubProxy is null) return;
+        await connectionManager.HubProxy.SendInvoiceUpdate(e.ToInvoice());
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public Task StopAsync(CancellationToken cancellationToken)
     {
-        _paymentsManager.OnPaymentUpdate -= OnPaymentUpdate;
+        paymentsManager.OnPaymentUpdate -= OnPaymentUpdate;
+        return Task.CompletedTask;
     }
 
     public void StartListen()
     {
         _listening = true;
-
     }
 }

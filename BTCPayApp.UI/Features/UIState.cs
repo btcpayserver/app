@@ -107,7 +107,7 @@ public record UIState
         }
     }
 
-    public class UIEffects(IJSRuntime jsRuntime, IHttpClientFactory httpClientFactory, IState<UIState> state)
+    public class UIEffects(IJSRuntime jsRuntime, IState<UIState> state)
     {
         [EffectMethod]
         public async Task ApplyUserThemeEffect(ApplyUserTheme action, IDispatcher dispatcher)

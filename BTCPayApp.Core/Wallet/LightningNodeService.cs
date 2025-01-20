@@ -245,11 +245,12 @@ public class LightningNodeManager : BaseHostedService
         _onChainWalletManager.StateChanged += OnChainWalletManagerOnStateChanged;
     }
 
-    protected override async Task ExecuteStopAsync(CancellationToken cancellationToken)
+    protected override Task ExecuteStopAsync(CancellationToken cancellationToken)
     {
         // _btcPayConnectionManager.ConnectionChanged -= OnConnectionChanged;
         _onChainWalletManager.StateChanged += OnChainWalletManagerOnStateChanged;
         StateChanged -= OnStateChanged;
         _nodeScope?.Dispose();
+        return Task.CompletedTask;
     }
 }

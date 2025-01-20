@@ -18,10 +18,10 @@ public enum TransactionType
 
 public class TransactionModel
 {
-    public string Id { get; set; }
-    public LightMoney Value { get; set; }
+    public string? Id { get; set; }
+    public LightMoney? Value { get; set; }
     public DateTimeOffset Timestamp { get; set; }
-    public string Status { get; set; }
+    public string? Status { get; set; }
     public TransactionType Type { get; set; }
     public TransactionPaymentMethod PaymentMethod { get; set; }
     public AppLightningPayment? LightningPayment { get; set; }

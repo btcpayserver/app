@@ -39,7 +39,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
     public event AsyncEventHandler<(BTCPayConnectionState Old, BTCPayConnectionState New)>? ConnectionChanged;
     private BTCPayConnectionState _connectionState = BTCPayConnectionState.Init;
 
-    private SemaphoreSlim _lock = new(1, 1);
+    private readonly SemaphoreSlim _lock = new(1, 1);
     public BTCPayConnectionState ConnectionState
     {
         get => _connectionState;
@@ -280,19 +280,22 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         }
     }
 
-    private async Task OnServerNodeInfo(object? sender, string e)
+    private Task OnServerNodeInfo(object? sender, string e)
     {
         ReportedNodeInfo = e;
+        return Task.CompletedTask;
     }
 
-    private async Task OnNotifyServerEvent(object? sender, ServerEvent e)
+    private Task OnNotifyServerEvent(object? sender, ServerEvent e)
     {
         _logger.LogInformation("OnNotifyServerEvent: {Type} - {Details}", e.Type, e.ToString());
+        return Task.CompletedTask;
     }
 
-    private async Task OnNotifyNetwork(object? sender, string e)
+    private Task OnNotifyNetwork(object? sender, string e)
     {
         ReportedNetwork = Network.GetNetwork(e);
+        return Task.CompletedTask;
     }
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
@@ -360,7 +363,6 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         ConnectionChanged -= OnConnectionChanged;
     }
 
-
     public Task OnClosed(Exception? exception)
     {
         _logger.LogError(exception, "Hub connection closed");
@@ -372,16 +374,18 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         return Task.CompletedTask;
     }
 
-    public async Task OnReconnected(string? connectionId)
+    public Task OnReconnected(string? connectionId)
     {
         _logger.LogInformation("Hub connection reconnected");
         ConnectionState = BTCPayConnectionState.Syncing;
+        return Task.CompletedTask;
     }
 
-    public async Task OnReconnecting(Exception? exception)
+    public Task OnReconnecting(Exception? exception)
     {
         _logger.LogWarning(exception, "Hub connection reconnecting");
         ConnectionState = BTCPayConnectionState.Connecting;
+        return Task.CompletedTask;
     }
 
     public async Task SwitchToSlave()

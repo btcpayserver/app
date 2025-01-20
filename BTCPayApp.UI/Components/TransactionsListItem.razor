@@ -28,11 +28,14 @@
             }
             else if (Transaction is { PaymentMethod: TransactionPaymentMethod.Lightning, LightningPayment: not null })
             {
-                <div class="form-floating">
-                    <TruncateCenter Text="@Transaction.LightningPayment.PaymentRequest.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                    <label>Payment Request</label>
-                </div>
-                @if (Transaction.LightningPayment.Preimage != null)
+                if (Transaction.LightningPayment.PaymentRequest != null)
+                {
+                    <div class="form-floating">
+                        <TruncateCenter Text="@Transaction.LightningPayment.PaymentRequest.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <label>Payment Request</label>
+                    </div>
+                }
+                if (Transaction.LightningPayment.Preimage != null)
                 {
                     <div class="form-floating">
                         <TruncateCenter Text="@Transaction.LightningPayment.Preimage" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>

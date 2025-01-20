@@ -84,11 +84,11 @@ public class CoreTests
         Assert.NotNull((await node.OnChainWalletManager.GetConfig())?.Derivations);
         Assert.False(
             (await node.OnChainWalletManager.GetConfig())?.Derivations.ContainsKey(WalletDerivation.LightningScripts));
-        WalletDerivation? segwitDerivation = null;
-        Assert.True(
-            (await node.OnChainWalletManager.GetConfig()).Derivations.TryGetValue(WalletDerivation.NativeSegwit,
-                out segwitDerivation));
-        Assert.False(string.IsNullOrEmpty((await node.OnChainWalletManager.GetConfig()).Fingerprint));
+        WalletDerivation? segwitDerivation;
+        var config = await node.OnChainWalletManager.GetConfig();
+        Assert.NotNull(config);
+        Assert.True(config.Derivations.TryGetValue(WalletDerivation.NativeSegwit, out segwitDerivation));
+        Assert.False(string.IsNullOrEmpty(config.Fingerprint));
         Assert.NotNull(segwitDerivation.Identifier);
         Assert.NotNull(segwitDerivation.Descriptor);
         Assert.NotNull(segwitDerivation.Name);
@@ -320,13 +320,13 @@ public class CoreTests
         await rpc.GenerateAsync(1);
         await TestUtils.EventuallyAsync(async () =>
         {
-            var node2Channel = Assert.Single(await node2.LNManager.Node.GetChannels());
-            var node3Channel = Assert.Single(await node3.LNManager.Node.GetChannels());
+            var node2Channel = Assert.Single(await node2.LNManager.Node.GetChannels() ?? []);
+            var node3Channel = Assert.Single(await node3.LNManager.Node.GetChannels() ?? []);
 
             Assert.Equal(node2Channel.Key, node3Channel.Key);
             Assert.Equal(
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations()).some,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations())
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails?.get_confirmations()).some,
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails?.get_confirmations())
                     .some);
 
             Assert.True(node3Channel.Value.channelDetails.get_is_channel_ready());

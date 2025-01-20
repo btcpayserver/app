@@ -233,7 +233,7 @@ public class AuthStateProvider(
         try
         {
             var response = await GetClient(serverUrl).AcceptInvite(payload, cancellation.GetValueOrDefault());
-            var account = await GetAccount(serverUrl, response.Email);
+            var account = await GetAccount(serverUrl, response.Email!);
             await SetCurrentAccount(account);
             var message = "Invitation accepted.";
             if (response.EmailHasBeenConfirmed is true)
@@ -313,9 +313,9 @@ public class AuthStateProvider(
             else
             {
                 var signup = response.ToObject<ApplicationUserData>();
-                if (signup.RequiresEmailConfirmation)
+                if (signup?.RequiresEmailConfirmation is true)
                     message += " Please confirm your email.";
-                if (signup.RequiresApproval)
+                if (signup?.RequiresApproval is true)
                     message += " The new account requires approval by an admin before you can log in.";
             }
             await SetCurrentAccount(account);

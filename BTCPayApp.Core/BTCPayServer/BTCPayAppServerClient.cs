@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.Crypto;
+using org.ldk.structs;
 
 namespace BTCPayApp.Core.BTCPayServer;
 
@@ -23,34 +24,43 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
     public event AsyncEventHandler<long?>? OnMasterUpdated;
     public event AsyncEventHandler<ServerEvent>? OnNotifyServerEvent;
 
+    private LDKNode? Node => _serviceProvider.GetRequiredService<LightningNodeManager>().Node;
+    private PaymentsManager? PaymentsManager => Node?.PaymentsManager;
+    private LightningAPIKeyManager? ApiKeyManager => Node?.ApiKeyManager;
+
     public async Task NotifyServerEvent(ServerEvent ev)
     {
-        _logger.LogInformation("NotifyServerEvent: {ev}", ev);
-        await OnNotifyServerEvent?.Invoke(this, ev);
+        _logger.LogInformation("NotifyServerEvent: {Event}", ev.ToString());
+        if (OnNotifyServerEvent is null) return;
+        await OnNotifyServerEvent.Invoke(this, ev);
     }
 
     public async Task NotifyNetwork(string network)
     {
-        _logger.LogInformation("NotifyNetwork: {network}", network);
-        await OnNotifyNetwork?.Invoke(this, network);
+        _logger.LogInformation("NotifyNetwork: {Network}", network);
+        if (OnNotifyNetwork is null) return;
+        await OnNotifyNetwork.Invoke(this, network);
     }
 
     public async Task NotifyServerNode(string nodeInfo)
     {
-        _logger.LogInformation("NotifyServerNode: {nodeInfo}", nodeInfo);
-        await OnServerNodeInfo?.Invoke(this, nodeInfo);
+        _logger.LogInformation("NotifyServerNode: {NodeInfo}", nodeInfo);
+        if (OnServerNodeInfo is null) return;
+        await OnServerNodeInfo.Invoke(this, nodeInfo);
     }
 
     public async Task TransactionDetected(TransactionDetectedRequest request)
     {
-        _logger.LogInformation($"OnTransactionDetected: {request.TxId}");
-        await OnTransactionDetected?.Invoke(this, request);
+        _logger.LogInformation("OnTransactionDetected: {TxId}", request.TxId);
+        if (OnTransactionDetected is null) return;
+        await OnTransactionDetected.Invoke(this, request);
     }
 
     public async Task NewBlock(string block)
     {
-        _logger.LogInformation("NewBlock: {block}", block);
-        await OnNewBlock?.Invoke(this, block);
+        _logger.LogInformation("NewBlock: {Block}", block);
+        if (OnNewBlock is null) return;
+        await OnNewBlock.Invoke(this, block);
     }
 
     public async Task StartListen(string key)
@@ -63,22 +73,19 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
             .StartListen();
     }
 
-    private PaymentsManager PaymentsManager =>
-        _serviceProvider.GetRequiredService<LightningNodeManager>().Node?.PaymentsManager;
-    private LightningAPIKeyManager ApiKeyManager =>
-        _serviceProvider.GetRequiredService<LightningNodeManager>().Node?.ApiKeyManager;
-
     private async Task AssertPermission(string key, APIKeyPermission permission)
     {
+        if (ApiKeyManager is null)
+            throw new HubException("Api Key Manager not available");
         if (!await ApiKeyManager.CheckPermission(key, permission))
-        {
             throw new HubException("Permission denied");
-        }
     }
 
     public async Task<LightningInvoice> CreateInvoice(string key, CreateLightningInvoiceRequest createLightningInvoiceRequest)
     {
         await AssertPermission(key, APIKeyPermission.Read);
+        if (PaymentsManager is null) throw new HubException("Payments Manager not available");
+
         var descHash = new uint256(Hashes.SHA256(Encoding.UTF8.GetBytes(createLightningInvoiceRequest.Description)),
             false);
         return (await PaymentsManager.RequestPayment(createLightningInvoiceRequest.Amount,
@@ -87,52 +94,61 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
 
     public async Task<LightningInvoice?> GetLightningInvoice(string key, uint256 paymentHash)
     {
-
         await AssertPermission(key, APIKeyPermission.Read);
-        var invs = await PaymentsManager.List(payments =>
+        if (PaymentsManager is null) throw new HubException("Payments Manager not available");
+
+        var invoices = await PaymentsManager.List(payments =>
             payments.Where(payment => payment.Inbound && payment.PaymentHash == paymentHash));
-        return invs.FirstOrDefault()?.ToInvoice();
+        return invoices.FirstOrDefault()?.ToInvoice();
     }
 
     public async Task<LightningPayment?> GetLightningPayment(string key, uint256 paymentHash)
     {
         await AssertPermission(key, APIKeyPermission.Read);
-        var invs = await PaymentsManager.List(payments =>
+        if (PaymentsManager is null) throw new HubException("Payments Manager not available");
+
+        var invoices = await PaymentsManager.List(payments =>
             payments.Where(payment => !payment.Inbound && payment.PaymentHash == paymentHash));
-        return invs.FirstOrDefault()?.ToPayment();
+        return invoices.FirstOrDefault()?.ToPayment();
     }
 
     public async Task CancelInvoice(string key, uint256 paymentHash)
     {
         await AssertPermission(key, APIKeyPermission.Write);
+        if (PaymentsManager is null) throw new HubException("Payments Manager not available");
+
         await PaymentsManager.CancelInbound(paymentHash);
     }
 
     public async Task<List<LightningPayment>> GetLightningPayments(string key, ListPaymentsParams request)
     {
-
         await AssertPermission(key, APIKeyPermission.Read);
-        return await PaymentsManager.List(payments => payments.Where(payment => !payment.Inbound), default)
+        if (PaymentsManager is null) throw new HubException("Payments Manager not available");
+
+        return await PaymentsManager.List(payments => payments.Where(payment => !payment.Inbound))
             .ToPayments();
     }
 
     public async Task<List<LightningInvoice>> GetLightningInvoices(string key, ListInvoicesParams request)
     {
         await AssertPermission(key, APIKeyPermission.Read);
-        return await PaymentsManager.List(payments => payments.Where(payment => payment.Inbound), default).ToInvoices();
+        if (PaymentsManager is null) throw new HubException("Payments Manager not available");
+
+        return await PaymentsManager.List(payments => payments.Where(payment => payment.Inbound)).ToInvoices();
     }
 
     public async Task<PayResponse> PayInvoice(string key, string bolt11, long? amountMilliSatoshi)
     {
-
         await AssertPermission(key, APIKeyPermission.Write);
+        if (PaymentsManager is null) throw new HubException("Payments Manager not available");
+
         var config = await _serviceProvider.GetRequiredService<OnChainWalletManager>().GetConfig();
         var bolt = BOLT11PaymentRequest.Parse(bolt11, config.NBitcoinNetwork);
         try
         {
             var result = await PaymentsManager.PayInvoice(bolt,
                 amountMilliSatoshi is null ? null : LightMoney.MilliSatoshis(amountMilliSatoshi.Value));
-            return new PayResponse()
+            return new PayResponse
             {
                 Result = result.Status switch
                 {
@@ -142,7 +158,7 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
                     LightningPaymentStatus.Failed => PayResult.Error,
                     _ => throw new ArgumentOutOfRangeException()
                 },
-                Details = new PayDetails()
+                Details = new PayDetails
                 {
                     Preimage = result.Preimage is not null ? new uint256(result.Preimage) : null,
                     Status = result.Status
@@ -156,47 +172,54 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
         }
     }
 
-    public async Task MasterUpdated(long? deviceIdentifier)
+    public Task MasterUpdated(long? deviceIdentifier)
     {
-        _logger.LogInformation("MasterUpdated: {deviceIdentifier}", deviceIdentifier);
+        _logger.LogInformation("MasterUpdated: {DeviceIdentifier}", deviceIdentifier);
         OnMasterUpdated?.Invoke(this, deviceIdentifier);
+        return Task.CompletedTask;
     }
 
     public async Task<LightningNodeInformation> GetLightningNodeInfo(string key)
     {
-
         await AssertPermission(key, APIKeyPermission.Read);
-        var node = _serviceProvider.GetRequiredService<LightningNodeManager>().Node;
+        if (Node is null) throw new HubException("Lightning Node not available");
+
+        var config = await Node.GetConfig();
+        var peers = await Node.GetPeers();
+        var chans = await Node.GetChannels() ?? [];
+        var channels = chans
+            .Where(channel => channel.Value.channelDetails is not null)
+            .Select(channel => channel.Value.channelDetails)
+            .OfType<ChannelDetails>()
+            .ToArray();
         var bb = await _serviceProvider.GetRequiredService<OnChainWalletManager>().GetBestBlock();
-        var config = await node.GetConfig();
-        var peers = await node.GetPeers();
-        var channels = (await node.GetChannels()).Where(channel => channel.Value.channelDetails is not null)
-            .Select(channel => channel.Value.channelDetails).ToArray();
-        return new LightningNodeInformation()
+        return new LightningNodeInformation
         {
             Alias = config.Alias,
             Color = config.Color,
             Version = "preprepreprealpha",
-            BlockHeight = bb.BlockHeight,
+            BlockHeight = bb?.BlockHeight ?? 0,
             PeersCount = peers.Length,
             ActiveChannelsCount = channels.Count(channel => channel.get_is_usable()),
-            InactiveChannelsCount =
-                channels.Count(channel => !channel.get_is_usable() && channel.get_is_channel_ready()),
-            PendingChannelsCount =
-                channels.Count(channel => !channel.get_is_usable() && !channel.get_is_channel_ready())
+            PendingChannelsCount = channels.Count(channel => !channel.get_is_usable() && !channel.get_is_channel_ready()),
+            InactiveChannelsCount = channels.Count(channel => !channel.get_is_usable() && channel.get_is_channel_ready())
         };
     }
 
     public async Task<LightningNodeBalance> GetLightningBalance(string key)
     {
         await AssertPermission(key, APIKeyPermission.Read);
-        var channels = (await _serviceProvider.GetRequiredService<LightningNodeManager>().Node.GetChannels())
-            .Where(channel => channel.Value.channelDetails is not null).Select(channel => channel.Value.channelDetails)
-            .ToArray();
+        if (Node is null) throw new HubException("Lightning Node not available");
 
-        return new LightningNodeBalance()
+        var chans = await Node.GetChannels() ?? [];
+        var channels = chans
+            .Where(channel => channel.Value.channelDetails is not null)
+            .Select(channel => channel.Value.channelDetails)
+            .OfType<ChannelDetails>()
+            .ToArray();
+        return new LightningNodeBalance
         {
-            OffchainBalance = new OffchainBalance()
+            OffchainBalance = new OffchainBalance
             {
                 Local = LightMoney.MilliSatoshis(channels.Sum(channel => channel.get_balance_msat())),
                 Remote = LightMoney.MilliSatoshis(channels.Sum(channel => channel.get_inbound_capacity_msat())),

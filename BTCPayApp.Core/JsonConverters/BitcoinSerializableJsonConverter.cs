@@ -16,7 +16,7 @@ public class BitcoinSerializableJsonConverter<T> : GenericStringJsonConverter<T>
     }
 
 
-    public override string ToString(T? instance)
+    public override string? ToString(T? instance)
     {
         return Convert.ToHexString(instance.ToBytes()).ToLowerInvariant();
     }

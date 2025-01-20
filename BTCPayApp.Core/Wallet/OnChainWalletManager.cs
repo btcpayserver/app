@@ -216,6 +216,7 @@ public class OnChainWalletManager : BaseHostedService
                 {
                     [WalletDerivation.NativeSegwit] = new()
                     {
+                        Identifier = null,
                         Name = "Native Segwit",
                         Descriptor = OutputDescriptor.AddChecksum(
                             $"wpkh([{fingerprint.ToString()}/{path}]{xpub}/0/*)")
@@ -332,7 +333,11 @@ public class OnChainWalletManager : BaseHostedService
         if (config is null || !IsConfigured(config))
             return [];
 
-        var identifiers = config.Derivations.Select(pair => pair.Value.Identifier).ToArray();
+        var identifiers = config.Derivations
+            .Select(pair => pair.Value.Identifier)
+            .Where(i => i != null)
+            .OfType<string>()
+            .ToArray();
         var response = await HubProxy.Handshake(new AppHandshake
         {
             Identifiers = identifiers
@@ -376,11 +381,14 @@ public class OnChainWalletManager : BaseHostedService
 
     private async Task UpdateSnapshot()
     {
+        var config = await GetConfig();
+        var bb = await GetBestBlock();
+        if (HubProxy == null || !IsHubConnected || bb is null || config is null || !IsConfigured(config))
+            throw new InvalidOperationException("Cannot update snapshot in current state");
+
         await _controlSemaphore.WaitAsync();
         try
         {
-            var config = await GetConfig();
-            var bb = await GetBestBlock();
             var identifiers = config.Derivations.Values.Select(derivation => derivation.Identifier).ToArray();
             var utxos = await HubProxy.GetUTXOs(identifiers);
             config.CoinSnapshot = new CoinSnapshot
@@ -390,10 +398,9 @@ public class OnChainWalletManager : BaseHostedService
                     BlockHash = uint256.Parse(bb.BlockHash),
                     BlockHeight = (uint)bb.BlockHeight
                 },
-                Coins = utxos.ToDictionary(kv => kv.Key,
-                    kv => kv.Value.Select(coin => new SavedCoin()
+                Coins = utxos.ToDictionary(kv => kv.Key, kv => kv.Value.Select(coin => new SavedCoin
                 {
-                    Outpoint = OutPoint.Parse(coin.Outpoint),
+                    Outpoint = OutPoint.Parse(coin.Outpoint!),
                     Path = coin.Path is null ? null : KeyPath.Parse(coin.Path)
                 }).ToArray())
             };
@@ -450,9 +457,8 @@ public class OnChainWalletManager : BaseHostedService
         var rootKey = new Mnemonic(config.Mnemonic).DeriveExtKey();
         foreach (var deriv in config.Derivations.Values.Where(derivation => derivation.Descriptor is not null))
         {
-            var data = deriv.Descriptor.ExtractFromDescriptor(config.NBitcoinNetwork);
-            if (data is null)
-                continue;
+            var data = deriv.Descriptor?.ExtractFromDescriptor(config.NBitcoinNetwork);
+            if (data is null) continue;
             var accKey = rootKey.Derive(data.Value.Item2);
             psbt = psbt.SignAll(data.Value.Item1.AsHDScriptPubKey(data.Value.Item3), accKey);
             if (psbt.TryFinalize(out _))
@@ -464,8 +470,8 @@ public class OnChainWalletManager : BaseHostedService
 
     private static ICoin ToCoin(CoinResponse response)
     {
-        var outpoint = OutPoint.Parse(response.Outpoint);
-        var scriptPubKey = Script.FromHex(response.Script);
+        var outpoint = OutPoint.Parse(response.Outpoint!);
+        var scriptPubKey = Script.FromHex(response.Script!);
         var amount = Money.Coins(response.Value);
         return new Coin(outpoint, new TxOut(amount, scriptPubKey));
     }
@@ -534,7 +540,7 @@ public class OnChainWalletManager : BaseHostedService
             pair =>
             {
                 return config.Derivations.First(derivation =>
-                    derivation.Value.Identifier.Equals(pair.Key, StringComparison.InvariantCultureIgnoreCase)).Key;
+                    derivation.Value.Identifier?.Equals(pair.Key, StringComparison.InvariantCultureIgnoreCase) is true).Key;
             }, pair => pair.Value.OrderByDescending(tx => tx.Timestamp).ToArray());
     }
 
@@ -567,11 +573,8 @@ public class OnChainWalletManager : BaseHostedService
             foreach (var coin in kp.Value)
             {
                 var coinKeyPath = KeyPath.Parse(coin.Path);
-                var key = new Mnemonic(config.Mnemonic).DeriveExtKey().Derive(data.Value.Item2.KeyPath)
-                    .Derive(coinKeyPath).PrivateKey;
+                var key = new Mnemonic(config.Mnemonic).DeriveExtKey().Derive(data.Value.Item2.KeyPath).Derive(coinKeyPath).PrivateKey;
                 var c = ToCoin(coin);
-
-
                 result.Add(new CoinWithKey(c.Outpoint, c.TxOut, key));
             }
         }
@@ -589,12 +592,18 @@ public class OnChainWalletManager : BaseHostedService
     public async Task<(Transaction Tx, ICoin[] SpentCoins, BitcoinAddress Change)> CreateTransaction(
         List<TxOut> txOuts, FeeRate? feeRate, List<Coin>? explicitIns = null)
     {
+        var config = await GetConfig();
+        if (config?.NBitcoinNetwork is null)
+            throw new InvalidOperationException("Cannot create transaction in current state");
+
         var availableCoins = (await GetUTXOS()).OfType<CoinWithKey>().ToList();
         feeRate ??= await GetFeeRate(1);
 
-        var config = await GetConfig();
         //TODO: do not hardcode this constant
         var changeScript = await DeriveScript(WalletDerivation.NativeSegwit);
+        if (changeScript is null)
+            throw new InvalidOperationException("Cannot create transaction in current state");
+
         var txBuilder = config.NBitcoinNetwork
             .CreateTransactionBuilder()
             .SetChange(changeScript)
@@ -604,9 +613,7 @@ public class OnChainWalletManager : BaseHostedService
         txBuilder.SendAllRemainingToChange();
 
         if (explicitIns?.Any() is true)
-        {
             txBuilder.AddCoins(explicitIns.ToArray());
-        }
 
         while (true)
         {
@@ -620,7 +627,7 @@ public class OnChainWalletManager : BaseHostedService
                 if (!availableCoins.Any()) throw;
                 var newCoin = availableCoins.First();
                 //TODO: switch to building a PSBT and signing with the ISignableCoin interface
-                if (newCoin is CoinWithKey newCoinWithKey)
+                if (newCoin is { } newCoinWithKey)
                 {
                     txBuilder.AddCoins(newCoin);
                     txBuilder.AddKeys(newCoinWithKey.Key);

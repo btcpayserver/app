@@ -110,8 +110,9 @@
         await InvokeAsync(StateHasChanged);
     }
 
-    private async Task SwitchToUser(StoreUserData user)
+    private Task SwitchToUser(StoreUserData user)
     {
+        return Task.CompletedTask;
         // Model = new LoginModel { Uri = account.BaseUri, Email = account.Email };
         //await JS.InvokeVoidAsync("Interop.openModal", "#UserSwitchModal");
         //AccountManager.OnBeforeAccountChange += OnBeforeAccountChange;

@@ -45,7 +45,7 @@ public static class ChannelExtensions
     }
 
 
-    public static (BitcoinExtPubKey, RootedKeyPath, ScriptPubKeyType)? ExtractFromDescriptor(this string descriptor, Network network)
+    public static (BitcoinExtPubKey, RootedKeyPath, ScriptPubKeyType)? ExtractFromDescriptor(this string descriptor, Network? network)
     {
         var od = OutputDescriptor.Parse(descriptor, network);
 
