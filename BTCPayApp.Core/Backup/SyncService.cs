@@ -15,39 +15,24 @@ using VSSProto;
 
 namespace BTCPayApp.Core.Backup;
 
-public class SyncService : IDisposable
+public class SyncService(
+    ConfigProvider configProvider,
+    ILogger<SyncService> logger,
+    ISecureConfigProvider secureConfigProvider,
+    IAccountManager accountManager,
+    IHttpClientFactory httpClientFactory,
+    IDbContextFactory<AppDbContext> dbContextFactory)
+    : IDisposable
 {
-    private readonly ConfigProvider _configProvider;
-    private readonly ILogger<SyncService> _logger;
-    private readonly IAccountManager _accountManager;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly ISecureConfigProvider _secureConfigProvider;
     public AsyncEventHandler? EncryptionKeyChanged;
     public AsyncEventHandler<(List<Outbox> OutboxItemsProcesed, PutObjectRequest RemoteRequest)>? RemoteObjectUpdated;
-    public AsyncEventHandler<string[]>? LocalUpdated;
-
+    private AsyncEventHandler<string[]>? _localUpdated;
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
-
-    public SyncService(
-        ConfigProvider configProvider,
-        ILogger<SyncService> logger,
-        ISecureConfigProvider secureConfigProvider,
-        IAccountManager accountManager,
-        IHttpClientFactory httpClientFactory,
-        IDbContextFactory<AppDbContext> dbContextFactory)
-    {
-        _configProvider = configProvider;
-        _logger = logger;
-        _accountManager = accountManager;
-        _httpClientFactory = httpClientFactory;
-        _dbContextFactory = dbContextFactory;
-        _secureConfigProvider = secureConfigProvider;
-    }
+    private readonly SemaphoreSlim _syncLock = new(1, 1);
 
     public async Task<string?> GetEncryptionKey()
     {
-       return  await _secureConfigProvider.Get<string>("encryptionKey");
+       return  await secureConfigProvider.Get<string>("encryptionKey");
     }
 
     private async Task<IDataProtector?> GetDataProtector()
@@ -55,7 +40,6 @@ public class SyncService : IDisposable
         var key = await GetEncryptionKey();
         return string.IsNullOrEmpty(key) ? null : new SingleKeyDataProtector(Convert.FromHexString(key));
     }
-
 
     public async Task<bool> EncryptionKeyRequiresImport()
     {
@@ -85,10 +69,9 @@ public class SyncService : IDisposable
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error while checking if encryption key requires import");
+            logger.LogError(e, "Error while checking if encryption key requires import");
             throw;
         }
-
     }
 
     public async Task<bool> SetEncryptionKey(Mnemonic mnemonic)
@@ -119,7 +102,7 @@ public class SyncService : IDisposable
                 var decrypted = dataProtector.Unprotect(res.Value.Value.ToByteArray());
                 if ("kukks" == Encoding.UTF8.GetString(decrypted))
                 {
-                    await _secureConfigProvider.Set("encryptionKey", key);
+                    await secureConfigProvider.Set("encryptionKey", key);
                     EncryptionKeyChanged?.Invoke(this);
                     return true;
                 }
@@ -134,34 +117,34 @@ public class SyncService : IDisposable
         }
         catch (Exception e)
         {
-            _logger.LogError("Error while setting encryption key: {message}", e.Message);
+            logger.LogError("Error while setting encryption key: {message}", e.Message);
             return false;
         }
 
-        await api.PutObjectAsync(new PutObjectRequest()
+        await api.PutObjectAsync(new PutObjectRequest
         {
-            GlobalVersion = await _configProvider.GetDeviceIdentifier(),
+            GlobalVersion = await configProvider.GetDeviceIdentifier(),
             TransactionItems =
             {
-                new KeyValue()
+                new KeyValue
                 {
                     Key = "encryptionKeyTest",
                     Value = ByteString.CopyFrom(encrypted)
                 }
             },
         });
-        await _secureConfigProvider.Set("encryptionKey", key);
+        await secureConfigProvider.Set("encryptionKey", key);
         EncryptionKeyChanged?.Invoke(this);
         return true;
     }
 
     private Task<IVSSAPI> GetUnencryptedVSSAPI()
     {
-        var account = _accountManager.GetAccount();
+        var account = accountManager.GetAccount();
         if (account is null)
             throw new InvalidOperationException("Account not found");
         var vssUri = new Uri(new Uri(account.BaseUri), "vss/");
-        var httpClient = _httpClientFactory.CreateClient("vss");
+        var httpClient = httpClientFactory.CreateClient("vss");
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("token", account.AccessToken);
         var vssClient = new HttpVSSAPIClient(vssUri, httpClient);
         return Task.FromResult<IVSSAPI>(vssClient);
@@ -173,7 +156,7 @@ public class SyncService : IDisposable
         return dataProtector is null ? null : new VSSApiEncryptorClient(await GetUnencryptedVSSAPI(), dataProtector);
     }
 
-    private async Task<KeyValue[]> CreateLocalVersions(AppDbContext dbContext)
+    private static async Task<KeyValue[]> CreateLocalVersions(AppDbContext dbContext)
     {
         var settings = dbContext.Settings.Where(setting => setting.Backup).Select(setting => new KeyValue()
         {
@@ -198,7 +181,7 @@ public class SyncService : IDisposable
         var backupApi = await GetVSSAPI();
         if (backupApi is null)
             return;
-        await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+        await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
         var localVersions = await CreateLocalVersions(db);
 
         var remoteVersions = await backupApi.ListKeyVersionsAsync(new ListKeyVersionsRequest(), cancellationToken);
@@ -225,7 +208,7 @@ public class SyncService : IDisposable
 
             if (toDelete.Length == 0 && !toUpsert.Any())
                 return;
-            _logger.LogInformation("Syncing to local: {ToDelete} to delete, {ToUpsert} to upsert", toDelete.Length,
+            logger.LogInformation("Syncing to local: {ToDelete} to delete, {ToUpsert} to upsert", toDelete.Length,
                 toUpsert.Count());
 
             foreach (var upsertItem in toUpsert)
@@ -239,7 +222,6 @@ public class SyncService : IDisposable
                     upsertItem.MergeFrom(item.Value);
                 }
             }
-
 
             var settingsToDelete = toDelete.Where(key => key.Key.StartsWith("Setting_")).Select(key => key.Key);
             var channelsToDelete = toDelete.Where(key => key.Key.StartsWith("Channel_")).Select(key => key.Key);
@@ -276,23 +258,21 @@ public class SyncService : IDisposable
                 cancellationToken: cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             await db.Database.CommitTransactionAsync(cancellationToken);
-            _logger.LogInformation("Synced to local: {DeleteCount} deleted, {UpsertCount} upserted", deleteCount,
+            logger.LogInformation("Synced to local: {DeleteCount} deleted, {UpsertCount} upserted", deleteCount,
                 upsertCount);
-            LocalUpdated?.Invoke(this, toDelete.Concat(toUpsert).Select(key => key.Key).ToArray());
+            _localUpdated?.Invoke(this, toDelete.Concat(toUpsert).Select(key => key.Key).ToArray());
             settingsToUpsert.Select(setting => setting.Key).Concat(settingsToDelete).Distinct().ToList()
-                .ForEach(key => _configProvider.Updated?.Invoke(this, key));
+                .ForEach(key => configProvider.Updated?.Invoke(this, key));
         }
         catch (Exception e)
         {
             await db.Database.RollbackTransactionAsync(cancellationToken);
-            _logger.LogError(e, "Error while syncing to local");
+            logger.LogError(e, "Error while syncing to local");
             throw;
         }
     }
 
-
-
-    private async Task<KeyValue?> GetValue(AppDbContext dbContext, Outbox outbox)
+    private static async Task<KeyValue?> GetValue(AppDbContext dbContext, Outbox outbox)
     {
         switch (outbox.Entity)
         {
@@ -315,7 +295,7 @@ public class SyncService : IDisposable
                     return null;
                 var val = JsonSerializer.SerializeToUtf8Bytes(channel);
 
-                return new KeyValue()
+                return new KeyValue
                 {
                     Key = outbox.Key,
                     Value = ByteString.CopyFrom(val),
@@ -327,7 +307,7 @@ public class SyncService : IDisposable
                 if (payment == null)
                     return null;
                 var paymentBytes = JsonSerializer.SerializeToUtf8Bytes(payment);
-                return new KeyValue()
+                return new KeyValue
                 {
                     Key = outbox.Key,
                     Value = ByteString.CopyFrom(paymentBytes),
@@ -338,70 +318,66 @@ public class SyncService : IDisposable
         }
     }
 
-    private SemaphoreSlim _syncLock = new(1, 1);
     public async Task SyncToRemote(CancellationToken cancellationToken = default)
     {
         try
         {
             await _syncLock.WaitAsync(cancellationToken);
 
-        var backupAPi = await GetVSSAPI();
-        if (backupAPi is null)
-            return;
-        await using var db = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            var backupAPi = await GetVSSAPI();
+            if (backupAPi is null)
+                return;
+            await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
 
-        var putObjectRequest = new PutObjectRequest
-        {
-            GlobalVersion = await _configProvider.GetDeviceIdentifier()
-        };
-        var outbox = await db.OutboxItems.GroupBy(outbox1 => outbox1.Key)
-            .ToListAsync(cancellationToken: cancellationToken);
-        if (outbox.Count != 0)
-        {
-
-        _logger.LogInformation($"Syncing to remote {outbox.Count} outbox items");
-
-        }
-        var removedOutboxItems = new List<Outbox>();
-        foreach (var outboxItemSet in outbox)
-        {
-            var orderedEnumerable = outboxItemSet.OrderByDescending(outbox1 => outbox1.Version)
-                .ThenByDescending(outbox1 => outbox1.ActionType).ToArray();
-            foreach (var item in orderedEnumerable)
+            var putObjectRequest = new PutObjectRequest
             {
-                if (item.ActionType == OutboxAction.Delete)
+                GlobalVersion = await configProvider.GetDeviceIdentifier()
+            };
+            var outbox = await db.OutboxItems.GroupBy(outbox1 => outbox1.Key)
+                .ToListAsync(cancellationToken: cancellationToken);
+            if (outbox.Count != 0)
+            {
+                logger.LogInformation("Syncing to remote {Count} outbox items", outbox.Count);
+            }
+            var removedOutboxItems = new List<Outbox>();
+            foreach (var outboxItemSet in outbox)
+            {
+                var orderedEnumerable = outboxItemSet.OrderByDescending(outbox1 => outbox1.Version)
+                    .ThenByDescending(outbox1 => outbox1.ActionType).ToArray();
+                foreach (var item in orderedEnumerable)
                 {
-                    putObjectRequest.DeleteItems.Add(new KeyValue()
+                    if (item.ActionType == OutboxAction.Delete)
                     {
-                        Key = item.Key, Version = item.Version
-                    });
-                }
-                else
-                {
-                    var kv = await GetValue(db, item);
-                    if (kv != null)
+                        putObjectRequest.DeleteItems.Add(new KeyValue()
+                        {
+                            Key = item.Key, Version = item.Version
+                        });
+                    }
+                    else
                     {
-                        putObjectRequest.TransactionItems.Add(kv);
-                        break;
+                        var kv = await GetValue(db, item);
+                        if (kv != null)
+                        {
+                            putObjectRequest.TransactionItems.Add(kv);
+                            break;
+                        }
                     }
                 }
+
+                db.OutboxItems.RemoveRange(orderedEnumerable);
+                removedOutboxItems.AddRange(orderedEnumerable);
+                // Process outbox item
             }
 
-            db.OutboxItems.RemoveRange(orderedEnumerable);
-            removedOutboxItems.AddRange(orderedEnumerable);
-            // Process outbox item
-        }
+            if (putObjectRequest.TransactionItems.Count == 0 && putObjectRequest.DeleteItems.Count == 0 && _syncTask is not null) return;
 
-        if (putObjectRequest.TransactionItems.Count == 0 && putObjectRequest.DeleteItems.Count == 0 && (_syncTask is not null))
-        {
-            return;
-        }
-        await backupAPi.PutObjectAsync(putObjectRequest, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
-        _logger.LogInformation(
-            $"Synced to remote {putObjectRequest.TransactionItems.Count} items and deleted {putObjectRequest.DeleteItems.Count} items" +
-            string.Join(", ", putObjectRequest.TransactionItems.Select(kv => kv.Key + " " + kv.Version)));
-        RemoteObjectUpdated?.Invoke(this, (removedOutboxItems, putObjectRequest.Clone()));
+            await backupAPi.PutObjectAsync(putObjectRequest, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Synced to remote {TransactionItemsCount} items and deleted {DeleteItemsCount} items {Join}",
+                putObjectRequest.TransactionItems.Count,
+                putObjectRequest.DeleteItems.Count,
+                string.Join(", ", putObjectRequest.TransactionItems.Select(kv => kv.Key + " " + kv.Version)));
+            RemoteObjectUpdated?.Invoke(this, (removedOutboxItems, putObjectRequest.Clone()));
         }
         finally
         {
@@ -413,12 +389,10 @@ public class SyncService : IDisposable
         if (_syncTask.HasValue && _syncTask.Value.local == local && !_syncTask.Value.cts.IsCancellationRequested)
             return;
         if (_syncTask.HasValue && _syncTask.Value.local != local)
-        {
             await _syncTask.Value.cts.CancelAsync();
-        }
 
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _syncTask = (ContinuouslySync( local, cts.Token), cts, local);
+        _syncTask = (ContinuouslySync(local, cts.Token), cts, local);
     }
 
     public async Task StopSync()
@@ -428,11 +402,9 @@ public class SyncService : IDisposable
             await _syncTask.Value.cts.CancelAsync();
             _syncTask = null;
         }
-
     }
 
-    private async Task ContinuouslySync(bool local,
-        CancellationToken cancellationToken = default)
+    private async Task ContinuouslySync(bool local, CancellationToken cancellationToken = default)
     {
         while (!cancellationToken.IsCancellationRequested)
         {
@@ -445,11 +417,10 @@ public class SyncService : IDisposable
             }
             catch (OperationCanceledException)
             {
-
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error while syncing to {Local}", local ? "local" : "remote");
+                logger.LogError(e, "Error while syncing to {Local}", local ? "local" : "remote");
             }
             finally
             {
@@ -463,6 +434,6 @@ public class SyncService : IDisposable
     {
         RemoteObjectUpdated = null;
         EncryptionKeyChanged = null;
-        LocalUpdated = null;
+        _localUpdated = null;
     }
 }

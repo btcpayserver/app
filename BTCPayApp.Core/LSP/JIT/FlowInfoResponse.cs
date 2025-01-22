@@ -6,10 +6,12 @@ using NBitcoin;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
-public class FlowInfoResponse
+public abstract class FlowInfoResponse
 {
-    [JsonPropertyName("connection_methods")] public ConnectionMethod[] ConnectionMethods { get; set; }
-    [JsonPropertyName("pubkey")] public required string PubKey { get; set; }
+    [JsonPropertyName("connection_methods")]
+    public ConnectionMethod[] ConnectionMethods { get; set; } = [];
+    [JsonPropertyName("pubkey")]
+    public required string PubKey { get; set; }
 
     public NodeInfo[] ToNodeInfo()
     {
@@ -17,11 +19,14 @@ public class FlowInfoResponse
         return ConnectionMethods.Select(method => new NodeInfo(pubkey, method.Address, method.Port)).ToArray();
     }
 
-    public class ConnectionMethod
+    public abstract class ConnectionMethod
     {
-        [JsonPropertyName("address")] public string Address { get; set; }
-        [JsonPropertyName("port")] public int Port { get; set; }
-        [JsonPropertyName("type")] public string Type { get; set; }
+        [JsonPropertyName("address")]
+        public required string Address { get; set; }
+        [JsonPropertyName("port")]
+        public required int Port { get; set; }
+        [JsonPropertyName("type")]
+        public string? Type { get; set; }
 
         public EndPoint? ToEndpoint()
         {

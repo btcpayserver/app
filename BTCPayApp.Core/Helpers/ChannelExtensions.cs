@@ -38,32 +38,30 @@ public static class ChannelExtensions
     {
         while (await channel.Reader.WaitToReadAsync(cancellationToken))
         {
-            while (channel.Reader.TryRead(out TEvent item))
+            while (channel.Reader.TryRead(out var item))
             {
                 await processor(item, cancellationToken);
             }
         }
     }
 
-    public static (BitcoinExtPubKey, RootedKeyPath, ScriptPubKeyType)? ExtractFromDescriptor(this string descriptor, Network? network)
+    public static (BitcoinExtPubKey, RootedKeyPath?, ScriptPubKeyType)? ExtractFromDescriptor(this string descriptor, Network network)
     {
         var od = OutputDescriptor.Parse(descriptor, network);
 
-        (BitcoinExtPubKey, RootedKeyPath) ExtractFromPkProvider(PubKeyProvider pubKeyProvider)
+        (BitcoinExtPubKey, RootedKeyPath?) ExtractFromPkProvider(PubKeyProvider pubKeyProvider)
         {
             switch (pubKeyProvider)
             {
                 case PubKeyProvider.Const _:
                     throw new FormatException("Only HD output descriptors are supported.");
                 case PubKeyProvider.HD hd:
-                    if (hd.Path != null && hd.Path.ToString() != "0")
-                    {
+                    if (hd.Path is not null && hd.Path.ToString() != "0")
                         throw new FormatException("Custom change paths are not supported.");
-                    }
                     return (hd.Extkey, null);
                 case PubKeyProvider.Origin origin:
                     var innerResult = ExtractFromPkProvider(origin.Inner);
-                    return (innerResult.Item1,  origin.KeyOriginInfo );
+                    return (innerResult.Item1, origin.KeyOriginInfo);
                 default:
                     throw new ArgumentOutOfRangeException();
             }

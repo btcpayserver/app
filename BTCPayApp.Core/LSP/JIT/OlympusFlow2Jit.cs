@@ -6,14 +6,16 @@ using org.ldk.structs;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
-public class OlympusFlow2Jit : VoltageFlow2Jit
+public class OlympusFlow2Jit(
+    IHttpClientFactory httpClientFactory,
+    Network network,
+    LDKNode node,
+    ChannelManager channelManager,
+    ILogger<VoltageFlow2Jit> logger,
+    LDKOpenChannelRequestEventHandler openChannelRequestEventHandler)
+    : VoltageFlow2Jit(httpClientFactory, network, node, channelManager, logger, openChannelRequestEventHandler)
 {
-    public OlympusFlow2Jit(IHttpClientFactory httpClientFactory, Network network, LDKNode node, ChannelManager channelManager, ILogger<VoltageFlow2Jit> logger, 
-        LDKOpenChannelRequestEventHandler openChannelRequestEventHandler) : base(httpClientFactory, network, node, channelManager, logger, openChannelRequestEventHandler)
-    {
-    }
-
-    public override Uri? BaseAddress(Network network)
+    protected override Uri? BaseAddress(Network network)
     {
         return network switch
         {

@@ -275,7 +275,7 @@ public sealed class ObservableConcurrentDictionary<TKey, TValue> : ConcurrentDic
    /// the default value of the <typeparamref name="TValue"/> type if <paramref name="key"/> does not exist.
    /// </param>
    /// <returns><see langword="true"/> if the object was removed successfully; otherwise, <see langword="false"/>.</returns>
-   public new bool TryRemove(TKey key, out TValue value)
+   public new bool TryRemove(TKey key, out TValue? value)
    {
       if (base.TryRemove(key, out value))
       {

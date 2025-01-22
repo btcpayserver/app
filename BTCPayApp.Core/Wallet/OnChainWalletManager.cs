@@ -462,7 +462,7 @@ public class OnChainWalletManager : BaseHostedService
         foreach (var deriv in config.Derivations.Values.Where(derivation => derivation.Descriptor is not null))
         {
             var data = deriv.Descriptor?.ExtractFromDescriptor(network);
-            if (data is null) continue;
+            if (data?.Item2 is null) continue;
             var accKey = rootKey.Derive(data.Value.Item2);
             psbt = psbt.SignAll(data.Value.Item1.AsHDScriptPubKey(data.Value.Item3), accKey);
             if (psbt.TryFinalize(out _))
@@ -548,7 +548,8 @@ public class OnChainWalletManager : BaseHostedService
     public async Task<IEnumerable<ICoin>> GetUTXOS()
     {
         var config = await GetConfig();
-        if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
+        var network = config?.NBitcoinNetwork;
+        if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config) || network == null)
             throw new InvalidOperationException("Cannot get UTXOS in current state");
 
         var identifiers = config.Derivations.Values
@@ -569,8 +570,8 @@ public class OnChainWalletManager : BaseHostedService
             var derivation =
                 config.Derivations.Values.First(derivation =>
                     derivation.Identifier!.Equals(kp.Key, StringComparison.InvariantCultureIgnoreCase));
-            var data = derivation.Descriptor!.ExtractFromDescriptor(config.NBitcoinNetwork);
-            if (data is null)
+            var data = derivation.Descriptor!.ExtractFromDescriptor(network);
+            if (data?.Item2 is null)
                 continue;
 
             foreach (var coin in kp.Value)

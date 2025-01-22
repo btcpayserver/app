@@ -26,22 +26,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Channel>().HasIndex(payment => payment.EntityKey).IsUnique();
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.PaymentRequest)
             .HasConversion(
-                request => request.ToString(),
+                request => request!.ToString(),
                 str => NetworkHelper.Try(network => BOLT11PaymentRequest.Parse(str, network)));
 
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.Secret)
             .HasConversion(
-                request => request.ToString(),
+                request => request!.ToString(),
                 str => uint256.Parse(str));
 
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.PaymentHash)
             .HasConversion(
-                request => request.ToString(),
+                request => request!.ToString(),
                 str => uint256.Parse(str));
 
         modelBuilder.Entity<AppLightningPayment>().Property(payment => payment.Value)
             .HasConversion(
-                request => request.MilliSatoshi,
+                request => request!.MilliSatoshi,
                 str => new LightMoney(str));
 
         modelBuilder.Entity<Channel>().Property(channel => channel.AdditionalData).HasJsonConversion();

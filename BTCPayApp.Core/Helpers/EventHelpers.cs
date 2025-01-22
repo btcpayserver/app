@@ -1,6 +1,6 @@
 ﻿namespace BTCPayApp.Core.Helpers;
 
-public delegate Task AsyncEventHandler<TEventArgs>(object? sender, TEventArgs e);
+public delegate Task AsyncEventHandler<in TEventArgs>(object? sender, TEventArgs e);
 public delegate Task AsyncEventHandler(object? sender);
 
 public static class EventHandlers
@@ -24,12 +24,12 @@ public static class EventHandlers
                 return Task.CompletedTask;
             });
 
-    public static EventHandler<TArgs> TryAsync<TArgs>(
+    private static EventHandler<TArgs> TryAsync<TArgs>(
         this Func<object, TArgs, Task> callback,
         Func<Exception, Task> errorHandler)
         where TArgs : EventArgs
     {
-        return new EventHandler<TArgs>(async (object s, TArgs e) =>
+        return new EventHandler<TArgs>(async void (s, e) =>
         {
             try
             {

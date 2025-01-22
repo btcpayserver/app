@@ -17,8 +17,11 @@ namespace BTCPayApp.Core.LSP.JIT;
 /// https://docs.voltage.cloud/flow/flow-2.0
 /// </summary>
 public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandler<Event.Event_ChannelPending>
-
 {
+    private const string LightningPaymentOriginalPaymentRequest = "OriginalPaymentRequest";
+    private const string LightningPaymentJITFeeKey = "JITFeeKey";
+    public const string LightningPaymentLSPKey = "LSP";
+
     private readonly HttpClient _httpClient;
     private readonly Network _network;
     private readonly LDKNode _node;
@@ -26,10 +29,22 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     private readonly ILogger<VoltageFlow2Jit> _logger;
     private readonly LDKOpenChannelRequestEventHandler _openChannelRequestEventHandler;
     private CancellationTokenSource _cts = new();
+    private readonly ConcurrentDictionary<long, Event.Event_OpenChannelRequest> _acceptedChannels = new();
+    public bool Active { get; }
 
+    public virtual string ProviderName => "Voltage";
+    protected virtual LightMoney NonChannelOpenFee => LightMoney.Zero;
 
+    private FlowInfoResponse? _info;
 
-    public virtual Uri? BaseAddress(Network network)
+    public VoltageFlow2Jit(bool active)
+    {
+        Active = active;
+    }
+
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
+
+    protected virtual Uri? BaseAddress(Network network)
     {
         return network switch
         {
@@ -56,14 +71,15 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         _openChannelRequestEventHandler = openChannelRequestEventHandler;
     }
 
-    public async Task<FlowInfoResponse> GetInfo(CancellationToken cancellationToken = default)
+    private async Task<FlowInfoResponse> GetInfo(CancellationToken cancellationToken = default)
     {
         var path = "/api/v1/info";
         var response = await _httpClient.GetAsync(path, cancellationToken);
         try
         {
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<FlowInfoResponse>(cancellationToken);
+            var res = await response.Content.ReadFromJsonAsync<FlowInfoResponse>(cancellationToken);
+            return res!;
         }
         catch (HttpRequestException e)
         {
@@ -72,7 +88,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         }
     }
 
-    public async Task<FlowFeeResponse> GetFee(LightMoney amount, PubKey pubkey,
+    private async Task<FlowFeeResponse> GetFee(LightMoney amount, PubKey pubkey,
         CancellationToken cancellationToken = default)
     {
         var path = "/api/v1/fee";
@@ -81,7 +97,8 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         try
         {
             response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<FlowFeeResponse>(cancellationToken);
+            var res = await response.Content.ReadFromJsonAsync<FlowFeeResponse>(cancellationToken);
+            return res!;
         }
         catch (HttpRequestException e)
         {
@@ -90,11 +107,11 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         }
     }
 
-    public async Task<BOLT11PaymentRequest> GetProposal(BOLT11PaymentRequest bolt11PaymentRequest,
+    private async Task<BOLT11PaymentRequest> GetProposal(BOLT11PaymentRequest bolt11PaymentRequest,
         EndPoint? endPoint = null, string? feeId = null, CancellationToken cancellationToken = default)
     {
-        var path = "/api/v1/proposal";
-        var request = new FlowProposalRequest()
+        const string path = "/api/v1/proposal";
+        var request = new FlowProposalRequest
         {
             Bolt11 = bolt11PaymentRequest.ToString(),
             Host = endPoint?.Host(),
@@ -118,17 +135,15 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         }
     }
 
-    public virtual string ProviderName => "Voltage";
-
     public async Task<JITFeeResponse?> CalculateInvoiceAmount(LightMoney expectedAmount, CancellationToken cancellationToken = default)
     {
         try
         {
             var fee = await GetFee(expectedAmount, _node.NodeId, cancellationToken);
             var amtToGenerate = expectedAmount - fee.Amount;
-            if(amtToGenerate.MilliSatoshi <= 0)
-                return null;
-            return new JITFeeResponse(expectedAmount, amtToGenerate, fee.Amount, fee.Id, ProviderName);
+            return amtToGenerate.MilliSatoshi <= 0
+                ? null
+                : new JITFeeResponse(expectedAmount, amtToGenerate, fee.Amount, fee.Id, ProviderName);
         }
         catch (Exception e)
         {
@@ -136,10 +151,6 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
             return null;
         }
     }
-
-    public const string LightningPaymentJITFeeKey = "JITFeeKey";
-    public const string LightningPaymentLSPKey = "LSP";
-    public const string LightningPaymentOriginalPaymentRequest = "OriginalPaymentRequest";
 
     public async Task<bool> WrapInvoice(AppLightningPayment lightningPayment, JITFeeResponse? fee, CancellationToken cancellationToken = default)
     {
@@ -168,37 +179,23 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         {
             _logger.LogError(e, "Error while wrapping invoice");
         }
-
         return false;
     }
 
-    public virtual async Task<bool> IsAcceptable(AppLightningPayment lightningPayment,
+    public virtual Task<bool> IsAcceptable(AppLightningPayment lightningPayment,
         Event.Event_PaymentClaimable paymentClaimable, CancellationToken cancellationToken = default)
     {
-        if (!lightningPayment.AdditionalData.TryGetValue(LightningPaymentLSPKey, out var lsp) ||
-            lsp.GetString() != ProviderName)
-        {
-            return false;
-        }
+        if (!lightningPayment.AdditionalData.TryGetValue(LightningPaymentLSPKey, out var lsp) || lsp.GetString() != ProviderName)
+            return Task.FromResult(false);
 
-        if (!lightningPayment.AdditionalData.TryGetValue(LightningPaymentJITFeeKey, out var feeRaw) ||
-            feeRaw.Deserialize<JITFeeResponse>() is not { } fee)
-        {
-            return false;
-        }
+        if (!lightningPayment.AdditionalData.TryGetValue(LightningPaymentJITFeeKey, out var feeRaw) || feeRaw.Deserialize<JITFeeResponse>() is not { } fee)
+            return Task.FromResult(false);
 
-        if (_acceptedChannels.TryRemove(paymentClaimable.via_channel_id.hash(), out var channelRequest) &&
-            paymentClaimable.counterparty_skimmed_fee_msat == fee.LSPFee.MilliSatoshi)
-        {
-            return true;
-        }
+        if (_acceptedChannels.TryRemove(paymentClaimable.via_channel_id.hash(), out _) && paymentClaimable.counterparty_skimmed_fee_msat == fee.LSPFee.MilliSatoshi)
+            return Task.FromResult(true);
 
-        return paymentClaimable.counterparty_skimmed_fee_msat == NonChannelOpenFee.MilliSatoshi || paymentClaimable.amount_msat ==  (lightningPayment.Value - NonChannelOpenFee );
+        return Task.FromResult(paymentClaimable.counterparty_skimmed_fee_msat == NonChannelOpenFee.MilliSatoshi || paymentClaimable.amount_msat ==  (lightningPayment.Value - NonChannelOpenFee ));
     }
-
-    protected virtual LightMoney NonChannelOpenFee => LightMoney.Zero;
-
-    public bool Active { get; }
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -206,7 +203,6 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         _node.ConfigUpdated += ConfigUpdated;
         _openChannelRequestEventHandler.AcceptedChannel += AcceptedChannel;
         _ = ConfigUpdated(this, await _node.GetConfig()).WithCancellation(_cts.Token);
-
         _ = Task.Run(async () =>
         {
             while (_cts.Token.IsCancellationRequested == false)
@@ -215,10 +211,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
                 await Task.Delay(10000, _cts.Token);
             }
         }, _cts.Token);
-
     }
-
-    private ConcurrentDictionary<long, Event.Event_OpenChannelRequest> _acceptedChannels = new();
 
     private Task AcceptedChannel(object? sender, Event.Event_OpenChannelRequest e)
     {
@@ -226,19 +219,9 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         {
             _acceptedChannels.TryAdd(e.temporary_channel_id.hash(), e);
         }
-
         return Task.CompletedTask;
     }
 
-
-    private FlowInfoResponse? _info;
-
-    public VoltageFlow2Jit(bool active)
-    {
-        Active = active;
-    }
-
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
     private async Task ConfigUpdated(object? sender, LightningConfig e)
     {
         try
@@ -248,8 +231,6 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
             {
                 _info = await GetInfo();
 
-
-                var ni = _info.ToNodeInfo();
                 var configPeers = await _node.GetConfig();
                 var pubkey = new PubKey(_info.PubKey);
                 if (configPeers.Peers.TryGetValue(_info.PubKey, out var peer))
@@ -295,7 +276,6 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         {
             _semaphore.Release();
         }
-
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -317,7 +297,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
                 return Task.CompletedTask;
             var channelConfig = channel.get_config();
             channelConfig.set_accept_underpaying_htlcs(true);
-            _channelManager.update_channel_config(@event.counterparty_node_id, new[] {@event.channel_id},
+            _channelManager.update_channel_config(@event.counterparty_node_id, [@event.channel_id],
                 channelConfig);
         }
         return Task.CompletedTask;
