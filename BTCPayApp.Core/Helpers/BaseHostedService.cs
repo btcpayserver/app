@@ -3,46 +3,41 @@ using Microsoft.Extensions.Logging;
 
 namespace BTCPayApp.Core.Helpers;
 
-public abstract class BaseHostedService : IHostedService, IDisposable
+public abstract class BaseHostedService(ILogger logger) : IHostedService, IDisposable
 {
-    private readonly ILogger _logger;
-    protected CancellationTokenSource _cancellationTokenSource = new();
-    protected readonly SemaphoreSlim _controlSemaphore = new(1, 1);
+    protected CancellationTokenSource CancellationTokenSource = new();
+    protected readonly SemaphoreSlim ControlSemaphore = new(1, 1);
     private Task? _currentTask;
 
-    public BaseHostedService(ILogger logger)
-    {
-        _logger = logger;
-    }
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await _controlSemaphore.WaitAsync(cancellationToken);
+        await ControlSemaphore.WaitAsync(cancellationToken);
         try
         {
-            _cancellationTokenSource = new CancellationTokenSource();
-            await ExecuteStartAsync(CancellationTokenSource.CreateLinkedTokenSource(_cancellationTokenSource.Token, cancellationToken).Token);
+            CancellationTokenSource = new CancellationTokenSource();
+            await ExecuteStartAsync(CancellationTokenSource.CreateLinkedTokenSource(CancellationTokenSource.Token, cancellationToken).Token);
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Stopping service");
-        await _cancellationTokenSource.CancelAsync();
-        await _controlSemaphore.WaitAsync(cancellationToken);
-        
+        logger.LogInformation("Stopping service");
+        await CancellationTokenSource.CancelAsync();
+        await ControlSemaphore.WaitAsync(cancellationToken);
+
         try
         {
-            await ExecuteStopAsync(_cancellationTokenSource.Token);
-            
-            _logger.LogInformation("Stopped");
+            await ExecuteStopAsync(CancellationTokenSource.Token);
+
+            logger.LogInformation("Stopped");
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 
@@ -51,20 +46,20 @@ public abstract class BaseHostedService : IHostedService, IDisposable
 
     public virtual void Dispose()
     {
-        _cancellationTokenSource?.Dispose();
-        _controlSemaphore?.Dispose();
+        CancellationTokenSource?.Dispose();
+        ControlSemaphore?.Dispose();
     }
-    
+
     protected async Task WrapInLock(Func<Task> act, CancellationToken cancellationToken)
     {
-        await _controlSemaphore.WaitAsync(cancellationToken);
+        await ControlSemaphore.WaitAsync(cancellationToken);
         try
         {
             await act();
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 }

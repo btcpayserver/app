@@ -101,7 +101,7 @@ public class AppDbContext : DbContext
                     // .Condition(@ref => @ref.Old.Value != @ref.New.Value)
                     .Update<Setting>(
                         (tableRefs, setting) => tableRefs.Old.Key == setting.Key,
-                        (tableRefs, setting) => new Setting { Version = tableRefs.Old.Version + 1 })
+                        (tableRefs, setting) => new Setting { Key = tableRefs.Old.Key, Version = tableRefs.Old.Version + 1 })
                     .Insert(
                         // .InsertIfNotExists( (@ref, outbox) => @ref.New.Version == outbox.Version && outbox.ActionType == OutboxAction.Update && outbox.Entity == "Setting" && outbox.Key == @ref.New.Key,
                         @ref => new Outbox

@@ -58,7 +58,7 @@ public class LDKPeerHandler : IScopedHostedService
 
     }
 
-    private async Task BtcPayAppServerClientOnOnServerNodeInfo(object? sender, string e)
+    private async Task BtcPayAppServerClientOnOnServerNodeInfo(object? sender, string? e)
     {
         var nodeInfo = NodeInfo.Parse(e);
         var config = await _node.GetConfig();
@@ -87,33 +87,32 @@ public class LDKPeerHandler : IScopedHostedService
         {
             try
             {
+                var connected = _peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()).ToLower());
+                var channels = (await _node.GetChannels(ctsToken)).Where(pair => pair.Value.channelDetails is not null)
+                    .Select(pair => pair.Value.channelDetails!).ToList();
 
-            var connected = _peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()).ToLower());
-            var channels = (await _node.GetChannels(ctsToken)).Where(pair => pair.Value.channelDetails is not null)
-                .Select(pair => pair.Value.channelDetails!).ToList();
+                var channelPeers = channels
+                    .Select(details => Convert.ToHexString(details.get_counterparty().get_node_id()).ToLower()).Distinct();
+                var config = await _node.GetConfig();
+                var missingConnections = config.Peers
+                    .Where(pair => pair.Value.Persistent || channelPeers.Contains(pair.Key)).Select(pair => pair.Key)
+                    .Except(connected, StringComparer.InvariantCultureIgnoreCase).ToList();
 
-            var channelPeers = channels
-                .Select(details => Convert.ToHexString(details.get_counterparty().get_node_id()).ToLower()).Distinct();
-            var config = await _node.GetConfig();
-            var missingConnections = config.Peers
-                .Where(pair => pair.Value.Persistent || channelPeers.Contains(pair.Key)).Select(pair => pair.Key)
-                .Except(connected, StringComparer.InvariantCultureIgnoreCase).ToList();
-
-            var tasks = new List<Task>();
-            foreach (var persistentPeer in missingConnections)
-            {
-                var kv = config.Peers[persistentPeer];
-                var nodeid = new PubKey(persistentPeer);
-                if (kv.Endpoint is {} endpoint)
+                var tasks = new List<Task>();
+                foreach (var persistentPeer in missingConnections)
                 {
-                    var cts = CancellationTokenSource.CreateLinkedTokenSource(ctsToken);
-                    cts.CancelAfter(10000);
-                    tasks.Add(ConnectAsync(nodeid, endpoint, cts.Token));
+                    var kv = config.Peers[persistentPeer];
+                    var nodeid = new PubKey(persistentPeer);
+                    if (kv.Endpoint is {} endpoint)
+                    {
+                        var cts = CancellationTokenSource.CreateLinkedTokenSource(ctsToken);
+                        cts.CancelAfter(10000);
+                        tasks.Add(ConnectAsync(nodeid, endpoint, cts.Token));
+                    }
                 }
-            }
 
-            await Task.WhenAll(tasks);
-            await Task.Delay(5000, ctsToken);
+                await Task.WhenAll(tasks);
+                await Task.Delay(5000, ctsToken);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
@@ -121,7 +120,6 @@ public class LDKPeerHandler : IScopedHostedService
             }
         }
     }
-
 
     private async Task PeriodicTicker(CancellationToken cancellationToken, int ms, Action action)
     {

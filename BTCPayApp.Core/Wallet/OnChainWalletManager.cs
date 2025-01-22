@@ -128,7 +128,7 @@ public class OnChainWalletManager : BaseHostedService
             if (config is null || !IsConfigured(config) || HubProxy == null)
                 throw new InvalidOperationException("Cannot restore wallet in current state");
 
-            await _controlSemaphore.WaitAsync();
+            await ControlSemaphore.WaitAsync();
 
             // step1: Track our derivations
             //for groups, we need to generate a new one and replace the local one with its identifier
@@ -179,13 +179,13 @@ public class OnChainWalletManager : BaseHostedService
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 
     public async Task Generate()
     {
-        await _controlSemaphore.WaitAsync();
+        await ControlSemaphore.WaitAsync();
         try
         {
             if (State != OnChainWalletState.NotConfigured || ReportedNetwork == null || HubProxy == null || !IsHubConnected ||
@@ -249,13 +249,13 @@ public class OnChainWalletManager : BaseHostedService
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 
     public async Task AddDerivation(string key, string name, string? descriptor)
     {
-        await _controlSemaphore.WaitAsync();
+        await ControlSemaphore.WaitAsync();
         try
         {
             var config = await GetConfig();
@@ -283,7 +283,7 @@ public class OnChainWalletManager : BaseHostedService
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 
@@ -337,13 +337,13 @@ public class OnChainWalletManager : BaseHostedService
             .ToArray();
         var response = await HubProxy.Handshake(new AppHandshake { Identifiers = identifiers });
         var missing = config.Derivations
-            .Where(pair => !response.IdentifiersAcknowledged.Contains(pair.Value.Identifier))
+            .Where(pair => response.IdentifiersAcknowledged?.Contains(pair.Value.Identifier) is not true)
             .ToList();
 
         if (missing.Count != 0)
         {
             _logger.LogWarning(
-                "Some identifiers that we had asked for BtcPayServer to track were not confirmed as being listened to. Tracking will be incomplete and functionality will critically fail");
+                "Some identifiers that we had asked to track were not confirmed as being listened to. Tracking will be incomplete and functionality will critically fail");
         }
 
         return missing.Select(pair => pair.Key).ToArray();
@@ -379,7 +379,7 @@ public class OnChainWalletManager : BaseHostedService
         if (HubProxy == null || !IsHubConnected || bb is null || config is null || !IsConfigured(config))
             throw new InvalidOperationException("Cannot update snapshot in current state");
 
-        await _controlSemaphore.WaitAsync();
+        await ControlSemaphore.WaitAsync();
         try
         {
             var identifiers = config.Derivations.Values
@@ -405,13 +405,13 @@ public class OnChainWalletManager : BaseHostedService
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 
     public async Task<BitcoinAddress?> DeriveScript(string derivationId)
     {
-        await _controlSemaphore.WaitAsync();
+        await ControlSemaphore.WaitAsync();
         try
         {
             var config = await GetConfig();
@@ -432,7 +432,7 @@ public class OnChainWalletManager : BaseHostedService
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 
@@ -642,7 +642,7 @@ public class OnChainWalletManager : BaseHostedService
 
     public async Task RemoveDerivation(params string[] key)
     {
-        await _controlSemaphore.WaitAsync();
+        await ControlSemaphore.WaitAsync();
         try
         {
             var config = await GetConfig();
@@ -657,7 +657,7 @@ public class OnChainWalletManager : BaseHostedService
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 

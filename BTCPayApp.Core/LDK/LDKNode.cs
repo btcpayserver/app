@@ -519,7 +519,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         await context.SaveChangesAsync();
     }
 
-    public async Task AddChannelData(ChannelId id, Dictionary<string, JsonElement> data)
+    private async Task AddChannelData(ChannelId id, Dictionary<string, JsonElement> data)
     {
         var channelId = Convert.ToHexString(id.get_a()).ToLowerInvariant();
         using var releaser = await channelLocker.LockAsync(channelId);
@@ -528,7 +528,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             .FirstOrDefaultAsync(channel => !channel.Archived && (channel.Id == channelId || channel.Aliases.Any(alias => alias.Id == channelId)));
         if (channel is null)
         {
-            channel = new Channel()
+            channel = new Channel
             {
                 Id = channelId,
                 Archived = false,
@@ -540,11 +540,8 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             await context.LightningChannels.AddAsync(channel);
         }
 
-
         channel.AdditionalData =  JsonSerializer.SerializeToNode(channel.AdditionalData)!.MergeDictionary(data).Deserialize<Dictionary<string, JsonElement>>();
         await context.SaveChangesAsync();
-
-
     }
 
 }

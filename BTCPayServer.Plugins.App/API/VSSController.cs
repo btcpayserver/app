@@ -71,12 +71,12 @@ public class VSSController(
         var userId = userManager.GetUserId(User)!;
 
         await using var dbContext = dbContextFactory.CreateContext();
-        return await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async async =>
+        return await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async _ =>
         {
             await using var dbContextTransaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
             try
             {
-                if (request.TransactionItems.Any())
+                if (request.TransactionItems.Count != 0)
                 {
                     var items = request.TransactionItems.Select(data => new AppStorageItemData
                     {
@@ -88,7 +88,7 @@ public class VSSController(
                     await dbContext.AppStorageItems.AddRangeAsync(items, cancellationToken);
                 }
 
-                if (request.DeleteItems.Any())
+                if (request.DeleteItems.Count != 0)
                 {
                     var deleteQuery = request.DeleteItems.Aggregate(
                         dbContext.AppStorageItems.Where(data => data.UserId == userId),
@@ -146,6 +146,7 @@ public class VSSController(
             .ToListAsync(cancellationToken: cancellationToken);
         return new ListKeyVersionsResponse {KeyVersions = {items}};
     }
+
     private T SetResult<T>(IActionResult result)
     {
         HttpContext.Items["Result"] = result;

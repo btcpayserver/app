@@ -13,33 +13,34 @@ using TypedSignalR.Client;
 
 namespace BTCPayApp.Core.BTCPayServer;
 
-public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
+public class BTCPayConnectionManager(
+    IServiceProvider serviceProvider,
+    IAccountManager accountManager,
+    AuthenticationStateProvider authStateProvider,
+    ILogger<BTCPayConnectionManager> logger,
+    BTCPayAppServerClient btcPayAppServerClient,
+    IBTCPayAppHubClient btcPayAppServerClientInterface,
+    ConfigProvider configProvider,
+    SyncService syncService)
+    : BaseHostedService(logger), IHubConnectionObserver
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly IAccountManager _accountManager;
-    private readonly AuthenticationStateProvider _authStateProvider;
-    private readonly ILogger<BTCPayConnectionManager> _logger;
-    private readonly BTCPayAppServerClient _btcPayAppServerClient;
-    private readonly IBTCPayAppHubClient _btcPayAppServerClientInterface;
-    private readonly ConfigProvider _configProvider;
-    private readonly SyncService _syncService;
+    private BTCPayConnectionState _connectionState = BTCPayConnectionState.Init;
+    private CancellationTokenSource _cts = new();
+    private readonly SemaphoreSlim _lock = new(1, 1);
     private IDisposable? _subscription;
-
+    private IBTCPayAppHubServer? _hubProxy;
     public IBTCPayAppHubServer? HubProxy
     {
         get => Connection?.State == HubConnectionState.Connected ? _hubProxy : null;
         private set => _hubProxy = value;
     }
-
     private HubConnection? Connection { get; set; }
     public Network? ReportedNetwork { get; private set; }
-    public string ReportedNodeInfo { get; set; }
-    public bool ForceSlaveMode { get; set; }
+    public string? ReportedNodeInfo { get; set; }
+    private bool ForceSlaveMode { get; set; }
 
     public event AsyncEventHandler<(BTCPayConnectionState Old, BTCPayConnectionState New)>? ConnectionChanged;
-    private BTCPayConnectionState _connectionState = BTCPayConnectionState.Init;
 
-    private readonly SemaphoreSlim _lock = new(1, 1);
     public BTCPayConnectionState ConnectionState
     {
         get => _connectionState;
@@ -51,7 +52,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                 if (_connectionState == value) return;
                 var old = _connectionState;
                 _connectionState = value;
-                _logger.LogInformation("Connection state changed: {Old} -> {ConnectionState}", old, _connectionState);
+                logger.LogInformation("Connection state changed: {Old} -> {ConnectionState}", old, _connectionState);
                 ConnectionChanged?.Invoke(this, (old, _connectionState));
             }
             finally
@@ -61,60 +62,17 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         }
     }
 
-    // TODO: Make this a primary constructor
-    public BTCPayConnectionManager(
-        IServiceProvider serviceProvider,
-        IAccountManager accountManager,
-        AuthenticationStateProvider authStateProvider,
-        ILogger<BTCPayConnectionManager> logger,
-        BTCPayAppServerClient btcPayAppServerClient,
-        IBTCPayAppHubClient btcPayAppServerClientInterface,
-        ConfigProvider configProvider,
-        SyncService syncService) : base(logger)
-    {
-        _serviceProvider = serviceProvider;
-        _accountManager = accountManager;
-        _authStateProvider = authStateProvider;
-        _logger = logger;
-        _btcPayAppServerClient = btcPayAppServerClient;
-        _btcPayAppServerClientInterface = btcPayAppServerClientInterface;
-        _configProvider = configProvider;
-        _syncService = syncService;
-    }
-
-    private CancellationTokenSource _cts = new();
-    private IBTCPayAppHubServer? _hubProxy;
-
     protected override async Task ExecuteStartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         ConnectionChanged += OnConnectionChanged;
-        _authStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
-        _btcPayAppServerClient.OnNotifyNetwork += OnNotifyNetwork;
-        _btcPayAppServerClient.OnNotifyServerEvent += OnNotifyServerEvent;
-        _btcPayAppServerClient.OnServerNodeInfo += OnServerNodeInfo;
-        _btcPayAppServerClient.OnMasterUpdated += OnMasterUpdated;
-        _syncService.EncryptionKeyChanged += EncryptionKeyChanged;
+        authStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        btcPayAppServerClient.OnNotifyNetwork += OnNotifyNetwork;
+        btcPayAppServerClient.OnNotifyServerEvent += OnNotifyServerEvent;
+        btcPayAppServerClient.OnServerNodeInfo += OnServerNodeInfo;
+        btcPayAppServerClient.OnMasterUpdated += OnMasterUpdated;
+        syncService.EncryptionKeyChanged += EncryptionKeyChanged;
         await OnConnectionChanged(this, (BTCPayConnectionState.Init, BTCPayConnectionState.Init));
-        _ = MonitorHubConnection(_cts.Token);
-    }
-
-    // TODO: Remove this
-    private async Task MonitorHubConnection(CancellationToken cancellationToken)
-    {
-        // while (!cancellationToken.IsCancellationRequested)
-        // {
-        //     await WrapInLock(async () =>
-        //         {
-        //             if (Connection?.State is HubConnectionState.Disconnected)
-        //             {
-        //                 await OnClosed(new Exception("MonitorHubConnection"));
-        //             }
-        //         }
-        //         , cancellationToken);
-        // }
-        //
-        // await Task.Delay(500, cancellationToken);
     }
 
     private async Task OnMasterUpdated(object? sender, long? e)
@@ -127,11 +85,11 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
             {
                 ConnectionState = BTCPayConnectionState.Syncing;
             }
-            else if (await _configProvider.GetDeviceIdentifier() == e)
+            else if (await configProvider.GetDeviceIdentifier() == e)
             {
                 ConnectionState = BTCPayConnectionState.ConnectedAsMaster;
             }
-            else if (ConnectionState == BTCPayConnectionState.ConnectedAsMaster && e != await _configProvider.GetDeviceIdentifier())
+            else if (ConnectionState == BTCPayConnectionState.ConnectedAsMaster && e != await configProvider.GetDeviceIdentifier())
             {
                 ConnectionState = BTCPayConnectionState.Syncing;
             }
@@ -153,18 +111,18 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
 
     private async Task OnConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) e)
     {
-        var deviceIdentifier = await _configProvider.GetDeviceIdentifier();
+        var deviceIdentifier = await configProvider.GetDeviceIdentifier();
         var newState = e.New;
         try
         {
-            var account = _accountManager.GetAccount();
+            var account = accountManager.GetAccount();
             switch (e.New)
             {
                 case BTCPayConnectionState.Init:
                     newState = BTCPayConnectionState.WaitingForAuth;
                     break;
                 case BTCPayConnectionState.WaitingForAuth:
-                    if (account is not null && await _accountManager.CheckAuthenticated())
+                    if (account is not null && await accountManager.CheckAuthenticated())
                     {
                         newState = BTCPayConnectionState.Connecting;
                     }
@@ -186,16 +144,16 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                         .WithUrl(url, options =>
                         {
                             options.AccessTokenProvider = () =>
-                                Task.FromResult(_accountManager.GetAccount()?.AccessToken);
-                            options.HttpMessageHandlerFactory = _serviceProvider
+                                Task.FromResult(accountManager.GetAccount()?.AccessToken);
+                            options.HttpMessageHandlerFactory = serviceProvider
                                 .GetService<Func<HttpMessageHandler, HttpMessageHandler>>();
                             options.WebSocketConfiguration =
-                                _serviceProvider.GetService<Action<ClientWebSocketOptions>>();
+                                serviceProvider.GetService<Action<ClientWebSocketOptions>>();
                         })
                         .Build();
 
-                    _subscription = connection.Register(_btcPayAppServerClientInterface);
-                    HubProxy = new ExceptionWrappedHubProxy(connection, _logger);
+                    _subscription = connection.Register(btcPayAppServerClientInterface);
+                    HubProxy = new ExceptionWrappedHubProxy(connection, logger);
 
                     if (connection.State == HubConnectionState.Disconnected)
                     {
@@ -205,14 +163,14 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                         }
                         catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized)
                         {
-                            await _accountManager.Logout();
-                            _logger.LogInformation("Signed out user because of unauthorized response");
+                            await accountManager.Logout();
+                            logger.LogInformation("Signed out user because of unauthorized response");
                         }
                         catch (Exception ex)
                         {
                             await Task.Delay(500);
                             if (ex is not TaskCanceledException)
-                                _logger.LogError(ex, "Error while connecting to hub");
+                                logger.LogError(ex, "Error while connecting to hub");
                         }
                     }
                     Connection = connection;
@@ -224,11 +182,11 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                     };
                     break;
                 case BTCPayConnectionState.Syncing:
-                    await _syncService.StopSync();
-                    if (await _syncService.EncryptionKeyRequiresImport())
+                    await syncService.StopSync();
+                    if (await syncService.EncryptionKeyRequiresImport())
                     {
                         newState = BTCPayConnectionState.WaitingForEncryptionKey;
-                        _logger.LogWarning(
+                        logger.LogWarning(
                             "Existing state found but encryption key is missing, waiting until key is provided");
                     }
                     else
@@ -237,11 +195,11 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                         var masterDevice = await HubProxy!.GetCurrentMaster();
                         if (deviceIdentifier == masterDevice)
                         {
-                            await _syncService.SyncToRemote(CancellationToken.None);
+                            await syncService.SyncToRemote(CancellationToken.None);
                         }
                         else
                         {
-                            await _syncService.SyncToLocal();
+                            await syncService.SyncToLocal();
                         }
                         newState = BTCPayConnectionState.ConnectedFinishedInitialSync;
                     }
@@ -259,10 +217,10 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
                     }
                     break;
                 case BTCPayConnectionState.ConnectedAsMaster:
-                    await _syncService.StartSync(false);
+                    await syncService.StartSync(false);
                     break;
                 case BTCPayConnectionState.ConnectedAsSlave:
-                    await _syncService.StartSync(true);
+                    await syncService.StartSync(true);
                     break;
                 case BTCPayConnectionState.Disconnected:
                     newState = BTCPayConnectionState.WaitingForAuth;
@@ -271,7 +229,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error while changing connection state from {Old} to {New}", e.Old, e.New);
+            logger.LogError(ex, "Error while changing connection state from {Old} to {New}", e.Old, e.New);
             throw;
         }
         finally
@@ -280,7 +238,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         }
     }
 
-    private Task OnServerNodeInfo(object? sender, string e)
+    private Task OnServerNodeInfo(object? sender, string? e)
     {
         ReportedNodeInfo = e;
         return Task.CompletedTask;
@@ -288,7 +246,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
 
     private Task OnNotifyServerEvent(object? sender, ServerEvent e)
     {
-        _logger.LogInformation("OnNotifyServerEvent: {Type} - {Details}", e.Type, e.ToString());
+        logger.LogInformation("OnNotifyServerEvent: {Type} - {Details}", e.Type, e.ToString());
         return Task.CompletedTask;
     }
 
@@ -305,7 +263,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
             try
             {
                 await task;
-                var authState = await _accountManager.CheckAuthenticated();
+                var authState = await accountManager.CheckAuthenticated();
                 if (ConnectionState == BTCPayConnectionState.WaitingForAuth && authState)
                 {
 
@@ -318,7 +276,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error while handling authentication state change");
+                logger.LogError(e, "Error while handling authentication state change");
             }
         }, _cts.Token);
     }
@@ -327,7 +285,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
     {
         if (Connection is not null)
         {
-            _logger.LogWarning("Killing connection");
+            logger.LogWarning("Killing connection");
         }
         var conn = Connection;
         Connection = null;
@@ -336,7 +294,7 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         _subscription?.Dispose();
         _subscription = null;
         HubProxy = null;
-        await _syncService.StopSync();
+        await syncService.StopSync();
     }
 
 
@@ -345,10 +303,10 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         await _cts.CancelAsync();
         if (_connectionState == BTCPayConnectionState.ConnectedAsMaster)
         {
-            _logger.LogInformation("Sending device master signal to turn off");
-            var deviceIdentifier = await _configProvider.GetDeviceIdentifier();
-            await _syncService.StopSync();
-            await _syncService.SyncToRemote(CancellationToken.None);
+            logger.LogInformation("Sending device master signal to turn off");
+            var deviceIdentifier = await configProvider.GetDeviceIdentifier();
+            await syncService.StopSync();
+            await syncService.SyncToRemote(CancellationToken.None);
             if (HubProxy is not null)
             {
                 await HubProxy.DeviceMasterSignal(deviceIdentifier, false);
@@ -356,16 +314,16 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         }
 
         await Kill();
-        _authStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
-        _btcPayAppServerClient.OnNotifyNetwork -= OnNotifyNetwork;
+        authStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        btcPayAppServerClient.OnNotifyNetwork -= OnNotifyNetwork;
 
-        _syncService.EncryptionKeyChanged -= EncryptionKeyChanged;
+        syncService.EncryptionKeyChanged -= EncryptionKeyChanged;
         ConnectionChanged -= OnConnectionChanged;
     }
 
     public Task OnClosed(Exception? exception)
     {
-        _logger.LogError(exception, "Hub connection closed");
+        logger.LogError(exception, "Hub connection closed");
         if (Connection?.State == HubConnectionState.Disconnected && ConnectionState != BTCPayConnectionState.Connecting)
         {
             ConnectionState = BTCPayConnectionState.Disconnected;
@@ -376,14 +334,14 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
 
     public Task OnReconnected(string? connectionId)
     {
-        _logger.LogInformation("Hub connection reconnected");
+        logger.LogInformation("Hub connection reconnected");
         ConnectionState = BTCPayConnectionState.Syncing;
         return Task.CompletedTask;
     }
 
     public Task OnReconnecting(Exception? exception)
     {
-        _logger.LogWarning(exception, "Hub connection reconnecting");
+        logger.LogWarning(exception, "Hub connection reconnecting");
         ConnectionState = BTCPayConnectionState.Connecting;
         return Task.CompletedTask;
     }
@@ -393,10 +351,10 @@ public class BTCPayConnectionManager : BaseHostedService, IHubConnectionObserver
         if (_connectionState == BTCPayConnectionState.ConnectedAsMaster)
         {
             ForceSlaveMode = true;
-            _logger.LogInformation("Sending device master signal to turn off");
-            await _syncService.StopSync();
-            await _syncService.SyncToRemote( CancellationToken.None);
-            await HubProxy!.DeviceMasterSignal(await _configProvider.GetDeviceIdentifier(), false);
+            logger.LogInformation("Sending device master signal to turn off");
+            await syncService.StopSync();
+            await syncService.SyncToRemote( CancellationToken.None);
+            await HubProxy!.DeviceMasterSignal(await configProvider.GetDeviceIdentifier(), false);
         }
     }
 }

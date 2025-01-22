@@ -66,7 +66,7 @@ public class SyncService : IDisposable
         var api = await GetUnencryptedVSSAPI();
         try
         {
-            var res = await api.GetObjectAsync(new GetObjectRequest()
+            var res = await api.GetObjectAsync(new GetObjectRequest
             {
                 Key = "encryptionKeyTest"
             });

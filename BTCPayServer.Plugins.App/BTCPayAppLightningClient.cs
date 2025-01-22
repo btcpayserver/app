@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Channels;
@@ -137,9 +137,10 @@ public class BTCPayAppLightningClient(
        return await HubClient.GetLightningBalance(key);
     }
 
-    public async Task<PayResponse> Pay(PayInvoiceParams payParams, CancellationToken cancellation = new())
+    public Task<PayResponse> Pay(PayInvoiceParams payParams, CancellationToken cancellation = new())
     {
-        return await Pay(null, payParams, cancellation);
+        throw new NotImplementedException();
+        //return await Pay(null, payParams, cancellation);
     }
 
     public async Task<PayResponse> Pay(string bolt11, PayInvoiceParams payParams, CancellationToken cancellation = new())

@@ -20,7 +20,7 @@
 //     public VSSMapperInterceptor(BTCPayConnectionManager btcPayConnectionManager, ILogger<VSSMapperInterceptor> logger)
 //     {
 //     }
-//     
+//
 //     private ConcurrentDictionary<EventId, object> PendingEvents = new ConcurrentDictionary<EventId, object>();
 //     public override ValueTask<int> SavedChangesAsync(SaveChangesCompletedEventData eventData, int result,
 //         CancellationToken cancellationToken = new CancellationToken())
@@ -39,12 +39,12 @@
 //             {
 //                 if (entry.State == EntityState.Deleted)
 //                 {
-//                  
+//
 //                     api.DeleteObjectAsync(new DeleteObjectRequest
 //                     {
 //                         KeyValue = new KeyValue()
 //                         {
-//                             
+//
 //                         }
 //                         Key = $"LightningPayment/{lightningPayment.Id}"
 //                     });
@@ -52,14 +52,14 @@
 //             }
 //             if (entry.Entity is Channel channel)
 //             {
-//                 
+//
 //             }
 //             if (entry.Entity is Setting setting)
 //             {
-//                 
+//
 //             }
 //         }
-//         
+//
 //         return base.SavingChangesAsync(eventData, result, cancellationToken);
 //     }
 //
@@ -76,8 +76,8 @@
 //         PendingEvents.Remove(eventData.EventId, out _);
 //         return base.SaveChangesFailedAsync(eventData, cancellationToken);
 //     }
-//     
-//     
+//
+//
 // }
 //
 
@@ -115,7 +115,7 @@ public class DatabaseConfigProvider: ConfigProvider
     public override async Task Set<T>(string key, T? value, bool backup) where T : default
     {
         using var releaser = await _lock.LockAsync(key);
-        _logger.LogDebug("Setting {key} to {value} {backup}", key, value, backup? "backup": "no backup");
+        _logger.LogDebug("Setting {Key} to {Value} {Backup}", key, value, backup ? "backup": "no backup");
         await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
         if (value is null)
         {
@@ -133,7 +133,6 @@ public class DatabaseConfigProvider: ConfigProvider
         var newValue = typeof(T) == typeof(byte[])? value as byte[]:JsonSerializer.SerializeToUtf8Bytes(value);
         var setting = new Setting {Key = key, Value = newValue, Backup = backup};
         await dbContext.Upsert(setting, CancellationToken.None);
-
     }
 
     public override async Task<IEnumerable<string>> List(string prefix)

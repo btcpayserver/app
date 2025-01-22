@@ -24,7 +24,7 @@ public class ChannelAlias
 {
     public required string Id { get; init; }
     public required string Type { get; init; }
-    public string ChannelId { get; set; }
+    public string? ChannelId { get; set; }
     [JsonIgnore]
     public Channel Channel { get; set; }
 }

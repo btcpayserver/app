@@ -126,7 +126,7 @@ public class AppHandshakeResponse
 
 public class PairRequest
 {
-    public Dictionary<string, DerivationItem?> Derivations { get; set; } = new();
+    public Dictionary<string, DerivationItem> Derivations { get; set; } = new();
 }
 
 public class DerivationItem

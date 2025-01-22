@@ -49,7 +49,6 @@ public static class LDKExtensions
 
         if (remote is null)
             return Option_SocketAddressZ.none();
-        var ipe = ((IPEndPoint) socket.RemoteEndPoint);
 
         // return Option_SocketAddressZ.some(SocketAddress.tcp_ip_v4(ipe.Address.GetAddressBytes(), (short) ipe.Port));
         var socketAddress = SocketAddress.from_str(remote);
@@ -64,7 +63,7 @@ public static class LDKExtensions
     {
         return SocketAddress.from_str(endPoint.ToString()) switch
         {
-            org.ldk.structs.Result_SocketAddressSocketAddressParseErrorZ.Result_SocketAddressSocketAddressParseErrorZ_OK
+            Result_SocketAddressSocketAddressParseErrorZ.Result_SocketAddressSocketAddressParseErrorZ_OK
                 ok => ok.res,
             _ => null
         };
@@ -308,14 +307,14 @@ public static class LDKExtensions
             ProbabilisticScoringFeeParameters.with_default()));
         services.AddScoped<Router>(provider => provider.GetRequiredService<DefaultRouter>().as_Router());
 
-        
+
         services.AddScoped<VoltageFlow2Jit>();
         services.AddScoped<OlympusFlow2Jit>();
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<OlympusFlow2Jit>());
         services.AddScoped<IJITService, VoltageFlow2Jit>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
         services.AddScoped<IJITService, OlympusFlow2Jit>(provider => provider.GetRequiredService<OlympusFlow2Jit>());
-        
+
         return services;
     }
 
@@ -396,7 +395,7 @@ public static class LDKExtensions
         }
         return reason;
     }
-    
+
 
     public static byte[]? GetPreimage(this PaymentPurpose purpose, out byte[]? secret)
     {

@@ -111,7 +111,6 @@ public class AuthStateProvider(
             var res = new AuthenticationState(user);
             if (AppUserInfo.Equals(oldUserInfo, _userInfo)) return res;
 
-            //TODO: should this check against old user info?s
             if (_userInfo != null)
             {
                 OnUserInfoChange?.Invoke(this, _userInfo);
@@ -152,8 +151,9 @@ public class AuthStateProvider(
     public async Task Logout()
     {
         _userInfo = null;
-        _account!.AccessToken = null;
         OnUserInfoChange?.Invoke(this, _userInfo);
+        if (_account == null) return;
+        _account.AccessToken = null;
         await UpdateAccount(_account);
         await SetCurrentAccount(null);
     }

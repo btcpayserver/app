@@ -67,7 +67,7 @@ public class LightningNodeManager : BaseHostedService
         }
 
         _logger.LogInformation("Starting lightning node");
-        await _controlSemaphore.WaitAsync();
+        await ControlSemaphore.WaitAsync();
         try
         {
             if (_onChainWalletManager.State is not OnChainWalletState.Loaded)
@@ -79,22 +79,22 @@ public class LightningNodeManager : BaseHostedService
             if (_nodeScope is null)
             {
                 _nodeScope = _serviceScopeFactory.CreateScope();
-                _cancellationTokenSource = new CancellationTokenSource();
+                CancellationTokenSource = new CancellationTokenSource();
             }
-            await Node.StartAsync(_cancellationTokenSource.Token);
+            await Node!.StartAsync(CancellationTokenSource.Token);
 
             State = LightningNodeState.Loaded;
         }
         catch (Exception e)
         {
-            _nodeScope.Dispose();
+            _nodeScope?.Dispose();
             _logger.LogError(e, "Error while starting lightning node");
             _nodeScope = null;
             State = LightningNodeState.Error;
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 
@@ -103,7 +103,7 @@ public class LightningNodeManager : BaseHostedService
     {
         if (_nodeScope is null)
             return;
-        await _controlSemaphore.WaitAsync();
+        await ControlSemaphore.WaitAsync();
         try
         {
             _logger.LogInformation("Stopping lightning node");
@@ -117,7 +117,7 @@ public class LightningNodeManager : BaseHostedService
         {
             _nodeScope?.Dispose();
             _nodeScope = null;
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
             if (setAsStopped)
                 State = LightningNodeState.Stopped;
         }
@@ -129,7 +129,7 @@ public class LightningNodeManager : BaseHostedService
 
         if (_nodeScope is not null || State == LightningNodeState.NotConfigured) return;
 
-        await _controlSemaphore.WaitAsync();
+        await ControlSemaphore.WaitAsync();
         try
         {
             await _onChainWalletManager.RemoveDerivation(WalletDerivation.LightningScripts);
@@ -141,7 +141,7 @@ public class LightningNodeManager : BaseHostedService
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
 
             State = LightningNodeState.NotConfigured;
         }
@@ -149,7 +149,7 @@ public class LightningNodeManager : BaseHostedService
 
     public async Task Generate()
     {
-        await _controlSemaphore.WaitAsync();
+        await ControlSemaphore.WaitAsync();
         try
         {
             if (!IsHubConnected)
@@ -167,7 +167,7 @@ public class LightningNodeManager : BaseHostedService
         }
         finally
         {
-            _controlSemaphore.Release();
+            ControlSemaphore.Release();
         }
     }
 
