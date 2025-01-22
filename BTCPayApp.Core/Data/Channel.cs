@@ -6,8 +6,8 @@ namespace BTCPayApp.Core.Data;
 public class Channel:VersionedData
 {
     public required string Id { get; init; }
-    public byte[] Data { get; set; }
-    public List<ChannelAlias> Aliases { get; set; }
+    public byte[]? Data { get; set; }
+    public List<ChannelAlias> Aliases { get; set; } = [];
     public long Checkpoint { get; set; }
     public bool Archived { get; set; }
 
@@ -26,7 +26,7 @@ public class ChannelAlias
     public required string Type { get; init; }
     public string? ChannelId { get; set; }
     [JsonIgnore]
-    public Channel Channel { get; set; }
+    public Channel? Channel { get; set; }
 }
 
 

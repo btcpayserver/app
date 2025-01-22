@@ -6,14 +6,9 @@ using NBitcoin;
 
 namespace BTCPayApp.Core.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options)
-    {
-    }
-
     public DbSet<Setting> Settings { get; set; }
-
     public DbSet<Channel> LightningChannels { get; set; }
     public DbSet<ChannelAlias> ChannelAliases { get; set; }
     public DbSet<AppLightningPayment> LightningPayments { get; set; }

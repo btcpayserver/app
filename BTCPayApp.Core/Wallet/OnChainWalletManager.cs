@@ -140,7 +140,7 @@ public class OnChainWalletManager : BaseHostedService
             var response = await HubProxy.Handshake(new AppHandshake { Identifiers = identifiers });
 
             var missing = config.Derivations
-                .Where(pair => !response.IdentifiersAcknowledged.Contains(pair.Value.Identifier))
+                .Where(pair => response.IdentifiersAcknowledged?.Contains(pair.Value.Identifier) is not true)
                 .ToList();
 
             foreach (var x in missing)

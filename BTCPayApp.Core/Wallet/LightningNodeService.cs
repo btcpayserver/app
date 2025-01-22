@@ -171,7 +171,7 @@ public class LightningNodeManager : BaseHostedService
         }
     }
 
-    private async Task OnConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
+    private Task OnConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
     {
         State = IsHubConnected switch
         {
@@ -179,9 +179,10 @@ public class LightningNodeManager : BaseHostedService
             false => LightningNodeState.Loading,
             _ => State
         };
+        return Task.CompletedTask;
     }
 
-    private async Task OnChainWalletManagerOnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
+    private Task OnChainWalletManagerOnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
     {
         if (e.New == OnChainWalletState.Loaded)
         {
@@ -191,6 +192,7 @@ public class LightningNodeManager : BaseHostedService
         {
             _ = StopNode();
         }
+        return Task.CompletedTask;
     }
 
     private async Task OnStateChanged(object? sender, (LightningNodeState Old, LightningNodeState New) state)

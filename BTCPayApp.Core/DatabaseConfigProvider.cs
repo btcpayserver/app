@@ -81,7 +81,6 @@
 // }
 //
 
-
 using System.Text.Json;
 using AsyncKeyedLock;
 using BTCPayApp.Core.Contracts;
@@ -91,21 +90,16 @@ using Microsoft.Extensions.Logging;
 
 namespace BTCPayApp.Core;
 
-public class DatabaseConfigProvider: ConfigProvider
+public class DatabaseConfigProvider(
+    IDbContextFactory<AppDbContext> dbContextFactory,
+    ILogger<DatabaseConfigProvider> logger)
+    : ConfigProvider
 {
-    private readonly IDbContextFactory<AppDbContext> _dbContextFactory;
-    private readonly ILogger<DatabaseConfigProvider> _logger;
     private readonly AsyncKeyedLocker<string> _lock = new();
-
-    public DatabaseConfigProvider(IDbContextFactory<AppDbContext> dbContextFactory, ILogger<DatabaseConfigProvider> logger)
-    {
-        _dbContextFactory = dbContextFactory;
-        _logger = logger;
-    }
 
     public override async Task<T?> Get<T>(string key) where T : default
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         var config = await dbContext.Settings.FindAsync(key);
         if (typeof(T) == typeof(byte[]))
             return (T?) (config?.Value as object);
@@ -115,8 +109,8 @@ public class DatabaseConfigProvider: ConfigProvider
     public override async Task Set<T>(string key, T? value, bool backup) where T : default
     {
         using var releaser = await _lock.LockAsync(key);
-        _logger.LogDebug("Setting {Key} to {Value} {Backup}", key, value, backup ? "backup": "no backup");
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        logger.LogDebug("Setting {Key} to {Value} {Backup}", key, value, backup ? "backup": "no backup");
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         if (value is null)
         {
             try
@@ -137,7 +131,7 @@ public class DatabaseConfigProvider: ConfigProvider
 
     public override async Task<IEnumerable<string>> List(string prefix)
     {
-        await using var dbContext = await _dbContextFactory.CreateDbContextAsync();
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         return await dbContext.Settings.Where(s => s.Key.StartsWith(prefix)).Select(s => s.Key).ToListAsync();
     }
 }

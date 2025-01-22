@@ -365,7 +365,9 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
-        var data = await db.LightningChannels.Where(channel => !channel.Archived).Select(channel => channel.Data)
+        var data = await db.LightningChannels
+            .Where(channel => !channel.Archived && channel.Data != null)
+            .Select(channel => channel.Data!)
             .ToArrayAsync();
 
         var channels = ChannelManagerHelper.GetInitialMonitors(data, entropySource, signerProvider);

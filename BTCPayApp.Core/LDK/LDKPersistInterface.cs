@@ -9,6 +9,7 @@ using NBitcoin;
 using org.ldk.enums;
 using org.ldk.structs;
 using VSSProto;
+using Exception = System.Exception;
 using OutPoint = org.ldk.structs.OutPoint;
 
 namespace BTCPayApp.Core.LDK;
@@ -21,8 +22,6 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
     private readonly SyncService _syncService;
     private readonly ConcurrentDictionary<long, Task> updateTasks = new();
     private readonly ConcurrentDictionary<long, TaskCompletionSource> _updateTaskCompletionSources = new();
-    private Dictionary<long,long> _updateIds = new();
-    // private readonly ChainMonitor _chainMonitor;
 
     public LDKPersistInterface(LDKNode node, ILogger<LDKPersistInterface> logger, IServiceProvider serviceProvider, SyncService syncService  )
     {
@@ -45,16 +44,12 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
         return Task.CompletedTask;
     }
 
-
-
-
-    public ChannelMonitorUpdateStatus persist_new_channel(OutPoint channel_funding_outpoint, ChannelMonitor data,
+    public ChannelMonitorUpdateStatus persist_new_channel(OutPoint channelFundingOutpoint, ChannelMonitor data,
         MonitorUpdateId update_id)
     {
         try
         {
-            _logger.LogDebug(
-                $"Persisting new channel, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
+            _logger.LogDebug("Persisting new channel, outpoint: {Outpoint}, updateid: {Hash}", channelFundingOutpoint.Outpoint(), update_id.hash());
 
             var updateId = update_id.hash();
 
@@ -65,7 +60,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
                 //     .SelectMany(zzzz => zzzz.get_b().Select(zz => Script.FromBytesUnsafe(zz.get_b()))).ToArray();
 
                 _updateTaskCompletionSources.TryAdd(updateId, new TaskCompletionSource());
-                var fundingId = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()).ToLower();
+                var fundingId = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channelFundingOutpoint).get_a()).ToLower();
 
                 var identifiers = new List<ChannelAlias>
                 {
@@ -91,7 +86,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
                 }
 
                 // var trackTask = _node.TrackScripts(outs).ContinueWith(task => _logger.LogDebug($"Tracking scripts finished for  updateid: {update_id.hash()}"));;
-                var updateTask = _node.UpdateChannel(identifiers, data.write(), updateId).ContinueWith(task => _logger.LogDebug($"Updating channel finished for  updateid: {update_id.hash()}"));;
+                var updateTask = _node.UpdateChannel(identifiers, data.write(), updateId).ContinueWith(task => _logger.LogDebug("Updating channel finished for  updateid: {Hash}", update_id.hash()));;
                 await updateTask;
                 // _logger.LogDebug("channel updated to local, waiting for remote sync to finish");
                 // await _updateTaskCompletionSources[updateId].Task;
@@ -100,23 +95,18 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
                 {
                     try
                     {
-
-                    _logger.LogDebug(
-                        $"Calling channel_monitor_updated, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
-
-                    _serviceProvider.GetRequiredService<ChainMonitor>()
-                        .channel_monitor_updated(channel_funding_outpoint, update_id);
-                    _logger.LogDebug(
-                        $"Persisted new channel, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
-                    updateTasks.TryRemove(updateId, out _);
+                        _logger.LogDebug("Calling channel_monitor_updated, outpoint: {Outpoint}, updateid: {Hash}", channelFundingOutpoint.Outpoint(), update_id.hash());
+                        _serviceProvider.GetRequiredService<ChainMonitor>()
+                            .channel_monitor_updated(channelFundingOutpoint, update_id);
+                        _logger.LogDebug("Persisted new channel, outpoint: {Outpoint}, updateid: {Hash}", channelFundingOutpoint.Outpoint(), update_id.hash());
+                        updateTasks.TryRemove(updateId, out _);
                     }
                     catch (Exception e)
                     {
                         _logger.LogError(e, "Error calling channel_monitor_updated for new channel ");
                         updateTasks.TryRemove(updateId, out _);
                     }
-                    });
-
+                });
                 // _chainMonitor.channel_monitor_updated(channel_funding_outpoint, update_id);
             });
 
@@ -136,18 +126,16 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
             }
 
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_InProgress;
-
         }
-        catch (Exception e)
+        catch (Exception _)
         {
-
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_UnrecoverableError;
         }
 
     }
 
 
-    public ChannelMonitorUpdateStatus update_persisted_channel(OutPoint channel_funding_outpoint, ChannelMonitorUpdate update,
+    public ChannelMonitorUpdateStatus update_persisted_channel(OutPoint channelFundingOutpoint, ChannelMonitorUpdate update,
         ChannelMonitor data, MonitorUpdateId update_id)
     {
 
@@ -156,24 +144,24 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
         _updateTaskCompletionSources.TryAdd(updateId, new TaskCompletionSource());
         var taskResult = updateTasks.GetOrAdd(updateId, async l =>
         {
-
-            var fundingId = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint).get_a()).ToLower();
-
-            var identifiers = new  List<ChannelAlias>();
-            identifiers.Add(new ChannelAlias()
+            var fundingId = Convert.ToHexString(ChannelId.v1_from_funding_outpoint(channelFundingOutpoint).get_a()).ToLower();
+            var identifiers = new List<ChannelAlias>
             {
-                Id = fundingId,
-                Type = "funding_outpoint"
-            });
+                new()
+                {
+                    Id = fundingId,
+                    Type = "funding_outpoint"
+                }
+            };
             var otherId = data.channel_id().is_zero()? null: Convert.ToHexString(data.channel_id().get_a()).ToLower();
-            if(otherId == fundingId)
+            if (otherId == fundingId)
             {
                 otherId = null;
 
             }
-            if(otherId != null)
+            if (otherId != null)
             {
-                identifiers.Add(new ChannelAlias()
+                identifiers.Add(new ChannelAlias
                 {
                     Id = otherId,
                     Type = "arbitrary_id"
@@ -187,13 +175,11 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
             await AsyncExtensions.RunInOtherThread(() =>
             {
-                _logger.LogDebug(
-                    $"Calling channel_monitor_updated, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
+                _logger.LogDebug("Calling channel_monitor_updated, outpoint: {Outpoint}, updateid: {Hash}", channelFundingOutpoint.Outpoint(), update_id.hash());
 
                 _serviceProvider.GetRequiredService<ChainMonitor>()
-                    .channel_monitor_updated(channel_funding_outpoint, update_id);
-                _logger.LogDebug(
-                    $"Persisted update channel, outpoint: {channel_funding_outpoint.Outpoint()}, updateid: {update_id.hash()}");
+                    .channel_monitor_updated(channelFundingOutpoint, update_id);
+                _logger.LogDebug("Persisted update channel, outpoint: {Outpoint}, updateid: {Hash}", channelFundingOutpoint.Outpoint(), update_id.hash());
                 updateTasks.TryRemove(updateId, out _);
             });
 
@@ -208,20 +194,18 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
         if (taskResult.IsCompleted)
         {
-
             updateTasks.TryRemove(updateId, out _);
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_Completed;
-
         }
 
         return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_InProgress;
     }
 
-    public void archive_persisted_channel(OutPoint channel_funding_outpoint)
+    public void archive_persisted_channel(OutPoint channelFundingOutpoint)
     {
-        _logger.LogInformation($"Archiving channel, outpoint: {channel_funding_outpoint.Outpoint()}");
+        _logger.LogInformation("Archiving channel, outpoint: {Outpoint}", channelFundingOutpoint.Outpoint());
         AsyncExtensions.RunInOtherThread(() =>
-            _node.ArchiveChannel(ChannelId.v1_from_funding_outpoint(channel_funding_outpoint))).GetAwaiter().GetResult();
+            _node.ArchiveChannel(ChannelId.v1_from_funding_outpoint(channelFundingOutpoint))).GetAwaiter().GetResult();
     }
     //
     // public async Task StartAsync(CancellationToken cancellationToken)
@@ -233,12 +217,14 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
     // {
     //     throw new NotImplementedException();
     // }
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
+        return Task.CompletedTask;
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public Task StopAsync(CancellationToken cancellationToken)
     {
         _syncService.RemoteObjectUpdated -= RemoteObjectUpdated;
+        return Task.CompletedTask;
     }
 }
