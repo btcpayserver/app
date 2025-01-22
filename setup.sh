@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
-# Initialize the server submodule
-git submodule init && git submodule update --recursive
+if [[ ! -v CI ]]; then
+  # Initialize the server submodule
+  git submodule init && git submodule update --recursive
 
-# Install the workloads
-dotnet workload restore
+  # Install the workloads
+  dotnet workload restore
+fi
 
 # Create appsettings file to include app plugin when running the server
 appsettings="submodules/btcpayserver/BTCPayServer/appsettings.dev.json"
