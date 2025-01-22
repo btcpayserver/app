@@ -11,20 +11,11 @@ git clone git@github.com:btcpayserver/app.git
 # Switch to it
 cd app
 
-# Initialize the server submodule
-git submodule init && git submodule update --recursive
-
-# Install the workloads
-dotnet workload restore
+# Run the setup script
+./setup.sh
 
 # Go to the server submodule
 cd submodules/btcpayserver/BTCPayServer.Tests
-
-# Verify you are on the `mobile-working-branch` branch
-git branch --show current
-
-# If not, check it out
-git checkout mobile-working-branch
 
 # Run the server
 docker-compose up dev
@@ -39,19 +30,6 @@ Click the Connect button, use `http://localhost:14142` as the server URL and an 
 
 After the first run of `DEV ALL` on a Linux machine with a new .NET setup, you may run into the [dotnet dev-certs - Untrusted Root](https://github.com/dotnet/aspnetcore/issues/41503)
 error, and you may find a solution at the [following link](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-dev-certs)
-
-## Missing dependencies in development environment
-
-If BTCPay Server does not start up with the app and its dependencies, run this:
-
-```bash
-cd BTCPayApp.Core
-dotnet publish -c Debug -o ../BTCPayServer.Plugins.App/bin/Debug/net8.0
-cd -
-cd BTCPayServer.Plugins.App
-dotnet publish -c Debug -o bin/Debug/net8.0
-cd -
-```
 
 ## Lightning Channels
 
