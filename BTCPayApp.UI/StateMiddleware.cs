@@ -96,12 +96,13 @@ public class StateMiddleware(
             }
         };
 
-        onChainWalletManager.OnSnapshotUpdate += async (sender, args) =>
+        onChainWalletManager.OnSnapshotUpdate += (sender, args) =>
         {
             if (accountManager.GetCurrentStore() is { } store)
             {
                 dispatcher.Dispatch(new StoreState.FetchBalances(store.Id));
             }
+            return Task.CompletedTask;
         };
 
         lightningNodeService.StateChanged += async (sender, args) =>

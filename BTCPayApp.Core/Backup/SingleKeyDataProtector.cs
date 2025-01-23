@@ -11,9 +11,7 @@ public class SingleKeyDataProtector : IDataProtector
     public SingleKeyDataProtector(byte[] key)
     {
         if (key.Length != 32) // AES-256 key size
-        {
             throw new ArgumentException("Key length must be 32 bytes.");
-        }
 
         _key = key;
     }
@@ -43,14 +41,12 @@ public class SingleKeyDataProtector : IDataProtector
         using var aes = Aes.Create();
         aes.Key = _key;
 
-        if(protectedData.Length == 0)
-        {
+        if (protectedData.Length == 0)
             return protectedData;
-        }
+
         var iv = protectedData.Take(16).ToArray();
         var cipherText = protectedData.Skip(16).ToArray();
 
         return aes.DecryptCbc(cipherText, iv);
     }
-
 }

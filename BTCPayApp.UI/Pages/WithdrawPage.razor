@@ -59,13 +59,13 @@
                             is not supported, see below.
                         </div>
                     }
-                    else
+                    else if (Model.Amount != null)
                     {
                         <div>
                             Not enough
                             @(Model.Bolt11 != null ? "Lightning" : Model.Address != null ? "onchain" : "")
                             balance to withdraw
-                            <AmountDisplay Value="Model.Amount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                            <AmountDisplay Value="Model.Amount.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
                         </div>
                     }
                 </Alert>
@@ -92,11 +92,14 @@
                             @if (Model.Address != null || Model.Bolt11 != null)
                             {
                                 <div class="form-text d-flex flex-wrap gap-1 align-items-center">
-                                <span>
-                                    Withdrawing @(Model.Bolt11 != null ? "via Lightning" : "onchain"):
-                                    <AmountDisplay Value="MaxAvailable" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
-                                    available.
-                                </span>
+                                    @if (MaxAvailable.HasValue)
+                                    {
+                                        <span>
+                                            Withdrawing @(Model.Bolt11 != null ? "via Lightning" : "onchain"):
+                                            <AmountDisplay Value="MaxAvailable.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                                            available.
+                                        </span>
+                                    }
                                     @if (CanAdjustAmount)
                                     {
                                         <button type="button" class="btn btn-link p-0" @onclick="() => Model.Amount = MaxAvailable">Withdraw maximum</button>
@@ -189,7 +192,7 @@
                 <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
                     <h2 class="mb-0">Onchain</h2>
                     <span class="text-muted">
-                        <AmountDisplay Value="OnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> available
+                        <AmountDisplay Value="OnchainConfirmedBalance!.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> available
                     </span>
                 </header>
                 @if (OnchainState == SourceState.NotSupported || !OnChainWalletManager.IsActive || !OnChainWalletManager.IsHubConnected)
@@ -218,13 +221,13 @@
                         @if (OnchainConfirmedBalance is > 0)
                         {
                             <li class="list-group-item py-2">
-                                <AmountDisplay Value="OnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> confirmed
+                                <AmountDisplay Value="OnchainConfirmedBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> confirmed
                             </li>
                         }
                         @if (OnchainUnconfirmedBalance is > 0)
                         {
                             <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Value="OnchainUnconfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> unconfirmed
+                                <AmountDisplay Value="OnchainUnconfirmedBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> unconfirmed
                             </li>
                         }
                     </ul>
@@ -266,37 +269,37 @@
                         @if (LightningOffchainOpeningBalance is > 0)
                         {
                             <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Value="LightningOffchainOpeningBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> opening channels
+                                <AmountDisplay Value="LightningOffchainOpeningBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> opening channels
                             </li>
                         }
                         @if (LightningOffchainLocalBalance is > 0)
                         {
                             <li class="list-group-item py-2">
-                                <AmountDisplay Value="LightningOffchainLocalBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> local / outbound capacity
+                                <AmountDisplay Value="LightningOffchainLocalBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> local / outbound capacity
                             </li>
                         }
                         @if (LightningOffchainClosingBalance is > 0)
                         {
                             <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Value="LightningOffchainClosingBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> closing channels
+                                <AmountDisplay Value="LightningOffchainClosingBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> closing channels
                             </li>
                         }
                         @if (LightningOnchainConfirmedBalance is > 0)
                         {
                             <li class="list-group-item py-2">
-                                <AmountDisplay Value="LightningOnchainConfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> confirmed onchain
+                                <AmountDisplay Value="LightningOnchainConfirmedBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> confirmed onchain
                             </li>
                         }
                         @if (LightningOnchainUnconfirmedBalance is > 0)
                         {
                             <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Value="LightningOnchainUnconfirmedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> unconfirmed onchain
+                                <AmountDisplay Value="LightningOnchainUnconfirmedBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> unconfirmed onchain
                             </li>
                         }
                         @if (LightningOnchainReservedBalance is > 0)
                         {
                             <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Value="LightningOnchainReservedBalance" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> reserved onchain
+                                <AmountDisplay Value="LightningOnchainReservedBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> reserved onchain
                             </li>
                         }
                     </ul>
@@ -560,7 +563,7 @@
             else if (Model.Address != null)
             {
                 // TODO: Implement send via external wallet: SendOnchainExternal(Model.Address, new Money(amount, UnitMoney));
-                result = await SendOnchain(Model.Address, new Money(amount, UnitMoney), Model.FeeRate.Value);
+                result = await SendOnchain(Model.Address, new Money(amount, UnitMoney), Model.FeeRate);
             }
             switch (result?.Succeeded)
             {

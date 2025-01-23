@@ -55,7 +55,6 @@ public class LDKPeerHandler : IScopedHostedService
     private void DescriptorsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
         _node.PeersChanged();
-
     }
 
     private async Task BtcPayAppServerClientOnOnServerNodeInfo(object? sender, string? e)
@@ -76,9 +75,10 @@ public class LDKPeerHandler : IScopedHostedService
 
     private TaskCompletionSource? _configTcs;
 
-    private async Task ConfigUpdated(object? sender, LightningConfig e)
+    private Task ConfigUpdated(object? sender, LightningConfig e)
     {
         _configTcs?.TrySetResult();
+        return Task.CompletedTask;
     }
 
     private async Task ContinuouslyAttemptToConnectToPersistentPeers(CancellationToken ctsToken)

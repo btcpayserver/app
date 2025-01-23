@@ -136,7 +136,7 @@
         }
 
         <h2>Channels</h2>
-        @if (_channels?.Any() is true)
+        @if (Node != null && _config != null && _channels?.Any() is true)
         {
             <div class="table-responsive">
                 <table class="table">
@@ -228,7 +228,7 @@
                             }
                         </td>
                         <td>
-                            @if (active)
+                            @if (active && channel.Value.channelDetails != null)
                             {
                                 <button type="button" class="btn btn-primary btn-sm" @onclick="() => Node.CloseChannel(channel.Value.channelDetails.get_channel_id(), new PubKey(channel.Value.channelDetails.get_counterparty().get_node_id()), !connected) ">Close</button>
                             }

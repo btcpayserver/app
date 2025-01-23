@@ -116,7 +116,7 @@
                 var result = await PaymentsManager.RequestPayment(LightMoney.Satoshis(Model.Amount ?? 0), TimeSpan.FromDays(1), hash);
 
                 _successMessage = "Payment request created";
-                _paymentRequest = result.PaymentRequest.ToString();
+                _paymentRequest = result.PaymentRequest!.ToString();
                 Model = new ReceiveModel();
             }
             catch (Exception e)

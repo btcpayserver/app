@@ -32,10 +32,10 @@
                                 {
                                     <span class="fw-semibold badge text-bg-info">@(context.PriceType == AppItemPriceType.Topup ? "Any amount" : "Free")</span>
                                 }
-                                else
+                                else if (context.Price.HasValue)
                                 {
                                     <span class="fw-semibold text-muted">
-                                        <AmountDisplay Value="@context.Price" Unit="@Currency"/> @(context.PriceType == AppItemPriceType.Minimum ? " minimum" : null)
+                                        <AmountDisplay Value="@context.Price.Value" Unit="@Currency"/> @(context.PriceType == AppItemPriceType.Minimum ? " minimum" : null)
                                     </span>
                                 }
                                 @if (context.Inventory.HasValue)
@@ -180,7 +180,6 @@
     private Guid _inputFileId = Guid.NewGuid();
     private ValidationEditContext? _validationEditContext;
     private AppItemModel? SelectedItem { get; set; }
-    private string? _successMessage;
     private string? _errorMessage;
 
     private async Task SelectItem(AppItem? item)

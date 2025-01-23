@@ -67,7 +67,7 @@
 </section>
 
 @code {
-    private AccountModel? Model { get; set; }
+    private AccountModel Model { get; set; } = new();
     private bool _sending;
     private string? _errorMessage;
     private string? _successMessage;

@@ -186,7 +186,7 @@
         _successMessage = null;
 
         var app = AppData!;
-        var tipPercentages = string.IsNullOrEmpty(Model.CustomTipPercentages) ? null : AppItemParser.SplitStringListToInts(ListSeparator, Model.CustomTipPercentages);
+        var tipPercentages = string.IsNullOrEmpty(Model!.CustomTipPercentages) ? null : AppItemParser.SplitStringListToInts(ListSeparator, Model.CustomTipPercentages);
         Dispatcher.Dispatch(new StoreState.UpdatePointOfSale(AppId!, new PointOfSaleAppRequest
         {
             Title = Model!.Title,

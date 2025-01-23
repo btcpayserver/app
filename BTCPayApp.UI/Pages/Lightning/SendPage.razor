@@ -98,7 +98,7 @@
 
     private async void SendPayment()
     {
-        if (Node is null || string.IsNullOrEmpty(Model.PaymentRequest)) return;
+        if (Node is null || PaymentsManager is null || string.IsNullOrEmpty(Model.PaymentRequest)) return;
         _successMessage = _errorMessage = null;
         _paymentSending = true;
         await Wrap(async () =>
@@ -106,7 +106,7 @@
             try
             {
                 var invoice = BOLT11PaymentRequest.Parse(Model.PaymentRequest, Node.Network);
-                var result = await Node.PaymentsManager.PayInvoice(invoice, Model.Amount is null ? null : LightMoney.Satoshis((long)Model.Amount.Value));
+                var result = await PaymentsManager.PayInvoice(invoice, Model.Amount is null ? null : LightMoney.Satoshis((long)Model.Amount.Value));
                 _successMessage = $"Payment {result.PaymentId} sent with status {result.Status}";
                 Model = new SendModel();
             }

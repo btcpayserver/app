@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Headers;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using BTCPayApp.Core.Auth;
@@ -44,9 +44,9 @@ public class SyncService(
     public async Task<bool> EncryptionKeyRequiresImport()
     {
         var dataProtector = await GetDataProtector();
-
         if (dataProtector is not null)
             return false;
+
         var api = await GetUnencryptedVSSAPI();
         try
         {
@@ -60,6 +60,7 @@ public class SyncService(
 
             if (dataProtector is null)
                 return true;
+
             var decrypted = dataProtector.Unprotect(res.Value.ToByteArray());
             return "kukks" == Encoding.UTF8.GetString(decrypted);
         }
@@ -92,7 +93,7 @@ public class SyncService(
 
         try
         {
-            var res = await api.GetObjectAsync(new GetObjectRequest()
+            var res = await api.GetObjectAsync(new GetObjectRequest
             {
                 Key = "encryptionKeyTest"
             });
@@ -106,10 +107,7 @@ public class SyncService(
                     EncryptionKeyChanged?.Invoke(this);
                     return true;
                 }
-                else
-                {
-                    return false;
-                }
+                return false;
             }
         }
         catch (VSSClientException e) when (e.Error.ErrorCode == ErrorCode.NoSuchKeyException)
@@ -117,7 +115,7 @@ public class SyncService(
         }
         catch (Exception e)
         {
-            logger.LogError("Error while setting encryption key: {message}", e.Message);
+            logger.LogError("Error while setting encryption key: {Message}", e.Message);
             return false;
         }
 
@@ -158,17 +156,17 @@ public class SyncService(
 
     private static async Task<KeyValue[]> CreateLocalVersions(AppDbContext dbContext)
     {
-        var settings = dbContext.Settings.Where(setting => setting.Backup).Select(setting => new KeyValue()
+        var settings = dbContext.Settings.Where(setting => setting.Backup).Select(setting => new KeyValue
         {
             Key = setting.EntityKey,
             Version = setting.Version
         });
-        var channels = dbContext.LightningChannels.Select(channel => new KeyValue()
+        var channels = dbContext.LightningChannels.Select(channel => new KeyValue
         {
             Key = channel.EntityKey,
             Version = channel.Version
         });
-        var payments = dbContext.LightningPayments.Select(payment => new KeyValue()
+        var payments = dbContext.LightningPayments.Select(payment => new KeyValue
         {
             Key = payment.EntityKey,
             Version = payment.Version
@@ -206,21 +204,19 @@ public class SyncService(
             var toUpsert = remoteVersions.KeyVersions.Where(remoteVersion => localVersions.All(localVersion =>
                 localVersion.Key != remoteVersion.Key || localVersion.Version < remoteVersion.Version)).Where(value => value.Key != "encryptionKeyTest").ToArray();
 
-            if (toDelete.Length == 0 && !toUpsert.Any())
+            if (toDelete.Length == 0 && toUpsert.Length == 0)
                 return;
             logger.LogInformation("Syncing to local: {ToDelete} to delete, {ToUpsert} to upsert", toDelete.Length,
-                toUpsert.Count());
+                toUpsert.Length);
 
             foreach (var upsertItem in toUpsert)
             {
-                if (upsertItem.Value is null or {Length: 0})
+                if (upsertItem.Value is not (null or { Length: 0 })) continue;
+                var item = await backupApi.GetObjectAsync(new GetObjectRequest()
                 {
-                    var item = await backupApi.GetObjectAsync(new GetObjectRequest()
-                    {
-                        Key = upsertItem.Key,
-                    }, cancellationToken);
-                    upsertItem.MergeFrom(item.Value);
-                }
+                    Key = upsertItem.Key,
+                }, cancellationToken);
+                upsertItem.MergeFrom(item.Value);
             }
 
             var settingsToDelete = toDelete.Where(key => key.Key.StartsWith("Setting_")).Select(key => key.Key);
@@ -281,7 +277,7 @@ public class SyncService(
                     setting1.EntityKey == outbox.Key && setting1.Backup);
                 if (setting == null)
                     return null;
-                return new KeyValue()
+                return new KeyValue
                 {
                     Key = outbox.Key,
                     Value = ByteString.CopyFrom(setting.Value),
@@ -413,14 +409,14 @@ public class SyncService(
                 if (local)
                     await SyncToLocal(cancellationToken);
                 else
-                    await SyncToRemote( cancellationToken);
+                    await SyncToRemote(cancellationToken);
             }
             catch (OperationCanceledException)
             {
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Error while syncing to {Local}", local ? "local" : "remote");
+                logger.LogError(e, "Error while syncing to {Target}", local ? "local" : "remote");
             }
             finally
             {

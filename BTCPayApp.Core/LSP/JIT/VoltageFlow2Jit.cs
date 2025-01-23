@@ -73,7 +73,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
 
     private async Task<FlowInfoResponse> GetInfo(CancellationToken cancellationToken = default)
     {
-        var path = "/api/v1/info";
+        const string path = "/api/v1/info";
         var response = await _httpClient.GetAsync(path, cancellationToken);
         try
         {
@@ -91,7 +91,7 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     private async Task<FlowFeeResponse> GetFee(LightMoney amount, PubKey pubkey,
         CancellationToken cancellationToken = default)
     {
-        var path = "/api/v1/fee";
+        const string path = "/api/v1/fee";
         var request = new FlowFeeRequest(amount, pubkey);
         var response = await _httpClient.PostAsJsonAsync(path, request, cancellationToken);
         try

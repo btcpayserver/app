@@ -2,14 +2,14 @@
 
 @inject DisplayFormatter DisplayFormatter
 
-<span @onclick="ToggleDisplayCurrency" @onclick:stopPropagation class="@CssClass">@DisplayFormatter.Currency(Value!.Value, Unit!, DisplayFormatter.CurrencyFormat.Symbol)</span>
+<span @onclick="ToggleDisplayCurrency" @onclick:stopPropagation class="@CssClass">@DisplayFormatter.Currency(Value, Unit, DisplayFormatter.CurrencyFormat.Symbol)</span>
 
 @code {
     [Parameter, EditorRequired]
-    public decimal? Value { get; set; }
+    public required decimal Value { get; set; }
 
     [Parameter, EditorRequired]
-    public string? Unit { get; set; }
+    public required string Unit { get; set; }
 
     [Parameter]
     public EventCallback OnToggleDisplayCurrency { get; set; }
