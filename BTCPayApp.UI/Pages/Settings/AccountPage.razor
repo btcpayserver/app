@@ -1,9 +1,12 @@
 ﻿@attribute [Route(Routes.Account)]
-@using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Contracts
+@using BTCPayApp.Core.Models
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
+@inject IState<UserState> UserState
+@inject IActionSubscriber ActionSubscriber
 @inject IAccountManager AccountManager
 @inject IDataDirectoryProvider DataDirectoryProvider
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -20,7 +23,7 @@
         <h2 class="mb-0">Your Account</h2>
     </div>
     <div class="box">
-        <ValidationEditContext Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage" enctype="multipart/form-data">
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error" enctype="multipart/form-data">
             <DataAnnotationsValidator/>
             <div class="form-group">
                 <label for="Email" class="form-label" data-required>Email</label>
@@ -52,8 +55,8 @@
                 <ValidationMessage For="@(() => Model.ImageUrl)"/>
             </div>
 
-            <button type="submit" class="btn btn-primary w-100" disabled="@(_sending)">
-                @if (_sending)
+            <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
+                @if (Sending)
                 {
                     <LoadingIndicator/>
                 }
@@ -67,56 +70,63 @@
 </section>
 
 @code {
+    private ValidationEditContext? _validationEditContext;
     private AccountModel Model { get; set; } = new();
-    private bool _sending;
     private string? _errorMessage;
     private string? _successMessage;
     private Guid _inputFileId = Guid.NewGuid();
+    private AppUserInfo? User => UserState.Value.Info?.Data;
+    private bool Sending => UserState.Value.Info?.Sending is true;
+    private string? Error => _errorMessage ?? UserState.Value.Info?.Error;
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        AccountManager.OnAccountInfoChange += OnAccountInfoChange;
-
-        var account = AccountManager.GetAccount()!;
-
-        Model = new AccountModel
+        ActionSubscriber.SubscribeToAction<UserState.SetInfo>(this, action =>
         {
-            Email = account.Email,
-            Name = account.Name,
-            ImageUrl = account.ImageUrl
-        };
+            if (action.Info == null) return;
+            UpdateModel(action.Info);
+            InvokeAsync(StateHasChanged);
+        });
+
+        ActionSubscriber.SubscribeToAction<UserState.UpdatedUser>(this, action =>
+        {
+            if (action.UserData == null || action.Error != null) return;
+            _successMessage = "Your account information has been changed.";
+            InvokeAsync(StateHasChanged);
+        });
+
+        if (User != null)
+            UpdateModel(User);
     }
 
     protected override ValueTask DisposeAsyncCore(bool disposing)
     {
         base.DisposeAsyncCore(disposing);
 
-        AccountManager.OnAccountInfoChange -= OnAccountInfoChange;
+        ActionSubscriber.UnsubscribeFromAllActions(this);
 
         return ValueTask.CompletedTask;
     }
 
-    private async Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
+    private void UpdateModel(AppUserInfo? user)
     {
         Model = new AccountModel
         {
-            Email = account?.Email,
-            Name = account?.Name,
-            ImageUrl = account?.ImageUrl
+            Email = user?.Email,
+            Name = user?.Name,
+            ImageUrl = user?.ImageUrl
         };
-        await InvokeAsync(StateHasChanged);
     }
 
     public async Task HandleValidSubmit()
     {
         _errorMessage = _successMessage = null;
-        _sending = true;
 
         try
         {
-            if (!string.IsNullOrEmpty(Model!.ImagePath))
+            if (!string.IsNullOrEmpty(Model.ImagePath))
             {
                 var path = Model.ImagePath;
                 var mimeType = FileHelper.GetContentType(path);
@@ -127,7 +137,7 @@
                 Model.ImagePath = null;
                 _inputFileId = Guid.NewGuid();
             }
-            else if (string.IsNullOrEmpty(Model!.ImageUrl))
+            else if (string.IsNullOrEmpty(Model.ImageUrl))
             {
                 await AccountManager.GetClient().DeleteCurrentUserProfilePicture();
             }
@@ -135,13 +145,11 @@
         catch (Exception e)
         {
             _errorMessage = e.Message;
-            _sending = false;
             return;
         }
 
+        // TODO: Use state for modifying actions
         var result = await AccountManager.ChangeAccountInfo(Model.Email!, Model.Name, Model.ImageUrl);
-        _sending = false;
-
         if (result.Succeeded)
         {
             var userData = result.Response!;
@@ -151,7 +159,6 @@
                 Name = userData.Name,
                 ImageUrl = userData.ImageUrl
             };
-            _successMessage = string.Join(",", result.Messages ?? ["Your account information has been changed."]);
         }
         else
         {
@@ -172,7 +179,7 @@
             await using FileStream fs = new(filePath, FileMode.Create);
             await e.File.OpenReadStream().CopyToAsync(fs);
             await fs.FlushAsync();
-            Model!.ImagePath = filePath;
+            Model.ImagePath = filePath;
             _errorMessage = null;
         }
         catch (Exception ex)
@@ -183,11 +190,10 @@
 
     private void UnsetProfilePicture()
     {
-        Model!.ImageUrl = null;
+        Model.ImageUrl = null;
         Model.ImagePath = null;
         _inputFileId = Guid.NewGuid();
     }
-
 
     private class AccountModel
     {
