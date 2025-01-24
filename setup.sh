@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ ! -v CI ]]; then
+if [ ! -v CI ]; then
   # Initialize the server submodule
   git submodule init && git submodule update --recursive
 
