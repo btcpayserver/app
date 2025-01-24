@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using BTCPayApp.Core.Auth;
@@ -26,7 +26,7 @@ public class SyncService(
 {
     public AsyncEventHandler? EncryptionKeyChanged;
     public AsyncEventHandler<(List<Outbox> OutboxItemsProcesed, PutObjectRequest RemoteRequest)>? RemoteObjectUpdated;
-    private AsyncEventHandler<string[]>? _localUpdated;
+    public AsyncEventHandler<string[]>? LocalUpdated;
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
     private readonly SemaphoreSlim _syncLock = new(1, 1);
 
@@ -256,7 +256,7 @@ public class SyncService(
             await db.Database.CommitTransactionAsync(cancellationToken);
             logger.LogInformation("Synced to local: {DeleteCount} deleted, {UpsertCount} upserted", deleteCount,
                 upsertCount);
-            _localUpdated?.Invoke(this, toDelete.Concat(toUpsert).Select(key => key.Key).ToArray());
+            LocalUpdated?.Invoke(this, toDelete.Concat(toUpsert).Select(key => key.Key).ToArray());
             settingsToUpsert.Select(setting => setting.Key).Concat(settingsToDelete).Distinct().ToList()
                 .ForEach(key => configProvider.Updated?.Invoke(this, key));
         }
@@ -430,6 +430,6 @@ public class SyncService(
     {
         RemoteObjectUpdated = null;
         EncryptionKeyChanged = null;
-        _localUpdated = null;
+        LocalUpdated = null;
     }
 }

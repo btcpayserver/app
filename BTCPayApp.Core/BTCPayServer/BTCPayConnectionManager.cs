@@ -266,7 +266,6 @@ public class BTCPayConnectionManager(
                 var authState = await accountManager.CheckAuthenticated();
                 if (ConnectionState == BTCPayConnectionState.WaitingForAuth && authState)
                 {
-
                     ConnectionState = BTCPayConnectionState.Connecting;
                 }
                 else if (ConnectionState > BTCPayConnectionState.WaitingForAuth && !authState)

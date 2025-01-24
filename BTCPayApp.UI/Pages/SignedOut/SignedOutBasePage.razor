@@ -163,8 +163,7 @@
     protected async Task RedirectForAuthState(Task<AuthenticationState> authTask)
     {
         var authState = await authTask;
-        var accounts = await AccountManager.GetAccounts();
-        var route = accounts.Any() ? Routes.Connect : Routes.Welcome;
+        var route = AccountManager.GetAccount() != null ? Routes.Connect : Routes.Welcome;
         if (authState.User.Identity?.IsAuthenticated is true)
         {
             var storeId = AccountManager.GetCurrentStore()?.Id;
