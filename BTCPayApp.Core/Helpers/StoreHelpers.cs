@@ -26,7 +26,7 @@ public static class StoreHelpers
          OnChainWalletManager onChainWalletManager, LightningNodeManager lightningNodeService, bool applyOnchain, bool applyLighting)
     {
         var storeId = accountManager.GetCurrentStore()?.Id;
-        var userId = accountManager.GetUserInfo()?.UserId;
+        var userId = accountManager.UserInfo?.UserId;
         var config = await onChainWalletManager.GetConfig();
         if (// are user and store present?
             string.IsNullOrEmpty(userId) ||

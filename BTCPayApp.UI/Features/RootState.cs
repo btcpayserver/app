@@ -22,12 +22,10 @@ public record RootState
         [EffectMethod]
         public Task HandleConnectionStateUpdatedAction(RootState.ConnectionStateUpdatedAction action, IDispatcher dispatcher)
         {
-            if(action.State == BTCPayConnectionState.WaitingForEncryptionKey)
+            if (action.State == BTCPayConnectionState.WaitingForEncryptionKey)
             {
-
                 dispatcher.Dispatch(new GoAction(navigationManager.ToAbsoluteUri(Routes.EncryptionKey).ToString()));
             }
-
             return Task.CompletedTask;
         }
     }

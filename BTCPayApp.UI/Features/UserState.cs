@@ -10,10 +10,7 @@ public record UserState
 {
     public RemoteData<AppUserInfo>? Info;
 
-    public record FetchInfo(
-        TaskCompletionSource<AppUserInfo?> TaskCompletionSource,
-        CancellationToken CancellationToken = default);
-
+    public record FetchInfo;
     public record SetInfo(AppUserInfo? Info, string? Error);
     public record UpdateUser(UpdateApplicationUserRequest Request);
     public record UpdatedUser(ApplicationUserData? UserData, string? Error);
@@ -91,14 +88,12 @@ public record UserState
         {
             try
             {
-                var info = await accountManager.GetClient().GetUserInfo(action.CancellationToken);
-                action.TaskCompletionSource.SetResult(info);
+                var info = await accountManager.GetClient().GetUserInfo();
                 dispatcher.Dispatch(new SetInfo(info, null));
             }
             catch (Exception e)
             {
                 var error = e.InnerException?.Message ?? e.Message;
-                action.TaskCompletionSource.SetResult(null);
                 dispatcher.Dispatch(new SetInfo(null, error));
             }
         }

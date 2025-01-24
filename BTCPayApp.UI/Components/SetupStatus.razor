@@ -49,7 +49,7 @@
     }
 
     public SetupState SetupStateAccount() {
-        return string.IsNullOrEmpty(AccountManager.GetAccount()?.CurrentStoreId) ? SetupState.Pending : SetupState.Completed;
+        return string.IsNullOrEmpty(AccountManager.GetCurrentStore()?.Id) ? SetupState.Pending : SetupState.Completed;
     }
 
     public SetupState SetupStateOnchain() {

@@ -7,6 +7,8 @@
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 @inject IState<UserState> UserState
+@inject IDispatcher Dispatcher
+@inject IActionSubscriber ActionSubscriber
 <PageTitle>Select your store</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
@@ -16,18 +18,27 @@
 </SectionContent>
 
 <section class="container">
-    @if (!string.IsNullOrEmpty(_errorMessage))
+    @if (UserInfo is null)
     {
-        <Alert Type="danger">@_errorMessage</Alert>
+        if (Loading)
+        {
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
     }
-    @if (Stores?.Any() is true)
+    else if (Stores?.Any() is true)
     {
         if (string.IsNullOrEmpty(_initialStoreId))
         {
             <p class="lead text-secondary mb-4 text-center">Select a store to begin accepting payments.</p>
             <style>#NavbarBottom { display: none; }</style>
         }
-        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
+        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@Error">
             <DataAnnotationsValidator />
             <InputRadioGroup Name="StoreIds" @bind-Value="@Model.StoreId">
                 <ul class="list-group list-group-flush mb-3">
@@ -84,14 +95,34 @@
         await base.OnInitializedAsync();
 
         _initialStoreId = Model.StoreId = AccountManager.GetCurrentStore()?.Id;
+
+        ActionSubscriber.SubscribeToAction<UserState.SetInfo>(this, action =>
+        {
+            if (action.Info == null) return;
+            InvokeAsync(HandleUpdate);
+        });
+
+        if (UserInfo != null)
+            await HandleUpdate();
+        else
+            Dispatcher.Dispatch(new UserState.FetchInfo());
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        ActionSubscriber.UnsubscribeFromAllActions(this);
+
+        return ValueTask.CompletedTask;
+    }
+
+    private async Task HandleUpdate()
+    {
         if (Stores?.Any() is not true)
-        {
             NavigationManager.NavigateTo(Routes.CreateStore);
-        }
-        /*else if (Stores?.Count() == 1)
-        {
-            await SelectStore(_userInfo!.Stores!.First().Id!);
-        }*/
+        else if (Stores?.Count() == 1)
+            await SelectStore(Stores!.First().Id);
     }
 
     private async Task HandleValidSubmit()
@@ -138,5 +169,7 @@
 
     private AppUserInfo? UserInfo => UserState.Value.Info?.Data;
     private IEnumerable<AppUserStoreInfo>? Stores => UserInfo?.Stores;
+    private bool Loading => UserState.Value.Info?.Loading is true;
+    private string? Error => _errorMessage ?? UserState.Value.Info?.Error;
     private string GetCreateStoreUrl() => NavigationManager.GetUriWithQueryParameters(Routes.CreateStore, new Dictionary<string, object?> { {"backUrl", Routes.SelectStore } } );
 }

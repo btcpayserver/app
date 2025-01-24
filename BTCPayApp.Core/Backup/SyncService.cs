@@ -138,7 +138,7 @@ public class SyncService(
 
     private Task<IVSSAPI> GetUnencryptedVSSAPI()
     {
-        var account = accountManager.GetAccount();
+        var account = accountManager.Account;
         if (account is null)
             throw new InvalidOperationException("Account not found");
         var vssUri = new Uri(new Uri(account.BaseUri), "vss/");

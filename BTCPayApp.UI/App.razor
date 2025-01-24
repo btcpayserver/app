@@ -2,6 +2,7 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Pages
 @using BTCPayApp.Core.Contracts
+@using BTCPayApp.UI.Pages.SignedOut
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IDispatcher Dispatcher
 @inject IAccountManager AccountManager
@@ -40,7 +41,7 @@
         // signed in
         if (AuthState == null) return;
         var authState = await AuthState;
-        var account = AccountManager.GetAccount();
+        var account = AccountManager.Account;
         if (authState.User.Identity?.IsAuthenticated is true && !string.IsNullOrEmpty(account?.BaseUri))
         {
             Dispatcher.Dispatch(new UIState.FetchInstanceInfo(account.BaseUri));
@@ -63,7 +64,7 @@
                         <RedirectToIndex/>
                     </NotAuthorized>
                     <Authorizing>
-                        <LoadingPage Title="Loading"/>
+                        <IndexPage />
                     </Authorizing>
                 </AuthorizeRouteView>
                 <FocusOnNavigate RouteData="@routeData" Selector="h1"/>

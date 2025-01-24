@@ -15,7 +15,6 @@
 @inject ConfigProvider ConfigProvider
 @inject IAccountManager AccountManager
 @inject IFingerprint Fingerprint
-@inject IState<UIState> UIState
 @inject IState<UserState> UserState
 @inject IState<StoreState> StoreState
 @inject BTCPayConnectionManager ConnectionManager
@@ -41,9 +40,19 @@
                 </div>
             }
         </header>
-        <div class="box user mb-2 d-flex align-items-center justify-content-between gap-3 my-4">
-            <UserSwitch Users="@StoreUsers"/>
-        </div>
+        @if (CurrentUser != null)
+        {
+            <div class="box user mb-2 d-flex align-items-center justify-content-between gap-3 my-4">
+                @if (StoreUsers?.Count() > 1 && HasPasscode)
+                {
+                    <UserSwitch CurrentUser="@CurrentUser" Users="@StoreUsers"/>
+                }
+                else
+                {
+                    <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl" />
+                }
+            </div>
+        }
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
                 <li class="list-group-item">
@@ -66,7 +75,7 @@
         <h2>Store</h2>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
-                @if (UserInfo?.Stores?.Count() > 1 || CurrentStore == null)
+                @if (CurrentUser?.Stores?.Count() > 1 || CurrentStore == null)
                 {
                     <li class="list-group-item">
                         <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : "justify-content-start")">
@@ -278,8 +287,8 @@
     private SettingsModel Model { get; set; } = new();
     private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
     private AppUserStoreInfo? CurrentStore => AccountManager.GetCurrentStore();
-    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
-    private AppUserInfo? UserInfo => UserState.Value.Info?.Data;
+    private AppInstanceInfo? InstanceInfo => UiState.Value.Instance?.Data;
+    private AppUserInfo? CurrentUser => UserState.Value.Info?.Data;
     private IEnumerable<StoreUserData>? StoreUsers => StoreState.Value.Users?.Data;
 
     private class SettingsModel
@@ -291,27 +300,10 @@
     {
         await base.OnInitializedAsync();
 
-        AccountManager.OnAccountInfoChange += OnAccountInfoChange;
-
         Model.Theme = UiState.Value.SelectedTheme;
-        _account = AccountManager.GetAccount();
+        _account = AccountManager.Account;
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
         _biometricAuthAvailable = await Fingerprint.IsAvailableAsync();
-    }
-
-    protected override ValueTask DisposeAsyncCore(bool disposing)
-    {
-        base.DisposeAsyncCore(disposing);
-
-        AccountManager.OnAccountInfoChange -= OnAccountInfoChange;
-
-        return ValueTask.CompletedTask;
-    }
-
-    private async Task OnAccountInfoChange(object? sender, BTCPayAccount? account)
-    {
-        _account = account;
-        await InvokeAsync(StateHasChanged);
     }
 
     // TODO: Guard with passcode entering
@@ -320,7 +312,7 @@
         if (HasPasscode)
         {
             _config!.Passcode = null;
-            await ConfigProvider.Set(BTCPayAppConfig.Key, _config, false);
+            await ConfigProvider.Set(BTCPayAppConfig.Key, _config, true);
         }
     }
 

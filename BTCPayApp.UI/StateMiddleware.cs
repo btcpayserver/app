@@ -61,7 +61,7 @@ public class StateMiddleware(
         dispatcher.Dispatch(new RootState.ConnectionStateUpdatedAction(btcPayConnectionManager.ConnectionState));
         dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
         dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
-        dispatcher.Dispatch(new UserState.SetInfo(accountManager.GetUserInfo(), null));
+        dispatcher.Dispatch(new UserState.SetInfo(accountManager.UserInfo, null));
 
         btcPayConnectionManager.ConnectionChanged += async (sender, args) =>
         {
@@ -138,8 +138,7 @@ public class StateMiddleware(
             dispatcher.Dispatch(new StoreState.SetStoreInfo(storeInfo));
             if (storeInfo != null)
             {
-                navigationManager.NavigateTo(Routes.Dashboard);
-               var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, true);
+                var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, true);
                 if (res is { onchain: {} onchain } && await onChainWalletManager.IsOnChainOurs(onchain))
                 {
                     dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeInfo.Id));
@@ -154,10 +153,8 @@ public class StateMiddleware(
                 if (storeInfo.PosAppId != null)
                     dispatcher.Dispatch(new StoreState.FetchPointOfSaleStats(storeInfo.PosAppId));
             }
-            else
-            {
-                navigationManager.NavigateTo(Routes.SelectStore, true, true);
-            }
+
+            navigationManager.NavigateTo(Routes.Index);
         };
 
         accountManager.OnUserInfoChange += (sender, userInfo) =>
@@ -169,7 +166,7 @@ public class StateMiddleware(
         btcpayAppServerClient.OnNotifyServerEvent += async (sender, serverEvent) =>
         {
             logger.LogDebug("Received Server Event: {Type} - {Info} ({Detail})", serverEvent.Type, serverEvent.ToString(), serverEvent.Detail ?? "no details");
-            var currentUserId = accountManager.GetUserInfo()?.UserId;
+            var currentUserId = accountManager.UserInfo?.UserId;
             if (string.IsNullOrEmpty(currentUserId)) return;
             var currentStore = accountManager.GetCurrentStore();
             var isCurrentStore = serverEvent.StoreId != null && currentStore != null && serverEvent.StoreId == currentStore.Id;
@@ -225,7 +222,7 @@ public class StateMiddleware(
                         await accountManager.CheckAuthenticated(true);
                         if (currentStore == null || serverEvent.StoreId != currentStore.Id) return;
                         if (serverEvent.Type is "store-removed" or "store-user-removed")
-                            await accountManager.UnsetCurrentStore();
+                            await accountManager.SetCurrentStoreId(null);
                         if (serverEvent.Type is "store-updated")
                             dispatcher.Dispatch(new StoreState.FetchStore(serverEvent.StoreId!));
                         if (serverEvent.Type.StartsWith("store-user-"))

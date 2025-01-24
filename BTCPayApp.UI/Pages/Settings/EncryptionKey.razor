@@ -36,7 +36,7 @@
                 <div class="form-group">
                     <label for="EncryptionKey" class="form-label">Your Encryption Key</label>
                     <div class="d-flex gap-2">
-                        <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" />
+                        <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" autocomplete="off" />
                         <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
                             <Icon Symbol="scan-qr"/>
                         </button>

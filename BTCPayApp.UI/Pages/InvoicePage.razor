@@ -338,7 +338,7 @@
     private InvoicePaymentMethodDataModel[]? PaymentMethods => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoicePaymentMethods(InvoiceId!)?.Data : null;
     private bool PaymentMethodsLoading => !string.IsNullOrEmpty(InvoiceId) && StoreState.Value.GetInvoicePaymentMethods(InvoiceId!)?.Loading is true;
     private string? PaymentMethodsError => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoicePaymentMethods(InvoiceId!)?.Error : null;
-    private string? ReceiptUrl => Invoice is { Status: InvoiceStatus.Settled, Receipt.Enabled: true } ? $"{AccountManager.GetAccount()!.BaseUri}i/{InvoiceId}/receipt" : null;
+    private string? ReceiptUrl => Invoice is { Status: InvoiceStatus.Settled, Receipt.Enabled: true } ? $"{AccountManager.Account!.BaseUri}i/{InvoiceId}/receipt" : null;
     private List<PaymentViewModel>? Payments => PaymentMethods?.SelectMany(pm => pm.Payments.Select(p => new PaymentViewModel { Payment = p, PaymentMethod = pm })).ToList();
 
     private class PaymentViewModel

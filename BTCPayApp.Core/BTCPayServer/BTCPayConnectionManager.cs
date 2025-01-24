@@ -115,7 +115,7 @@ public class BTCPayConnectionManager(
         var newState = e.New;
         try
         {
-            var account = accountManager.GetAccount();
+            var account = accountManager.Account;
             switch (e.New)
             {
                 case BTCPayConnectionState.Init:
@@ -144,7 +144,7 @@ public class BTCPayConnectionManager(
                         .WithUrl(url, options =>
                         {
                             options.AccessTokenProvider = () =>
-                                Task.FromResult(accountManager.GetAccount()?.AccessToken);
+                                Task.FromResult(accountManager.Account?.AccessToken);
                             options.HttpMessageHandlerFactory = serviceProvider
                                 .GetService<Func<HttpMessageHandler, HttpMessageHandler>>();
                             options.WebSocketConfiguration =
@@ -202,6 +202,12 @@ public class BTCPayConnectionManager(
                             await syncService.SyncToLocal();
                         }
                         newState = BTCPayConnectionState.ConnectedFinishedInitialSync;
+
+                        var config = await configProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
+                        if (!string.IsNullOrEmpty(config?.CurrentStoreId))
+                        {
+                            await accountManager.SetCurrentStoreId(config.CurrentStoreId);
+                        }
                     }
                     break;
                 case BTCPayConnectionState.ConnectedFinishedInitialSync:

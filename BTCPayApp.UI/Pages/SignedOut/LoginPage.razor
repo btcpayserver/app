@@ -108,7 +108,7 @@
         }
 
         // See if we had a previous session/account
-        var account = AccountManager.GetAccount();
+        var account = AccountManager.Account;
         if (string.IsNullOrEmpty(ServerUrl) || Model.Uri == account?.BaseUri)
         {
             Model.Uri = account?.BaseUri;

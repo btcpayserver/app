@@ -20,5 +20,5 @@
 
     private bool _iframeLoaded;
 
-    private string? CheckoutUrl => string.IsNullOrEmpty(InvoiceId) ? null : $"{AccountManager.GetAccount()!.BaseUri}i/{InvoiceId}";
+    private string? CheckoutUrl => string.IsNullOrEmpty(InvoiceId) ? null : $"{AccountManager.Account!.BaseUri}i/{InvoiceId}";
 }

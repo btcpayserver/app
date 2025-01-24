@@ -13,35 +13,38 @@ namespace BTCPayApp.Core.Auth;
 
 public class AuthStateProvider(
     IHttpClientFactory clientFactory,
-    ConfigProvider configProvider,
     IAuthorizationService authService,
+    ConfigProvider configProvider,
     IOptionsMonitor<IdentityOptions> identityOptions)
     : AuthenticationStateProvider, IAccountManager, IHostedService
 {
-    private const string AccountKeyPrefix = "Account";
-    private const string CurrentAccountKey = "CurrentAccount";
     private bool _isInitialized;
     private bool _refreshUserInfo;
-    private BTCPayAccount? _account;
-    private AppUserInfo? _userInfo;
     private CancellationTokenSource? _pingCts;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly ClaimsPrincipal _unauthenticated = new(new ClaimsIdentity());
 
-    public BTCPayAccount? GetAccount() => _account;
-    public AppUserInfo? GetUserInfo() => _userInfo;
-
+    public BTCPayAccount? Account { get; private set; }
+    public AppUserInfo? UserInfo { get; private set; }
+    public string? CurrentStoreId { get; private set; }
     public AsyncEventHandler<BTCPayAccount?>? OnBeforeAccountChange { get; set; }
     public AsyncEventHandler<BTCPayAccount?>? OnAfterAccountChange { get; set; }
     public AsyncEventHandler<AppUserStoreInfo?>? OnBeforeStoreChange { get; set; }
     public AsyncEventHandler<AppUserStoreInfo?>? OnAfterStoreChange { get; set; }
-    public AsyncEventHandler<BTCPayAccount?>? OnAccountInfoChange { get; set; }
     public AsyncEventHandler<AppUserInfo?>? OnUserInfoChange { get; set; }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _pingCts = new CancellationTokenSource();
+        //syncService.LocalUpdated += SyncServiceLocalUpdated;
         _ = PingOccasionally(_pingCts.Token);
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        //syncService.LocalUpdated -= SyncServiceLocalUpdated;
+        _pingCts?.Cancel();
         return Task.CompletedTask;
     }
 
@@ -54,17 +57,20 @@ public class AuthStateProvider(
         }
     }
 
-    public Task StopAsync(CancellationToken cancellationToken)
+    /*private Task SyncServiceLocalUpdated(object? sender, string[] keys)
     {
-        _pingCts?.Cancel();
+        if (keys.Contains(BTCPayAppConfig.Key))
+        {
+            // TODO: Implement this method
+        }
         return Task.CompletedTask;
-    }
+    }*/
 
     public BTCPayAppClient GetClient(string? baseUri = null)
     {
-        if (string.IsNullOrEmpty(baseUri) && string.IsNullOrEmpty(_account?.BaseUri))
+        if (string.IsNullOrEmpty(baseUri) && string.IsNullOrEmpty(Account?.BaseUri))
             throw new ArgumentException("No base URI present or provided.", nameof(baseUri));
-        return new BTCPayAppClient(baseUri ?? _account!.BaseUri, _account?.AccessToken, clientFactory.CreateClient());
+        return new BTCPayAppClient(baseUri ?? Account!.BaseUri, Account?.AccessToken, clientFactory.CreateClient());
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -76,48 +82,46 @@ public class AuthStateProvider(
             await _semaphore.WaitAsync();
 
             // initialize with persisted account
-            if (!_isInitialized && _account == null)
+            if (!_isInitialized && Account == null)
             {
-                _account = await GetCurrentAccount();
+                Account = await configProvider.Get<BTCPayAccount>(BTCPayAccount.Key);
+                CurrentStoreId = (await configProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key))?.CurrentStoreId;
                 _isInitialized = true;
             }
 
-            var oldUserInfo = _userInfo;
-            var needsRefresh = _refreshUserInfo || _userInfo == null;
-            if (needsRefresh && !string.IsNullOrEmpty(_account?.AccessToken))
+            var oldUserInfo = UserInfo;
+            var needsRefresh = _refreshUserInfo || UserInfo == null;
+            if (needsRefresh && !string.IsNullOrEmpty(Account?.AccessToken))
             {
                 var cts = new CancellationTokenSource(5000);
-                _userInfo = await GetClient().GetUserInfo(cts.Token);
+                UserInfo = await GetClient().GetUserInfo(cts.Token);
                 _refreshUserInfo = false;
             }
 
-            if (_userInfo != null)
+            if (Account != null && UserInfo != null)
             {
                 var claims = new List<Claim>
                 {
-                    new(identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType, _userInfo.UserId!),
-                    new(identityOptions.CurrentValue.ClaimsIdentity.UserNameClaimType, _userInfo.Name ?? _userInfo.Email!),
-                    new(identityOptions.CurrentValue.ClaimsIdentity.EmailClaimType, _userInfo.Email!)
+                    new(identityOptions.CurrentValue.ClaimsIdentity.UserIdClaimType, UserInfo.UserId!),
+                    new(identityOptions.CurrentValue.ClaimsIdentity.UserNameClaimType, UserInfo.Name ?? UserInfo.Email!),
+                    new(identityOptions.CurrentValue.ClaimsIdentity.EmailClaimType, UserInfo.Email!)
                 };
-                if (_userInfo.Roles?.Any() is true)
-                    claims.AddRange(_userInfo.Roles.Select(role =>
+                if (UserInfo.Roles?.Any() is true)
+                    claims.AddRange(UserInfo.Roles.Select(role =>
                         new Claim(identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, role)));
-                if (_userInfo.Stores?.Any() is true)
-                    claims.AddRange(_userInfo.Stores.Select(store =>
+                if (UserInfo.Stores?.Any() is true)
+                    claims.AddRange(UserInfo.Stores.Select(store =>
                         new Claim(store.Id, string.Join(',', store.Permissions ?? []))));
                 user = new ClaimsPrincipal(new ClaimsIdentity(claims, "Greenfield"));
             }
 
             var res = new AuthenticationState(user);
-            if (AppUserInfo.Equals(oldUserInfo, _userInfo)) return res;
+            if (AppUserInfo.Equals(oldUserInfo, UserInfo)) return res;
 
-            if (_userInfo != null)
+            if (Account != null && UserInfo != null)
             {
-                OnUserInfoChange?.Invoke(this, _userInfo);
-                // update account user info
-                _account!.SetInfo(_userInfo.Email!, _userInfo.Name, _userInfo.ImageUrl);
-                OnAccountInfoChange?.Invoke(this, _account);
-                await UpdateAccount(_account);
+                OnUserInfoChange?.Invoke(this, UserInfo);
+                await UpdateAccount(Account);
             }
 
             NotifyAuthenticationStateChanged(Task.FromResult(res));
@@ -125,7 +129,7 @@ public class AuthStateProvider(
         }
         catch
         {
-            _userInfo = null;
+            UserInfo = null;
             return new AuthenticationState(user);
         }
         finally
@@ -138,7 +142,7 @@ public class AuthStateProvider(
     {
         if (refreshUser) _refreshUserInfo = true;
         await GetAuthenticationStateAsync();
-        return _userInfo != null;
+        return UserInfo != null;
     }
 
     public async Task<bool> IsAuthorized(string policy, object? resource = null)
@@ -148,46 +152,37 @@ public class AuthStateProvider(
         return result.Succeeded;
     }
 
-    public async Task Logout()
+    public async Task<FormResult> SetCurrentStoreId(string? storeId)
     {
-        _userInfo = null;
-        OnUserInfoChange?.Invoke(this, _userInfo);
-        if (_account == null) return;
-        _account.AccessToken = null;
-        await UpdateAccount(_account);
-        await SetCurrentAccount(null);
-    }
+        if (!string.IsNullOrEmpty(storeId))
+        {
+            var store = GetUserStore(storeId);
+            if (store == null) return new FormResult(false, $"Store with ID '{storeId}' does not exist or belong to the user.");
 
-    public async Task<FormResult> SetCurrentStoreId(string storeId)
-    {
-        var store = GetUserStore(storeId);
-        if (store == null) return new FormResult(false, $"Store with ID '{storeId}' does not exist or belong to the user.");
-
-        if (store.Id != GetCurrentStore()?.Id)
-            await SetCurrentStore(store);
-
+            if (store.Id != GetCurrentStore()?.Id)
+                await SetCurrentStore(store);
+        }
+        else
+        {
+            await SetCurrentStore(null);
+        }
         return new FormResult(true);
     }
 
-    private async Task SetCurrentStore(AppUserStoreInfo store)
+    private async Task SetCurrentStore(AppUserStoreInfo? store)
     {
         OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
 
-        // create associated POS app if there is none
-        store = await EnsureStorePos(store);
+        if (store != null)
+            store = await EnsureStorePos(store);
 
-        _account!.CurrentStoreId = store.Id;
-        await UpdateAccount(_account);
+        CurrentStoreId = store?.Id;
+
+        var appConfig = await configProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key) ?? new BTCPayAppConfig();
+        appConfig.CurrentStoreId = CurrentStoreId;
+        await configProvider.Set(BTCPayAppConfig.Key, appConfig, true);
 
         OnAfterStoreChange?.Invoke(this, store);
-    }
-
-    public async Task UnsetCurrentStore()
-    {
-        OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
-        _account!.CurrentStoreId = null;
-        await UpdateAccount(_account);
-        OnAfterStoreChange?.Invoke(this, null);
     }
 
     public async Task<AppUserStoreInfo> EnsureStorePos(AppUserStoreInfo store, bool? forceCreate = false)
@@ -209,15 +204,14 @@ public class AuthStateProvider(
         return store;
     }
 
-    public AppUserStoreInfo? GetUserStore(string storeId)
+    private AppUserStoreInfo? GetUserStore(string storeId)
     {
-        return _userInfo?.Stores?.FirstOrDefault(store => store.Id == storeId);
+        return UserInfo?.Stores?.FirstOrDefault(store => store.Id == storeId);
     }
 
     public AppUserStoreInfo? GetCurrentStore()
     {
-        var storeId = _account?.CurrentStoreId;
-        return string.IsNullOrEmpty(storeId) ? null : GetUserStore(storeId);
+        return string.IsNullOrEmpty(CurrentStoreId) ? null : GetUserStore(CurrentStoreId);
     }
 
     public async Task<FormResult<AcceptInviteResult>> AcceptInvite(string inviteUrl, CancellationToken? cancellation = default)
@@ -233,8 +227,8 @@ public class AuthStateProvider(
         try
         {
             var response = await GetClient(serverUrl).AcceptInvite(payload, cancellation.GetValueOrDefault());
-            var account = await GetAccount(serverUrl, response.Email!);
-            await SetCurrentAccount(account);
+            var account = new BTCPayAccount(serverUrl, response.Email!);
+            await SetAccount(account);
             var message = "Invitation accepted.";
             if (response.EmailHasBeenConfirmed is true)
                 message += " Your email has been confirmed.";
@@ -263,9 +257,8 @@ public class AuthStateProvider(
         {
             var response = await GetClient(serverUrl).Login(payload, cancellation.GetValueOrDefault());
             if (string.IsNullOrEmpty(response.AccessToken)) throw new Exception("Did not obtain valid API token.");
-            var account = await GetAccount(serverUrl, email);
-            account.AccessToken = response.AccessToken;
-            await SetCurrentAccount(account);
+            var account = new BTCPayAccount(serverUrl, email, response.AccessToken);
+            await SetAccount(account);
             return new FormResult(true);
         }
         catch (Exception e)
@@ -281,9 +274,8 @@ public class AuthStateProvider(
             var client = GetClient(serverUrl);
             var response = await client.Login(code, cancellation.GetValueOrDefault());
             if (string.IsNullOrEmpty(response.AccessToken)) throw new Exception("Did not obtain valid API token.");
-            var account = await GetAccount(serverUrl, email);
-            account.AccessToken = response.AccessToken;
-            await SetCurrentAccount(account);
+            var account = new BTCPayAccount(serverUrl, email, response.AccessToken);
+            await SetAccount(account);
             return new FormResult(true);
         }
         catch (Exception e)
@@ -302,7 +294,7 @@ public class AuthStateProvider(
         try
         {
             var response = await GetClient(serverUrl).RegisterUser(payload, cancellation.GetValueOrDefault());
-            var account = await GetAccount(serverUrl, email);
+            var account = new BTCPayAccount(serverUrl, email);
             var message = "Account created.";
             if (response.ContainsKey("accessToken"))
             {
@@ -318,7 +310,7 @@ public class AuthStateProvider(
                 if (signup?.RequiresApproval is true)
                     message += " The new account requires approval by an admin before you can log in.";
             }
-            await SetCurrentAccount(account);
+            await SetAccount(account);
             return new FormResult(true, message);
         }
         catch (Exception e)
@@ -342,9 +334,8 @@ public class AuthStateProvider(
             if (response?.ContainsKey("accessToken") is true)
             {
                 var access = response.ToObject<AuthenticationResponse>();
-                var account = await GetAccount(serverUrl, email);
-                account.AccessToken = access!.AccessToken;
-                await SetCurrentAccount(account);
+                var account = new BTCPayAccount(serverUrl, email, access!.AccessToken);
+                await SetAccount(account);
             }
 
             return new FormResult(true, isForgotStep
@@ -386,12 +377,10 @@ public class AuthStateProvider(
         try
         {
             var userData = await GetClient().UpdateCurrentUser(payload, cancellation.GetValueOrDefault());
-            _account!.SetInfo(userData.Email!, userData.Name, userData.ImageUrl);
-            OnAccountInfoChange?.Invoke(this, _account);
-            if (_userInfo != null)
+            if (UserInfo != null)
             {
-                _userInfo.SetInfo(userData.Email!, userData.Name, userData.ImageUrl);
-                OnUserInfoChange?.Invoke(this, _userInfo);
+                UserInfo.SetInfo(userData.Email!, userData.Name, userData.ImageUrl);
+                OnUserInfoChange?.Invoke(this, UserInfo);
             }
             return new FormResult<ApplicationUserData>(true, "Your account info has been changed.", userData);
         }
@@ -401,55 +390,28 @@ public class AuthStateProvider(
         }
     }
 
-    private static string GetKey(string accountId) => $"{AccountKeyPrefix}:{accountId}";
-
-    public async Task<IEnumerable<BTCPayAccount>> GetAccounts(string? hostFilter = null)
+    public async Task Logout()
     {
-        var prefix = $"{AccountKeyPrefix}:" + (hostFilter == null ? "" : $"{hostFilter}:");
-        var keys = (await configProvider.List(prefix)).ToArray();
-        var accounts = new List<BTCPayAccount>();
-        foreach (var key in keys)
-        {
-            var account = await configProvider.Get<BTCPayAccount>(key);
-            accounts.Add(account!);
-        }
-        return accounts;
+        if (Account == null) return;
+        Account.AccessToken = null;
+        await SetAccount(Account);
     }
 
-    public async Task UpdateAccount(BTCPayAccount account)
+    private async Task UpdateAccount(BTCPayAccount account)
     {
-        await configProvider.Set(GetKey(account.Id), account, false);
+        await configProvider.Set(BTCPayAccount.Key, account, false);
     }
 
-    public async Task RemoveAccount(BTCPayAccount account)
+    private async Task SetAccount(BTCPayAccount account)
     {
-        await configProvider.Set<BTCPayAccount>(GetKey(account.Id), null, false);
-    }
-
-    private async Task<BTCPayAccount> GetAccount(string serverUrl, string email)
-    {
-        var accountId = BTCPayAccount.GetId(serverUrl, email);
-        var account = await configProvider.Get<BTCPayAccount>(GetKey(accountId));
-        return account ?? new BTCPayAccount(serverUrl, email);
-    }
-
-    private async Task<BTCPayAccount?> GetCurrentAccount()
-    {
-        var accountId = await configProvider.Get<string>(CurrentAccountKey);
-        if (string.IsNullOrEmpty(accountId)) return null;
-        return await configProvider.Get<BTCPayAccount>(GetKey(accountId));
-    }
-
-    private async Task SetCurrentAccount(BTCPayAccount? account)
-    {
-        OnBeforeAccountChange?.Invoke(this, _account);
-        if (account != null) await UpdateAccount(account);
-        await configProvider.Set(CurrentAccountKey, account?.Id, false);
-        _account = account;
-        _userInfo = null;
+        OnBeforeAccountChange?.Invoke(this, Account);
+        await UpdateAccount(account);
+        Account = account;
+        UserInfo = null;
+        OnUserInfoChange?.Invoke(this, UserInfo);
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
-        OnAfterAccountChange?.Invoke(this, _account);
+        OnAfterAccountChange?.Invoke(this, Account);
 
         var store = GetCurrentStore();
         if (store != null) await SetCurrentStore(store);
