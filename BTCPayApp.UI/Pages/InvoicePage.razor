@@ -330,7 +330,7 @@
         }
     }
 
-    private string? StoreId => AccountManager.GetCurrentStore()?.Id;
+    private string? StoreId => AccountManager.CurrentStore?.Id;
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private InvoiceData? Invoice => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoice(InvoiceId!)?.Data : null;
     private bool Loading => !string.IsNullOrEmpty(InvoiceId) && StoreState.Value.GetInvoice(InvoiceId!)?.Loading is true;

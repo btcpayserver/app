@@ -48,7 +48,7 @@
         }
 
         // store
-        var store = AccountManager.GetCurrentStore();
+        var store = AccountManager.CurrentStore;
         if (store != null)
         {
             Dispatcher.Dispatch(new StoreState.SetStoreInfo(store));

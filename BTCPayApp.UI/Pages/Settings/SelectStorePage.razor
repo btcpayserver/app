@@ -94,7 +94,7 @@
     {
         await base.OnInitializedAsync();
 
-        _initialStoreId = Model.StoreId = AccountManager.GetCurrentStore()?.Id;
+        _initialStoreId = Model.StoreId = AccountManager.CurrentStore?.Id;
 
         ActionSubscriber.SubscribeToAction<UserState.SetInfo>(this, action =>
         {

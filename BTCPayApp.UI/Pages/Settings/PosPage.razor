@@ -244,7 +244,7 @@
         public AppItem[]? Items { get; set; }
     }
 
-    private string StoreId => AccountManager.GetCurrentStore()!.Id;
+    private string StoreId => AccountManager.CurrentStore!.Id;
     private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;
     private bool Loading => StoreState.Value.PointOfSale?.Loading is true;
     private bool Sending => StoreState.Value.PointOfSale?.Sending is true;

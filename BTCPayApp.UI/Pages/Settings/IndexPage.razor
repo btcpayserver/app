@@ -286,7 +286,7 @@
     private bool? _biometricAuthAvailable;
     private SettingsModel Model { get; set; } = new();
     private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
-    private AppUserStoreInfo? CurrentStore => AccountManager.GetCurrentStore();
+    private AppUserStoreInfo? CurrentStore => AccountManager.CurrentStore;
     private AppInstanceInfo? InstanceInfo => UiState.Value.Instance?.Data;
     private AppUserInfo? CurrentUser => UserState.Value.Info?.Data;
     private IEnumerable<StoreUserData>? StoreUsers => StoreState.Value.Users?.Data;

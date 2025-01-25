@@ -8,6 +8,7 @@ public interface IAccountManager
 {
     public BTCPayAccount? Account { get; }
     public AppUserInfo? UserInfo { get; }
+    public AppUserStoreInfo? CurrentStore { get; }
     public BTCPayAppClient GetClient(string? baseUri = null);
     public Task<bool> CheckAuthenticated(bool refreshUser = false);
     public Task<bool> IsAuthorized(string policy, object? resource = null);
@@ -19,12 +20,8 @@ public interface IAccountManager
     public Task<FormResult<ApplicationUserData>> ChangePassword(string currentPassword, string newPassword, CancellationToken? cancellation = default);
     public Task<FormResult<ApplicationUserData>> ChangeAccountInfo(string email, string? name, string? imageUrl, CancellationToken? cancellation = default);
     public Task<FormResult> SetCurrentStoreId(string? storeId);
-    public AppUserStoreInfo? GetCurrentStore();
     public Task<AppUserStoreInfo> EnsureStorePos(AppUserStoreInfo store, bool? forceCreate = false);
     public Task Logout();
-    public AsyncEventHandler<BTCPayAccount?>? OnBeforeAccountChange { get; set; }
-    public AsyncEventHandler<BTCPayAccount?>? OnAfterAccountChange { get; set; }
-    public AsyncEventHandler<AppUserInfo?>? OnUserInfoChange { get; set; }
-    public AsyncEventHandler<AppUserStoreInfo?>? OnBeforeStoreChange { get; set; }
-    public AsyncEventHandler<AppUserStoreInfo?>? OnAfterStoreChange { get; set; }
+    public AsyncEventHandler<AppUserInfo?>? OnUserInfoChanged { get; set; }
+    public AsyncEventHandler<AppUserStoreInfo?>? OnStoreChanged { get; set; }
 }

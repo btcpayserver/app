@@ -38,7 +38,7 @@
 </section>
 
 @code {
-    private string? StoreId => AccountManager.GetCurrentStore()?.Id;
+    private string? StoreId => AccountManager.CurrentStore?.Id;
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data;
     private bool Loading => StoreState.Value.Invoices?.Loading is true;

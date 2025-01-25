@@ -167,7 +167,7 @@
         var route = AccountManager.Account != null ? Routes.Connect : Routes.Welcome;
         if (authState.User.Identity?.IsAuthenticated is true)
         {
-            var storeId = AccountManager.GetCurrentStore()?.Id;
+            var storeId = AccountManager.CurrentStore?.Id;
             switch (ConnectionManager.ConnectionState)
             {
                 case BTCPayConnectionState.Connecting or BTCPayConnectionState.Syncing:

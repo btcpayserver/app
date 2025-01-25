@@ -118,7 +118,7 @@ else
     }
 
     private string? _errorMessage;
-    private AppUserStoreInfo? Store => AccountManager.GetCurrentStore();
+    private AppUserStoreInfo? Store => AccountManager.CurrentStore;
     private string? StoreId => Store?.Id;
     private string? AppId => Store?.PosAppId ?? AppData?.Id;
     private PointOfSaleAppData? AppData => StoreState.Value.PointOfSale?.Data;

@@ -87,7 +87,7 @@
 
 @code {
     private SetupStatus? _setupStatus;
-    private string? StoreId => AccountManager.GetCurrentStore()!.Id;
+    private string? StoreId => AccountManager.CurrentStore!.Id;
     private SetupState SetupStateConnection => _setupStatus?.SetupStateConnection() ?? SetupState.Undetermined;
     private SetupState SetupStateAccount => _setupStatus?.SetupStateAccount() ?? SetupState.Undetermined;
     private SetupState SetupStateOnchain => _setupStatus?.SetupStateOnchain() ?? SetupState.Undetermined;

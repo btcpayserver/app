@@ -14,7 +14,7 @@ public static class StoreHelpers
     public static async Task<(GenericPaymentMethodData? onchain, GenericPaymentMethodData? lightning)>
         GetCurrentStorePaymentMethods(this IAccountManager accountManager)
     {
-        var storeId = accountManager.GetCurrentStore()?.Id;
+        var storeId = accountManager.CurrentStore?.Id;
         var pms = await accountManager.GetClient().GetStorePaymentMethods(storeId, includeConfig: true);
         var onchain = pms.FirstOrDefault(pm => pm.PaymentMethodId == OnChainWalletManager.PaymentMethodId);
         var lightning = pms.FirstOrDefault(pm => pm.PaymentMethodId == LightningNodeManager.PaymentMethodId);
@@ -25,7 +25,7 @@ public static class StoreHelpers
          this IAccountManager accountManager,
          OnChainWalletManager onChainWalletManager, LightningNodeManager lightningNodeService, bool applyOnchain, bool applyLighting)
     {
-        var storeId = accountManager.GetCurrentStore()?.Id;
+        var storeId = accountManager.CurrentStore?.Id;
         var userId = accountManager.UserInfo?.UserId;
         var config = await onChainWalletManager.GetConfig();
         if (// are user and store present?

@@ -161,11 +161,11 @@ public class CoreTests
             Assert.Equal(Money.Coins(2).Satoshi, utxos.Sum(coin => (Money)coin.Amount));
         });
 
-        Assert.Null(node2.AccountManager.GetCurrentStore());
+        Assert.Null(node2.AccountManager.CurrentStore);
         var store = await node2.AccountManager.GetClient().CreateStore(new CreateStoreRequest { Name = "Store1" });
         Assert.True(await node2.AccountManager.CheckAuthenticated(true));
         Assert.True((await node2.AccountManager.SetCurrentStoreId(store.Id)).Succeeded);
-        Assert.Equal(store.Id, node2.AccountManager.GetCurrentStore()?.Id);
+        Assert.Equal(store.Id, node2.AccountManager.CurrentStore?.Id);
 
         var res = await node2.AccountManager.TryApplyingAppPaymentMethodsToCurrentStore(node2.OnChainWalletManager,
             node2.LNManager, true, true);

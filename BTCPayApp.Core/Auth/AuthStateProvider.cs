@@ -20,30 +20,26 @@ public class AuthStateProvider(
 {
     private bool _isInitialized;
     private bool _refreshUserInfo;
+    private string? _currentStoreId;
     private CancellationTokenSource? _pingCts;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly ClaimsPrincipal _unauthenticated = new(new ClaimsIdentity());
 
     public BTCPayAccount? Account { get; private set; }
     public AppUserInfo? UserInfo { get; private set; }
-    public string? CurrentStoreId { get; private set; }
-    public AsyncEventHandler<BTCPayAccount?>? OnBeforeAccountChange { get; set; }
-    public AsyncEventHandler<BTCPayAccount?>? OnAfterAccountChange { get; set; }
-    public AsyncEventHandler<AppUserStoreInfo?>? OnBeforeStoreChange { get; set; }
-    public AsyncEventHandler<AppUserStoreInfo?>? OnAfterStoreChange { get; set; }
-    public AsyncEventHandler<AppUserInfo?>? OnUserInfoChange { get; set; }
+    public AppUserStoreInfo? CurrentStore => string.IsNullOrEmpty(_currentStoreId) ? null : GetUserStore(_currentStoreId);
+    public AsyncEventHandler<AppUserStoreInfo?>? OnStoreChanged { get; set; }
+    public AsyncEventHandler<AppUserInfo?>? OnUserInfoChanged { get; set; }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _pingCts = new CancellationTokenSource();
-        //syncService.LocalUpdated += SyncServiceLocalUpdated;
         _ = PingOccasionally(_pingCts.Token);
         return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        //syncService.LocalUpdated -= SyncServiceLocalUpdated;
         _pingCts?.Cancel();
         return Task.CompletedTask;
     }
@@ -56,15 +52,6 @@ public class AuthStateProvider(
             await Task.Delay(TimeSpan.FromSeconds(5), pingCtsToken);
         }
     }
-
-    /*private Task SyncServiceLocalUpdated(object? sender, string[] keys)
-    {
-        if (keys.Contains(BTCPayAppConfig.Key))
-        {
-            // TODO: Implement this method
-        }
-        return Task.CompletedTask;
-    }*/
 
     public BTCPayAppClient GetClient(string? baseUri = null)
     {
@@ -85,7 +72,7 @@ public class AuthStateProvider(
             if (!_isInitialized && Account == null)
             {
                 Account = await configProvider.Get<BTCPayAccount>(BTCPayAccount.Key);
-                CurrentStoreId = (await configProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key))?.CurrentStoreId;
+                _currentStoreId = (await configProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key))?.CurrentStoreId;
                 _isInitialized = true;
             }
 
@@ -120,7 +107,7 @@ public class AuthStateProvider(
 
             if (Account != null && UserInfo != null)
             {
-                OnUserInfoChange?.Invoke(this, UserInfo);
+                OnUserInfoChanged?.Invoke(this, UserInfo);
                 await UpdateAccount(Account);
             }
 
@@ -159,7 +146,7 @@ public class AuthStateProvider(
             var store = GetUserStore(storeId);
             if (store == null) return new FormResult(false, $"Store with ID '{storeId}' does not exist or belong to the user.");
 
-            if (store.Id != GetCurrentStore()?.Id)
+            if (store.Id != CurrentStore?.Id)
                 await SetCurrentStore(store);
         }
         else
@@ -171,18 +158,16 @@ public class AuthStateProvider(
 
     private async Task SetCurrentStore(AppUserStoreInfo? store)
     {
-        OnBeforeStoreChange?.Invoke(this, GetCurrentStore());
-
         if (store != null)
             store = await EnsureStorePos(store);
 
-        CurrentStoreId = store?.Id;
+        _currentStoreId = store?.Id;
 
         var appConfig = await configProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key) ?? new BTCPayAppConfig();
-        appConfig.CurrentStoreId = CurrentStoreId;
+        appConfig.CurrentStoreId = _currentStoreId;
         await configProvider.Set(BTCPayAppConfig.Key, appConfig, true);
 
-        OnAfterStoreChange?.Invoke(this, store);
+        OnStoreChanged?.Invoke(this, store);
     }
 
     public async Task<AppUserStoreInfo> EnsureStorePos(AppUserStoreInfo store, bool? forceCreate = false)
@@ -207,11 +192,6 @@ public class AuthStateProvider(
     private AppUserStoreInfo? GetUserStore(string storeId)
     {
         return UserInfo?.Stores?.FirstOrDefault(store => store.Id == storeId);
-    }
-
-    public AppUserStoreInfo? GetCurrentStore()
-    {
-        return string.IsNullOrEmpty(CurrentStoreId) ? null : GetUserStore(CurrentStoreId);
     }
 
     public async Task<FormResult<AcceptInviteResult>> AcceptInvite(string inviteUrl, CancellationToken? cancellation = default)
@@ -380,7 +360,7 @@ public class AuthStateProvider(
             if (UserInfo != null)
             {
                 UserInfo.SetInfo(userData.Email!, userData.Name, userData.ImageUrl);
-                OnUserInfoChange?.Invoke(this, UserInfo);
+                OnUserInfoChanged?.Invoke(this, UserInfo);
             }
             return new FormResult<ApplicationUserData>(true, "Your account info has been changed.", userData);
         }
@@ -404,16 +384,14 @@ public class AuthStateProvider(
 
     private async Task SetAccount(BTCPayAccount account)
     {
-        OnBeforeAccountChange?.Invoke(this, Account);
         await UpdateAccount(account);
         Account = account;
         UserInfo = null;
-        OnUserInfoChange?.Invoke(this, UserInfo);
+        OnUserInfoChanged?.Invoke(this, UserInfo);
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
-        OnAfterAccountChange?.Invoke(this, Account);
 
-        var store = GetCurrentStore();
+        var store = CurrentStore;
         if (store != null) await SetCurrentStore(store);
     }
 }

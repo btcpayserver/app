@@ -34,7 +34,7 @@ public class StateMiddleware(
             {
                 uiStateFeature.RestoreState(existing);
             }
-            uiStateFeature.StateChanged += async (sender, args) =>
+            uiStateFeature.StateChanged += async (_, _) =>
             {
                 var state = (UIState)uiStateFeature.GetState() with { Instance = null };
                 await configProvider.Set(UiStateConfigKey, state, false);
@@ -50,7 +50,7 @@ public class StateMiddleware(
     {
         while (token.IsCancellationRequested is false)
         {
-            var storeInfo = accountManager.GetCurrentStore();
+            var storeInfo = accountManager.CurrentStore;
             if (storeInfo != null) dispatcher.Dispatch(new StoreState.FetchRates(storeInfo));
             await Task.Delay(TimeSpan.FromMinutes(5), token);
         }
@@ -63,7 +63,7 @@ public class StateMiddleware(
         dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
         dispatcher.Dispatch(new UserState.SetInfo(accountManager.UserInfo, null));
 
-        btcPayConnectionManager.ConnectionChanged += async (sender, args) =>
+        btcPayConnectionManager.ConnectionChanged += async (_, _) =>
         {
             dispatcher.Dispatch(new RootState.ConnectionStateUpdatedAction(btcPayConnectionManager.ConnectionState));
 
@@ -74,10 +74,10 @@ public class StateMiddleware(
             }
         };
 
-        onChainWalletManager.StateChanged += async (sender, args) =>
+        onChainWalletManager.StateChanged += async (_, _) =>
         {
             dispatcher.Dispatch(new RootState.OnChainWalletStateUpdatedAction(onChainWalletManager.State));
-            if (accountManager.GetCurrentStore() is { } store)
+            if (accountManager.CurrentStore is { } store)
             {
                 switch (onChainWalletManager.State)
                 {
@@ -96,16 +96,16 @@ public class StateMiddleware(
             }
         };
 
-        onChainWalletManager.OnSnapshotUpdate += (sender, args) =>
+        onChainWalletManager.OnSnapshotUpdate += (_, _) =>
         {
-            if (accountManager.GetCurrentStore() is { } store)
+            if (accountManager.CurrentStore is { } store)
             {
                 dispatcher.Dispatch(new StoreState.FetchBalances(store.Id));
             }
             return Task.CompletedTask;
         };
 
-        lightningNodeService.StateChanged += async (sender, args) =>
+        lightningNodeService.StateChanged += async (_, _) =>
         {
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
             if (lightningNodeService is {State: LightningNodeState.NotConfigured} && await lightningNodeService.CanConfigureLightningNode())
@@ -124,7 +124,7 @@ public class StateMiddleware(
                 var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, false, true);
                 if (res is { lightning: {} lightning } && await lightningNodeService.IsLightningOurs(lightning))
                 {
-                    if (accountManager.GetCurrentStore() is { } store)
+                    if (accountManager.CurrentStore is { } store)
                     {
                         dispatcher.Dispatch(new StoreState.FetchLightningBalance(store.Id));
                         dispatcher.Dispatch(new StoreState.FetchLightningHistogram(store.Id));
@@ -133,7 +133,7 @@ public class StateMiddleware(
             }
         };
 
-        accountManager.OnAfterStoreChange += async (sender, storeInfo) =>
+        accountManager.OnStoreChanged += async (_, storeInfo) =>
         {
             dispatcher.Dispatch(new StoreState.SetStoreInfo(storeInfo));
             if (storeInfo != null)
@@ -157,18 +157,18 @@ public class StateMiddleware(
             navigationManager.NavigateTo(Routes.Index);
         };
 
-        accountManager.OnUserInfoChange += (sender, userInfo) =>
+        accountManager.OnUserInfoChanged += (_, userInfo) =>
         {
             dispatcher.Dispatch(new UserState.SetInfo(userInfo, null));
             return Task.CompletedTask;
         };
 
-        btcpayAppServerClient.OnNotifyServerEvent += async (sender, serverEvent) =>
+        btcpayAppServerClient.OnNotifyServerEvent += async (_, serverEvent) =>
         {
             logger.LogDebug("Received Server Event: {Type} - {Info} ({Detail})", serverEvent.Type, serverEvent.ToString(), serverEvent.Detail ?? "no details");
             var currentUserId = accountManager.UserInfo?.UserId;
             if (string.IsNullOrEmpty(currentUserId)) return;
-            var currentStore = accountManager.GetCurrentStore();
+            var currentStore = accountManager.CurrentStore;
             var isCurrentStore = serverEvent.StoreId != null && currentStore != null && serverEvent.StoreId == currentStore.Id;
             switch (serverEvent.Type)
             {
