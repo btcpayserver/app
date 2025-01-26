@@ -173,6 +173,13 @@
                         <Icon Symbol="caret-right"/>
                     </a>
                 </li>
+                @*<li class="list-group-item">
+                    <a href="@Routes.ChangePasscode">
+                        <Icon Symbol="key"/>
+                        <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
+                        <Icon Symbol="caret-right"/>
+                    </a>
+                </li>*@
                 <li class="list-group-item">
                     <a href="@Routes.ChangePassword">
                         <Icon Symbol="dots" class="p-2"/>
@@ -180,24 +187,6 @@
                         <Icon Symbol="caret-right"/>
                     </a>
                 </li>
-                @*
-                <li class="list-group-item">
-                    <a href="@Routes.ChangePasscode">
-                        <Icon Symbol="key"/>
-                        <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
-                        <Icon Symbol="caret-right"/>
-                    </a>
-                </li>
-                @if (HasPasscode)
-                {
-                    <li class="list-group-item">
-                        <button class="btn btn-link text-danger" type="button" @onclick="RemovePasscode">
-                            <Icon Symbol="key" class="text-body"/>
-                            <span class="me-auto">Remove passcode</span>
-                        </button>
-                    </li>
-                }
-                *@
             </ul>
         </div>
 
@@ -304,16 +293,6 @@
         _account = AccountManager.Account;
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
         _biometricAuthAvailable = await Fingerprint.IsAvailableAsync();
-    }
-
-    // TODO: Guard with passcode entering
-    private async Task RemovePasscode()
-    {
-        if (HasPasscode)
-        {
-            _config!.Passcode = null;
-            await ConfigProvider.Set(BTCPayAppConfig.Key, _config, true);
-        }
     }
 
     private void SetTheme(string theme)

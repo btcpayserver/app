@@ -38,6 +38,12 @@
             }
         </div>
         <Passcode OnPasscodeEntered="HandlePasscodeEntered" />
+        @if (HasPasscode)
+        {
+            <button class="btn btn-outline-danger" type="button" @onclick="RemovePasscode">
+                Remove passcode
+            </button>
+        }
     </ValidationEditContext>
 </section>
 
@@ -45,6 +51,7 @@
     private PasscodeModel Model { get; set; } = new();
     private BTCPayAppConfig? _config;
     private ValidationEditContext? _validationEditContext;
+    private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
 
     protected override async Task OnInitializedAsync()
     {
@@ -95,9 +102,19 @@
         }
     }
 
+    // TODO: Guard with passcode entering
+    private async Task RemovePasscode()
+    {
+        if (HasPasscode)
+        {
+            _config!.Passcode = null;
+            await ConfigProvider.Set(BTCPayAppConfig.Key, _config, true);
+        }
+    }
+
     private string GetTitle() => Model.Mode switch
     {
-        PasscodeMode.Set => $"{(string.IsNullOrEmpty(_config!.Passcode)  ? "Set" : "Change")} Passcode",
+        PasscodeMode.Set => $"{(HasPasscode ? "Set" : "Change")} Passcode",
         PasscodeMode.Confirm => "Confirm Passcode",
         _ => throw new ArgumentOutOfRangeException()
     };
