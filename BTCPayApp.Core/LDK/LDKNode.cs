@@ -228,10 +228,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
         var keyPath = KeyPath.Parse(lightningConfig.LightningDerivationPath);
 
-
-        Seed = new Mnemonic(walletConfig.Mnemonic).DeriveExtKey().Derive(keyPath).PrivateKey
-            .ToBytes();
-        _logger.LogInformation($"Node {walletConfig.Mnemonic} SEED: {Convert.ToHexString(Seed)}");
+        Seed = new Mnemonic(walletConfig.Mnemonic).DeriveExtKey().Derive(keyPath).PrivateKey.ToBytes();
         var services = ServiceProvider.GetServices<IScopedHostedService>();
 
         _logger.LogInformation("Starting LDKNode services");
@@ -243,7 +240,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
         foreach (var service in services)
         {
-            _logger.LogInformation($"Starting {service.GetType().Name}");
+            _logger.LogInformation("Starting {Name}", service.GetType().Name);
             await service.StartAsync(cancellationToken);
         }
 
