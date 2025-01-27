@@ -28,52 +28,60 @@
     }
 </SectionContent>
 
-@if (_loading)
-{
-    <div class="p-3 text-center">
-        <LoadingIndicator/>
-    </div>
-}
-else if (_data is not null)
-{
-    <p class="lead text-secondary mb-4">Create a store to begin accepting payments.</p>
-    <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" FormName="CreateStore" method="post">
-        <div class="form-group">
-            <label for="Name" class="form-label" data-required>Name</label>
-            <InputText @bind-Value="Model.Name" id="Name" class="form-control"/>
-            <ValidationMessage For="@(() => Model.Name)"/>
-        </div>
-        <div class="form-group">
-            <label for="DefaultCurrency" class="form-label" data-required>Default Currency</label>
-            <InputText @bind-Value="Model.DefaultCurrency" id="DefaultCurrency" class="form-control"/>
-            <ValidationMessage For="@(() => Model.DefaultCurrency)"/>
-        </div>
-        @if (_data.Exchanges?.Any() is true)
+
+<AuthorizeView Policy="@AppPolicies.CanModifySettings">
+    <Authorized>
+        @if (_loading)
         {
-            <div class="form-group">
-                <label for="PreferredExchange" class="form-label" data-required>Preferred Exchange</label>
-                <InputSelect @bind-Value="Model.PreferredExchange" id="PreferredExchange" class="form-select">
-                    @foreach (var e in _data.Exchanges)
-                    {
-                        <option value="@e.Key">@e.Value</option>
-                    }
-                </InputSelect>
-                <div class="form-text mt-2 only-for-js">The recommended price source gets chosen based on the default currency.</div>
-                <ValidationMessage For="@(() => Model.PreferredExchange)"/>
+            <div class="p-3 text-center">
+                <LoadingIndicator/>
             </div>
         }
-        <button class="btn btn-primary w-100" type="submit" data-testid="CreateStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
-            @if (_sending)
-            {
-                <LoadingIndicator />
-            }
-            else
-            {
-                <span>Create Store</span>
-            }
-        </button>
-    </ValidationEditContext>
-}
+        else if (_data is not null)
+        {
+            <p class="lead text-secondary mb-4">Create a store to begin accepting payments.</p>
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" FormName="CreateStore" method="post">
+                <div class="form-group">
+                    <label for="Name" class="form-label" data-required>Name</label>
+                    <InputText @bind-Value="Model.Name" id="Name" class="form-control"/>
+                    <ValidationMessage For="@(() => Model.Name)"/>
+                </div>
+                <div class="form-group">
+                    <label for="DefaultCurrency" class="form-label" data-required>Default Currency</label>
+                    <InputText @bind-Value="Model.DefaultCurrency" id="DefaultCurrency" class="form-control"/>
+                    <ValidationMessage For="@(() => Model.DefaultCurrency)"/>
+                </div>
+                @if (_data.Exchanges?.Any() is true)
+                {
+                    <div class="form-group">
+                        <label for="PreferredExchange" class="form-label" data-required>Preferred Exchange</label>
+                        <InputSelect @bind-Value="Model.PreferredExchange" id="PreferredExchange" class="form-select">
+                            @foreach (var e in _data.Exchanges)
+                            {
+                                <option value="@e.Key">@e.Value</option>
+                            }
+                        </InputSelect>
+                        <div class="form-text mt-2 only-for-js">The recommended price source gets chosen based on the default currency.</div>
+                        <ValidationMessage For="@(() => Model.PreferredExchange)"/>
+                    </div>
+                }
+                <button class="btn btn-primary w-100" type="submit" data-testid="CreateStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
+                    @if (_sending)
+                    {
+                        <LoadingIndicator />
+                    }
+                    else
+                    {
+                        <span>Create Store</span>
+                    }
+                </button>
+            </ValidationEditContext>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <Alert Type="danger">Unauthorized.</Alert>
+    </NotAuthorized>
+</AuthorizeView>
 
 @code {
     [SupplyParameterFromQuery]

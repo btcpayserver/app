@@ -23,6 +23,7 @@ public class AuthorizationHandler(IOptionsMonitor<IdentityOptions> identityOptio
         var permissionSet = new PermissionSet();
         var success = false;
         var isAdmin = context.User.IsInRole("ServerAdmin");
+        var isOwner = context.User.IsInRole("DeviceOwner");
         var storeId = context.Resource as string;
         var policy = requirement.Policy;
         var requiredUnscoped = false;
@@ -68,6 +69,10 @@ public class AuthorizationHandler(IOptionsMonitor<IdentityOptions> identityOptio
             {
                 success = true;
             }
+        }
+        else if (Policies.IsPluginPolicy(policy) && policy.StartsWith("btcpay.plugin.app"))
+        {
+            success = isOwner;
         }
         if (success)
         {

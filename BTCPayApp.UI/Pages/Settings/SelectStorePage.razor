@@ -18,69 +18,76 @@
 </SectionContent>
 
 <section class="container">
-    @if (UserInfo is null)
-    {
-        if (Loading)
-        {
-            <div class="p-3 text-center">
-                <LoadingIndicator/>
-            </div>
-        }
-        else if (!string.IsNullOrEmpty(Error))
-        {
-            <Alert Type="danger">@Error</Alert>
-        }
-    }
-    else if (Stores?.Any() is true)
-    {
-        if (string.IsNullOrEmpty(_initialStoreId))
-        {
-            <p class="lead text-secondary mb-4 text-center">Select a store to begin accepting payments.</p>
-            <style>#NavbarBottom { display: none; }</style>
-        }
-        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@Error">
-            <DataAnnotationsValidator />
-            <InputRadioGroup Name="StoreIds" @bind-Value="@Model.StoreId">
-                <ul class="list-group list-group-flush mb-3">
-                    @foreach (var store in Stores)
-                    {
-                        <li class="list-group-item">
-                            <label class="form-check-label stretched-link d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                <InputRadio Name="StoreIds" Value="@store.Id" class="form-check-input m-0"/>
-                                @if (string.IsNullOrEmpty(store.LogoUrl))
-                                {
-                                    <Icon Symbol="nav-store"/>
-                                }
-                                else
-                                {
-                                    <img src="@store.LogoUrl" alt="@store.Name" class="icon icon-nav-store"/>
-                                }
-                                <strong>@store.Name</strong>
-                                <span class="badge bg-light ms-auto">@store.RoleId</span>
-                            </label>
-                        </li>
-                    }
-                </ul>
-            </InputRadioGroup>
-            <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
-                @if (_sending)
+    <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+        <Authorized>
+            @if (UserInfo is null)
+            {
+                if (Loading)
                 {
-                    <LoadingIndicator />
+                    <div class="p-3 text-center">
+                        <LoadingIndicator/>
+                    </div>
                 }
-                else
+                else if (!string.IsNullOrEmpty(Error))
                 {
-                    <span>Select Store</span>
+                    <Alert Type="danger">@Error</Alert>
                 }
-            </button>
-        </ValidationEditContext>
-        <p class="mt-5 text-secondary text-center">In case you want to start with a blank slate, you can also create a new store for the app.</p>
-        <NavLink class="btn btn-outline-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
-    }
-    else
-    {
-        <p class="text-secondary text-center">You don't have a store, yet.</p>
-        <NavLink class="btn btn-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
-    }
+            }
+            else if (Stores?.Any() is true)
+            {
+                if (string.IsNullOrEmpty(_initialStoreId))
+                {
+                    <p class="lead text-secondary mb-4 text-center">Select a store to begin accepting payments.</p>
+                    <style>#NavbarBottom { display: none; }</style>
+                }
+                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@Error">
+                    <DataAnnotationsValidator />
+                    <InputRadioGroup Name="StoreIds" @bind-Value="@Model.StoreId">
+                        <ul class="list-group list-group-flush mb-3">
+                            @foreach (var store in Stores)
+                            {
+                                <li class="list-group-item">
+                                    <label class="form-check-label stretched-link d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <InputRadio Name="StoreIds" Value="@store.Id" class="form-check-input m-0"/>
+                                        @if (string.IsNullOrEmpty(store.LogoUrl))
+                                        {
+                                            <Icon Symbol="nav-store"/>
+                                        }
+                                        else
+                                        {
+                                            <img src="@store.LogoUrl" alt="@store.Name" class="icon icon-nav-store"/>
+                                        }
+                                        <strong>@store.Name</strong>
+                                        <span class="badge bg-light ms-auto">@store.RoleId</span>
+                                    </label>
+                                </li>
+                            }
+                        </ul>
+                    </InputRadioGroup>
+                    <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
+                        @if (_sending)
+                        {
+                            <LoadingIndicator />
+                        }
+                        else
+                        {
+                            <span>Select Store</span>
+                        }
+                    </button>
+                </ValidationEditContext>
+                <p class="mt-5 text-secondary text-center">In case you want to start with a blank slate, you can also create a new store for the app.</p>
+                <NavLink class="btn btn-outline-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
+            }
+            else
+            {
+                <p class="text-secondary text-center">You don't have a store, yet.</p>
+                <NavLink class="btn btn-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
 </section>
 
 @code {

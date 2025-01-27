@@ -1,4 +1,4 @@
-namespace BTCPayApp.Core.Auth;
+namespace BTCPayApp.Core.Models;
 
 public class FormResult(bool succeeded, string[]? messages = null)
 {

@@ -38,6 +38,7 @@ public partial class AppApiController(
     DefaultRulesCollection defaultRules,
     RateFetcher rateFactory,
     UserLoginCodeService userLoginCodeService,
+    IAuthorizationService authService,
     Logs logs)
     : Controller
 {

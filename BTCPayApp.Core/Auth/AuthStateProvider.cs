@@ -14,6 +14,7 @@ namespace BTCPayApp.Core.Auth;
 public class AuthStateProvider(
     IHttpClientFactory clientFactory,
     IAuthorizationService authService,
+    ISecureConfigProvider secureProvider,
     ConfigProvider configProvider,
     IOptionsMonitor<IdentityOptions> identityOptions)
     : AuthenticationStateProvider, IAccountManager, IHostedService
@@ -57,7 +58,8 @@ public class AuthStateProvider(
     {
         if (string.IsNullOrEmpty(baseUri) && string.IsNullOrEmpty(Account?.BaseUri))
             throw new ArgumentException("No base URI present or provided.", nameof(baseUri));
-        return new BTCPayAppClient(baseUri ?? Account!.BaseUri, Account?.AccessToken, clientFactory.CreateClient());
+        var token = Account?.UserToken ?? Account?.OwnerToken;
+        return new BTCPayAppClient(baseUri ?? Account!.BaseUri, token, clientFactory.CreateClient());
     }
 
     public override async Task<AuthenticationState> GetAuthenticationStateAsync()
@@ -71,14 +73,16 @@ public class AuthStateProvider(
             // initialize with persisted account
             if (!_isInitialized && Account == null)
             {
-                Account = await configProvider.Get<BTCPayAccount>(BTCPayAccount.Key);
+                Account = await secureProvider.Get<BTCPayAccount>(BTCPayAccount.Key);
                 _currentStoreId = (await configProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key))?.CurrentStoreId;
                 _isInitialized = true;
             }
 
             var oldUserInfo = UserInfo;
+            var hasOwnerToken = !string.IsNullOrEmpty(Account?.OwnerToken);
+            var hasUserToken = !string.IsNullOrEmpty(Account?.UserToken);
             var needsRefresh = _refreshUserInfo || UserInfo == null;
-            if (needsRefresh && !string.IsNullOrEmpty(Account?.AccessToken))
+            if (needsRefresh && hasOwnerToken)
             {
                 var cts = new CancellationTokenSource(5000);
                 UserInfo = await GetClient().GetUserInfo(cts.Token);
@@ -99,17 +103,18 @@ public class AuthStateProvider(
                 if (UserInfo.Stores?.Any() is true)
                     claims.AddRange(UserInfo.Stores.Select(store =>
                         new Claim(store.Id, string.Join(',', store.Permissions ?? []))));
+                // TODO: Improve distinguishing the device owner
+                if (hasOwnerToken && !hasUserToken)
+                    claims.Add(new Claim(identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, "DeviceOwner"));
                 user = new ClaimsPrincipal(new ClaimsIdentity(claims, "Greenfield"));
             }
 
             var res = new AuthenticationState(user);
             if (AppUserInfo.Equals(oldUserInfo, UserInfo)) return res;
 
+            OnUserInfoChanged?.Invoke(this, UserInfo);
             if (Account != null && UserInfo != null)
-            {
-                OnUserInfoChanged?.Invoke(this, UserInfo);
                 await UpdateAccount(Account);
-            }
 
             NotifyAuthenticationStateChanged(Task.FromResult(res));
             return res;
@@ -158,6 +163,8 @@ public class AuthStateProvider(
 
     private async Task SetCurrentStore(AppUserStoreInfo? store)
     {
+        if (_currentStoreId == store?.Id) return;
+
         if (store != null)
             store = await EnsureStorePos(store);
 
@@ -280,7 +287,7 @@ public class AuthStateProvider(
             {
                 var access = response.ToObject<AuthenticationResponse>();
                 if (string.IsNullOrEmpty(access?.AccessToken)) throw new Exception("Did not obtain valid API token.");
-                account.AccessToken = access.AccessToken;
+                account.OwnerToken = access.AccessToken;
             }
             else
             {
@@ -370,16 +377,51 @@ public class AuthStateProvider(
         }
     }
 
+    public async Task<FormResult> SwitchToUser(string storeId, string userId, CancellationToken? cancellation = default)
+    {
+        if (Account == null || !string.IsNullOrEmpty(Account.UserToken))
+            return new FormResult(false, "Cannot switch user in current state.");
+
+        var payload = new SwitchUserRequest
+        {
+            StoreId = storeId,
+            UserId = userId
+        };
+        try
+        {
+            var response = await GetClient().SwitchUser(payload, cancellation.GetValueOrDefault());
+            if (string.IsNullOrEmpty(response.AccessToken)) throw new Exception("Did not obtain valid API token.");
+
+            Account.UserToken = response.AccessToken;
+            await SetAccount(Account);
+            return new FormResult(true);
+        }
+        catch (Exception e)
+        {
+            return new FormResult(false, e.Message);
+        }
+    }
+
+    public async Task<FormResult> SwitchToOwner()
+    {
+        if (Account == null || string.IsNullOrEmpty(Account.UserToken) || string.IsNullOrEmpty(Account.OwnerToken))
+            return new FormResult(false, "Cannot switch user in current state.");
+
+        Account.UserToken = null;
+        await SetAccount(Account);
+        return new FormResult(true);
+    }
+
     public async Task Logout()
     {
         if (Account == null) return;
-        Account.AccessToken = null;
+        Account.OwnerToken = Account.UserToken = null;
         await SetAccount(Account);
     }
 
     private async Task UpdateAccount(BTCPayAccount account)
     {
-        await configProvider.Set(BTCPayAccount.Key, account, false);
+        await secureProvider.Set(BTCPayAccount.Key, account);
     }
 
     private async Task SetAccount(BTCPayAccount account)
@@ -387,7 +429,6 @@ public class AuthStateProvider(
         await UpdateAccount(account);
         Account = account;
         UserInfo = null;
-        OnUserInfoChanged?.Invoke(this, UserInfo);
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
 

@@ -143,7 +143,7 @@ public class SyncService(
             throw new InvalidOperationException("Account not found");
         var vssUri = new Uri(new Uri(account.BaseUri), "vss/");
         var httpClient = httpClientFactory.CreateClient("vss");
-        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("token", account.AccessToken);
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("token", account.OwnerToken);
         var vssClient = new HttpVSSAPIClient(vssUri, httpClient);
         return Task.FromResult<IVSSAPI>(vssClient);
     }

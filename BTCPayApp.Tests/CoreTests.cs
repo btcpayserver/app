@@ -53,7 +53,7 @@ public class CoreTests
         Assert.False(await node.AuthStateProvider.CheckAuthenticated());
         Assert.True((await node.AccountManager.Login(btcpayUri.AbsoluteUri, username, username, null)).Succeeded);
         Assert.True(await node.AuthStateProvider.CheckAuthenticated());
-        Assert.NotNull(node.AccountManager.Account?.AccessToken);
+        Assert.NotNull(node.AccountManager.Account?.OwnerToken);
 
         TestUtils.Eventually(() =>
             Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node.ConnectionManager.ConnectionState), 30_000);
@@ -68,7 +68,7 @@ public class CoreTests
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
         Assert.True((await node.AccountManager.Login(btcpayUri.AbsoluteUri, username, username, null)).Succeeded);
         Assert.True(await node.AuthStateProvider.CheckAuthenticated());
-        Assert.NotNull(node.AccountManager.Account?.AccessToken);
+        Assert.NotNull(node.AccountManager.Account?.OwnerToken);
 
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.NotConfigured, node.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));

@@ -22,86 +22,94 @@
         <h1>@_title</h1>
     </Titlebar>
 </SectionContent>
+
 <section class="container">
-    @if (!string.IsNullOrEmpty(_errorMessage))
-    {
-        <Alert Type="danger" Dismissible>@_errorMessage</Alert>
-    }
-    else if (!string.IsNullOrEmpty(_successMessage))
-    {
-        <Alert Type="success" Dismissible>@_successMessage</Alert>
-    }
-    @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Config is not null)
-    {
-        <h4>Wallet</h4>
-        <div class="box mb-3">
-            <div class="form-floating">
-                <TruncateCenter Text="@Config.Fingerprint" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                <label>Fingerprint</label>
-            </div>
-            <button class="btn btn-secondary mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#seed" aria-expanded="false" aria-controls="seed">
-                Show seed
-            </button>
-            <div id="seed" class="collapse">
-                <ol class="m-0 pt-4 ms-3">
-                    @foreach (var word in Config.Mnemonic.Split(' '))
-                    {
-                        <li class="font-monospace">@word</li>
-                    }
-                </ol>
-            </div>
-        </div>
-        <h4>Derivations</h4>
-        @foreach (var d in Config.Derivations)
-        {
-            var identifier = d.Value.Identifier;
-            if (string.IsNullOrEmpty(identifier)) continue;
-            var descriptor = d.Value.Descriptor;
-            var isStorePM = IsStorePaymentMethodId(identifier);
-            <div class="box mb-3">
-                <h4 class="d-flex flex-wrap align-items-center gap-2">
-                    @(d.Value.Name)
-                    @if (isStorePM is true)
-                    {
-                        <span class="badge bg-info">
-                            Current onchain payment method for store
-                        </span>
-                    }
-                </h4>
-                @if (!string.IsNullOrEmpty(identifier))
-                {
+    <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+        <Authorized>
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <Alert Type="danger" Dismissible>@_errorMessage</Alert>
+            }
+            else if (!string.IsNullOrEmpty(_successMessage))
+            {
+                <Alert Type="success" Dismissible>@_successMessage</Alert>
+            }
+            @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Config is not null)
+            {
+                <h4>Wallet</h4>
+                <div class="box mb-3">
                     <div class="form-floating">
-                        <TruncateCenter Text="@identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                        <label>Identifier</label>
+                        <TruncateCenter Text="@Config.Fingerprint" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <label>Fingerprint</label>
+                    </div>
+                    <button class="btn btn-secondary mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#seed" aria-expanded="false" aria-controls="seed">
+                        Show seed
+                    </button>
+                    <div id="seed" class="collapse">
+                        <ol class="m-0 pt-4 ms-3">
+                            @foreach (var word in Config.Mnemonic.Split(' '))
+                            {
+                                <li class="font-monospace">@word</li>
+                            }
+                        </ol>
+                    </div>
+                </div>
+                <h4>Derivations</h4>
+                @foreach (var d in Config.Derivations)
+                {
+                    var identifier = d.Value.Identifier;
+                    if (string.IsNullOrEmpty(identifier)) continue;
+                    var descriptor = d.Value.Descriptor;
+                    var isStorePM = IsStorePaymentMethodId(identifier);
+                    <div class="box mb-3">
+                        <h4 class="d-flex flex-wrap align-items-center gap-2">
+                            @(d.Value.Name)
+                            @if (isStorePM is true)
+                            {
+                                <span class="badge bg-info">
+                                    Current onchain payment method for store
+                                </span>
+                            }
+                        </h4>
+                        @if (!string.IsNullOrEmpty(identifier))
+                        {
+                            <div class="form-floating">
+                                <TruncateCenter Text="@identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                                <label>Identifier</label>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(descriptor))
+                        {
+                            <div class="form-floating">
+                                <TruncateCenter Text="@descriptor" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                                <label>Descriptor</label>
+                            </div>
+                            @if (isStorePM is false && !string.IsNullOrEmpty(StoreId))
+                            {
+                                <button class="btn btn-primary mt-3" @onclick="() => SetStorePaymentMethod(d.Key)">
+                                    Set as onchain payment method for store
+                                </button>
+                            }
+                        }
                     </div>
                 }
-                @if (!string.IsNullOrEmpty(descriptor))
-                {
-                    <div class="form-floating">
-                        <TruncateCenter Text="@descriptor" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                        <label>Descriptor</label>
-                    </div>
-                    @if (isStorePM is false && !string.IsNullOrEmpty(StoreId))
-                    {
-                        <button class="btn btn-primary mt-3" @onclick="() => SetStorePaymentMethod(d.Key)">
-                            Set as onchain payment method for store
-                        </button>
-                    }
-                }
-            </div>
-        }
-    }
-    else if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
-    {
-        <button class="btn btn-primary" @onclick="GenerateWallet">Generate wallet</button>
-    }
-    else
-    {
-        <ul>
-            <li>Connection state: @State.Value.ConnectionState</li>
-            <li>Onchain wallet state: @State.Value.OnchainWalletState</li>
-        </ul>
-    }
+            }
+            else if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
+            {
+                <button class="btn btn-primary" @onclick="GenerateWallet">Generate wallet</button>
+            }
+            else
+            {
+                <ul>
+                    <li>Connection state: @State.Value.ConnectionState</li>
+                    <li>Onchain wallet state: @State.Value.OnchainWalletState</li>
+                </ul>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
 </section>
 
 @code {

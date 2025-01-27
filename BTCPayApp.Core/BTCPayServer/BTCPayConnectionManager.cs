@@ -144,7 +144,7 @@ public class BTCPayConnectionManager(
                         .WithUrl(url, options =>
                         {
                             options.AccessTokenProvider = () =>
-                                Task.FromResult(accountManager.Account?.AccessToken);
+                                Task.FromResult(accountManager.Account?.OwnerToken);
                             options.HttpMessageHandlerFactory = serviceProvider
                                 .GetService<Func<HttpMessageHandler, HttpMessageHandler>>();
                             options.WebSocketConfiguration =

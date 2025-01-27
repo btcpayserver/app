@@ -48,7 +48,7 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddLDK();
         serviceCollection.AddSingleton<IAuthorizationHandler, AuthorizationHandler>();
-        serviceCollection.AddAuthorizationCore(options => options.AddBTCPayPolicies());
+        serviceCollection.AddAuthorizationCore(options => options.AddPolicies());
         return serviceCollection;
     }
 }

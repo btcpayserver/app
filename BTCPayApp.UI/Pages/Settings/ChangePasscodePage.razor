@@ -1,6 +1,7 @@
 ﻿@attribute [Route(Routes.ChangePasscode)]
 @layout BaseLayout
 @using BTCPayApp.Core
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Util
@@ -22,29 +23,36 @@
 </SectionContent>
 
 <section class="container">
-    <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
-        <div class="text-center">
-            <InputText @bind-Value="Model.NewPasscode" class="d-none"/>
-            <InputText @bind-Value="Model.ConfirmPasscode" class="d-none"/>
-            @if (Model.Mode == PasscodeMode.Set)
-            {
-                <p>Set a 6-digit passcode to unlock the app.<br />This passcode can't be used to recover your wallet.</p>
-            }
-            else if (Model.Mode == PasscodeMode.Confirm)
-            {
-                <p>Please confirm the passcode you just entered.</p>
-                <button type="button" class="btn btn-outline-light mb-3" @onclick="Reset">Start over</button>
-                <ValidationMessage For="@(() => Model.ConfirmPasscode)" />
-            }
-        </div>
-        <Passcode OnPasscodeEntered="HandlePasscodeEntered" />
-        @if (HasPasscode)
-        {
-            <button class="btn btn-outline-danger" type="button" @onclick="RemovePasscode">
-                Remove passcode
-            </button>
-        }
-    </ValidationEditContext>
+    <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+        <Authorized>
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
+                <div class="text-center">
+                    <InputText @bind-Value="Model.NewPasscode" class="d-none"/>
+                    <InputText @bind-Value="Model.ConfirmPasscode" class="d-none"/>
+                    @if (Model.Mode == PasscodeMode.Set)
+                    {
+                        <p>Set a 6-digit passcode to unlock the app.<br />This passcode can't be used to recover your wallet.</p>
+                    }
+                    else if (Model.Mode == PasscodeMode.Confirm)
+                    {
+                        <p>Please confirm the passcode you just entered.</p>
+                        <button type="button" class="btn btn-outline-light mb-3" @onclick="Reset">Start over</button>
+                        <ValidationMessage For="@(() => Model.ConfirmPasscode)" />
+                    }
+                </div>
+                <Passcode OnPasscodeEntered="HandlePasscodeEntered" />
+                @if (HasPasscode)
+                {
+                    <button class="btn btn-outline-danger" type="button" @onclick="RemovePasscode">
+                        Remove passcode
+                    </button>
+                }
+            </ValidationEditContext>
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
 </section>
 
 @code {

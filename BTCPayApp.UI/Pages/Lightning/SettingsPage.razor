@@ -28,101 +28,108 @@
     </Titlebar>
 </SectionContent>
 <section class="container">
-    @if (State.Value.LightningNodeState is LightningNodeState.NotConfigured)
-    {
-        <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
-    }
-    else if (Node is not null && State.Value.LightningNodeState is not LightningNodeState.Error)
-    {
-        <h2 class="d-flex flex-wrap align-items-center gap-2">
-            <span>@(_config?.Alias ?? "Lightning Node")</span>
-            @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier)
-                 // && _storePaymentMethodIdentifier == ConnectionString
-        )
+    <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+        <Authorized>
+            @if (State.Value.LightningNodeState is LightningNodeState.NotConfigured)
             {
-                <span class="badge bg-info">Lightning Payment Method</span>
+                <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
             }
-        </h2>
-        <div class="box mb-5">
-            @if (Node is not null)
+            else if (Node is not null && State.Value.LightningNodeState is not LightningNodeState.Error)
             {
-                <div class="form-floating">
-                    <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                    <label>Node ID</label>
-                </div>
-            }
-
-            @if (!string.IsNullOrEmpty(_config?.LightningDerivationPath))
-            {
-                <div class="form-floating">
-                    <TruncateCenter Text="@_config.LightningDerivationPath" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                    <label>Derivation Path</label>
-                </div>
-            }
-
-            @* @if (!string.IsNullOrEmpty(ConnectionString)) *@
-            @* { *@
-            @*     <div class="form-floating"> *@
-            @*         <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/> *@
-            @*         <label>Connection String</label> *@
-            @*     </div> *@
-            @* *@
-            @*     @if (!string.IsNullOrEmpty(StoreId) && _storePaymentMethodIdentifier != ConnectionString) *@
-            @*     { *@
-            @*         <button class="btn btn-primary my-3" @onclick="SetStorePaymentMethod">Set as lightning payment method for store</button> *@
-            @*     } *@
-            @* } *@
-        </div>
-        @if (Node is not null)
-        {
-            <h2>Lightning Settings</h2>
-            <ValidationEditContext @ref="_validationEditContext"  Model="Model" OnValidSubmit="UpdateConfig" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
-                <DataAnnotationsValidator/>
-                <fieldset class="box">
-                    @if (_jitOptions?.Any() is true)
+                <h2 class="d-flex flex-wrap align-items-center gap-2">
+                    <span>@(_config?.Alias ?? "Lightning Node")</span>
+                    @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier)
+                         // && _storePaymentMethodIdentifier == ConnectionString
+                )
                     {
-                        <div class="form-group">
-                            <label for="JITLSP" class="form-label">Lightning Service Provider</label>
-                            <InputSelect id="JITLSP" @bind-Value="Model.JitLsp" class="form-select">
-                                <option value="">None</option>
-                                @foreach (var jit in _jitOptions)
-                                {
-                                    <option value="@jit">@jit</option>
-                                }
-                            </InputSelect>
-                            <ValidationMessage For="@(() => Model.JitLsp)"/>
+                        <span class="badge bg-info">Lightning Payment Method</span>
+                    }
+                </h2>
+                <div class="box mb-5">
+                    @if (Node is not null)
+                    {
+                        <div class="form-floating">
+                            <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                            <label>Node ID</label>
                         </div>
                     }
-                    <div class="form-group">
-                        <label for="RgsUrl" class="form-label">Rapid Gossip Sync Server URL</label>
-                        <InputText @bind-Value="Model.RgsUrl" type="url" class="form-control" id="RgsUrl"/>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100" disabled="@_validationEditContext!.Invalid">
-                        <span>Update Configuration</span>
-                    </button>
-                </fieldset>
-            </ValidationEditContext>
-        }
-    }
-    else
-    {
-        <LightningNodeStateAlert State="State.Value.LightningNodeState" />
-    }
-    @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loaded or LightningNodeState.Stopped or LightningNodeState.Error)
-    {
-        <h2>Lightning Control</h2>
-        <div class="box d-grid d-sm-flex flex-wrap gap-3 buttons">
-            @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
-            {
-                <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
+
+                    @if (!string.IsNullOrEmpty(_config?.LightningDerivationPath))
+                    {
+                        <div class="form-floating">
+                            <TruncateCenter Text="@_config.LightningDerivationPath" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                            <label>Derivation Path</label>
+                        </div>
+                    }
+
+                    @* @if (!string.IsNullOrEmpty(ConnectionString)) *@
+                    @* { *@
+                    @*     <div class="form-floating"> *@
+                    @*         <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/> *@
+                    @*         <label>Connection String</label> *@
+                    @*     </div> *@
+                    @* *@
+                    @*     @if (!string.IsNullOrEmpty(StoreId) && _storePaymentMethodIdentifier != ConnectionString) *@
+                    @*     { *@
+                    @*         <button class="btn btn-primary my-3" @onclick="SetStorePaymentMethod">Set as lightning payment method for store</button> *@
+                    @*     } *@
+                    @* } *@
+                </div>
+                @if (Node is not null)
+                {
+                    <h2>Lightning Settings</h2>
+                    <ValidationEditContext @ref="_validationEditContext"  Model="Model" OnValidSubmit="UpdateConfig" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
+                        <DataAnnotationsValidator/>
+                        <fieldset class="box">
+                            @if (_jitOptions?.Any() is true)
+                            {
+                                <div class="form-group">
+                                    <label for="JITLSP" class="form-label">Lightning Service Provider</label>
+                                    <InputSelect id="JITLSP" @bind-Value="Model.JitLsp" class="form-select">
+                                        <option value="">None</option>
+                                        @foreach (var jit in _jitOptions)
+                                        {
+                                            <option value="@jit">@jit</option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => Model.JitLsp)"/>
+                                </div>
+                            }
+                            <div class="form-group">
+                                <label for="RgsUrl" class="form-label">Rapid Gossip Sync Server URL</label>
+                                <InputText @bind-Value="Model.RgsUrl" type="url" class="form-control" id="RgsUrl"/>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" disabled="@_validationEditContext!.Invalid">
+                                <span>Update Configuration</span>
+                            </button>
+                        </fieldset>
+                    </ValidationEditContext>
+                }
             }
-            else if (State.Value.LightningNodeState is LightningNodeState.Loaded)
+            else
             {
-                <button class="btn btn-outline-warning" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
-                <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
+                <LightningNodeStateAlert State="State.Value.LightningNodeState" />
             }
-        </div>
-    }
+            @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loaded or LightningNodeState.Stopped or LightningNodeState.Error)
+            {
+                <h2>Lightning Control</h2>
+                <div class="box d-grid d-sm-flex flex-wrap gap-3 buttons">
+                    @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
+                    {
+                        <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
+                    }
+                    else if (State.Value.LightningNodeState is LightningNodeState.Loaded)
+                    {
+                        <button class="btn btn-outline-warning" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
+                        <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
+                    }
+                </div>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
 </section>
 
 @code {

@@ -1,4 +1,5 @@
 ﻿@attribute [Route(Routes.EncryptionKey)]
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Backup
 @using BTCPayApp.Core.BTCPayServer
 @using BTCPayApp.UI.Components.Layout
@@ -36,7 +37,7 @@
                 <div class="form-group">
                     <label for="EncryptionKey" class="form-label">Your Encryption Key</label>
                     <div class="d-flex gap-2">
-                        <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" autocomplete="off" />
+                        <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" autocomplete="off"/>
                         <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
                             <Icon Symbol="scan-qr"/>
                         </button>
@@ -50,17 +51,24 @@
     }
     else if (!string.IsNullOrEmpty(Model.EncryptionKey))
     {
-        <p class="mb-4 text-center">
-            Back up your encryption key, otherwise you won't be able to restore the app and its wallet.
-            You will also need this key to pair the app with other devices.
-        </p>
-        <div class="box my-4 mx-auto">
-            <div class="form-floating form-group">
-                <TruncateCenter Text="@Model.EncryptionKey" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                <label>Your Encryption Key</label>
-            </div>
-            <QrCode Data="@Model.EncryptionKey" class="w-100"/>
-        </div>
+        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+            <Authorized>
+                <p class="mb-4 text-center">
+                    Back up your encryption key, otherwise you won't be able to restore the app and its wallet.
+                    You will also need this key to pair the app with other devices.
+                </p>
+                <div class="box my-4 mx-auto">
+                    <div class="form-floating form-group">
+                        <TruncateCenter Text="@Model.EncryptionKey" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <label>Your Encryption Key</label>
+                    </div>
+                    <QrCode Data="@Model.EncryptionKey" class="w-100"/>
+                </div>
+            </Authorized>
+            <NotAuthorized>
+                <Alert Type="danger">Unauthorized.</Alert>
+            </NotAuthorized>
+        </AuthorizeView>
     }
 </section>
 

@@ -28,29 +28,39 @@
     <section class="container">
         <header class="d-flex align-items-center justify-content-between gap-3 my-4">
             <h1>Settings</h1>
-            @if (InstanceInfo?.CustomThemeExtension is null)
-            {
-                <div class="theme-switch">
-                    @foreach (var theme in ThemeList)
-                    {
-                        <button type="button" class="btn-icon @(Model.Theme == theme ? "active" : null)" title="@theme" @onclick="() => SetTheme(theme)">
-                            <Icon Symbol="@($"themes-{theme.ToLower()}")"/>
-                        </button>
-                    }
-                </div>
-            }
+            <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+                @if (InstanceInfo?.CustomThemeExtension is null)
+                {
+                    <div class="theme-switch">
+                        @foreach (var theme in ThemeList)
+                        {
+                            <button type="button" class="btn-icon @(Model.Theme == theme ? "active" : null)" title="@theme" @onclick="() => SetTheme(theme)">
+                                <Icon Symbol="@($"themes-{theme.ToLower()}")"/>
+                            </button>
+                        }
+                    </div>
+                }
+            </AuthorizeView>
         </header>
         @if (CurrentUser != null)
         {
             <div class="box user mb-2 d-flex align-items-center justify-content-between gap-3 my-4">
-                @if (StoreUsers?.Count() > 1 && HasPasscode)
-                {
-                    <UserSwitch CurrentUser="@CurrentUser" Users="@StoreUsers"/>
-                }
-                else
-                {
-                    <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl" />
-                }
+                <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+                    <Authorized>
+                        @if (StoreUsers?.Count() > 1 && HasPasscode)
+                        {
+                            <UserSwitch CurrentUser="@CurrentUser" Users="@StoreUsers" SwitchToUser="@SwitchToUser"/>
+                        }
+                        else
+                        {
+                            <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl"/>
+                        }
+                    </Authorized>
+                    <NotAuthorized>
+                        <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl"/>
+                        <span class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchToOwner">Switch back</span>
+                    </NotAuthorized>
+                </AuthorizeView>
             </div>
         }
         <div class="box">
@@ -72,114 +82,120 @@
             </ul>
         </div>
 
-        <h2>Store</h2>
-        <div class="box">
-            <ul class="list-group list-group-flush list-group-links">
-                @if (CurrentUser?.Stores?.Count() > 1 || CurrentStore == null)
-                {
-                    <li class="list-group-item">
-                        <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : "justify-content-start")">
-                            <Icon Symbol="nav-store"/>
-                            @if (CurrentStore == null)
-                            {
-                                <span>Select Store</span>
-                                <Icon Symbol="caret-right"/>
-                            }
-                            else
-                            {
-                                <div>
-                                    <div>@CurrentStore.Name</div>
-                                    <div class="text-muted">@CurrentStore.RoleId</div>
-                                </div>
-                                <span class="btn btn-link fw-semibold px-2 py-1 ms-auto">Select</span>
-                            }
-                        </a>
-                    </li>
-                }
-                else
-                {
-                    <li class="list-group-item">
-                        <a href="@Routes.CreateStore">
-                            <Icon Symbol="nav-store"/>
-                            <span>Create Store</span>
-                            <Icon Symbol="caret-right"/>
-                        </a>
-                    </li>
-                }
-                @if (CurrentStore != null)
-                {
-                    <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id">
+        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+            <h2>Store</h2>
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
+                    @if (CurrentUser?.Stores?.Count() > 1 || CurrentStore == null)
+                    {
                         <li class="list-group-item">
-                            <a href="@Routes.StorePath(CurrentStore.Id)">
+                            <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : "justify-content-start")">
                                 <Icon Symbol="nav-store"/>
-                                <span>@CurrentStore.Name</span>
+                                @if (CurrentStore == null)
+                                {
+                                    <span>Select Store</span>
+                                    <Icon Symbol="caret-right"/>
+                                }
+                                else
+                                {
+                                    <div>
+                                        <div>@CurrentStore.Name</div>
+                                        <div class="text-muted">@CurrentStore.RoleId</div>
+                                    </div>
+                                    <span class="btn btn-link fw-semibold px-2 py-1 ms-auto">Select</span>
+                                }
+                            </a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="list-group-item">
+                            <a href="@Routes.CreateStore">
+                                <Icon Symbol="nav-store"/>
+                                <span>Create Store</span>
                                 <Icon Symbol="caret-right"/>
                             </a>
                         </li>
-                    </AuthorizeView>
-                    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id">
-                        @if (CurrentStore.PosAppId != null)
-                        {
+                    }
+                    @if (CurrentStore != null)
+                    {
+                        <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id" Context="Store">
                             <li class="list-group-item">
-                                <a href="@Routes.PosSettingsPath(CurrentStore.PosAppId)">
-                                    <Icon Symbol="nav-pointofsale"/>
-                                    <span>Checkout</span>
+                                <a href="@Routes.StorePath(CurrentStore.Id)">
+                                    <Icon Symbol="nav-store"/>
+                                    <span>@CurrentStore.Name</span>
                                     <Icon Symbol="caret-right"/>
                                 </a>
                             </li>
-                        }
-                    </AuthorizeView>
-                }
-            </ul>
-        </div>
+                        </AuthorizeView>
+                        <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id" Context="Store">
+                            @if (CurrentStore.PosAppId != null)
+                            {
+                                <li class="list-group-item">
+                                    <a href="@Routes.PosSettingsPath(CurrentStore.PosAppId)">
+                                        <Icon Symbol="nav-pointofsale"/>
+                                        <span>Checkout</span>
+                                        <Icon Symbol="caret-right"/>
+                                    </a>
+                                </li>
+                            }
+                        </AuthorizeView>
+                    }
+                </ul>
+            </div>
+        </AuthorizeView>
 
-        <h2>Bitcoin</h2>
-        <div class="box">
-            <ul class="list-group list-group-flush list-group-links">
-                <li class="list-group-item">
-                    <a href="@Routes.WalletSettings">
-                        <Icon Symbol="wallet-wallet"/>
-                        <span>Onchain Wallet</span>
-                        <Icon Symbol="caret-right"/>
-                    </a>
-                </li>
-                <li class="list-group-item">
-                    <a href="@Routes.LightningSettings">
-                        <Icon Symbol="lightning-node"/>
-                        <span>Lightning Node</span>
-                        <Icon Symbol="caret-right"/>
-                    </a>
-                </li>
-                @if (LightningNodeManager.IsActive)
-                {
+        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+            <h2>Bitcoin</h2>
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item">
-                        <a href="@Routes.ChannelsPeers">
-                            <Icon Symbol="lightning-node"/>
-                            <span>Channels and Peers</span>
+                        <a href="@Routes.WalletSettings">
+                            <Icon Symbol="wallet-wallet"/>
+                            <span>Onchain Wallet</span>
                             <Icon Symbol="caret-right"/>
                         </a>
                     </li>
-                }
-            </ul>
-        </div>
+                    <li class="list-group-item">
+                        <a href="@Routes.LightningSettings">
+                            <Icon Symbol="lightning-node"/>
+                            <span>Lightning Node</span>
+                            <Icon Symbol="caret-right"/>
+                        </a>
+                    </li>
+                    @if (LightningNodeManager.IsActive)
+                    {
+                        <li class="list-group-item">
+                            <a href="@Routes.ChannelsPeers">
+                                <Icon Symbol="lightning-node"/>
+                                <span>Channels and Peers</span>
+                                <Icon Symbol="caret-right"/>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </AuthorizeView>
 
         <h2>Security</h2>
         <div class="box">
             <ul class="list-group list-group-flush list-group-links">
-                <li class="list-group-item">
-                    <a href="@Routes.EncryptionKey">
-                        <Icon Symbol="key"/>
-                        <span>Encryption key</span>
-                        <Icon Symbol="caret-right"/>
-                    </a>
-                </li>
-                @*<li class="list-group-item">
-                    <a href="@Routes.ChangePasscode">
-                        <Icon Symbol="key"/>
-                        <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
-                        <Icon Symbol="caret-right"/>
-                    </a>
-                </li>*@
+                <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+                    <li class="list-group-item">
+                        <a href="@Routes.EncryptionKey">
+                            <Icon Symbol="key"/>
+                            <span>Encryption key</span>
+                            <Icon Symbol="caret-right"/>
+                        </a>
+                    </li>
+                    @*<li class="list-group-item">
+                        <a href="@Routes.ChangePasscode">
+                            <Icon Symbol="key"/>
+                            <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
+                            <Icon Symbol="caret-right"/>
+                        </a>
+                    </li>*@
+                </AuthorizeView>
                 <li class="list-group-item">
                     <a href="@Routes.ChangePassword">
                         <Icon Symbol="dots" class="p-2"/>
@@ -190,81 +206,82 @@
             </ul>
         </div>
 
-        <h2>Debug</h2>
-        <div class="box">
-            <ul class="list-group list-group-flush list-group-links">
-                <li class="list-group-item">
-                    <div class="justify-content-start">
-                        <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster or BTCPayConnectionState.ConnectedAsSlave or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
-                        <span>
-                            Hub:
-                            @(State.Value.ConnectionState switch
+        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+            <h2>Debug</h2>
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
+                    <li class="list-group-item">
+                        <div class="justify-content-start">
+                            <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster or BTCPayConnectionState.ConnectedAsSlave or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                            <span>
+                                Hub:
+                                @(State.Value.ConnectionState switch
+                                {
+                                    BTCPayConnectionState.ConnectedAsMaster => "Connected as primary device",
+                                    BTCPayConnectionState.ConnectedAsSlave => "Connected as secondary device",
+                                    BTCPayConnectionState.ConnectedFinishedInitialSync => "Connected, initial sync finished",
+                                    BTCPayConnectionState.WaitingForAuth => "Waiting for authentication",
+                                    BTCPayConnectionState.WaitingForEncryptionKey => "Waiting for encryption key",
+                                    _ => State.Value.ConnectionState.ToString()
+                                })
+                            </span>
+                            @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
                             {
-                                BTCPayConnectionState.ConnectedAsMaster => "Connected as primary device",
-                                BTCPayConnectionState.ConnectedAsSlave => "Connected as secondary device",
-                                BTCPayConnectionState.ConnectedFinishedInitialSync => "Connected, initial sync finished",
-                                BTCPayConnectionState.WaitingForAuth => "Waiting for authentication",
-                                BTCPayConnectionState.WaitingForEncryptionKey => "Waiting for encryption key",
-                                _ => State.Value.ConnectionState.ToString()
-                            })
-                        </span>
-                        @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
-                        {
-                            <button type="button" class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchToSlave">
-                                <span>Switch to Slave</span>
-                            </button>
-                        }
-                    </div>
-                </li>
-                @if (State.Value.ConnectionState != BTCPayConnectionState.ConnectedAsSlave)
+                                <button type="button" class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchToSlave">
+                                    <span>Switch to Slave</span>
+                                </button>
+                            }
+                        </div>
+                    </li>
+                    @if (State.Value.ConnectionState != BTCPayConnectionState.ConnectedAsSlave)
+                    {
+                        <li class="list-group-item">
+                            <div class="justify-content-start">
+                                <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.OnchainWalletState switch { OnChainWalletState.Loaded => "enabled", OnChainWalletState.Init => "disabled", _ => "pending" })"></span>
+                                <span>
+                                    Wallet:
+                                    @(State.Value.OnchainWalletState switch
+                                    {
+                                        OnChainWalletState.NotConfigured => "Not configured",
+                                        OnChainWalletState.WaitingForConnection => "Waiting for connection",
+                                        _ => State.Value.OnchainWalletState.ToString()
+                                    })
+                                </span>
+                            </div>
+                        </li>
+                        <li class="list-group-item">
+                            <div class="justify-content-start">
+                                <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.LightningNodeState switch { LightningNodeState.Loaded => "enabled", LightningNodeState.Error or LightningNodeState.Stopped=> "disabled", _ => "pending" })"></span>
+                                <span>
+                                    Lightning:
+                                    @(State.Value.LightningNodeState switch
+                                    {
+                                        LightningNodeState.NotConfigured => "Not configured",
+                                        LightningNodeState.WaitingForConnection => "Waiting for connection",
+                                        _ => State.Value.LightningNodeState.ToString()
+                                    })
+                                </span>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+            <h2>Logout</h2>
+            <div class="box">
+                @switch (State.Value.ConnectionState)
                 {
-                    <li class="list-group-item">
-                        <div class="justify-content-start">
-                            <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.OnchainWalletState switch { OnChainWalletState.Loaded => "enabled", OnChainWalletState.Init => "disabled", _ => "pending" })"></span>
-                            <span>
-                                Wallet:
-                                @(State.Value.OnchainWalletState switch
-                                {
-                                    OnChainWalletState.NotConfigured => "Not configured",
-                                    OnChainWalletState.WaitingForConnection => "Waiting for connection",
-                                    _ => State.Value.OnchainWalletState.ToString()
-                                })
-                            </span>
-                        </div>
-                    </li>
-                    <li class="list-group-item">
-                        <div class="justify-content-start">
-                            <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.LightningNodeState switch { LightningNodeState.Loaded => "enabled", LightningNodeState.Error or LightningNodeState.Stopped=> "disabled", _ => "pending" })"></span>
-                            <span>
-                                Lightning:
-                                @(State.Value.LightningNodeState switch
-                                {
-                                    LightningNodeState.NotConfigured => "Not configured",
-                                    LightningNodeState.WaitingForConnection => "Waiting for connection",
-                                    _ => State.Value.LightningNodeState.ToString()
-                                })
-                            </span>
-                        </div>
-                    </li>
+                    case BTCPayConnectionState.ConnectedAsMaster:
+                        <p>This device is currently connected as primary device for communication with the BTCPay Server.</p>
+                        <p>Please note, that when you sign out of the account on this device, your Lightning node will go offline and you will not be able to receive any payments.</p>
+                        break;
+                    case BTCPayConnectionState.ConnectedAsSlave:
+                        <p>This device is currently connected as additional device for communication with the BTCPay Server.</p>
+                        <p>Please ensure, that your primary device is still connected to the BTCPay Server, because otherwise you will not be able to receive any payments.</p>
+                        break;
                 }
-            </ul>
-        </div>
-
-        <h2>Logout</h2>
-        <div class="box">
-            @switch (State.Value.ConnectionState)
-            {
-                case BTCPayConnectionState.ConnectedAsMaster:
-                    <p>This device is currently connected as primary device for communication with the BTCPay Server.</p>
-                    <p>Please note, that when you sign out of the account on this device, your Lightning node will go offline and you will not be able to receive any payments.</p>
-                    break;
-                case BTCPayConnectionState.ConnectedAsSlave:
-                    <p>This device is currently connected as additional device for communication with the BTCPay Server.</p>
-                    <p>Please ensure, that your primary device is still connected to the BTCPay Server, because otherwise you will not be able to receive any payments.</p>
-                    break;
-            }
-            <button class="btn btn-outline-danger w-100 mt-2" type="button" @onclick="Logout">Logout</button>
-        </div>
+                <button class="btn btn-outline-danger w-100 mt-2" type="button" @onclick="Logout">Logout</button>
+            </div>
+        </AuthorizeView>
     </section>
 }
 
@@ -301,9 +318,23 @@
         Dispatcher.Dispatch(new UIState.ApplyUserTheme(Model.Theme));
     }
 
-    private void SwitchToSlave()
+    private async Task SwitchToSlave()
     {
+        if (!await AccountManager.IsAuthorized(AppPolicies.CanModifySettings)) return;
         _ = ConnectionManager.SwitchToSlave();
+    }
+
+    private async Task SwitchToUser(StoreUserData storeUser)
+    {
+        if (string.IsNullOrEmpty(CurrentStore?.Id)) return;
+        if (!await AccountManager.IsAuthorized(AppPolicies.CanModifySettings)) return;
+        await AccountManager.SwitchToUser(CurrentStore.Id, storeUser.UserId);
+    }
+
+    private async Task SwitchToOwner()
+    {
+        // TODO: Guard with pin entry
+        await AccountManager.SwitchToOwner();
     }
 
     private async Task Logout()

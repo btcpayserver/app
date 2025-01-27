@@ -4,26 +4,22 @@
 @inject BTCPayConnectionManager ConnectionManager
 @layout BaseLayout
 
-@if (!string.IsNullOrEmpty(LoadingState))
-{
-    <PageTitle>@LoadingState</PageTitle>
-    <style>#NavbarBottom { display: none; }</style>
-    <section class="container">
-        <LoadingIndicator Size="lg"/>
-        <div class="fs-4">@LoadingState</div>
-    </section>
-}
+<PageTitle>@LoadingState</PageTitle>
+<style>#NavbarBottom { display: none; }</style>
+<section class="container">
+    <LoadingIndicator Size="lg"/>
+    <div class="fs-4">@LoadingState</div>
+</section>
 
 @code {
-    private string? LoadingState { get; set; }
+    private string LoadingState { get; set; } = "Loading";
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        LoadingState = ConnectionManager.ConnectionState is BTCPayConnectionState.Connecting or BTCPayConnectionState.Syncing
-            ? ConnectionManager.ConnectionState.ToString()
-            : null;
+        if (ConnectionManager.ConnectionState is BTCPayConnectionState.Connecting or BTCPayConnectionState.Syncing)
+            LoadingState = ConnectionManager.ConnectionState.ToString();
 
         await RedirectForAuthState();
     }

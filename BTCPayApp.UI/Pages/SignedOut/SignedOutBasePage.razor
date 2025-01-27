@@ -7,6 +7,7 @@
 @using BTCPayApp.Core.Models
 @using BTCPayApp.UI.Features
 @using Microsoft.Extensions.Logging
+@using org.ldk.structs
 @inject IJSRuntime JS
 @inject IAccountManager AccountManager
 @inject BTCPayConnectionManager ConnectionManager
@@ -168,6 +169,7 @@
         if (authState.User.Identity?.IsAuthenticated is true)
         {
             var storeId = AccountManager.CurrentStore?.Id;
+            var current = NavigationManager.Uri[(NavigationManager.BaseUri.Length - 1)..];
             switch (ConnectionManager.ConnectionState)
             {
                 case BTCPayConnectionState.Connecting or BTCPayConnectionState.Syncing:
@@ -186,9 +188,14 @@
                             ? Routes.SelectStore
                             : Routes.CreateStore;
                     }
-                    else
+                    else if (current == Routes.Index)
                     {
                         route = Routes.PointOfSale;
+                    }
+                    else
+                    {
+                        // do not redirect if the user is already on the correct page
+                        return;
                     }
                     break;
                 }

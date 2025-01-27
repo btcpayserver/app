@@ -165,6 +165,31 @@ public partial class AppApiController
         return Ok(response);
     }
 
+    [HttpPost("switch-user")]
+    [RateLimitsFilter(ZoneLimits.Login, Scope = RateLimitsScope.RemoteAddress)]
+    public async Task<IActionResult> SwitchUser(SwitchUserRequest req)
+    {
+        if (string.IsNullOrEmpty(req.StoreId))
+            ModelState.AddModelError(nameof(req.StoreId), "Missing store id");
+        if (string.IsNullOrEmpty(req.UserId))
+            ModelState.AddModelError(nameof(req.UserId), "Missing user id");
+        if (!ModelState.IsValid)
+            return this.CreateValidationError(ModelState);
+
+        var authorization = await authService.AuthorizeAsync(User, Policies.CanModifyStoreSettings);
+        if (!authorization.Succeeded)
+            return this.CreateAPIError(401, "unauthenticated", "Only store owners can switch users");
+
+        var storeUser = await storeRepository.GetStoreUser(req.StoreId, req.UserId);
+        if (storeUser == null)
+            return this.CreateAPIError(404, "store-user-not-found", "The user is not associated with the store");
+
+        var user = await userManager.FindByIdAsync(storeUser.ApplicationUserId);
+        return user != null
+            ? await UserAuthenticated(user)
+            : this.CreateAPIError(404, "user-not-found", "The user was not found");
+    }
+
     [HttpPost("logout")]
     public async Task<IActionResult> Logout()
     {
@@ -184,41 +209,7 @@ public partial class AppApiController
         var user = await userManager.GetUserAsync(User);
         if (user == null) return NotFound();
 
-        var userStores = await storeRepository.GetStoresByUserId(user.Id);
-        var stores = new List<AppUserStoreInfo>();
-        foreach (var store in userStores)
-        {
-            var userStore = store.UserStores.Find(us => us.ApplicationUserId == user.Id && us.StoreDataId == store.Id)!;
-            var apps = await appService.GetAllApps(user.Id, false, store.Id);
-            var posApp = apps.FirstOrDefault(app => app.AppType == PointOfSaleAppType.AppType && app.App.GetSettings<PointOfSaleSettings>().DefaultView == PosViewType.Light);
-            var storeBlob = userStore.StoreData.GetStoreBlob();
-            stores.Add(new AppUserStoreInfo
-            {
-                Id = store.Id,
-                Name = store.StoreName,
-                Archived = store.Archived,
-                RoleId = userStore.StoreRole.Id,
-                PosAppId = posApp?.Id,
-                DefaultCurrency = storeBlob.DefaultCurrency,
-                Permissions = userStore.StoreRole.Permissions,
-                LogoUrl = storeBlob.LogoUrl != null
-                    ? await uriResolver.Resolve(Request.GetAbsoluteRootUri(), storeBlob.LogoUrl)
-                    : null,
-            });
-        }
-
-        var userBlob = user.GetBlob<UserBlob>();
-        var info = new AppUserInfo
-        {
-            UserId = user.Id,
-            Name = userBlob?.Name,
-            ImageUrl = !string.IsNullOrEmpty(userBlob?.ImageUrl)
-                ? await uriResolver.Resolve(Request.GetAbsoluteRootUri(), UnresolvedUri.Create(userBlob.ImageUrl))
-                : null,
-            Email = await userManager.GetEmailAsync(user),
-            Roles = await userManager.GetRolesAsync(user),
-            Stores = stores
-        };
+        var info = await GetUserInfo(user);
         return Ok(info);
     }
 
@@ -312,5 +303,45 @@ public partial class AppApiController
             await apiKeyRepository.CreateKey(key);
         }
         return Ok(new AuthenticationResponse { AccessToken = key.Id });
+    }
+
+    private async Task<AppUserInfo> GetUserInfo(ApplicationUser user)
+    {
+        var userStores = await storeRepository.GetStoresByUserId(user.Id);
+        var stores = new List<AppUserStoreInfo>();
+        foreach (var store in userStores)
+        {
+            var userStore = store.UserStores.Find(us => us.ApplicationUserId == user.Id && us.StoreDataId == store.Id)!;
+            var apps = await appService.GetAllApps(user.Id, false, store.Id);
+            var posApp = apps.FirstOrDefault(app => app.AppType == PointOfSaleAppType.AppType && app.App.GetSettings<PointOfSaleSettings>().DefaultView == PosViewType.Light);
+            var storeBlob = userStore.StoreData.GetStoreBlob();
+            stores.Add(new AppUserStoreInfo
+            {
+                Id = store.Id,
+                Name = store.StoreName,
+                Archived = store.Archived,
+                RoleId = userStore.StoreRole.Id,
+                PosAppId = posApp?.Id,
+                DefaultCurrency = storeBlob.DefaultCurrency,
+                Permissions = userStore.StoreRole.Permissions,
+                LogoUrl = storeBlob.LogoUrl != null
+                    ? await uriResolver.Resolve(Request.GetAbsoluteRootUri(), storeBlob.LogoUrl)
+                    : null,
+            });
+        }
+
+        var userBlob = user.GetBlob<UserBlob>();
+        var info = new AppUserInfo
+        {
+            UserId = user.Id,
+            Name = userBlob?.Name,
+            ImageUrl = !string.IsNullOrEmpty(userBlob?.ImageUrl)
+                ? await uriResolver.Resolve(Request.GetAbsoluteRootUri(), UnresolvedUri.Create(userBlob.ImageUrl))
+                : null,
+            Email = await userManager.GetEmailAsync(user),
+            Roles = await userManager.GetRolesAsync(user),
+            Stores = stores
+        };
+        return info;
     }
 }

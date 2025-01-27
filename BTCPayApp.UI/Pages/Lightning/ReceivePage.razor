@@ -1,4 +1,5 @@
 ﻿@attribute [Route(Routes.LightningReceive)]
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Data
 @using BTCPayApp.Core.LDK
 @using BTCPayApp.Core.Wallet
@@ -22,50 +23,57 @@
 </SectionContent>
 
 <section class="container">
-    @if (State.Value.LightningNodeState is LightningNodeState.Loaded)
-    {
-        <h4 class="mb-4">Request payment</h4>
-        <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="GenerateInvoice" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
-            <DataAnnotationsValidator/>
-
-            @if (!string.IsNullOrEmpty(_paymentRequest))
+    <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+        <Authorized>
+            @if (State.Value.LightningNodeState is LightningNodeState.Loaded)
             {
-                <div class="form-group form-floating">
-                    <TruncateCenter Text="@_paymentRequest" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                    <label>Payment Request</label>
-                </div>
+                <h4 class="mb-4">Request payment</h4>
+                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="GenerateInvoice" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
+                    <DataAnnotationsValidator/>
+
+                    @if (!string.IsNullOrEmpty(_paymentRequest))
+                    {
+                        <div class="form-group form-floating">
+                            <TruncateCenter Text="@_paymentRequest" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                            <label>Payment Request</label>
+                        </div>
+                    }
+
+                    <div class="form-group">
+                        <label for="Amount" class="form-label" data-required>Amount</label>
+                        <div class="input-group">
+                            <InputNumber @bind-Value="Model.Amount" id="Amount" class="form-control" inputmode="numeric" min="0"/>
+                            <span class="input-group-text">sats</span>
+                        </div>
+                        <ValidationMessage For="@(() => Model.Amount)"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary" disabled="@(_validationEditContext!.Invalid || _invoiceGenerating)">
+                        @if (_invoiceGenerating)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Generate Invoice</span>
+                        }
+                    </button>
+                </ValidationEditContext>
+
+                <article class="my-5">
+                    <h4 class="mb-4">Invoices</h4>
+                    <LightningPaymentList Payments="_invoices" Unit="@BitcoinUnit" Loading="@(PaymentsManager == null)" OnCancelClick="payment => Cancel(payment)" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                </article>
+                <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
             }
-
-            <div class="form-group">
-                <label for="Amount" class="form-label" data-required>Amount</label>
-                <div class="input-group">
-                    <InputNumber @bind-Value="Model.Amount" id="Amount" class="form-control" inputmode="numeric" min="0"/>
-                    <span class="input-group-text">sats</span>
-                </div>
-                <ValidationMessage For="@(() => Model.Amount)"/>
-            </div>
-            <button type="submit" class="btn btn-primary" disabled="@(_validationEditContext!.Invalid || _invoiceGenerating)">
-                @if (_invoiceGenerating)
-                {
-                    <LoadingIndicator/>
-                }
-                else
-                {
-                    <span>Generate Invoice</span>
-                }
-            </button>
-        </ValidationEditContext>
-
-        <article class="my-5">
-            <h4 class="mb-4">Invoices</h4>
-            <LightningPaymentList Payments="_invoices" Unit="@BitcoinUnit" Loading="@(PaymentsManager == null)" OnCancelClick="payment => Cancel(payment)" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
-        </article>
-        <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
-    }
-    else
-    {
-        <LightningNodeStateAlert State="State.Value.LightningNodeState" />
-    }
+            else
+            {
+                <LightningNodeStateAlert State="State.Value.LightningNodeState"/>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
 </section>
 
 @code {

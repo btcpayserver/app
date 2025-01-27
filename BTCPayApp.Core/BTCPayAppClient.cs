@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Net.Http.Headers;
 using BTCPayApp.Core.Models;
 using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
@@ -40,6 +39,11 @@ public class BTCPayAppClient(string baseUri, string? apiKey = null, HttpClient? 
     public async Task<AuthenticationResponse> Login(LoginRequest payload, CancellationToken cancellation = default)
     {
         return await SendHttpRequest<AuthenticationResponse>("btcpayapp/login", payload, HttpMethod.Post, cancellation);
+    }
+
+    public async Task<AuthenticationResponse> SwitchUser(SwitchUserRequest payload, CancellationToken cancellation = default)
+    {
+        return await SendHttpRequest<AuthenticationResponse>("btcpayapp/switch-user", payload, HttpMethod.Post, cancellation);
     }
 
     public async Task<AuthenticationResponse> Login(string loginCode, CancellationToken cancellation = default)
