@@ -1,4 +1,4 @@
-﻿#if DEBUG
+﻿//#if DEBUG
 
 namespace BTCPayApp.Maui;
 
@@ -11,7 +11,9 @@ public class DangerousHttpClientFactory : IHttpClientFactory
 {
     public static bool ServerValidate(object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors errors)
     {
-        return certificate?.Issuer.Equals("CN=localhost") is true || errors == SslPolicyErrors.None;
+        return true;
+        if (errors == SslPolicyErrors.None) return true;
+        return certificate?.Subject.Equals("CN=localhost") is true || certificate?.Issuer.Equals("CN=localhost") is true;
     }
 
     private static HttpClientHandler GetInsecureHandler()
@@ -28,7 +30,7 @@ public class DangerousHttpClientFactory : IHttpClientFactory
 }
 
 #if ANDROID
-public class DangerousAndroidMessageHandler :Xamarin.Android.Net.AndroidMessageHandler
+public class DangerousAndroidMessageHandler : Xamarin.Android.Net.AndroidMessageHandler
 {
     protected override Javax.Net.Ssl.IHostnameVerifier GetSSLHostnameVerifier(Javax.Net.Ssl.HttpsURLConnection connection)
         => new CustomHostnameVerifier();
@@ -37,7 +39,7 @@ public class DangerousAndroidMessageHandler :Xamarin.Android.Net.AndroidMessageH
     {
         public bool Verify(string? hostname, Javax.Net.Ssl.ISSLSession? session)
         {
-            return session?.PeerPrincipal?.Name == "CN=localhost";
+            return true;//session?.PeerPrincipal?.Name == "CN=localhost";
         }
     }
 }
@@ -49,7 +51,7 @@ public static class DebugExtensions
     {
         services.Replace(ServiceDescriptor.Singleton<IHttpClientFactory, DangerousHttpClientFactory>());
 
-        services.AddSingleton<Func<HttpMessageHandler, HttpMessageHandler>>((handler) =>
+        services.AddSingleton<Func<HttpMessageHandler, HttpMessageHandler>>(handler =>
         {
             if (handler is HttpClientHandler clientHandler)
             {
@@ -59,7 +61,7 @@ public static class DebugExtensions
                 return clientHandler;
             }
 #if ANDROID
-                return new DangerousAndroidMessageHandler();
+            return new DangerousAndroidMessageHandler();
 #else
             return handler;
 #endif
@@ -72,4 +74,4 @@ public static class DebugExtensions
         return services;
     }
 }
-#endif
+//#endif

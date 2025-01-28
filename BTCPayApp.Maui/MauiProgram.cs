@@ -1,6 +1,4 @@
 ﻿using BTCPayApp.Core;
-using BTCPayApp.Core.Contracts;
-using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
@@ -14,24 +12,16 @@ public static class MauiProgram
     {
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>()
-            .ConfigureFonts(fonts => { fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular"); });
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+            });
 
         builder.Services.AddMauiBlazorWebView();
-        builder.Services.ConfigureBTCPayAppCore();
         builder.Services.AddBTCPayAppUIServices();
-        builder.Services.AddLogging(loggingBuilder => loggingBuilder
-            .AddConsole()
-        );
-#if DEBUG
-        builder.Services.AddBlazorWebViewDeveloperTools();
-        builder.Logging.AddDebug();
-#endif
-        builder.Services.AddSingleton<IDataDirectoryProvider, MauiDataDirectoryProvider>();
-        builder.Services.AddSingleton<ISecureConfigProvider, MauiEssentialsSecureConfigProvider>();
-        builder.Services.AddSingleton<ISystemThemeProvider, MauiSystemThemeProvider>();
-        builder.Services.AddSingleton(CrossFingerprint.Current);
-        builder.Services.AddSingleton<HostedServiceInitializer>();
-        builder.Services.AddSingleton<IMauiInitializeService, HostedServiceInitializer>();
+        builder.Services.ConfigureBTCPayAppCore();
+        builder.Services.ConfigureBTCPayAppMaui();
+        builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddConsole());
 
         builder.ConfigureLifecycleEvents(events =>
         {
@@ -49,8 +39,6 @@ public static class MauiProgram
                 {
                     IPlatformApplication.Current?.Services.GetRequiredService<HostedServiceInitializer>().Dispose();
                 }));
-
-
 #endif
 #if IOS
                 events.AddiOS(ios => ios
@@ -72,10 +60,11 @@ public static class MauiProgram
                 return true;
             }
         });
-
-        #if DEBUG
+#if DEBUG
+        builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Services.AddDangerousSSLSettingsForDev();
-        #endif
+        builder.Logging.AddDebug();
+#endif
         return builder.Build();
     }
 }
