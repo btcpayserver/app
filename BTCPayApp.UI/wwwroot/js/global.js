@@ -85,14 +85,15 @@ Interop = {
 }
 
 Chart = {
-  renderLineChart (selector, labels, series, type, seriesUnit, displayUnit, rate, defaultCurrency, divisibility) {
+  renderLineChart (selector, labels, series, type, seriesUnit, rate, currency, divisibility) {
     const $el = document.querySelector(selector);
     if (!$el) return;
-    const valueTransform = (value, fromUnit, toUnit) =>{
+    const valueTransform = (value, fromUnit, rate, toUnit) => {
       if (fromUnit === toUnit) return value;
       if (fromUnit === 'BTC' && toUnit === 'SATS') return Math.round(value * 100000000);
       if (fromUnit === 'SATS' && toUnit === 'BTC') return value / 100000000;
-      else return value;
+      if (rate) return Math.round((value * rate) * 100) / 100;
+      return value;
     }
     const labelCount = 6
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/DateTimeFormat
@@ -100,8 +101,8 @@ Chart = {
     const dateFormatterDetails = new Intl.DateTimeFormat('default', { month: 'short', day: 'numeric', hour: 'numeric', minute: 'numeric' })
     Chart.lineChartTooltipValueTransform = (value, label) => {
       const date = dateFormatterDetails.format(new Date(label))
-      const val = valueTransform(value, seriesUnit, displayUnit)
-      return `<div class="chartist-tooltip-value-amount">${displayCurrency(val, rate, displayUnit, divisibility) + ' ' + (displayUnit === 'SATS' ? 'sats' : displayUnit)}</div><div class="chartist-tooltip-value-date">${date}</div>`
+      const val = valueTransform(value, seriesUnit, rate, currency)
+      return `<div class="chartist-tooltip-value-amount">${displayCurrency(val, currency, divisibility)}</div><div class="chartist-tooltip-value-date">${date}</div>`
     }
     const min = Math.min(...series);
     const max = Math.max(...series);
@@ -236,20 +237,19 @@ function formatDateTimes(format) {
   });
 }
 
-function toDefaultCurrency(amount, rate) {
-  return Math.round((amount * rate) * 100) / 100;
-}
-
-function displayCurrency(amount, rate, currency, divisibility) {
-  const value = rate ? toDefaultCurrency(amount, rate) : amount;
+function displayCurrency(amount, currency, divisibility) {
   const locale = ['USD', 'BTC', 'SATS'].includes(currency) ? 'en-US' : navigator.language;
   const isSats = currency === 'SATS';
-  if (currency === 'BTC')  divisibility = 8;
+  const isBtc = currency === 'BTC';
+  if (isBtc)  divisibility = 8;
   if (isSats) divisibility = 0;
   if (isSats) currency = 'BTC';
-  const opts = { currency, style: 'decimal', minimumFractionDigits: divisibility };
-  const val = new Intl.NumberFormat(locale, opts).format(value);
-  return isSats ? val.replace(/[\\.,]/g, ' ') : val;
+  const style = isSats || isBtc ? 'decimal' : 'currency';
+  const opts = { currency, style, minimumFractionDigits: divisibility };
+  const val = new Intl.NumberFormat(locale, opts).format(amount);
+  if (isSats) return `${val.replace(/[\\.,]/g, ' ')} sats`
+  if (isBtc) return `${val} BTC`
+  return val;
 }
 
 function confirmCopy(el, message) {

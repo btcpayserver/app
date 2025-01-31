@@ -1,27 +1,50 @@
 @using BTCPayApp.UI.Util
+@using NBitcoin
 
 @inject DisplayFormatter DisplayFormatter
 
-<span @onclick="ToggleDisplayCurrency" @onclick:stopPropagation class="@CssClass">@DisplayFormatter.Currency(Value, Unit, DisplayFormatter.CurrencyFormat.Symbol)</span>
+<span @attributes="InputAttributes" @onclick="ChangeDisplayCurrency" @onclick:stopPropagation class="@CssClass">
+    @DisplayValue
+</span>
 
 @code {
     [Parameter, EditorRequired]
-    public required decimal Value { get; set; }
+    public required long Sats { get; set; }
 
     [Parameter, EditorRequired]
-    public required string Unit { get; set; }
+    public required string Currency { get; set; }
 
     [Parameter]
-    public EventCallback OnToggleDisplayCurrency { get; set; }
+    public decimal? Rate { get; set; }
+
+    [Parameter]
+    public EventCallback OnChangeDisplayCurrency { get; set; }
 
     [Parameter(CaptureUnmatchedValues = true)]
     public Dictionary<string, object>? InputAttributes { get; set; }
 
-    private string? CssClass => InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"].ToString() : null;
-
-    private async Task ToggleDisplayCurrency()
+    private async Task ChangeDisplayCurrency()
     {
-        if (OnToggleDisplayCurrency.HasDelegate)
-            await OnToggleDisplayCurrency.InvokeAsync();
+        if (OnChangeDisplayCurrency.HasDelegate)
+            await OnChangeDisplayCurrency.InvokeAsync();
     }
+
+    private bool CanDisplayFiat => !string.IsNullOrEmpty(Currency) && DisplayFormatter.HasCurrency(Currency) && Rate.HasValue;
+    private decimal Btc => new Money(Sats, MoneyUnit.Satoshi).ToDecimal(MoneyUnit.BTC);
+    private string CurrencyUnit => Currency switch
+    {
+        CurrencyDisplay.BTC => CurrencyDisplay.BTC,
+        CurrencyDisplay.SATS => CurrencyDisplay.SATS,
+        _ => CanDisplayFiat
+            ? Currency
+            : CurrencyDisplay.SATS
+    };
+    private decimal CurrencyValue => CurrencyUnit switch
+    {
+        CurrencyDisplay.SATS => Sats,
+        CurrencyDisplay.BTC => Btc,
+        _ => CanDisplayFiat ? Btc * Rate!.Value : Sats
+    };
+    private string DisplayValue => DisplayFormatter.Currency(CurrencyValue, CurrencyUnit, DisplayFormatter.CurrencyFormat.Symbol);
+    private string? CssClass => InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"].ToString() : null;
 }

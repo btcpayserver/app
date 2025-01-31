@@ -6,6 +6,7 @@
 @using NBitcoin
 @using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Util
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
@@ -39,7 +40,7 @@
                 @if (_totalBalance != null)
                 {
                     <span class="badge bg-info ms-2">
-                    <AmountDisplay Value="_totalBalance.ToDecimal(UnitMoney)" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> total
+                    <AmountDisplay Sats="_totalBalance.Satoshi" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> total
                 </span>
                 }
             </header>
@@ -50,7 +51,7 @@
                         @foreach (var utxo in _utxos)
                         {
                             <li class="list-group-item py-2">
-                                <AmountDisplay Value="utxo.TxOut.Value.ToDecimal(UnitMoney)" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                                <AmountDisplay Sats="utxo.TxOut.Value.Satoshi" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
                             </li>
                         }
                     </ul>
@@ -82,7 +83,7 @@
                             <div class="box">
                                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
                                 <span class="text-end fw-semibold" @onclick="ToggleDisplayCurrency">
-                                    <AmountDisplay Value="new Money(tx.BalanceChange, MoneyUnit.BTC).ToDecimal(UnitMoney)" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                                    <AmountDisplay Sats="new Money(tx.BalanceChange, MoneyUnit.BTC).Satoshi" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
                                 </span>
                                     <TruncateCenter Text="@tx.TransactionId" class="truncate-center-id" Copy/>
                                     <span class="text-muted">
@@ -219,10 +220,10 @@
     private SendModel? Model { get; set; } = new();
 
     private string GetTitle() => $"{_network?.Name ?? ""} Onchain Wallet".Trim();
-    private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
-    private string BitcoinUnit => UIState.Value.BitcoinUnit;
+    private string DisplayCurrency => UIState.Value.DisplayCurrency;
+    private MoneyUnit UnitMoney => DisplayCurrency == CurrencyDisplay.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private IEnumerable<KeyValuePair<string, TxResp[]>>? TxGroups => _txs?.Where(txGroup => txGroup.Value.Any());
 
     private class SendModel
@@ -370,7 +371,7 @@
             Model.Amount = new Money(Model.Amount.Value, UnitMoney).ToDecimal(UnitMoney == MoneyUnit.Satoshi
                 ? MoneyUnit.BTC
                 : MoneyUnit.Satoshi);
-        Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
+        Dispatcher.Dispatch(new UIState.ToggleDisplayCurrency());
     }
 
     private async void OnQrCodeScan(string code)

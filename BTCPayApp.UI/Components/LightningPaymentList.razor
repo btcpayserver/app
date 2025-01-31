@@ -13,7 +13,7 @@
             @foreach (var p in Payments)
             {
                 <div class="box">
-                    <LightningPaymentItem Payment="@p" Unit="@Unit" OnCancelClick="OnCancelClick" OnToggleDisplayCurrency="OnToggleDisplayCurrency"/>
+                    <LightningPaymentItem Payment="@p" Rate="@Rate" Currency="@Currency" OnCancelClick="OnCancelClick" OnToggleDisplayCurrency="OnToggleDisplayCurrency"/>
                 </div>
             }
         }
@@ -35,7 +35,10 @@
     public IEnumerable<AppLightningPayment>? Payments { get; set; }
 
     [Parameter, EditorRequired]
-    public string? Unit { get; set; }
+    public string? Currency { get; set; }
+
+    [Parameter]
+    public decimal? Rate { get; set; }
 
     [Parameter]
     public EventCallback<AppLightningPayment> OnCancelClick { get; set; }

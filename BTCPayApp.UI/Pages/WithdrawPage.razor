@@ -65,7 +65,7 @@
                             Not enough
                             @(Model.Bolt11 != null ? "Lightning" : Model.Address != null ? "onchain" : "")
                             balance to withdraw
-                            <AmountDisplay Value="Model.Amount.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                            <AmountDisplay Sats="new Money(Model.Amount.Value, MoneyUnit.Satoshi).Satoshi" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
                         </div>
                     }
                 </Alert>
@@ -96,7 +96,7 @@
                                     {
                                         <span>
                                             Withdrawing @(Model.Bolt11 != null ? "via Lightning" : "onchain"):
-                                            <AmountDisplay Value="MaxAvailable.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                                            <AmountDisplay Sats="MaxAvailable.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
                                             available.
                                         </span>
                                     }
@@ -133,26 +133,26 @@
                 else
                 {
                     var transaction = Model.Transaction.Value;
-                    var spendingAmount = transaction.SpentCoins.Sum(c => c.TxOut.Value.ToDecimal(UnitMoney));
-                    var changeAmount = transaction.Tx.Outputs.Where(o => o.IsTo(transaction.Change)).Sum(o => o.Value.ToDecimal(UnitMoney));
-                    var feeAmount = transaction.Tx.GetFee(transaction.SpentCoins).ToDecimal(UnitMoney);
+                    var spendingAmount = transaction.SpentCoins.Sum(c => c.TxOut.Value.Satoshi);
+                    var changeAmount = transaction.Tx.Outputs.Where(o => o.IsTo(transaction.Change)).Sum(o => o.Value.Satoshi);
+                    var feeAmount = transaction.Tx.GetFee(transaction.SpentCoins).Satoshi;
                     var totalAmount = spendingAmount - changeAmount;
                     var payAmount = totalAmount - feeAmount;
                     <h2 class="fs-2 fw-bold mt-4 mb-5 text-center">
-                        <AmountDisplay Value="totalAmount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                        <AmountDisplay Sats="totalAmount" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
                     </h2>
                     <dl class="box mb-5">
                         <div>
                             <dt>Recipient gets</dt>
                             <dd>
-                                <AmountDisplay Value="payAmount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                                <AmountDisplay Sats="payAmount" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
                             </dd>
                         </div>
                         <div>
                             <dt>Network Fee</dt>
                             <dd>
                                 <span>@Model.FeeRate sat/vB =</span>
-                                <AmountDisplay Value="feeAmount" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                                <AmountDisplay Sats="feeAmount" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
                             </dd>
                         </div>
                         <div>
@@ -192,7 +192,7 @@
                 <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
                     <h2 class="mb-0">Onchain</h2>
                     <span class="text-muted">
-                        <AmountDisplay Value="OnchainConfirmedBalance!.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> available
+                        <AmountDisplay Sats="OnchainConfirmedBalance!.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> available
                     </span>
                 </header>
                 @if (OnchainState == SourceState.NotSupported || !OnChainWalletManager.IsActive || !OnChainWalletManager.IsHubConnected)
@@ -221,13 +221,13 @@
                         @if (OnchainConfirmedBalance is > 0)
                         {
                             <li class="list-group-item py-2">
-                                <AmountDisplay Value="OnchainConfirmedBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> confirmed
+                                <AmountDisplay Sats="OnchainConfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> confirmed
                             </li>
                         }
                         @if (OnchainUnconfirmedBalance is > 0)
                         {
                             <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Value="OnchainUnconfirmedBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> unconfirmed
+                                <AmountDisplay Sats="OnchainUnconfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> unconfirmed
                             </li>
                         }
                     </ul>
@@ -240,7 +240,7 @@
                 <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
                     <h2 class="mb-0">Lightning</h2>
                     <span class="text-muted">
-                        <AmountDisplay Value="(LightningOffchainLocalBalance ?? 0) + (LightningOnchainConfirmedBalance ?? 0)" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> available
+                        <AmountDisplay Sats="(LightningOffchainLocalBalance ?? 0) + (LightningOnchainConfirmedBalance ?? 0)" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> available
                     </span>
                 </header>
                 @if (LightningState == SourceState.NotSupported || !LightningNodeManager.IsActive || !LightningNodeManager.IsHubConnected)
@@ -269,37 +269,37 @@
                         @if (LightningOffchainOpeningBalance is > 0)
                         {
                             <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Value="LightningOffchainOpeningBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> opening channels
+                                <AmountDisplay Sats="LightningOffchainOpeningBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> opening channels
                             </li>
                         }
                         @if (LightningOffchainLocalBalance is > 0)
                         {
                             <li class="list-group-item py-2">
-                                <AmountDisplay Value="LightningOffchainLocalBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> local / outbound capacity
+                                <AmountDisplay Sats="LightningOffchainLocalBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> local / outbound capacity
                             </li>
                         }
                         @if (LightningOffchainClosingBalance is > 0)
                         {
                             <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Value="LightningOffchainClosingBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> closing channels
+                                <AmountDisplay Sats="LightningOffchainClosingBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> closing channels
                             </li>
                         }
                         @if (LightningOnchainConfirmedBalance is > 0)
                         {
                             <li class="list-group-item py-2">
-                                <AmountDisplay Value="LightningOnchainConfirmedBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> confirmed onchain
+                                <AmountDisplay Sats="LightningOnchainConfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> confirmed onchain
                             </li>
                         }
                         @if (LightningOnchainUnconfirmedBalance is > 0)
                         {
                             <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Value="LightningOnchainUnconfirmedBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> unconfirmed onchain
+                                <AmountDisplay Sats="LightningOnchainUnconfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> unconfirmed onchain
                             </li>
                         }
                         @if (LightningOnchainReservedBalance is > 0)
                         {
                             <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Value="LightningOnchainReservedBalance.Value" Unit="@BitcoinUnit" OnToggleDisplayCurrency="ToggleDisplayCurrency"/> reserved onchain
+                                <AmountDisplay Sats="LightningOnchainReservedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> reserved onchain
                             </li>
                         }
                     </ul>
@@ -315,7 +315,7 @@
                         <LoadingIndicator/>
                     }
                 </header>
-                <TransactionsList Transactions="Transactions" Unit="@BitcoinUnit" Error="@TransactionsError" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                <TransactionsList Transactions="Transactions" Rate="@Rate" Currency="@DisplayCurrency" Error="@TransactionsError" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
             }
         }
     </AuthorizeView>
@@ -328,19 +328,19 @@
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private string? StoreId => StoreState.Value.StoreInfo?.Id;
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
-    private decimal? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
-    private decimal? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).ToDecimal(UnitMoney);
+    private long? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).Satoshi;
+    private long? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).Satoshi;
     private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
-    private decimal? LightningOnchainBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(UnitMoney);
-    private decimal? LightningOffchainBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(UnitLightMoney);
-    private decimal? LightningOnchainConfirmedBalance => LightningBalance?.OnchainBalance?.Confirmed.ToDecimal(UnitMoney);
-    private decimal? LightningOnchainUnconfirmedBalance => LightningBalance?.OnchainBalance?.Unconfirmed.ToDecimal(UnitMoney);
-    private decimal? LightningOnchainReservedBalance => LightningBalance?.OnchainBalance?.Reserved.ToDecimal(UnitMoney);
-    private decimal? LightningOffchainOpeningBalance => LightningBalance?.OffchainBalance.Opening?.ToDecimal(UnitLightMoney);
-    private decimal? LightningOffchainLocalBalance => LightningBalance?.OffchainBalance.Local.ToDecimal(UnitLightMoney);
-    private decimal? LightningOffchainRemoteBalance => LightningBalance?.OffchainBalance.Remote.ToDecimal(UnitLightMoney);
-    private decimal? LightningOffchainClosingBalance => LightningBalance?.OffchainBalance.Opening?.ToDecimal(UnitLightMoney);
-    private decimal? TotalBalance => OnchainBalance == null && LightningBalance == null
+    private long? LightningOnchainBalance => LightningBalance?.OnchainBalance?.Confirmed.Satoshi;
+    private long? LightningOffchainBalance => LightningBalance?.OffchainBalance.Local.MilliSatoshi / 1000;
+    private long? LightningOnchainConfirmedBalance => LightningBalance?.OnchainBalance?.Confirmed.Satoshi;
+    private long? LightningOnchainUnconfirmedBalance => LightningBalance?.OnchainBalance?.Unconfirmed.Satoshi;
+    private long? LightningOnchainReservedBalance => LightningBalance?.OnchainBalance?.Reserved.Satoshi;
+    private long? LightningOffchainOpeningBalance => LightningBalance?.OffchainBalance.Opening?.MilliSatoshi / 1000;
+    private long? LightningOffchainLocalBalance => LightningBalance?.OffchainBalance.Local.MilliSatoshi / 1000;
+    private long? LightningOffchainRemoteBalance => LightningBalance?.OffchainBalance.Remote.MilliSatoshi / 1000;
+    private long? LightningOffchainClosingBalance => LightningBalance?.OffchainBalance.Opening?.MilliSatoshi / 1000;
+    private long? TotalBalance => OnchainBalance == null && LightningBalance == null
         ? null
         : (OnchainConfirmedBalance ?? 0) + (OnchainUnconfirmedBalance ?? 0) + (LightningOnchainBalance ?? 0) + (LightningOffchainBalance ?? 0);
 
@@ -348,14 +348,14 @@
     private string? BalanceError => StoreState.Value.OnchainBalance?.Error ?? StoreState.Value.LightningBalance?.Error;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
-    private string BitcoinUnit => UIState.Value.BitcoinUnit;
-    private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
-    private LightMoneyUnit UnitLightMoney => BitcoinUnit == CurrencyUnit.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
+    private string DisplayCurrency => UIState.Value.DisplayCurrency;
+    private MoneyUnit UnitMoney => DisplayCurrency == CurrencyDisplay.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
+    private LightMoneyUnit UnitLightMoney => DisplayCurrency == CurrencyDisplay.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
     private string GetTitle() => Model.Transaction == null ? "Withdraw Bitcoin" : "Review Withdrawal";
     private bool InsufficientFunds => Model.Amount is > 0 && MaxAvailable < Model.Amount;
     private bool NotSupported => Model.Bolt11 != null && LightningState != SourceState.Supported || Model.Address != null && OnchainState != SourceState.Supported;
     private bool CanAdjustAmount => Model.Bolt11?.MinimumAmount == null && MaxAvailable > 0;
-    private decimal? MaxAvailable => Model.Bolt11 != null
+    private long? MaxAvailable => Model.Bolt11 != null
         ? (LightningOffchainLocalBalance ?? 0)
         : (OnchainConfirmedBalance ?? 0);
     private bool IsValidForm => !_validationEditContext!.Invalid && !InsufficientFunds && !string.IsNullOrEmpty(Model.Destination) && (
@@ -520,7 +520,7 @@
         try
         {
             Model.Bolt11 = BOLT11PaymentRequest.Parse(destination, network);
-            Model.Amount = Model.Bolt11.MinimumAmount.ToDecimal(UnitLightMoney);
+            Model.Amount = Model.Bolt11.MinimumAmount.MilliSatoshi / 1000;
             return;
         }
         catch
@@ -717,11 +717,7 @@
 
     private void ToggleDisplayCurrency()
     {
-        if (Model.Amount.HasValue)
-            Model.Amount = new Money(Model.Amount.Value, UnitMoney).ToDecimal(UnitMoney == MoneyUnit.Satoshi
-                ? MoneyUnit.BTC
-                : MoneyUnit.Satoshi);
-        Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
+        Dispatcher.Dispatch(new UIState.ToggleDisplayCurrency());
     }
 
     // ReSharper disable once AsyncVoidMethod

@@ -6,6 +6,7 @@
 @using BTCPayApp.Core.Helpers
 @using BTCPayApp.Core.LDK
 @using BTCPayApp.Core.Wallet
+@using BTCPayApp.UI.Util
 @using LNURL
 @using NBitcoin
 @using org.ldk.enums
@@ -313,8 +314,8 @@
     private LDKNode? Node => LightningNodeManager.Node;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
-    private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
-    private string BitcoinUnit => UIState.Value.BitcoinUnit;
+    private string DisplayCurrency => UIState.Value.DisplayCurrency;
+    private MoneyUnit UnitMoney => DisplayCurrency == CurrencyDisplay.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private bool Loading { get; set; }
 
     private bool ChannelOpening { get; set; }
@@ -564,6 +565,6 @@
             ChannelModel.Amount = new Money(ChannelModel.Amount.Value, UnitMoney).ToDecimal(UnitMoney == MoneyUnit.Satoshi
                 ? MoneyUnit.BTC
                 : MoneyUnit.Satoshi);
-        Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
+        Dispatcher.Dispatch(new UIState.ToggleDisplayCurrency());
     }
 }

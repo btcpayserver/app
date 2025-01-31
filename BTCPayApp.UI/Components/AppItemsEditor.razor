@@ -6,6 +6,7 @@
 @using Plk.Blazor.DragDrop
 @inject IJSRuntime JS
 @inject IAccountManager AccountManager
+@inject DisplayFormatter DisplayFormatter
 @inject IDataDirectoryProvider DataDirectoryProvider
 
 <div @attributes="InputAttributes" class="@CssClass">
@@ -35,7 +36,8 @@
                                 else if (context.Price.HasValue)
                                 {
                                     <span class="fw-semibold text-muted">
-                                        <AmountDisplay Value="@context.Price.Value" Unit="@Currency"/> @(context.PriceType == AppItemPriceType.Minimum ? " minimum" : null)
+                                        @DisplayFormatter.Currency(context.Price.Value, Currency, DisplayFormatter.CurrencyFormat.Symbol)
+                                        @(context.PriceType == AppItemPriceType.Minimum ? " minimum" : null)
                                     </span>
                                 }
                                 @if (context.Inventory.HasValue)

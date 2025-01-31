@@ -1,14 +1,16 @@
-﻿@attribute [Route(Routes.LightningSend)]
+@attribute [Route(Routes.LightningSend)]
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Data
 @using BTCPayApp.Core.LDK
 @using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Util
 @using BTCPayServer.Lightning
 @using NBitcoin
 @inject IState<RootState> State
 @inject IState<UIState> UIState
+@inject IState<StoreState> StoreState
 @inject LightningNodeManager LightningNodeManager
 @inject IDispatcher Dispatcher
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -52,7 +54,7 @@
 
                 <article class="my-5">
                     <h4 class="mb-4">Payments</h4>
-                    <LightningPaymentList Payments="_payments" Unit="@BitcoinUnit" Loading="@(PaymentsManager == null)" OnCancelClick="payment => Cancel(payment)" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                    <LightningPaymentList Payments="_payments" Rate="@Rate" Currency="@DisplayCurrency" Loading="@(PaymentsManager == null)" OnCancelClick="payment => Cancel(payment)" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
                 </article>
                 <button class="btn btn-outline-primary" type="button" @onclick="FetchData">Refresh data</button>
             }
@@ -78,8 +80,9 @@
     private LDKNode? Node => LightningNodeManager.Node;
     private PaymentsManager? PaymentsManager => LightningNodeManager.Node?.PaymentsManager;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-    private string BitcoinUnit => UIState.Value.BitcoinUnit;
-    private MoneyUnit UnitMoney => BitcoinUnit == CurrencyUnit.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
+    private string DisplayCurrency => UIState.Value.DisplayCurrency;
+    private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
+    private MoneyUnit UnitMoney => DisplayCurrency == CurrencyDisplay.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
 
     private class SendModel
     {
@@ -155,6 +158,6 @@
 
     private void ToggleDisplayCurrency()
     {
-        Dispatcher.Dispatch(new UIState.ToggleBitcoinUnit());
+        Dispatcher.Dispatch(new UIState.ToggleDisplayCurrency());
     }
 }

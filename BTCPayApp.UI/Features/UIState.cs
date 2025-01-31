@@ -1,31 +1,20 @@
 ﻿using System.Text.Json.Serialization;
 using BTCPayApp.Core;
 using BTCPayApp.Core.Models;
+using BTCPayApp.UI.Util;
 using BTCPayServer.Client.Models;
 using Fluxor;
 using Microsoft.JSInterop;
 
 namespace BTCPayApp.UI.Features;
 
-public static class Themes
-{
-    public const string Dark = "dark";
-    public const string Light = "light";
-    public const string System = "system";
-}
-
-public static class CurrencyUnit
-{
-    public const string SATS = "SATS";
-    public const string BTC = "BTC";
-}
-
 [FeatureState]
 public record UIState
 {
     public string SelectedTheme { get; set; } = Themes.System;
     public string SystemTheme { get; set; } = Themes.Light;
-    public string BitcoinUnit { get; set; } = CurrencyUnit.SATS;
+    public string DisplayCurrency { get; set; } = CurrencyDisplay.SATS;
+    public string? FiatCurrency { get; set; }
     public HistogramType HistogramType { get; set; } = HistogramType.Week;
 
     [JsonIgnore]
@@ -35,8 +24,11 @@ public record UIState
     public record SetUserTheme(string Theme);
     public record FetchInstanceInfo(string? Url);
     public record SetInstanceInfo(AppInstanceInfo? Instance, string? Error);
-    public record ToggleBitcoinUnit(string? BitcoinUnit = null);
+    public record ToggleDisplayCurrency(string? Currency = null);
+    public record SetFiatCurrency(string? Currency = null);
     public record SetHistogramType(HistogramType Type);
+
+    public bool IsDarkMode => SelectedTheme == Themes.System? SystemTheme == Themes.Dark : SelectedTheme == Themes.Dark;
 
     protected class SetUserThemeReducer : Reducer<UIState, SetUserTheme>
     {
@@ -50,7 +42,16 @@ public record UIState
         }
     }
 
-    public bool IsDarkMode => SelectedTheme == Themes.System? SystemTheme == Themes.Dark : SelectedTheme == Themes.Dark;
+    protected class SetFiatCurrencyReducer : Reducer<UIState, SetFiatCurrency>
+    {
+        public override UIState Reduce(UIState state, SetFiatCurrency action)
+        {
+            return state with
+            {
+                FiatCurrency = action.Currency
+            };
+        }
+    }
 
     protected class FetchInstanceInfoReducer : Reducer<UIState, FetchInstanceInfo>
     {
@@ -82,16 +83,21 @@ public record UIState
         }
     }
 
-    protected class ToggleBitcoinUnitReducer : Reducer<UIState, ToggleBitcoinUnit>
+    protected class ToggleDisplayCurrencyReducer : Reducer<UIState, ToggleDisplayCurrency>
     {
-        public override UIState Reduce(UIState state, ToggleBitcoinUnit action)
+        public override UIState Reduce(UIState state, ToggleDisplayCurrency action)
         {
-            var unit = action.BitcoinUnit ?? (state.BitcoinUnit == CurrencyUnit.SATS
-                ? CurrencyUnit.BTC
-                : CurrencyUnit.SATS);
+            var unit = action.Currency ?? state.DisplayCurrency switch
+            {
+                CurrencyDisplay.BTC => CurrencyDisplay.SATS,
+                CurrencyDisplay.SATS => string.IsNullOrEmpty(state.FiatCurrency)
+                    ? CurrencyDisplay.BTC
+                    : state.FiatCurrency,
+                _ => CurrencyDisplay.BTC
+            };
             return state with
             {
-                BitcoinUnit = unit
+                DisplayCurrency = unit
             };
         }
     }
@@ -148,9 +154,9 @@ public record UIState
         }
 
         [EffectMethod]
-        public async Task ToggleBitcoinUnitEffect(ToggleBitcoinUnit action, IDispatcher dispatcher)
+        public async Task ToggleDisplayCurrencyEffect(ToggleDisplayCurrency action, IDispatcher dispatcher)
         {
-            await jsRuntime.InvokeVoidAsync("Interop.setBitcoinUnit", state.Value.BitcoinUnit);
+            await jsRuntime.InvokeVoidAsync("Interop.setBitcoinUnit", state.Value.DisplayCurrency);
         }
 
         [EffectMethod]

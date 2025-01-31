@@ -1,5 +1,6 @@
 ﻿using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Models;
+using BTCPayApp.UI.Util;
 using BTCPayServer.Client.Models;
 using Fluxor;
 
@@ -27,7 +28,7 @@ public record StoreState
     public HistogramData? UnifiedHistogram;
     public HistogramType? HistogramType;
 
-    private static string[] RateFetchExcludes = ["BTC", "SATS"];
+    private static readonly string[] BitcoinUnits = [CurrencyDisplay.BTC, CurrencyDisplay.SATS];
 
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
     public record SetHistogramType(HistogramType Type);
@@ -640,6 +641,9 @@ public record StoreState
                 dispatcher.Dispatch(new FetchRates(store));
                 dispatcher.Dispatch(new FetchPointOfSale(posId));
                 dispatcher.Dispatch(new FetchPointOfSaleStats(posId));
+
+                var currency = BitcoinUnits.Contains(store.DefaultCurrency) ? null : store.DefaultCurrency;
+                dispatcher.Dispatch(new UIState.SetFiatCurrency(currency));
             }
             return Task.CompletedTask;
         }
@@ -883,7 +887,7 @@ public record StoreState
         public async Task FetchRatesEffect(FetchRates action, IDispatcher dispatcher)
         {
             var currency = action.Store.DefaultCurrency;
-            if (RateFetchExcludes.Contains(currency)) return;
+            if (BitcoinUnits.Contains(currency)) return;
             try
             {
                 var rates = await accountManager.GetClient().GetStoreRates(action.Store.Id, [$"BTC_{currency}"]);

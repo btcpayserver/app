@@ -6,7 +6,7 @@
         <span class="flex-grow-1 text-muted">
             <DateDisplay DateTimeOffset="@Transaction.Timestamp"/>
         </span>
-        <AmountDisplay Value="Transaction.Value.ToDecimal(UnitLightMoney)" Unit="@Unit" OnToggleDisplayCurrency="ToggleDisplayCurrency" class="@AmountClass" />
+        <AmountDisplay Sats="Transaction.Value.MilliSatoshi / 1000" Rate="@Rate" Currency="@Currency" OnChangeDisplayCurrency="ToggleDisplayCurrency" class="@AmountClass" />
         <span class="w-100px ms-auto text-end">
             <span class="@BadgeClass">@UnifyStatus(Transaction.Status)</span>
         </span>
@@ -52,13 +52,15 @@
     public TransactionModel Transaction { get; set; } = null!;
 
     [Parameter, EditorRequired]
-    public string? Unit { get; set; }
+    public string? Currency { get; set; }
+
+    [Parameter]
+    public decimal? Rate { get; set; }
 
     [Parameter]
     public EventCallback OnToggleDisplayCurrency { get; set; }
 
     private bool _showDetails;
-    private LightMoneyUnit UnitLightMoney => Unit == "SATS" ? LightMoneyUnit.Satoshi : LightMoneyUnit.BTC;
     private string AmountClass => $"flex-grow-1 text-end fw-semibold text-{(Transaction.Type == TransactionType.Receive ? "success" : "danger")}";
     private string BadgeClass
     {

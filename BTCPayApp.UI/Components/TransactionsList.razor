@@ -13,7 +13,7 @@
             @foreach (var t in Transactions)
             {
                 <div class="box">
-                    <TransactionsListItem Transaction="@t" Unit="@Unit" OnToggleDisplayCurrency="OnToggleDisplayCurrency"/>
+                    <TransactionsListItem Transaction="@t" Rate="@Rate" Currency="@Currency" OnToggleDisplayCurrency="OnToggleDisplayCurrency"/>
                 </div>
             }
         }
@@ -35,7 +35,10 @@
     public IEnumerable<TransactionModel>? Transactions { get; set; }
 
     [Parameter, EditorRequired]
-    public string? Unit { get; set; }
+    public string? Currency { get; set; }
+
+    [Parameter]
+    public decimal? Rate { get; set; }
 
     [Parameter]
     public EventCallback OnToggleDisplayCurrency { get; set; }

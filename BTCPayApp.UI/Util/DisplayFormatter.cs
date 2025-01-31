@@ -174,6 +174,11 @@ public class DisplayFormatter
 
     readonly Dictionary<string, CurrencyData> _Currencies;
 
+    public bool HasCurrency(string currency)
+    {
+        return _Currencies.ContainsKey(currency.ToUpperInvariant());
+    }
+
     private static CurrencyData[] LoadData()
     {
         var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("BTCPayApp.UI.Util.Currencies.json");
