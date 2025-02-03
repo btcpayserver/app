@@ -340,7 +340,7 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
 
     public async Task<bool> DeviceMasterSignal(long deviceIdentifier, bool active)
     {
-        return await _appState.DeviceMasterSignal(Context.ConnectionId,deviceIdentifier,active);
+        return await _appState.DeviceMasterSignal(Context.ConnectionId, deviceIdentifier, active);
     }
 
     public async Task<Dictionary<string, string>> Pair(PairRequest request)

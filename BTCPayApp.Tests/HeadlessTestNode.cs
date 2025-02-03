@@ -46,12 +46,11 @@ public class HeadlessTestNode : IDisposable
 {
     public static async Task<HeadlessTestNode> Create(string nodeName, ITestOutputHelper testOutputHelper, string[]? args = null)
     {
-        var res = new HeadlessTestNode( nodeName, testOutputHelper, args);
+        var res = new HeadlessTestNode(nodeName, testOutputHelper, args);
         TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.Init, res.ConnectionManager.ConnectionState));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.Init, res.LNManager.State));
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Init, res.OnChainWalletManager.State));
 
-        
         var appTask =  res.App.StartAsync();
         await Task.WhenAny(appTask,
             res.App.Services.GetRequiredService<IHostApplicationLifetime>().ApplicationStarted.AsTask());
@@ -61,13 +60,13 @@ public class HeadlessTestNode : IDisposable
 
     private HeadlessTestNode(string nodeName, ITestOutputHelper testOutputHelper, string[]? args = null)
     {
-        var x = Path.Combine("btcpaytests", Guid.NewGuid().ToString());
+        var x = Path.Combine("btcpaytests", $"{nodeName}-{Guid.NewGuid()}");
         var hostBuilder = Host.CreateDefaultBuilder();
 
         hostBuilder
             .ConfigureLogging(builder =>
             {
-                
+
                 // builder.Services.Replace(ServiceDescriptor.Singleton<ILoggerFactory, TestLoggerFactory>(provider => new TestLoggerFactory(nodeName)));
                 // check if scopes are used in normal operation
                 var useScopes = builder.UsesScopes();
@@ -92,7 +91,7 @@ public class HeadlessTestNode : IDisposable
               options.Rules.Clear();
 options.Rules.AddRange(newRules);
             });
-            
+
             collection.Replace(ServiceDescriptor.Singleton<ILoggerFactory, TestLoggerFactory>(provider => new TestLoggerFactory(nodeName, ActivatorUtilities.CreateInstance<LoggerFactory>(provider))));
             // collection.Replace(ServiceDescriptor.Singleton<IDbContextFactory<AppDbContext>, TestDbContextFactory>());
             collection.AddDataProtection(options => { options.ApplicationDiscriminator = "BTCPayApp"; });

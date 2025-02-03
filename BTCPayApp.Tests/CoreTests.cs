@@ -33,13 +33,11 @@ public class CoreTests
     [Fact]
     public async Task CanStartAppCore()
     {
-        var btcpayUri = new Uri( GetEnvironment("BTCPAY_SERVER_URL", "https://localhost:14142"));
+        var btcpayUri = new Uri(GetEnvironment("BTCPAY_SERVER_URL", "https://localhost:14142"));
         using var node = await HeadlessTestNode.Create("Node1", _output);
 
-        TestUtils.Eventually(
-            () => Assert.Equal(BTCPayConnectionState.WaitingForAuth, node.ConnectionManager.ConnectionState));
-        TestUtils.Eventually(() =>
-            Assert.Equal(OnChainWalletState.WaitingForConnection, node.OnChainWalletManager.State));
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.WaitingForAuth, node.ConnectionManager.ConnectionState));
+        TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.WaitingForConnection, node.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => node.OnChainWalletManager.Generate());
@@ -55,21 +53,20 @@ public class CoreTests
         Assert.True(await node.AuthStateProvider.CheckAuthenticated());
         Assert.NotNull(node.AccountManager.Account?.OwnerToken);
 
-        TestUtils.Eventually(() =>
-            Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node.ConnectionManager.ConnectionState), 30_000);
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node.ConnectionManager.ConnectionState), 30_000);
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.NotConfigured, node.OnChainWalletManager.State));
 
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
         Assert.Null(await node.OnChainWalletManager.GetConfig());
 
         await node.AccountManager.Logout();
-        TestUtils.Eventually(() =>
-            Assert.Equal(OnChainWalletState.WaitingForConnection, node.OnChainWalletManager.State));
+        TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.WaitingForConnection, node.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
         Assert.True((await node.AccountManager.Login(btcpayUri.AbsoluteUri, username, username, null)).Succeeded);
         Assert.True(await node.AuthStateProvider.CheckAuthenticated());
         Assert.NotNull(node.AccountManager.Account?.OwnerToken);
 
+        TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.WaitingForConnection, node.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.NotConfigured, node.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
 
@@ -82,8 +79,7 @@ public class CoreTests
 
         Assert.NotNull(await node.OnChainWalletManager.GetConfig());
         Assert.NotNull((await node.OnChainWalletManager.GetConfig())?.Derivations);
-        Assert.False(
-            (await node.OnChainWalletManager.GetConfig())?.Derivations.ContainsKey(WalletDerivation.LightningScripts));
+        Assert.False((await node.OnChainWalletManager.GetConfig())?.Derivations.ContainsKey(WalletDerivation.LightningScripts));
         WalletDerivation? segwitDerivation;
         var config = await node.OnChainWalletManager.GetConfig();
         Assert.NotNull(config);
@@ -99,9 +95,7 @@ public class CoreTests
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.Loaded, node.LNManager.State));
         await Assert.ThrowsAsync<InvalidOperationException>(() => node.LNManager.Generate());
         WalletDerivation? lnDerivation = null;
-        Assert.True(
-            (await node.OnChainWalletManager.GetConfig())?.Derivations.TryGetValue(WalletDerivation.LightningScripts,
-                out lnDerivation));
+        Assert.True((await node.OnChainWalletManager.GetConfig())?.Derivations.TryGetValue(WalletDerivation.LightningScripts, out lnDerivation));
         Assert.NotNull(lnDerivation.Identifier);
         Assert.Null(lnDerivation.Descriptor);
         Assert.NotNull(lnDerivation.Name);
@@ -113,27 +107,19 @@ public class CoreTests
         Assert.True((await node2.AccountManager.Login(btcpayUri.AbsoluteUri, username, username, null)).Succeeded);
         Assert.True(await node2.AuthStateProvider.CheckAuthenticated());
 
-        TestUtils.Eventually(() =>
-            Assert.Equal(BTCPayConnectionState.WaitingForEncryptionKey, node2.ConnectionManager.ConnectionState));
-        Assert.False(await node2.App.Services.GetRequiredService<SyncService>()
-            .SetEncryptionKey(new Mnemonic(Wordlist.English).ToString()));
-        Assert.True(await node2.App.Services.GetRequiredService<SyncService>()
-            .SetEncryptionKey((await node.OnChainWalletManager.GetConfig())!.Mnemonic));
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.WaitingForEncryptionKey, node2.ConnectionManager.ConnectionState));
+        Assert.False(await node2.App.Services.GetRequiredService<SyncService>().SetEncryptionKey(new Mnemonic(Wordlist.English).ToString()));
+        Assert.True(await node2.App.Services.GetRequiredService<SyncService>().SetEncryptionKey((await node.OnChainWalletManager.GetConfig())!.Mnemonic));
 
-        TestUtils.Eventually(() =>
-            Assert.Equal(BTCPayConnectionState.Syncing, node2.ConnectionManager.ConnectionState));
-        TestUtils.Eventually(() =>
-            Assert.Equal(BTCPayConnectionState.ConnectedAsSlave, node2.ConnectionManager.ConnectionState));
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.Syncing, node2.ConnectionManager.ConnectionState));
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsSlave, node2.ConnectionManager.ConnectionState));
 
         var address = await node.OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);
 
         await node.ConnectionManager.SwitchToSlave();
         _output.WriteLine("SLAVE CHECKPOINT");
-        TestUtils.Eventually(() =>
-            Assert.Equal(BTCPayConnectionState.ConnectedAsSlave, node.ConnectionManager.ConnectionState));
-        TestUtils.Eventually(() =>
-            Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node2.ConnectionManager.ConnectionState));
-
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsSlave, node.ConnectionManager.ConnectionState));
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node2.ConnectionManager.ConnectionState));
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Loaded, node2.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.Loaded, node2.LNManager.State));
 
@@ -142,8 +128,7 @@ public class CoreTests
             config.AcceptInboundConnection = true;
             return (config, true);
         });
-        await TestUtils.EventuallyAsync(async () =>
-            Assert.True((await node2.LNManager.Node.GetConfig()).AcceptInboundConnection));
+        await TestUtils.EventuallyAsync(async () => Assert.True((await node2.LNManager.Node.GetConfig()).AcceptInboundConnection));
         TestUtils.Eventually(() => Assert.NotNull(node2.LNManager.Node?.PeerHandler.Endpoint));
 
         //test onchain wallet
@@ -167,8 +152,7 @@ public class CoreTests
         Assert.True((await node2.AccountManager.SetCurrentStoreId(store.Id)).Succeeded);
         Assert.Equal(store.Id, node2.AccountManager.CurrentStore?.Id);
 
-        var res = await node2.AccountManager.TryApplyingAppPaymentMethodsToCurrentStore(node2.OnChainWalletManager,
-            node2.LNManager, true, true);
+        var res = await node2.AccountManager.TryApplyingAppPaymentMethodsToCurrentStore(node2.OnChainWalletManager, node2.LNManager, true, true);
         Assert.NotNull(res);
         Assert.True(await node2.OnChainWalletManager.IsOnChainOurs(res.Value.onchain));
         Assert.True(await node2.LNManager.IsLightningOurs(res.Value.lightning));
@@ -184,8 +168,7 @@ public class CoreTests
         var pmOnchain = pms.First(p => p.PaymentMethodId == "BTC-CHAIN");
         var pmLN = pms.First(p => p.PaymentMethodId == "BTC-LN");
 
-        var requestOfInvoice =
-            Assert.Single(await node2.LNManager.Node.PaymentsManager.List(payments => payments));
+        var requestOfInvoice = Assert.Single(await node2.LNManager.Node.PaymentsManager.List(payments => payments));
         Assert.Equal(pmLN.Destination, requestOfInvoice.PaymentRequest.ToString());
         Assert.True(requestOfInvoice.Inbound);
 
@@ -199,9 +182,7 @@ public class CoreTests
         });
         await TestUtils.EventuallyAsync(async () =>
         {
-            requestOfInvoice =
-                Assert.Single(
-                    await node2.LNManager.Node.PaymentsManager.List(payments => payments));
+            requestOfInvoice = Assert.Single(await node2.LNManager.Node.PaymentsManager.List(payments => payments));
             Assert.Equal(pmLN.Destination, requestOfInvoice.PaymentRequest.ToString());
             //Note: this should be failed in the future. BTCPay should cancel the invoice once btcpay invoice is paid..
             Assert.Equal(LightningPaymentStatus.Pending, requestOfInvoice.Status);
