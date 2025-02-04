@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using BTCPayApp.Core;
+using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Models;
 using BTCPayApp.UI.Util;
 using BTCPayServer.Client.Models;
@@ -113,7 +114,7 @@ public record UIState
         }
     }
 
-    public class UIEffects(IJSRuntime jsRuntime, IState<UIState> state)
+    public class UIEffects(IAccountManager accountManager, IJSRuntime jsRuntime, IState<UIState> state)
     {
         [EffectMethod]
         public async Task ApplyUserThemeEffect(ApplyUserTheme action, IDispatcher dispatcher)
@@ -130,7 +131,7 @@ public record UIState
             try
             {
                 var instance = !string.IsNullOrEmpty(action.Url)
-                    ? await new BTCPayAppClient(action.Url).GetInstanceInfo()
+                    ? await accountManager.GetClient(action.Url).GetInstanceInfo()
                     : null;
 
                 var error = !string.IsNullOrEmpty(action.Url) && instance == null

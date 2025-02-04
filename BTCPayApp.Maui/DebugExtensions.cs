@@ -1,4 +1,4 @@
-﻿//#if DEBUG
+﻿#if DEBUG
 
 namespace BTCPayApp.Maui;
 
@@ -11,9 +11,8 @@ public class DangerousHttpClientFactory : IHttpClientFactory
 {
     public static bool ServerValidate(object sender, X509Certificate? certificate, X509Chain? chain, SslPolicyErrors errors)
     {
-        return true;
         if (errors == SslPolicyErrors.None) return true;
-        return certificate?.Subject.Equals("CN=localhost") is true || certificate?.Issuer.Equals("CN=localhost") is true;
+        return certificate?.Subject.Equals("CN=localhost") is true;
     }
 
     private static HttpClientHandler GetInsecureHandler()
@@ -39,7 +38,7 @@ public class DangerousAndroidMessageHandler : Xamarin.Android.Net.AndroidMessage
     {
         public bool Verify(string? hostname, Javax.Net.Ssl.ISSLSession? session)
         {
-            return true;//session?.PeerPrincipal?.Name == "CN=localhost";
+            return session?.PeerPrincipal?.Name == "CN=localhost";
         }
     }
 }
@@ -57,7 +56,6 @@ public static class DebugExtensions
             {
                 // always verify the SSL certificate
                 clientHandler.ServerCertificateCustomValidationCallback += DangerousHttpClientFactory.ServerValidate;
-
                 return clientHandler;
             }
 #if ANDROID
@@ -74,4 +72,4 @@ public static class DebugExtensions
         return services;
     }
 }
-//#endif
+#endif

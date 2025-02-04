@@ -27,24 +27,21 @@ public static class StartupExtensions
         });
 
         serviceCollection.AddMemoryCache();
-        serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddHttpClient();
+        serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddSingleton<BTCPayConnectionManager>();
         serviceCollection.AddSingleton<SyncService>();
         serviceCollection.AddSingleton<LightningNodeManager>();
         serviceCollection.AddSingleton<OnChainWalletManager>();
         serviceCollection.AddSingleton<BTCPayAppServerClient>();
-        serviceCollection.AddSingleton<IBTCPayAppHubClient>(provider =>
-            provider.GetRequiredService<BTCPayAppServerClient>());
-        serviceCollection.AddSingleton<IHostedService>(provider =>
-            provider.GetRequiredService<BTCPayConnectionManager>());
+        serviceCollection.AddSingleton<IBTCPayAppHubClient>(provider => provider.GetRequiredService<BTCPayAppServerClient>());
+        serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<BTCPayConnectionManager>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<LightningNodeManager>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<OnChainWalletManager>());
         serviceCollection.AddSingleton<AuthStateProvider>();
-        serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>(provider =>
-            provider.GetRequiredService<AuthStateProvider>());
+        serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>(provider => provider.GetRequiredService<AuthStateProvider>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<AuthStateProvider>());
-        serviceCollection.AddSingleton(sp => (IAccountManager) sp.GetRequiredService<AuthenticationStateProvider>());
+        serviceCollection.AddSingleton(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
         serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddLDK();
         serviceCollection.AddSingleton<IAuthorizationHandler, AuthorizationHandler>();
