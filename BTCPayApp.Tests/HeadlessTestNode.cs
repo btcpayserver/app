@@ -95,7 +95,7 @@ options.Rules.AddRange(newRules);
             collection.Replace(ServiceDescriptor.Singleton<ILoggerFactory, TestLoggerFactory>(provider => new TestLoggerFactory(nodeName, ActivatorUtilities.CreateInstance<LoggerFactory>(provider))));
             // collection.Replace(ServiceDescriptor.Singleton<IDbContextFactory<AppDbContext>, TestDbContextFactory>());
             collection.AddDataProtection(options => { options.ApplicationDiscriminator = "BTCPayApp"; });
-            collection.AddSingleton<ISecureConfigProvider, TestSecureConfigProvider>();
+            collection.AddSingleton<ISecureConfigProvider, DesktopSecureConfigProvider>();
             collection.AddSingleton<IFingerprint, StubFingerprintProvider>();
             collection.AddSingleton<IDataDirectoryProvider, DesktopDataDirectoryProvider>();
         });

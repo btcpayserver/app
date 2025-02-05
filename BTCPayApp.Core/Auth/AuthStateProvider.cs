@@ -103,7 +103,6 @@ public class AuthStateProvider(
                 if (UserInfo.Stores?.Any() is true)
                     claims.AddRange(UserInfo.Stores.Select(store =>
                         new Claim(store.Id, string.Join(',', store.Permissions ?? []))));
-                // TODO: Improve distinguishing the device owner
                 if (hasOwnerToken && !hasUserToken)
                     claims.Add(new Claim(identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, "DeviceOwner"));
                 user = new ClaimsPrincipal(new ClaimsIdentity(claims, "Greenfield"));

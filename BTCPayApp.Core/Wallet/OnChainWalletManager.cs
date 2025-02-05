@@ -287,13 +287,8 @@ public class OnChainWalletManager : BaseHostedService
         }
     }
 
-    private async Task ConnectionChanged(object? sender,
-        (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
+    private async Task ConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
     {
-        // if (valueTuple.New is BTCPayConnectionState.ConnectedFinishedInitialSync)
-        // {
-        //     WalletConfig = await _configProvider.Get<WalletConfig>(WalletConfig.Key);
-        // }
         await DetermineState();
     }
 

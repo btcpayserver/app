@@ -121,7 +121,7 @@ public class SyncService(
 
         await api.PutObjectAsync(new PutObjectRequest
         {
-            GlobalVersion = await configProvider.GetDeviceIdentifier(),
+            GlobalVersion = await secureConfigProvider.GetDeviceIdentifier(),
             TransactionItems =
             {
                 new KeyValue
@@ -327,7 +327,7 @@ public class SyncService(
 
             var putObjectRequest = new PutObjectRequest
             {
-                GlobalVersion = await configProvider.GetDeviceIdentifier()
+                GlobalVersion = await secureConfigProvider.GetDeviceIdentifier()
             };
             var outbox = await db.OutboxItems.GroupBy(outbox1 => outbox1.Key)
                 .ToListAsync(cancellationToken: cancellationToken);
