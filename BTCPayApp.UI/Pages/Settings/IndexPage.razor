@@ -83,100 +83,103 @@
             </ul>
         </div>
 
-        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
-            <h2>Store</h2>
-            <div class="box">
-                <ul class="list-group list-group-flush list-group-links">
-                    @if (CurrentUser?.Stores?.Count() > 1 || CurrentStore == null)
-                    {
-                        <li class="list-group-item">
-                            <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : "justify-content-start")">
-                                <Icon Symbol="nav-store"/>
-                                @if (CurrentStore == null)
-                                {
-                                    <span>Select Store</span>
-                                    <Icon Symbol="caret-right"/>
-                                }
-                                else
-                                {
-                                    <div>
-                                        <div>@CurrentStore.Name</div>
-                                        <div class="text-muted">@CurrentStore.RoleId</div>
-                                    </div>
-                                    <span class="btn btn-link fw-semibold px-2 py-1 ms-auto">Select</span>
-                                }
-                            </a>
-                        </li>
-                    }
-                    else
-                    {
-                        <li class="list-group-item">
-                            <a href="@Routes.CreateStore">
-                                <Icon Symbol="nav-store"/>
-                                <span>Create Store</span>
-                                <Icon Symbol="caret-right"/>
-                            </a>
-                        </li>
-                    }
-                    @if (CurrentStore != null)
-                    {
-                        <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id" Context="Store">
+        @if (!NeedsEncryptionKey)
+        {
+            <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+                <h2>Store</h2>
+                <div class="box">
+                    <ul class="list-group list-group-flush list-group-links">
+                        @if (CurrentUser?.Stores?.Count() > 1 || CurrentStore == null)
+                        {
                             <li class="list-group-item">
-                                <a href="@Routes.StorePath(CurrentStore.Id)">
+                                <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : "justify-content-start")">
                                     <Icon Symbol="nav-store"/>
-                                    <span>@CurrentStore.Name</span>
+                                    @if (CurrentStore == null)
+                                    {
+                                        <span>Select Store</span>
+                                        <Icon Symbol="caret-right"/>
+                                    }
+                                    else
+                                    {
+                                        <div>
+                                            <div>@CurrentStore.Name</div>
+                                            <div class="text-muted">@CurrentStore.RoleId</div>
+                                        </div>
+                                        <span class="btn btn-link fw-semibold px-2 py-1 ms-auto">Select</span>
+                                    }
+                                </a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="list-group-item">
+                                <a href="@Routes.CreateStore">
+                                    <Icon Symbol="nav-store"/>
+                                    <span>Create Store</span>
                                     <Icon Symbol="caret-right"/>
                                 </a>
                             </li>
-                        </AuthorizeView>
-                        <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id" Context="Store">
-                            @if (CurrentStore.PosAppId != null)
-                            {
+                        }
+                        @if (CurrentStore != null)
+                        {
+                            <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id" Context="Store">
                                 <li class="list-group-item">
-                                    <a href="@Routes.PosSettingsPath(CurrentStore.PosAppId)">
-                                        <Icon Symbol="nav-pointofsale"/>
-                                        <span>Checkout</span>
+                                    <a href="@Routes.StorePath(CurrentStore.Id)">
+                                        <Icon Symbol="nav-store"/>
+                                        <span>@CurrentStore.Name</span>
                                         <Icon Symbol="caret-right"/>
                                     </a>
                                 </li>
-                            }
-                        </AuthorizeView>
-                    }
-                </ul>
-            </div>
-        </AuthorizeView>
+                            </AuthorizeView>
+                            <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id" Context="Store">
+                                @if (CurrentStore.PosAppId != null)
+                                {
+                                    <li class="list-group-item">
+                                        <a href="@Routes.PosSettingsPath(CurrentStore.PosAppId)">
+                                            <Icon Symbol="nav-pointofsale"/>
+                                            <span>Checkout</span>
+                                            <Icon Symbol="caret-right"/>
+                                        </a>
+                                    </li>
+                                }
+                            </AuthorizeView>
+                        }
+                    </ul>
+                </div>
+            </AuthorizeView>
 
-        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
-            <h2>Bitcoin</h2>
-            <div class="box">
-                <ul class="list-group list-group-flush list-group-links">
-                    <li class="list-group-item">
-                        <a href="@Routes.WalletSettings">
-                            <Icon Symbol="wallet-wallet"/>
-                            <span>Onchain Wallet</span>
-                            <Icon Symbol="caret-right"/>
-                        </a>
-                    </li>
-                    <li class="list-group-item">
-                        <a href="@Routes.LightningSettings">
-                            <Icon Symbol="lightning-node"/>
-                            <span>Lightning Node</span>
-                            <Icon Symbol="caret-right"/>
-                        </a>
-                    </li>
-                    @if (LightningNodeManager.IsActive)
-                    {
+            <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+                <h2>Bitcoin</h2>
+                <div class="box">
+                    <ul class="list-group list-group-flush list-group-links">
                         <li class="list-group-item">
-                            <a href="@Routes.ChannelsPeers">
-                                <Icon Symbol="lightning-node"/>
-                                <span>Channels and Peers</span>
+                            <a href="@Routes.WalletSettings">
+                                <Icon Symbol="wallet-wallet"/>
+                                <span>Onchain Wallet</span>
                                 <Icon Symbol="caret-right"/>
                             </a>
                         </li>
-                    }
-                </ul>
-            </div>
-        </AuthorizeView>
+                        <li class="list-group-item">
+                            <a href="@Routes.LightningSettings">
+                                <Icon Symbol="lightning-node"/>
+                                <span>Lightning Node</span>
+                                <Icon Symbol="caret-right"/>
+                            </a>
+                        </li>
+                        @if (LightningNodeManager.IsActive)
+                        {
+                            <li class="list-group-item">
+                                <a href="@Routes.ChannelsPeers">
+                                    <Icon Symbol="lightning-node"/>
+                                    <span>Channels and Peers</span>
+                                    <Icon Symbol="caret-right"/>
+                                </a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </AuthorizeView>
+        }
 
         <h2>Security</h2>
         <div class="box">
@@ -184,8 +187,16 @@
                 <AuthorizeView Policy="@AppPolicies.CanModifySettings">
                     <li class="list-group-item">
                         <a href="@Routes.EncryptionKey">
-                            <Icon Symbol="key"/>
-                            <span>Encryption key</span>
+                            @if (NeedsEncryptionKey)
+                            {
+                                <Icon Symbol="key"/>
+                                <span>Encryption Key</span>
+                            }
+                            else
+                            {
+                                <Icon Symbol="nav-transactions"/>
+                                <span>Device pairing</span>
+                            }
                             <Icon Symbol="caret-right"/>
                         </a>
                     </li>
@@ -297,6 +308,7 @@
     private AppInstanceInfo? InstanceInfo => UiState.Value.Instance?.Data;
     private AppUserInfo? CurrentUser => UserState.Value.Info?.Data;
     private IEnumerable<StoreUserData>? StoreUsers => StoreState.Value.Users?.Data;
+    private bool NeedsEncryptionKey => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey;
 
     private class SettingsModel
     {

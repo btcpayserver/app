@@ -28,14 +28,18 @@
     @if (NeedsEncryptionKey)
     {
         <style>#NavbarBottom { display: none; }</style>
-        <p class="mb-4 text-center">
+        <p class="text-center">
             Your encryption key is required to unlock the app.
-            Enter the encryption key of your master device.
+        </p>
+        <p class="text-center">
+            Enter or scan the encryption key of your master device.
+            In case you lost your device or do not have access to the encryption key,
+            you can also provide your wallet seed as a fallback.
         </p>
         <div class="box my-4 mx-auto">
             <ValidationEditContext @ref="_validationEditContext" Model="@Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@_errorMessage">
                 <div class="form-group">
-                    <label for="EncryptionKey" class="form-label">Your Encryption Key</label>
+                    <label for="EncryptionKey" class="form-label">Encryption Key</label>
                     <div class="d-flex gap-2">
                         <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" autocomplete="off"/>
                         <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
@@ -44,7 +48,7 @@
                     </div>
                     <ValidationMessage For="@(() => Model.EncryptionKey)"/>
                 </div>
-                <button type="submit" class="btn btn-primary w-100" disabled="@(!IsValidKey)">Use Encryption Key</button>
+                <button type="submit" class="btn btn-primary w-100" disabled="@(!IsValidKey)">Unlock</button>
             </ValidationEditContext>
         </div>
         <QrScanModal OnScan="@OnQrCodeScan"/>
@@ -53,16 +57,28 @@
     {
         <AuthorizeView Policy="@AppPolicies.CanModifySettings">
             <Authorized>
-                <p class="mb-4 text-center">
-                    Back up your encryption key, otherwise you won't be able to restore the app and its wallet.
-                    You will also need this key to pair the app with other devices.
+                <p>
+                    You can use this app's wallet and Lightning node on multiple devices.
+                    To pair another device, install the app and log into your account.
+                </p>
+                <p>
+                    You will be prompted for this encryption key, so that the data can be synced with the new device.
+                </p>
+                <QrCode Data="@Model.EncryptionKey" class="w-100 my-4 rounded"/>
+
+                <h2 class="text-center fs-5 mt-3">Backup</h2>
+                <p>
+                    In case you lose your device, the encryption key can also be used for restoring the app and its wallet.
+                    To restore your data without this key, you will need to provide your wallet seed.
+                </p>
+                <p>
+                    You can safely back up the encryption key using a password manager.
                 </p>
                 <div class="box my-4 mx-auto">
                     <div class="form-floating form-group">
                         <TruncateCenter Text="@Model.EncryptionKey" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
                         <label>Your Encryption Key</label>
                     </div>
-                    <QrCode Data="@Model.EncryptionKey" class="w-100"/>
                 </div>
             </Authorized>
             <NotAuthorized>
@@ -77,12 +93,10 @@
     private EncryptionKeyModel Model { get; } = new ();
     private string? _errorMessage;
     private string? _qrInput;
-    private const int KeyLength = 64;
 
     private class EncryptionKeyModel
     {
         [Required]
-        [StringLength(KeyLength, MinimumLength = KeyLength)]
         public string? EncryptionKey { get; set; }
     }
 
@@ -116,11 +130,11 @@
         _qrInput = code;
         await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
 
-        Model!.EncryptionKey = code;
+        Model.EncryptionKey = code;
         StateHasChanged();
     }
 
-    private string GetTitle() => $"{(NeedsEncryptionKey ? "Enter" : "View")} your encryption key";
+    private string GetTitle() => NeedsEncryptionKey ? "Provide your encryption key" : "Pair another device";
     private bool NeedsEncryptionKey => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey;
-    private bool IsValidKey => !string.IsNullOrEmpty(Model.EncryptionKey) && Model.EncryptionKey.Length == KeyLength;
+    private bool IsValidKey => !string.IsNullOrEmpty(Model.EncryptionKey);
 }
