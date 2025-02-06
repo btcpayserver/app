@@ -10,7 +10,6 @@ public static class Routes
     public const string Register = "/register";
     public const string ForgotPassword = "/forgot-password";
     public const string Error = "/error";
-    public const string Loading = "/loading";
     public const string NotFound = "/not-found";
 
     // authorized
@@ -39,8 +38,10 @@ public static class Routes
     public const string EncryptionKey = "/settings/encryption";
     public const string LightningSend = "/lightning/send";
     public const string LightningReceive = "/lightning/receive";
+
+    // paths with params
+    public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);
     public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);
     public static string CheckoutPath(string invoiceId) => Checkout.Replace("{InvoiceId}", invoiceId);
-    public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);
     public static string PosSettingsPath(string appId) => PosSettings.Replace("{AppId}", appId);
 }
