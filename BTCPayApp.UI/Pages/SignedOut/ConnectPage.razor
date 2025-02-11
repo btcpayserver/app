@@ -55,7 +55,8 @@
 
     private async Task HandleValidSubmit()
     {
-        if (await HandleInput(Model.Uri!)) return;
+        var result = await HandleInput(Model.Uri!);
+        if (result is not null) return;
         var loginUri = NavigationManager.GetUriWithQueryParameters(Routes.Login, new Dictionary<string, object?> { {"serverUrl", Model.Uri } } );
         NavigationManager.NavigateTo(loginUri);
     }

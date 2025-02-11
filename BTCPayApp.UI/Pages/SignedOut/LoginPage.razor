@@ -120,7 +120,7 @@
 
     private async Task HandleValidSubmit()
     {
-        if (await HandleInput(Model.Uri!)) return;
+        if (await HandleInput(Model.Uri!) is true) return;
 
         ErrorMessage = null;
         Sending = true;

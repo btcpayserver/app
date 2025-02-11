@@ -87,7 +87,7 @@
         if (url != InstanceInfo?.BaseUrl) Dispatcher.Dispatch(new UIState.FetchInstanceInfo(url));
     }
 
-    protected async Task<bool> HandleInput(string urlOrLoginCode)
+    protected async Task<bool?> HandleInput(string urlOrLoginCode)
     {
         if (urlOrLoginCode.Contains(InviteSeparator))
         {
@@ -97,7 +97,8 @@
         {
             return await HandleLoginCode(urlOrLoginCode);
         }
-        return false;
+
+        return null;
     }
 
     private async Task<bool> HandleInviteUrl(string url)

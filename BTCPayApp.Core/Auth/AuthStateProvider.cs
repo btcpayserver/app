@@ -227,7 +227,7 @@ public class AuthStateProvider(
         }
         catch (Exception e)
         {
-            return new FormResult<AcceptInviteResult>(false, e.Message, null);
+            return new FormResult<AcceptInviteResult>(false, "Invalid invitation.", null);
         }
     }
 
