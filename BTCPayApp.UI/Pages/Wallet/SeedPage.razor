@@ -1,0 +1,64 @@
+﻿@attribute [Route(Routes.WalletSeed)]
+@using BTCPayApp.UI.Features
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.Data
+@using BTCPayApp.Core.Wallet
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject OnChainWalletManager OnChainWalletManager
+@inject IState<RootState> State
+
+<PageTitle>@GetTitle()</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back>
+        <h1>@GetTitle()</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+        <Authorized>
+            @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Config is not null)
+            {
+                <h2>Wallet</h2>
+                <div class="box">
+                    <ol class="m-0 pt-4 ms-3">
+                        @foreach (var word in Config.Mnemonic.Split(' '))
+                        {
+                            <li class="font-monospace">@word</li>
+                        }
+                    </ol>
+                </div>
+            }
+            else
+            {
+                <p>
+                    @(State.Value.OnchainWalletState switch
+                    {
+                        OnChainWalletState.NotConfigured => "Not configured",
+                        OnChainWalletState.WaitingForConnection => "Waiting for connection",
+                        _ => State.Value.OnchainWalletState.ToString()
+                    })
+                </p>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
+</section>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        Config = await OnChainWalletManager.GetConfig();
+    }
+
+    private WalletConfig? Config { get; set; }
+
+    private string GetTitle() => "Secure your recovery phrase";
+}
+
