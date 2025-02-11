@@ -15,11 +15,11 @@
 @inject ILogger<SettingsPage> Logger
 @inject IAccountManager AccountManager
 
-<PageTitle>@_title</PageTitle>
+<PageTitle>@GetTitle()</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>@_title</h1>
+        <h1>@GetTitle()</h1>
     </Titlebar>
 </SectionContent>
 
@@ -34,65 +34,56 @@
             {
                 <Alert Type="success" Dismissible>@_successMessage</Alert>
             }
-            @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Config is not null)
+            @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Derivation is not null)
             {
-                <h4>Wallet</h4>
-                <div class="box mb-3">
+                var descriptor = Derivation.Descriptor;
+                var isStorePM = IsStorePaymentMethodId(Derivation.Identifier!);
+                <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                    <h2 class="mb-0">@Derivation.Name</h2>
+                    @if (isStorePM is true)
+                    {
+                        <span class="badge bg-info text-wrap">
+                            Current store onchain payment method
+                        </span>
+                    }
+                </header>
+                <div class="box mb-2">
                     <div class="form-floating">
                         <TruncateCenter Text="@Config.Fingerprint" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                         <label>Fingerprint</label>
                     </div>
-                    <button class="btn btn-secondary mt-3" type="button" data-bs-toggle="collapse" data-bs-target="#seed" aria-expanded="false" aria-controls="seed">
-                        Show seed
-                    </button>
-                    <div id="seed" class="collapse">
-                        <ol class="m-0 pt-4 ms-3">
-                            @foreach (var word in Config.Mnemonic.Split(' '))
-                            {
-                                <li class="font-monospace">@word</li>
-                            }
-                        </ol>
-                    </div>
+                    @if (!string.IsNullOrEmpty(Derivation.Identifier))
+                    {
+                        <div class="form-floating">
+                            <TruncateCenter Text="@Derivation.Identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                            <label>Identifier</label>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(descriptor))
+                    {
+                        <div class="form-floating">
+                            <TruncateCenter Text="@descriptor" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                            <label>Descriptor</label>
+                        </div>
+                        @if (isStorePM is false && !string.IsNullOrEmpty(StoreId))
+                        {
+                            <button class="btn btn-primary mt-3" @onclick="SetStorePaymentMethod">
+                                Set as onchain payment method for store
+                            </button>
+                        }
+                    }
                 </div>
-                <h4>Derivations</h4>
-                @foreach (var d in Config.Derivations)
-                {
-                    var identifier = d.Value.Identifier;
-                    if (string.IsNullOrEmpty(identifier)) continue;
-                    var descriptor = d.Value.Descriptor;
-                    var isStorePM = IsStorePaymentMethodId(identifier);
-                    <div class="box mb-3">
-                        <h4 class="d-flex flex-wrap align-items-center gap-2">
-                            @(d.Value.Name)
-                            @if (isStorePM is true)
-                            {
-                                <span class="badge bg-info">
-                                    Current onchain payment method for store
-                                </span>
-                            }
-                        </h4>
-                        @if (!string.IsNullOrEmpty(identifier))
-                        {
-                            <div class="form-floating">
-                                <TruncateCenter Text="@identifier" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                                <label>Identifier</label>
-                            </div>
-                        }
-                        @if (!string.IsNullOrEmpty(descriptor))
-                        {
-                            <div class="form-floating">
-                                <TruncateCenter Text="@descriptor" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                                <label>Descriptor</label>
-                            </div>
-                            @if (isStorePM is false && !string.IsNullOrEmpty(StoreId))
-                            {
-                                <button class="btn btn-primary mt-3" @onclick="() => SetStorePaymentMethod(d.Key)">
-                                    Set as onchain payment method for store
-                                </button>
-                            }
-                        }
-                    </div>
-                }
+                <div class="box">
+                    <ul class="list-group list-group-flush list-group-links">
+                        <li class="list-group-item">
+                            <a href="@Routes.WalletSeed">
+                                <Icon Symbol="wallet-seed"/>
+                                <span>Recovery Phrase</span>
+                                <Icon Symbol="caret-right"/>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             }
             else if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
             {
@@ -100,10 +91,14 @@
             }
             else
             {
-                <ul>
-                    <li>Connection state: @State.Value.ConnectionState</li>
-                    <li>Onchain wallet state: @State.Value.OnchainWalletState</li>
-                </ul>
+                <p>
+                    @(State.Value.OnchainWalletState switch
+                    {
+                        OnChainWalletState.NotConfigured => "Not configured",
+                        OnChainWalletState.WaitingForConnection => "Waiting for connection",
+                        _ => State.Value.OnchainWalletState.ToString()
+                    })
+                </p>
             }
         </Authorized>
         <NotAuthorized>
@@ -118,7 +113,9 @@
     private string? _storePaymentMethodIdentifier;
     private string? _errorMessage;
     private string? _successMessage;
-    private string? _title;
+
+    private WalletConfig? Config { get; set; }
+    private WalletDerivation? Derivation => Config?.Derivations.FirstOrDefault(d => d.Key == WalletDerivation.NativeSegwit).Value;
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,10 +124,7 @@
         if (!string.IsNullOrEmpty(StoreId))
             await GetStorePaymentMethod();
         Config = await OnChainWalletManager.GetConfig();
-        _title = GetTitle();
     }
-
-    public WalletConfig? Config { get; private set; }
 
     private async Task GetStorePaymentMethod()
     {
@@ -146,16 +140,16 @@
         }
     }
 
-    private async Task SetStorePaymentMethod(string key)
+    private async Task SetStorePaymentMethod()
     {
-        if (string.IsNullOrEmpty(StoreId) || Config?.Derivations.TryGetValue(key, out var derivation) is not true || derivation.Descriptor is null) return;
+        if (string.IsNullOrEmpty(StoreId) || Derivation?.Descriptor is null) return;
         _successMessage = _errorMessage = null;
         try
         {
             var pm = await AccountManager.GetClient().UpdateStorePaymentMethod(StoreId, PaymentMethodId, new UpdatePaymentMethodRequest
             {
                 Enabled = true,
-                Config = derivation.Descriptor
+                Config = Derivation.Descriptor
             });
             _storePaymentMethodIdentifier = GetDerivationScheme(pm);
             _successMessage = "Store payment method set.";
