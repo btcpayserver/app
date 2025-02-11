@@ -130,7 +130,7 @@ public partial class AppApiController
     {
         if (string.IsNullOrEmpty(invite.UserId) || string.IsNullOrEmpty(invite.Code)) return NotFound();
 
-        var user = await userManager.FindByInvitationTokenAsync<ApplicationUser>(invite.UserId, Uri.UnescapeDataString(invite.Code));
+        var user = await userManager.FindByInvitationTokenAsync<ApplicationUser>(invite.UserId.Trim(), Uri.UnescapeDataString(invite.Code.Trim()));
         if (user == null) return NotFound();
 
         var requiresEmailConfirmation = user is { RequiresEmailConfirmation: true, EmailConfirmed: false };
@@ -138,10 +138,6 @@ public partial class AppApiController
         bool? emailHasBeenConfirmed = requiresEmailConfirmation ? false : null;
         var requiresSetPassword = !await userManager.HasPasswordAsync(user);
         var passwordSetCode = requiresSetPassword ? await userManager.GeneratePasswordResetTokenAsync(user) : null;
-
-        // This is a placeholder, the real storeIds will be set by the UserEventHostedService
-        var storeUsersLink = callbackGenerator.StoreUsersLink("{0}", Request);
-        eventAggregator.Publish(new UserEvent.InviteAccepted(user, storeUsersLink));
 
         if (requiresEmailConfirmation)
         {
@@ -154,6 +150,8 @@ public partial class AppApiController
                 eventAggregator.Publish(new UserEvent.ConfirmedEmail(user, approvalLink));
             }
         }
+
+        await FinalizeInvitationIfApplicable(user);
 
         var response = new AcceptInviteResult
         {
@@ -267,6 +265,8 @@ public partial class AppApiController
 
         if (!result.Succeeded) return this.CreateAPIError(401, "unauthenticated", result.ToString().Split(": ").Last());
 
+        if (!needsInitialPassword) await FinalizeInvitationIfApplicable(user);
+
         // see if we can sign in user after accepting an invitation and setting the password
         if (needsInitialPassword && UserService.TryCanLogin(user, out _))
         {
@@ -343,5 +343,16 @@ public partial class AppApiController
             Stores = stores
         };
         return info;
+    }
+
+    private async Task FinalizeInvitationIfApplicable(ApplicationUser user)
+    {
+        if (!userManager.HasInvitationToken<ApplicationUser>(user)) return;
+
+        // This is a placeholder, the real storeIds will be set by the UserEventHostedService
+        var storeUsersLink = callbackGenerator.StoreUsersLink("{0}", Request);
+        eventAggregator.Publish(new UserEvent.InviteAccepted(user, storeUsersLink));
+        // unset used token
+        await userManager.UnsetInvitationTokenAsync<ApplicationUser>(user.Id);
     }
 }
