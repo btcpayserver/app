@@ -1,46 +1,40 @@
 ﻿@attribute [Route(Routes.WalletSeed)]
-@using BTCPayApp.UI.Features
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Data
 @using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Components.Layout
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject OnChainWalletManager OnChainWalletManager
-@inject IState<RootState> State
 
-<PageTitle>@GetTitle()</PageTitle>
+<PageTitle>Secure your recovery phrase</PageTitle>
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>@GetTitle()</h1>
+        <h1>Secure your recovery phrase</h1>
     </Titlebar>
 </SectionContent>
 
 <section class="container">
     <AuthorizeView Policy="@AppPolicies.CanModifySettings">
         <Authorized>
-            @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Config is not null)
+            @if (Words is not null)
             {
-                <h2>Wallet</h2>
-                <div class="box">
-                    <ol class="m-0 pt-4 ms-3">
-                        @foreach (var word in Config.Mnemonic.Split(' '))
+                <p>
+                    The combination of words below are called your recovery phrase.
+                    The recovery phrase allows you to access and restore your wallet.
+                </p>
+                <p class="text-warning">
+                    Anyone who knows it can access your funds.
+                    Write them down on a piece of paper in this exact order.
+                </p>
+                <div class="box my-4">
+                    <ol class="seed">
+                        @foreach (var word in Words)
                         {
-                            <li class="font-monospace">@word</li>
+                            <li>@word</li>
                         }
                     </ol>
                 </div>
-            }
-            else
-            {
-                <p>
-                    @(State.Value.OnchainWalletState switch
-                    {
-                        OnChainWalletState.NotConfigured => "Not configured",
-                        OnChainWalletState.WaitingForConnection => "Waiting for connection",
-                        _ => State.Value.OnchainWalletState.ToString()
-                    })
-                </p>
             }
         </Authorized>
         <NotAuthorized>
@@ -59,6 +53,6 @@
 
     private WalletConfig? Config { get; set; }
 
-    private string GetTitle() => "Secure your recovery phrase";
+    private string[]? Words => Config?.Mnemonic.Split(' ');
 }
 

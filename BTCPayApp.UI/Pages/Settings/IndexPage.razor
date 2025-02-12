@@ -245,7 +245,7 @@
                             }
                         </div>
                     </li>
-                    @if (State.Value.ConnectionState != BTCPayConnectionState.ConnectedAsSlave)
+                    @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
                     {
                         <li class="list-group-item">
                             <div class="justify-content-start">

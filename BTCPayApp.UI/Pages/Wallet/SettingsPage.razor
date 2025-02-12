@@ -34,9 +34,10 @@
             {
                 <Alert Type="success" Dismissible>@_successMessage</Alert>
             }
-            @if (State.Value.OnchainWalletState == OnChainWalletState.Loaded && Derivation is not null)
+            @if (OnChainWalletManager.IsActive)
             {
-                var descriptor = Derivation.Descriptor;
+                if (Derivation is null) return;
+                var descriptor = Derivation!.Descriptor;
                 var isStorePM = IsStorePaymentMethodId(Derivation.Identifier!);
                 <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
                     <h2 class="mb-0">@Derivation.Name</h2>
@@ -49,7 +50,7 @@
                 </header>
                 <div class="box mb-2">
                     <div class="form-floating">
-                        <TruncateCenter Text="@Config.Fingerprint" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                        <TruncateCenter Text="@Config!.Fingerprint" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                         <label>Fingerprint</label>
                     </div>
                     @if (!string.IsNullOrEmpty(Derivation.Identifier))
@@ -78,27 +79,27 @@
                         <li class="list-group-item">
                             <a href="@Routes.WalletSeed">
                                 <Icon Symbol="wallet-seed"/>
-                                <span>Recovery Phrase</span>
+                                <span>Your Recovery Phrase</span>
                                 <Icon Symbol="caret-right"/>
                             </a>
                         </li>
                     </ul>
                 </div>
             }
-            else if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
-            {
-                <button class="btn btn-primary" @onclick="GenerateWallet">Generate wallet</button>
-            }
             else
             {
                 <p>
-                    @(State.Value.OnchainWalletState switch
+                    @(OnChainWalletManager.State switch
                     {
                         OnChainWalletState.NotConfigured => "Not configured",
                         OnChainWalletState.WaitingForConnection => "Waiting for connection",
                         _ => State.Value.OnchainWalletState.ToString()
                     })
                 </p>
+            }
+            @if (_canConfigureWallet)
+            {
+                <button class="btn btn-primary" @onclick="GenerateWallet">Generate wallet</button>
             }
         </Authorized>
         <NotAuthorized>
@@ -113,9 +114,10 @@
     private string? _storePaymentMethodIdentifier;
     private string? _errorMessage;
     private string? _successMessage;
+    private bool _canConfigureWallet;
 
     private WalletConfig? Config { get; set; }
-    private WalletDerivation? Derivation => Config?.Derivations.FirstOrDefault(d => d.Key == WalletDerivation.NativeSegwit).Value;
+    private WalletDerivation? Derivation { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -123,7 +125,8 @@
 
         if (!string.IsNullOrEmpty(StoreId))
             await GetStorePaymentMethod();
-        Config = await OnChainWalletManager.GetConfig();
+
+        await SetupWallet();
     }
 
     private async Task GetStorePaymentMethod()
@@ -138,6 +141,13 @@
         {
             Logger.LogDebug(ex, "Payment method {PaymentMethodId} unset for store {StoreId}", PaymentMethodId, StoreId);
         }
+    }
+
+    private async Task SetupWallet()
+    {
+        Config = await OnChainWalletManager.GetConfig();
+        Derivation = Config?.Derivations.FirstOrDefault(d => d.Key == WalletDerivation.NativeSegwit).Value;
+        _canConfigureWallet = await OnChainWalletManager.CanConfigureWallet();
     }
 
     private async Task SetStorePaymentMethod()
@@ -168,6 +178,7 @@
         await AsyncExtensions.RunInOtherThread(async () =>
         {
             await OnChainWalletManager.Generate();
+            await SetupWallet();
         });
     }
 

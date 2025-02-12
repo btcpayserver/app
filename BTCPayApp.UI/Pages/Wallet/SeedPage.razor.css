@@ -1,0 +1,22 @@
+.container {
+  max-width: 500px;
+}
+
+.seed {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(6, auto);
+  gap: var(--btcpay-space-m);
+  justify-content: space-evenly;
+  padding: 0;
+}
+
+.seed li::marker {
+  color: var(--btcpay-body-text-muted);
+  font-weight: var(--btcpay-font-weight-normal);
+  padding-left: 2em;
+}
+
+.seed li {
+  font-weight: var(--btcpay-font-weight-semibold);
+}
