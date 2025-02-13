@@ -1,0 +1,145 @@
+﻿@attribute [Route(Routes.WalletSeedConfirm)]
+@using BTCPayApp.Core
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.Contracts
+@using BTCPayApp.Core.Data
+@using BTCPayApp.Core.Wallet
+@using BTCPayApp.UI.Components.Layout
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject ConfigProvider ConfigProvider
+@inject OnChainWalletManager OnChainWalletManager
+
+<PageTitle>Confirm your recovery phrase</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back>
+        <h1>Confirm your recovery phrase</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+        <Authorized>
+            <p class="text-center">
+                Match the word to the number to verify.
+            </p>
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
+                @if (Words is not null)
+                {
+                    <div class="box my-4">
+                        <ol class="ask mt-3 mb-5">
+                            @for (var i = 0; i < _ask.Length; i++)
+                            {
+                                var num = _ask[i];
+                                <li value="@num">
+                                    <div class="rounded-pill@(Model.Words.Count == i ? " current" : "")">
+                                        @(Model.Words.Count > i ? Model.Words[i] : "...")
+                                    </div>
+                                </li>
+                            }
+                        </ol>
+                        <div class="words">
+                            @foreach (var word in Shuffled)
+                            {
+                                <button type="button" class="btn bg-white rounded-pill" @onclick="() => AddWord(word)">@word</button>
+                            }
+                        </div>
+                    </div>
+                }
+                @if (!Model.IsVerified)
+                {
+                    <button class="btn btn-primary w-100 rounded-pill" type="submit" disabled="@(Model.Words.Count != _ask.Length)">
+                        <span>Verify recovery phrase</span>
+                    </button>
+                }
+            </ValidationEditContext>
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
+</section>
+
+@code {
+    private string? _errorMessage;
+    private string? _successMessage;
+    private BTCPayAppConfig? _config;
+    private ValidationEditContext? _validationEditContext;
+    VerificationModel Model { get; set; } = new();
+
+    private WalletConfig? Wallet { get; set; }
+    private string[]? Words { get; set; }
+    private string[]? Shuffled { get; set; }
+
+    private readonly int[] _ask = [
+        Random.Shared.Next(1, 3),
+        Random.Shared.Next(3, 5),
+        Random.Shared.Next(5, 7),
+        Random.Shared.Next(7, 9),
+        Random.Shared.Next(9, 11),
+        Random.Shared.Next(11, 13)
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key) ?? new BTCPayAppConfig();
+
+        Wallet = await OnChainWalletManager.GetConfig();
+        Words = Wallet?.Mnemonic.Split(' ');
+        Shuffled = Words?.OrderBy(_ => Guid.NewGuid()).ToArray();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _errorMessage = _successMessage = null;
+        Model.IsVerified = false;
+
+        if (Words is null)
+        {
+            _errorMessage = "Recovery phrase not available";
+        }
+        else if (Model.Words.Count != _ask.Length)
+        {
+            _errorMessage = "Please fill all words.";
+        }
+        else
+        {
+            for (var i = 0; i < _ask.Length; i++)
+            {
+                var num = _ask[i] - 1;
+                var word = Model.Words[i];
+                var expected = Words[num];
+                if (word != expected)
+                {
+                    _errorMessage = "Please check the words.";
+                    Model.Words = [];
+                    return;
+                }
+            }
+
+            _successMessage = "Good job, these are correct!";
+            Model.IsVerified = true;
+
+            if (!_config!.RecoveryPhraseVerified)
+            {
+                _config!.RecoveryPhraseVerified = true;
+                await ConfigProvider.Set(BTCPayAppConfig.Key, _config, true);
+            }
+        }
+    }
+
+    private void AddWord(string word)
+    {
+        if (Model.Words.Count < _ask.Length)
+            Model.Words.Add(word);
+    }
+
+    private class VerificationModel
+    {
+        public List<string> Words { get; set; } = [];
+        public bool IsVerified { get; set; }
+    }
+}
+

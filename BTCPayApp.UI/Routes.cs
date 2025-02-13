@@ -31,6 +31,7 @@ public static class Routes
     public const string NotificationSettings = "/settings/notifications";
     public const string WalletSettings = "/settings/wallet";
     public const string WalletSeed = "/settings/wallet/seed";
+    public const string WalletSeedConfirm = "/settings/wallet/seed-confirmation";
     public const string WalletFunds = "/settings/wallet/funds";
     public const string LightningSettings = "/settings/lightning";
     public const string ChannelsPeers = "/settings/lightning/channels";

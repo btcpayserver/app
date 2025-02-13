@@ -1,0 +1,57 @@
+.container {
+  max-width: 500px;
+}
+
+.ask {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(3, 50%);
+  grid-template-columns: repeat(2, 50%);
+  gap: var(--btcpay-space-m);
+  margin-right: 2em;
+  padding: 0;
+}
+
+.ask li::marker {
+  color: var(--btcpay-body-text-muted);
+  font-weight: var(--btcpay-font-weight-normal);
+}
+
+.ask li {
+  margin-left: 2.5em;
+  font-weight: var(--btcpay-font-weight-semibold);
+}
+
+.ask li .rounded-pill {
+  display: block;
+  border: 1px dashed var(--btcpay-body-border-medium);
+  background: var(--btcpay-bg-tile);
+  margin-left: var(--btcpay-space-xs);
+  padding: .5rem 1.5rem;
+}
+
+.ask li .rounded-pill.current {
+  border-color: 1px dashed var(--btcpay-body-border-light);
+}
+
+.words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--btcpay-space-m);
+  align-items: center;
+  justify-content: space-evenly;
+}
+
+.words .btn {
+  flex: 1 1 calc(50% - var(--btcpay-space-m));
+  --btcpay-btn-color: var(--btcpay-black);
+  --btcpay-btn-hover-color: var(--btcpay-black);
+  --btcpay-btn-active-color: var(--btcpay-black);
+  --btcpay-btn-bg: var(--btcpay-white);
+}
+
+@media (min-width: 400px) {
+  .words .btn {
+    flex: 1 1 calc(33% - var(--btcpay-space-m));
+  }
+}
