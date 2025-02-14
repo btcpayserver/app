@@ -123,7 +123,7 @@
             {
                 param["Email"] = response.Email;
                 param["ResetCode"] = response.PasswordSetCode;
-                param["Mode"] = ForgotPasswordPage.PasswordMode.Set.ToString();
+                param["Mode"] = nameof(ForgotPasswordPage.PasswordMode.Set);
                 var forgotPassword = NavigationManager.GetUriWithQueryParameters(Routes.ForgotPassword, param);
                 NavigationManager.NavigateTo(forgotPassword);
             }

@@ -5,7 +5,7 @@
 .ask {
   display: grid;
   grid-auto-flow: column;
-  grid-template-rows: repeat(3, 50%);
+  grid-template-rows: repeat(3, auto);
   grid-template-columns: repeat(2, 50%);
   gap: var(--btcpay-space-m);
   margin-right: 2em;
