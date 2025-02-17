@@ -11,7 +11,7 @@
         <ul class="navbar-nav">
             <AuthorizeView Policy="@Policies.CanCreateInvoice" Resource="StoreId">
                 <li class="nav-item">
-                    <NavLink href="@Routes.PointOfSale" Match="NavLinkMatch.All" class="@(HasStore ? "nav-link" : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
+                    <NavLink href="@Routes.PointOfSale" Match="NavLinkMatch.All" class="@(HasStore ? CheckoutCssClass() : "nav-link disabled")" aria-disabled="@(HasStore ? null : true)">
                         <Icon Symbol="nav-keypad"/>
                         <span>Checkout</span>
                     </NavLink>
@@ -57,10 +57,17 @@
 
     private string HomeCssClass()
     {
-        var rel = "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
         var c = "nav-link";
-        if (rel.StartsWith(Routes.Notifications)) c += " active";
-        if (rel.StartsWith(Routes.Withdraw)) c += " active";
+        if (RelativePath.StartsWith(Routes.Notifications)) c += " active";
+        if (RelativePath.StartsWith(Routes.Withdraw)) c += " active";
+        return c;
+    }
+
+    private string CheckoutCssClass()
+    {
+        var c = "nav-link";
+        if (RelativePath.StartsWith(Routes.PointOfSale)) c += " active";
+        if (RelativePath.StartsWith(Routes.CheckoutPath(""))) c += " active";
         return c;
     }
 
@@ -71,4 +78,5 @@
 
     private bool HasStore => StoreId != null;
     private string? StoreId => AccountManager.CurrentStore?.Id;
+    private string RelativePath => "/" + NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
 }
