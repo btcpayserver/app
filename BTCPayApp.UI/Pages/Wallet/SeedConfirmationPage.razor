@@ -1,4 +1,5 @@
 ﻿@attribute [Route(Routes.WalletSeedConfirm)]
+@using System.Diagnostics.CodeAnalysis
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Contracts
@@ -30,10 +31,19 @@
                         <ol class="ask mt-3 mb-5">
                             @for (var i = 0; i < _ask.Length; i++)
                             {
+                                var j = i;
                                 var num = _ask[i];
-                                <li value="@num">
-                                    <div class="rounded-pill@(Model.Words.Count == i ? " current" : "")">
-                                        @(Model.Words.Count > i ? Model.Words[i] : "...")
+                                var word = Model.Words[i];
+                                <li value="@num" @onclick="() => Model.Index = j">
+                                    <div class="rounded-pill@(Model.Index == i ? " current" : "")">
+                                        @if (!string.IsNullOrEmpty(word))
+                                        {
+                                            <span>@word</span>
+                                        }
+                                        else
+                                        {
+                                            <span>&nbsp;</span>
+                                        }
                                     </div>
                                 </li>
                             }
@@ -41,14 +51,14 @@
                         <div class="words">
                             @foreach (var word in Shuffled)
                             {
-                                <button type="button" class="btn bg-white rounded-pill" @onclick="() => AddWord(word)">@word</button>
+                                <button type="button" class="btn bg-white rounded-pill" @onclick="() => SetWord(word)">@word</button>
                             }
                         </div>
                     </div>
                 }
                 @if (!Model.IsVerified)
                 {
-                    <button class="btn btn-primary w-100 rounded-pill" type="submit" disabled="@(Model.Words.Count != _ask.Length)">
+                    <button class="btn btn-primary w-100 rounded-pill" type="submit" disabled="@(!Model.AllFilled)">
                         <span>Verify recovery phrase</span>
                     </button>
                 }
@@ -100,7 +110,7 @@
         {
             _errorMessage = "Recovery phrase not available";
         }
-        else if (Model.Words.Count != _ask.Length)
+        else if (!Model.AllFilled)
         {
             _errorMessage = "Please fill all words.";
         }
@@ -113,8 +123,7 @@
                 var expected = Words[num];
                 if (word != expected)
                 {
-                    _errorMessage = "Please check the words.";
-                    Model.Words = [];
+                    _errorMessage = "Please check the words. Tap a word to replace it.";
                     return;
                 }
             }
@@ -130,16 +139,19 @@
         }
     }
 
-    private void AddWord(string word)
+    private void SetWord(string word)
     {
-        if (Model.Words.Count < _ask.Length)
-            Model.Words.Add(word);
+        if (Model.Index is <= -1 or >= 6) return;
+        Model.Words[Model.Index] = word;
+        Model.Index = Model.Words.FindIndex(string.IsNullOrEmpty);
     }
 
     private class VerificationModel
     {
-        public List<string> Words { get; set; } = [];
+        public List<string> Words { get; set; } = ["", "", "", "", "", ""];
+        public int Index { get; set; } = 0;
         public bool IsVerified { get; set; }
+        public bool AllFilled => !Words.Any(string.IsNullOrEmpty);
     }
 }
 
