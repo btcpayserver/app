@@ -45,14 +45,13 @@
   min-height: 100dvh;
 }
 
-#Titlebar ~ #MainContent,
-#NavbarTop ~ #MainContent {
-  min-height: calc(100dvh - var(--navbar-top-height));
+#Titlebar.fixed ~ #MainContent {
+  min-height: 100dvh;
+  padding-top: var(--navbar-top-height);
 }
 
-#Titlebar.fixed ~ #MainContent,
-#NavbarTop ~ #MainContent {
-  padding-top: var(--navbar-top-height);
+#Titlebar:not(.fixed) ~ #MainContent {
+  min-height: calc(100dvh - var(--navbar-top-height));
 }
 
 #NavbarBottom ~ #MainContent {
