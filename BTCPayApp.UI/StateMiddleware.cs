@@ -225,10 +225,11 @@ public class StateMiddleware(
                             await accountManager.SetCurrentStoreId(null);
                         if (serverEvent.Type is "store-updated")
                             dispatcher.Dispatch(new StoreState.FetchStore(serverEvent.StoreId!));
+                        /* not needed currently
                         if (serverEvent.Type.StartsWith("store-user-"))
                             dispatcher.Dispatch(new StoreState.FetchUsers(serverEvent.StoreId!));
                         if (serverEvent.Type.StartsWith("store-role-"))
-                            dispatcher.Dispatch(new StoreState.FetchRoles(serverEvent.StoreId!));
+                            dispatcher.Dispatch(new StoreState.FetchRoles(serverEvent.StoreId!));*/
                     }
                     break;
             }

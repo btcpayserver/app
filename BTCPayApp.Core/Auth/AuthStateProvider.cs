@@ -58,7 +58,7 @@ public class AuthStateProvider(
     {
         if (string.IsNullOrEmpty(baseUri) && string.IsNullOrEmpty(Account?.BaseUri))
             throw new ArgumentException("No base URI present or provided.", nameof(baseUri));
-        var token = Account?.UserToken ?? Account?.OwnerToken;
+        var token = Account?.ModeToken ?? Account?.OwnerToken;
         return new BTCPayAppClient(baseUri ?? Account!.BaseUri, token, clientFactory.CreateClient());
     }
 
@@ -80,7 +80,7 @@ public class AuthStateProvider(
 
             var oldUserInfo = UserInfo;
             var hasOwnerToken = !string.IsNullOrEmpty(Account?.OwnerToken);
-            var hasUserToken = !string.IsNullOrEmpty(Account?.UserToken);
+            var hasModeToken = !string.IsNullOrEmpty(Account?.ModeToken);
             var needsRefresh = _refreshUserInfo || UserInfo == null;
             if (needsRefresh && hasOwnerToken)
             {
@@ -103,7 +103,7 @@ public class AuthStateProvider(
                 if (UserInfo.Stores?.Any() is true)
                     claims.AddRange(UserInfo.Stores.Select(store =>
                         new Claim(store.Id, string.Join(',', store.Permissions ?? []))));
-                if (hasOwnerToken && !hasUserToken)
+                if (hasOwnerToken && !hasModeToken)
                     claims.Add(new Claim(identityOptions.CurrentValue.ClaimsIdentity.RoleClaimType, "DeviceOwner"));
                 user = new ClaimsPrincipal(new ClaimsIdentity(claims, "Greenfield"));
             }
@@ -225,7 +225,7 @@ public class AuthStateProvider(
                 : " Please set your password.";
             return new FormResult<AcceptInviteResult>(true, message, response);
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return new FormResult<AcceptInviteResult>(false, "Invalid invitation.", null);
         }
@@ -376,22 +376,22 @@ public class AuthStateProvider(
         }
     }
 
-    public async Task<FormResult> SwitchToUser(string storeId, string userId, CancellationToken? cancellation = default)
+    public async Task<FormResult> SwitchMode(string storeId, string mode, CancellationToken? cancellation = default)
     {
-        if (Account == null || !string.IsNullOrEmpty(Account.UserToken))
-            return new FormResult(false, "Cannot switch user in current state.");
+        if (Account == null || !string.IsNullOrEmpty(Account.ModeToken))
+            return new FormResult(false, "Cannot switch mode in current state.");
 
-        var payload = new SwitchUserRequest
+        var payload = new SwitchModeRequest
         {
             StoreId = storeId,
-            UserId = userId
+            Mode = mode
         };
         try
         {
-            var response = await GetClient().SwitchUser(payload, cancellation.GetValueOrDefault());
+            var response = await GetClient().SwitchMode(payload, cancellation.GetValueOrDefault());
             if (string.IsNullOrEmpty(response.AccessToken)) throw new Exception("Did not obtain valid API token.");
 
-            Account.UserToken = response.AccessToken;
+            Account.ModeToken = response.AccessToken;
             await SetAccount(Account);
             return new FormResult(true);
         }
@@ -401,20 +401,35 @@ public class AuthStateProvider(
         }
     }
 
-    public async Task<FormResult> SwitchToOwner()
+    public async Task<FormResult> SwitchToOwner(string password, string? otp = null, CancellationToken? cancellation = default)
     {
-        if (Account == null || string.IsNullOrEmpty(Account.UserToken) || string.IsNullOrEmpty(Account.OwnerToken))
+        if (Account == null || string.IsNullOrEmpty(Account.ModeToken) || string.IsNullOrEmpty(Account.OwnerToken))
             return new FormResult(false, "Cannot switch user in current state.");
 
-        Account.UserToken = null;
-        await SetAccount(Account);
-        return new FormResult(true);
+        var payload = new LoginRequest
+        {
+            Email = Account.Email,
+            Password = password,
+            TwoFactorCode = otp
+        };
+        try
+        {
+            var response = await GetClient().Login(payload, cancellation.GetValueOrDefault());
+            if (string.IsNullOrEmpty(response.AccessToken)) throw new Exception("Did not obtain valid API token.");
+            Account.ModeToken = null;
+            await SetAccount(Account);
+            return new FormResult(true);
+        }
+        catch (Exception e)
+        {
+            return new FormResult(false, e.Message);
+        }
     }
 
     public async Task Logout()
     {
         if (Account == null) return;
-        Account.OwnerToken = Account.UserToken = null;
+        Account.OwnerToken = Account.ModeToken = null;
         await SetAccount(Account);
     }
 
@@ -425,13 +440,14 @@ public class AuthStateProvider(
 
     private async Task SetAccount(BTCPayAccount account)
     {
+        var storeId = CurrentStore?.Id;
+
         await UpdateAccount(account);
         Account = account;
         UserInfo = null;
 
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
 
-        var store = CurrentStore;
-        if (store != null) await SetCurrentStore(store);
+        if (!string.IsNullOrEmpty(storeId)) await SetCurrentStoreId(storeId);
     }
 }

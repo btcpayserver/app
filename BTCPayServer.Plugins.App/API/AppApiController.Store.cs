@@ -2,8 +2,11 @@
 using System.Linq;
 using System.Threading.Tasks;
 using BTCPayApp.Core.Models;
+using BTCPayServer.Abstractions.Constants;
+using BTCPayServer.Client;
 using BTCPayServer.Data;
 using BTCPayServer.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BTCPayServer.Plugins.App.API;
@@ -11,6 +14,7 @@ namespace BTCPayServer.Plugins.App.API;
 public partial class AppApiController
 {
     [HttpGet("create-store")]
+    [Authorize(Policy = Policies.CanModifyStoreSettingsUnscoped, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
     public async Task<IActionResult> CreateStore()
     {
         var defaultCurrency = (await settingsRepository.GetSettingAsync<PoliciesSettings>())?.DefaultCurrency ?? StoreBlob.StandardDefaultCurrency;

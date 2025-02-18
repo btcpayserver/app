@@ -7,7 +7,7 @@ public class BTCPayAccount(string baseUri, string email, string? ownerToken = nu
     public string BaseUri { get; private set; } = WithTrailingSlash(baseUri);
     public string Email { get; private set; } = email;
     public string? OwnerToken { get; set; } = ownerToken;
-    public string? UserToken { get; set; }
+    public string? ModeToken { get; set; }
 
     private static string WithTrailingSlash(string s)
     {

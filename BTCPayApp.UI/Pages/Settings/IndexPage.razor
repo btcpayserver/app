@@ -8,7 +8,6 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client
-@using BTCPayServer.Client.Models
 @using Plugin.Fingerprint.Abstractions
 @inject IState<RootState> State
 @inject IState<UIState> UiState
@@ -17,9 +16,9 @@
 @inject IAccountManager AccountManager
 @inject IFingerprint Fingerprint
 @inject IState<UserState> UserState
-@inject IState<StoreState> StoreState
 @inject BTCPayConnectionManager ConnectionManager
 @inject LightningNodeManager LightningNodeManager
+@inject IJSRuntime JS
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Settings</PageTitle>
@@ -48,9 +47,23 @@
             <div class="box user mb-2 d-flex align-items-center justify-content-between gap-3 my-4">
                 <AuthorizeView Policy="@AppPolicies.CanModifySettings">
                     <Authorized>
-                        @if (StoreUsers?.Count() > 1 && HasPasscode)
+                        @if (CurrentStore != null)
                         {
-                            <UserSwitch CurrentUser="@CurrentUser" Users="@StoreUsers" SwitchToUser="@SwitchToUser"/>
+                            <div class="d-inline-flex align-items-center p-0 gap-3">
+                                <button class="d-inline-flex align-items-center btn btn-link text-body dropdown-toggle dropdown-toggle-no-caret p-0 gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl"/>
+                                    <Icon Symbol="caret-down" class="text-muted"/>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><h6 class="dropdown-header">Switch to mode</h6></li>
+                                    @foreach (var mode in new[] { "Cashier" })
+                                    {
+                                        <li>
+                                            <button class="dropdown-item" type="button" @onclick="() => SwitchMode(mode)">@mode</button>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
                         }
                         else
                         {
@@ -59,29 +72,77 @@
                     </Authorized>
                     <NotAuthorized>
                         <UserInfo Email="@CurrentUser.Email" Name="@CurrentUser.Name" ImageUrl="@CurrentUser.ImageUrl"/>
-                        <span class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchToOwner">Switch back</span>
+                        <span class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchBackToOwner">Switch back</span>
                     </NotAuthorized>
                 </AuthorizeView>
+                <div class="modal fade" id="ModeSwitchModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog">
+                        <EditForm Model="SignInModel" OnValidSubmit="HandleValidSubmit" FormName="SwitchMode">
+                            <div class="modal-content">
+                                <div class="modal-header pb-0">
+                                    <h1 class="modal-title fs-5">Switch back to admin mode</h1>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                                        <Icon Symbol="close"/>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    @if (!string.IsNullOrEmpty(_errorMessage))
+                                    {
+                                        <Alert Type="danger">@_errorMessage</Alert>
+                                    }
+                                    <div hidden="@SignInModel.RequireTwoFactor">
+                                        <label for="Password" class="form-label">Password</label>
+                                        <InputText @bind-Value="SignInModel.Password" type="password" id="Password" autocomplete="current-password" class="form-control"/>
+                                        <ValidationMessage For="@(() => SignInModel.Password)"/>
+                                    </div>
+                                    @if (SignInModel.RequireTwoFactor)
+                                    {
+                                        <div>
+                                            <label for="TwoFactorCode" class="form-label">Two Factor Code</label>
+                                            <InputText @bind-Value="SignInModel.TwoFactorCode" type="number" id="TwoFactorCode" autocomplete="one-time-code" class="form-control hide-number-spin"/>
+                                            <ValidationMessage For="@(() => SignInModel.TwoFactorCode)"/>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        @if (_sending)
+                                        {
+                                            <LoadingIndicator />
+                                        }
+                                        else
+                                        {
+                                            <span>Switch back</span>
+                                        }
+                                    </button>
+                                </div>
+                            </div>
+                        </EditForm>
+                    </div>
+                </div>
             </div>
         }
-        <div class="box">
-            <ul class="list-group list-group-flush list-group-links">
-                <li class="list-group-item">
-                    <a href="@Routes.Account">
-                        <Icon Symbol="nav-account"/>
-                        <span>Account Details</span>
-                        <Icon Symbol="caret-right"/>
-                    </a>
-                </li>
-                <li class="list-group-item">
-                    <a href="@Routes.NotificationSettings">
-                        <Icon Symbol="nav-notifications"/>
-                        <span>Notifications</span>
-                        <Icon Symbol="caret-right"/>
-                    </a>
-                </li>
-            </ul>
-        </div>
+
+        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
+                    <li class="list-group-item">
+                        <a href="@Routes.Account">
+                            <Icon Symbol="nav-account"/>
+                            <span>Account Details</span>
+                            <Icon Symbol="caret-right"/>
+                        </a>
+                    </li>
+                    <li class="list-group-item">
+                        <a href="@Routes.NotificationSettings">
+                            <Icon Symbol="nav-notifications"/>
+                            <span>Notifications</span>
+                            <Icon Symbol="caret-right"/>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </AuthorizeView>
 
         @if (!NeedsEncryptionKey)
         {
@@ -181,10 +242,10 @@
             </AuthorizeView>
         }
 
-        <h2>Security</h2>
-        <div class="box">
-            <ul class="list-group list-group-flush list-group-links">
-                <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+            <h2>Security</h2>
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item">
                         <a href="@Routes.EncryptionKey">
                             @if (NeedsEncryptionKey)
@@ -200,25 +261,24 @@
                             <Icon Symbol="caret-right"/>
                         </a>
                     </li>
-                    @*<li class="list-group-item">
+                    @*
+                    <li class="list-group-item">
                         <a href="@Routes.ChangePasscode">
                             <Icon Symbol="key"/>
                             <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
                             <Icon Symbol="caret-right"/>
                         </a>
-                    </li>*@
-                </AuthorizeView>
-                <li class="list-group-item">
-                    <a href="@Routes.ChangePassword">
-                        <Icon Symbol="dots" class="p-2"/>
-                        <span>Change Password</span>
-                        <Icon Symbol="caret-right"/>
-                    </a>
-                </li>
-            </ul>
-        </div>
-
-        <AuthorizeView Policy="@AppPolicies.CanModifySettings">
+                    </li>
+                    *@
+                    <li class="list-group-item">
+                        <a href="@Routes.ChangePassword">
+                            <Icon Symbol="dots" class="p-2"/>
+                            <span>Change Password</span>
+                            <Icon Symbol="caret-right"/>
+                        </a>
+                    </li>
+                </ul>
+            </div>
             <h2>Debug</h2>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
@@ -303,16 +363,30 @@
     private BTCPayAppConfig? _config;
     private bool? _biometricAuthAvailable;
     private SettingsModel Model { get; set; } = new();
+    private SigninModel SignInModel { get; set; } = new();
     private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
     private AppUserStoreInfo? CurrentStore => AccountManager.CurrentStore;
     private AppInstanceInfo? InstanceInfo => UiState.Value.Instance?.Data;
     private AppUserInfo? CurrentUser => UserState.Value.Info?.Data;
-    private IEnumerable<StoreUserData>? StoreUsers => StoreState.Value.Users?.Data;
     private bool NeedsEncryptionKey => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey;
+    private bool _sending;
+    private string? _errorMessage;
 
     private class SettingsModel
     {
         public string Theme { get; set; } = Themes.System;
+    }
+
+    public class SigninModel
+    {
+        public bool RequireTwoFactor { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string? Password { get; set; }
+
+        [RequiredIf(nameof(RequireTwoFactor), true)]
+        public string? TwoFactorCode { get; set; }
     }
 
     protected override async Task OnInitializedAsync()
@@ -337,17 +411,37 @@
         _ = ConnectionManager.SwitchToSlave();
     }
 
-    private async Task SwitchToUser(StoreUserData storeUser)
+    private async Task SwitchMode(string mode)
     {
-        if (string.IsNullOrEmpty(CurrentStore?.Id)) return;
-        if (!await AccountManager.IsAuthorized(AppPolicies.CanModifySettings)) return;
-        await AccountManager.SwitchToUser(CurrentStore.Id, storeUser.UserId);
+        if (string.IsNullOrEmpty(CurrentStore?.Id) || string.IsNullOrEmpty(mode) ||
+            !await AccountManager.IsAuthorized(AppPolicies.CanModifySettings)) return;
+        await AccountManager.SwitchMode(CurrentStore.Id, mode);
     }
 
-    private async Task SwitchToOwner()
+    private async Task SwitchBackToOwner()
     {
-        // TODO: Guard with pin entry
-        await AccountManager.SwitchToOwner();
+        SignInModel = new SigninModel();
+        await JS.InvokeVoidAsync("Interop.openModal", "#ModeSwitchModal");
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _errorMessage = null;
+        _sending = true;
+
+        await JS.InvokeVoidAsync("Interop.closeModal", "#ModeSwitchModal");
+        var result = await AccountManager.SwitchToOwner(SignInModel.Password!, SignInModel.TwoFactorCode);
+        _sending = false;
+        if (!result.Succeeded)
+        {
+            await JS.InvokeVoidAsync("Interop.openModal", "#ModeSwitchModal");
+            if (result.Messages?.Contains("RequiresTwoFactor") is true)
+                SignInModel.RequireTwoFactor = true;
+            else
+                _errorMessage = result.Messages?.Contains("Failed") is false
+                    ? string.Join(",", result.Messages)
+                    : "Invalid login attempt.";
+        }
     }
 
     private async Task Logout()

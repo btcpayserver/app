@@ -635,12 +635,13 @@ public record StoreState
                 dispatcher.Dispatch(new FetchStore(storeId));
                 dispatcher.Dispatch(new FetchBalances(storeId, histogramType));
                 dispatcher.Dispatch(new FetchNotifications(storeId));
-                dispatcher.Dispatch(new FetchRoles(storeId));
-                dispatcher.Dispatch(new FetchUsers(storeId));
                 dispatcher.Dispatch(new FetchInvoices(storeId));
                 dispatcher.Dispatch(new FetchRates(store));
                 dispatcher.Dispatch(new FetchPointOfSale(posId));
                 dispatcher.Dispatch(new FetchPointOfSaleStats(posId));
+                /* not needed currently
+                dispatcher.Dispatch(new FetchRoles(storeId));
+                dispatcher.Dispatch(new FetchUsers(storeId));*/
 
                 var currency = BitcoinUnits.Contains(store.DefaultCurrency) ? null : store.DefaultCurrency;
                 dispatcher.Dispatch(new UIState.SetFiatCurrency(currency));

@@ -8,9 +8,6 @@ namespace BTCPayApp.Core.Auth;
 
 public class AuthorizationHandler(IOptionsMonitor<IdentityOptions> identityOptions) : AuthorizationHandler<PolicyRequirement>
 {
-    //TODO: In the future, we will add these store permissions to actual aspnet roles, and remove this class.
-    private static readonly PermissionSet _serverAdminRolePermissions = new([Permission.Create(Policies.CanViewStoreSettings)]);
-
     protected override Task HandleRequirementAsync(AuthorizationHandlerContext context, PolicyRequirement requirement)
     {
         if (context.User.Identity?.AuthenticationType != "Greenfield")
@@ -40,7 +37,7 @@ public class AuthorizationHandler(IOptionsMonitor<IdentityOptions> identityOptio
             if (!string.IsNullOrEmpty(permissions))
             {
                 permissionSet = new PermissionSet(permissions.Split(',')
-                    .Select(s => Permission.TryCreatePermission(s, storeId, out var permission) ? permission : null)
+                    .Select(s => Permission.TryParse(s, out var permission) ? permission : null)
                     .Where(s => s != null).ToArray());
             }
         }
@@ -55,11 +52,6 @@ public class AuthorizationHandler(IOptionsMonitor<IdentityOptions> identityOptio
         }
         else if (Policies.IsStorePolicy(policy) && !string.IsNullOrEmpty(storeId))
         {
-            if (isAdmin && !string.IsNullOrEmpty(storeId))
-            {
-                success = _serverAdminRolePermissions.Contains(policy, storeId);
-            }
-
             if (!success && permissionSet.Contains(policy, storeId))
             {
                 success = true;

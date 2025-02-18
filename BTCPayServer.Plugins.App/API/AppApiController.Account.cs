@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using BTCPayApp.Core.Models;
+using BTCPayServer.Abstractions.Constants;
 using BTCPayServer.Abstractions.Extensions;
 using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Data;
 using BTCPayServer.Events;
 using BTCPayServer.Models.AppViewModels;
+using BTCPayServer.Plugins.App.Extensions;
 using BTCPayServer.Plugins.PointOfSale;
 using BTCPayServer.Security.Greenfield;
 using BTCPayServer.Services;
@@ -163,32 +165,39 @@ public partial class AppApiController
         return Ok(response);
     }
 
-    [HttpPost("switch-user")]
+    [HttpPost("switch-mode")]
     [RateLimitsFilter(ZoneLimits.Login, Scope = RateLimitsScope.RemoteAddress)]
-    public async Task<IActionResult> SwitchUser(SwitchUserRequest req)
+    [Authorize(Policy = Policies.CanModifyProfile, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
+    public async Task<IActionResult> SwitchMode(SwitchModeRequest req)
     {
         if (string.IsNullOrEmpty(req.StoreId))
             ModelState.AddModelError(nameof(req.StoreId), "Missing store id");
-        if (string.IsNullOrEmpty(req.UserId))
-            ModelState.AddModelError(nameof(req.UserId), "Missing user id");
+        var permissions = req.Mode switch
+        {
+            "Cashier" => new [] { Policies.CanViewProfile, Permission.Create(Policies.CanModifyInvoices, req.StoreId).ToString() },
+            _ => null
+        };
+        if (permissions == null)
+            ModelState.AddModelError(nameof(req.Mode), "Missing or invalid mode");
         if (!ModelState.IsValid)
             return this.CreateValidationError(ModelState);
 
+        var user = await userManager.GetUserAsync(User);
+        if (user == null)
+            return this.CreateAPIError(404, "user-not-found", "The user was not found");
+
         var authorization = await authService.AuthorizeAsync(User, Policies.CanModifyStoreSettings);
         if (!authorization.Succeeded)
-            return this.CreateAPIError(401, "unauthenticated", "Only store owners can switch users");
+            return this.CreateAPIError(401, "unauthenticated", "Only store owners can switch modes");
 
-        var storeUser = await storeRepository.GetStoreUser(req.StoreId, req.UserId);
-        if (storeUser == null)
-            return this.CreateAPIError(404, "store-user-not-found", "The user is not associated with the store");
+        var identifier = $"BTCPay App: {req.Mode}";
+        var key = await GetOrCreateApiKey(user.Id, identifier, permissions!);
 
-        var user = await userManager.FindByIdAsync(storeUser.ApplicationUserId);
-        return user != null
-            ? await UserAuthenticated(user)
-            : this.CreateAPIError(404, "user-not-found", "The user was not found");
+        return Ok(new AuthenticationResponse { AccessToken = key.Id });
     }
 
     [HttpPost("logout")]
+    [Authorize(Policy = Policies.CanModifyProfile, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
     public async Task<IActionResult> Logout()
     {
         var user = await userManager.GetUserAsync(User);
@@ -202,6 +211,7 @@ public partial class AppApiController
     }
 
     [HttpGet("user")]
+    [Authorize(Policy = Policies.CanViewProfile, AuthenticationSchemes = AuthenticationSchemes.Greenfield)]
     public async Task<IActionResult> UserInfo()
     {
         var user = await userManager.GetUserAsync(User);
@@ -283,38 +293,53 @@ public partial class AppApiController
 
     private async Task<IActionResult> UserAuthenticated(ApplicationUser user)
     {
-        var identifier = "BTCPay App";
-        var keys = await apiKeyRepository.GetKeys(new APIKeyRepository.APIKeyQuery { UserId = [user.Id] });
-        var key = keys.FirstOrDefault<APIKeyData>(k => k.GetBlob<APIKeyBlob>()?.ApplicationIdentifier == identifier);
+        const string identifier = "BTCPay App";
+        var key = await GetOrCreateApiKey(user.Id, identifier, [Policies.Unrestricted]);
+        return Ok(new AuthenticationResponse { AccessToken = key.Id });
+    }
+
+    private async Task<APIKeyData> GetOrCreateApiKey(string userId, string identifier, string[] permissions)
+    {
+        var keys = await apiKeyRepository.GetKeys(new APIKeyRepository.APIKeyQuery { UserId = [userId] });
+        var key = keys.FirstOrDefault(k =>
+        {
+            var blob = k.GetBlob<APIKeyBlob>();
+            return blob != null && blob.ApplicationIdentifier == identifier && blob.Permissions.SequenceEqual(permissions);
+        });
         if (key == null)
         {
             key = new APIKeyData
             {
                 Id = Encoders.Hex.EncodeData(RandomUtils.GetBytes(20)),
                 Type = APIKeyType.Permanent,
-                UserId = user.Id,
+                UserId = userId,
                 Label = identifier
             };
             key.SetBlob(new APIKeyBlob
             {
                 ApplicationIdentifier = identifier,
-                Permissions = [Policies.Unrestricted]
+                Permissions = permissions
             });
             await apiKeyRepository.CreateKey(key);
         }
-        return Ok(new AuthenticationResponse { AccessToken = key.Id });
+        return key;
     }
 
     private async Task<AppUserInfo> GetUserInfo(ApplicationUser user)
     {
         var userStores = await storeRepository.GetStoresByUserId(user.Id);
+        var apiKeyPermissions = HttpContext.GetPermissions();
+        var isUnrestricted = apiKeyPermissions is [Policies.Unrestricted];
         var stores = new List<AppUserStoreInfo>();
         foreach (var store in userStores)
         {
+            if (!HttpContext.HasPermission(Permission.Create(Policies.CanViewInvoices, store.Id))) continue;
+
             var userStore = store.UserStores.Find(us => us.ApplicationUserId == user.Id && us.StoreDataId == store.Id)!;
             var apps = await appService.GetAllApps(user.Id, false, store.Id);
             var posApp = apps.FirstOrDefault(app => app.AppType == PointOfSaleAppType.AppType && app.App.GetSettings<PointOfSaleSettings>().DefaultView == PosViewType.Light);
             var storeBlob = userStore.StoreData.GetStoreBlob();
+            var storePermissions = isUnrestricted ? userStore.StoreRole.Permissions : apiKeyPermissions.Where(Policies.IsStorePolicy);
             stores.Add(new AppUserStoreInfo
             {
                 Id = store.Id,
@@ -322,8 +347,8 @@ public partial class AppApiController
                 Archived = store.Archived,
                 RoleId = userStore.StoreRole.Id,
                 PosAppId = posApp?.Id,
+                Permissions = storePermissions,
                 DefaultCurrency = storeBlob.DefaultCurrency,
-                Permissions = userStore.StoreRole.Permissions,
                 LogoUrl = storeBlob.LogoUrl != null
                     ? await uriResolver.Resolve(Request.GetAbsoluteRootUri(), storeBlob.LogoUrl)
                     : null,
@@ -339,7 +364,7 @@ public partial class AppApiController
                 ? await uriResolver.Resolve(Request.GetAbsoluteRootUri(), UnresolvedUri.Create(userBlob.ImageUrl))
                 : null,
             Email = await userManager.GetEmailAsync(user),
-            Roles = await userManager.GetRolesAsync(user),
+            Roles = isUnrestricted ? await userManager.GetRolesAsync(user) : [],
             Stores = stores
         };
         return info;

@@ -41,9 +41,9 @@ public class BTCPayAppClient(string baseUri, string? apiKey = null, HttpClient? 
         return await SendHttpRequest<AuthenticationResponse>("btcpayapp/login", payload, HttpMethod.Post, cancellation);
     }
 
-    public async Task<AuthenticationResponse> SwitchUser(SwitchUserRequest payload, CancellationToken cancellation = default)
+    public async Task<AuthenticationResponse> SwitchMode(SwitchModeRequest payload, CancellationToken cancellation = default)
     {
-        return await SendHttpRequest<AuthenticationResponse>("btcpayapp/switch-user", payload, HttpMethod.Post, cancellation);
+        return await SendHttpRequest<AuthenticationResponse>("btcpayapp/switch-mode", payload, HttpMethod.Post, cancellation);
     }
 
     public async Task<AuthenticationResponse> Login(string loginCode, CancellationToken cancellation = default)
