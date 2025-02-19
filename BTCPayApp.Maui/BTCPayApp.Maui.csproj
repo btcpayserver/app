@@ -47,6 +47,14 @@
         <DebugSymbols>True</DebugSymbols>
     </PropertyGroup>
 
+    <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' And '$(Configuration)' == 'Release'">
+        <AndroidKeyStore>True</AndroidKeyStore>
+        <AndroidSigningKeyStore>../btcpayapp.keystore</AndroidSigningKeyStore>
+        <AndroidSigningKeyAlias>btcpayapp</AndroidSigningKeyAlias>
+        <AndroidSigningKeyPass>env:ANDROID_SIGNING_PASSWORD</AndroidSigningKeyPass>
+        <AndroidSigningStorePass>env:ANDROID_SIGNING_PASSWORD</AndroidSigningStorePass>
+    </PropertyGroup>
+
     <ItemGroup>
         <!-- App Icon -->
         <!-- Splash Screen -->

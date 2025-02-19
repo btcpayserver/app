@@ -66,7 +66,11 @@ jobs:
       - name: Install workloads
         run: dotnet workload install maui
       - name: Build
-        run: dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net8.0-android -c Release -o publish/android
+        # TODO: Add keystore https://learn.microsoft.com/en-us/dotnet/maui/android/deployment/publish-cli?view=net-maui-8.0#code-try-4
+        run: |
+          dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net8.0-android -c Release -o publish/android
+        env:
+          ANDROID_SIGNING_PASSWORD: ${{ secrets.ANDROID_SIGNING_PASSWORD }}
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
