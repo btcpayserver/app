@@ -1,4 +1,4 @@
-﻿using BTCPayApp.Core;
+﻿using BTCPayApp.Core.Extensions;
 using BTCPayApp.UI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;

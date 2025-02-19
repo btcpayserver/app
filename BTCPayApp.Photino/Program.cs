@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using BTCPayApp.Core;
+using BTCPayApp.Core.Extensions;
 using BTCPayApp.Desktop;
 using BTCPayApp.UI;
 using Microsoft.AspNetCore.Components.Web;
@@ -17,7 +18,7 @@ public static class Program
     private static void Main(string[] args)
     {
         var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
-        
+
         builder.Services.TryAddSingleton<IConfiguration>(_ =>
         {
             var configBuilder = new ConfigurationBuilder();
@@ -28,6 +29,9 @@ public static class Program
         builder.Services.ConfigureBTCPayAppCore();
         builder.Services.ConfigureBTCPayAppDesktop();
         builder.Services.AddLogging();
+#if DEBUG
+        builder.Services.AddDangerousSSLSettingsForDev();
+#endif
         builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
 

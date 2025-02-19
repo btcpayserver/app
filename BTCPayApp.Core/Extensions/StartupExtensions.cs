@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace BTCPayApp.Core;
+namespace BTCPayApp.Core.Extensions;
 
 public static class StartupExtensions
 {
@@ -46,6 +46,7 @@ public static class StartupExtensions
         serviceCollection.AddLDK();
         serviceCollection.AddSingleton<IAuthorizationHandler, AuthorizationHandler>();
         serviceCollection.AddAuthorizationCore(options => options.AddPolicies());
+
         return serviceCollection;
     }
 }

@@ -1,11 +1,12 @@
 ﻿#if DEBUG
 
-namespace BTCPayApp.Maui;
-
 using System.Net.Security;
 using System.Net.WebSockets;
 using System.Security.Cryptography.X509Certificates;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+
+namespace BTCPayApp.Core.Extensions;
 
 public class DangerousHttpClientFactory : IHttpClientFactory
 {

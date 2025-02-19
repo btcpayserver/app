@@ -3,6 +3,7 @@ using BTCPayApp.Core;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Extensions;
 using BTCPayApp.Core.Wallet;
 using BTCPayApp.Desktop;
 using Laraue.EfCoreTriggers.Common.Extensions;
