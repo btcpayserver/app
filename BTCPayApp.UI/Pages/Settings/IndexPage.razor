@@ -8,13 +8,11 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client
-@using Plugin.Fingerprint.Abstractions
 @inject IState<RootState> State
 @inject IState<UIState> UiState
 @inject IDispatcher Dispatcher
 @inject ConfigProvider ConfigProvider
 @inject IAccountManager AccountManager
-@inject IFingerprint Fingerprint
 @inject IState<UserState> UserState
 @inject BTCPayConnectionManager ConnectionManager
 @inject LightningNodeManager LightningNodeManager
@@ -261,7 +259,6 @@
                             <Icon Symbol="caret-right"/>
                         </a>
                     </li>
-                    @*
                     <li class="list-group-item">
                         <a href="@Routes.ChangePasscode">
                             <Icon Symbol="key"/>
@@ -269,7 +266,6 @@
                             <Icon Symbol="caret-right"/>
                         </a>
                     </li>
-                    *@
                     <li class="list-group-item">
                         <a href="@Routes.ChangePassword">
                             <Icon Symbol="dots" class="p-2"/>
@@ -361,7 +357,6 @@
     private static string[] ThemeList => [Themes.System, Themes.Light, Themes.Dark];
     private BTCPayAccount? _account;
     private BTCPayAppConfig? _config;
-    private bool? _biometricAuthAvailable;
     private SettingsModel Model { get; set; } = new();
     private SigninModel SignInModel { get; set; } = new();
     private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
@@ -396,7 +391,6 @@
         Model.Theme = UiState.Value.SelectedTheme;
         _account = AccountManager.Account;
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
-        _biometricAuthAvailable = await Fingerprint.IsAvailableAsync();
     }
 
     private void SetTheme(string theme)

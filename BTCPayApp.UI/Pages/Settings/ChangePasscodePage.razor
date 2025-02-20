@@ -5,6 +5,8 @@
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Util
+@using Plugin.Fingerprint.Abstractions
+@inject IFingerprint Fingerprint
 @inject ConfigProvider ConfigProvider
 @inject NavigationManager NavigationManager
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -43,9 +45,15 @@
                 <Passcode OnPasscodeEntered="HandlePasscodeEntered" />
                 @if (HasPasscode)
                 {
-                    <button class="btn btn-outline-danger" type="button" @onclick="RemovePasscode">
-                        Remove passcode
-                    </button>
+                    <div class="buttons">
+                        @if (true || _biometricAuthAvailable is true)
+                        {
+                            <button class="btn btn-secondary" type="button" @onclick="ToggleBiometricAuth">@(Config.UseBiometricAuth ? "Disable" : "Enable") biometric authentication</button>
+                        }
+                        <button class="btn btn-outline-danger" type="button" @onclick="RemovePasscode">
+                            Remove passcode
+                        </button>
+                    </div>
                 }
             </ValidationEditContext>
         </Authorized>
@@ -57,15 +65,17 @@
 
 @code {
     private PasscodeModel Model { get; set; } = new();
-    private BTCPayAppConfig? _config;
+    private BTCPayAppConfig Config { get; set; } = null!;
     private ValidationEditContext? _validationEditContext;
-    private bool HasPasscode => !string.IsNullOrEmpty(_config?.Passcode);
+    private bool _biometricAuthAvailable;
+    private bool HasPasscode => !string.IsNullOrEmpty(Config?.Passcode);
 
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
-        _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key) ?? new BTCPayAppConfig();
+        Config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key) ?? new BTCPayAppConfig();
+        _biometricAuthAvailable = await Fingerprint.IsAvailableAsync();
     }
 
     private class PasscodeModel
@@ -91,8 +101,8 @@
 
     public async Task HandleValidSubmit()
     {
-        _config!.Passcode = Model.NewPasscode;
-        await ConfigProvider.Set(BTCPayAppConfig.Key, _config, true);
+        Config.Passcode = Model.NewPasscode;
+        await ConfigProvider.Set(BTCPayAppConfig.Key, Config, true);
         NavigationManager.NavigateTo(Routes.Settings);
     }
 
@@ -110,19 +120,26 @@
         }
     }
 
+    // TODO: Guard with biometric auth
+    private async Task ToggleBiometricAuth()
+    {
+        if (!HasPasscode) return;
+        Config.UseBiometricAuth = _biometricAuthAvailable && !Config.UseBiometricAuth;
+        await ConfigProvider.Set(BTCPayAppConfig.Key, Config, true);
+    }
+
     // TODO: Guard with passcode entering
     private async Task RemovePasscode()
     {
-        if (HasPasscode)
-        {
-            _config!.Passcode = null;
-            await ConfigProvider.Set(BTCPayAppConfig.Key, _config, true);
-        }
+        if (!HasPasscode) return;
+        Config.Passcode = null;
+        Config.UseBiometricAuth = false;
+        await ConfigProvider.Set(BTCPayAppConfig.Key, Config, true);
     }
 
     private string GetTitle() => Model.Mode switch
     {
-        PasscodeMode.Set => $"{(HasPasscode ? "Set" : "Change")} Passcode",
+        PasscodeMode.Set => $"{(HasPasscode ? "Change" : "Set")} Passcode",
         PasscodeMode.Confirm => "Confirm Passcode",
         _ => throw new ArgumentOutOfRangeException()
     };

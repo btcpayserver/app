@@ -9,15 +9,13 @@
 
 .container ::deep form {
   gap: var(--btcpay-space-l);
-  padding-bottom: var(--btcpay-space-l);
 }
 
-.container ::deep form > div {
-  min-height: 8rem;
-}
-
-.container .btn-outline-danger {
+.container .buttons {
   width: 100%;
   max-width: 28rem;
-  margin-top: var(--btcpay-space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--btcpay-space-l);
+  margin: var(--btcpay-space-l) 0;
 }
