@@ -76,7 +76,7 @@ jobs:
         with:
           name: android build
           path: |
-            publish/android
+            publish/android/*Signed.apk*
 
   # build-desktop-win:
   #   runs-on: windows-latest

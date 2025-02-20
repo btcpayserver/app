@@ -1,46 +1,39 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-    </PropertyGroup>
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
 
-    <PropertyGroup>
-      <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    </PropertyGroup>
+  <PropertyGroup>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
 
-    <ItemGroup>
-      <PackageReference Include="AsyncKeyedLock" Version="7.1.4" />
-      <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" Version="8.1.0" />
-      <PackageReference Include="Laraue.EfCoreTriggers.SqlLite" Version="8.1.2" />
-      <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.11" />
-      <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.11" />
-      <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="8.0.11" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.6">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11" />
-      <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
-      <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
-      <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
-      <PackageReference Include="NBitcoin" Version="7.0.48" />
-        <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.11" />
-        <PackageReference Include="org.ldk" Version="0.0.123" />
-      <PackageReference Include="TypedSignalR.Client" Version="3.6.0">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
-      <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="8.0.11" />
-      <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.11" />
-      <PackageReference Include="VSS" Version="1.0.1" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Folder Include="Migrations\" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj"/>
+    <PackageReference Include="AsyncKeyedLock" Version="7.1.4"/>
+    <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" Version="8.1.0"/>
+    <PackageReference Include="Laraue.EfCoreTriggers.SqlLite" Version="8.1.2"/>
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.11"/>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.11"/>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Protocols.NewtonsoftJson" Version="8.0.11"/>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.6">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.11"/>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2"/>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1"/>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1"/>
+    <PackageReference Include="NBitcoin" Version="7.0.48"/>
+    <PackageReference Include="Microsoft.Extensions.Identity.Core" Version="8.0.11"/>
+    <PackageReference Include="org.ldk" Version="0.0.123"/>
+    <PackageReference Include="TypedSignalR.Client" Version="3.6.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.Abstractions" Version="8.0.11"/>
+    <PackageReference Include="Microsoft.AspNetCore.Authorization" Version="8.0.11"/>
+    <PackageReference Include="VSS" Version="1.0.1"/>
+  </ItemGroup>
 </Project>

@@ -14,11 +14,7 @@ if [ ! -f $appsettings ]; then
     echo '{ "DEBUG_PLUGINS": "../../../BTCPayServer.Plugins.App/bin/Debug/net8.0/BTCPayServer.Plugins.App.dll" }' > $appsettings
 fi
 
-# Build the core and plugin to share their dependencies with the server
-cd BTCPayApp.Core
-dotnet publish -c Debug -o ../BTCPayServer.Plugins.App/bin/Debug/net8.0
-cd -
-
+# Publish plugin to share its dependencies with the server
 cd BTCPayServer.Plugins.App
 dotnet publish -c Debug -o bin/Debug/net8.0
 cd -
