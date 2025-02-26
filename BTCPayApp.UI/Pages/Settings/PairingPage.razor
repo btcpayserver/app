@@ -1,4 +1,6 @@
-﻿@attribute [Route(Routes.EncryptionKey)]
+﻿@attribute [Route(Routes.Pairing)]
+@using ReactorBlazorQRCodeScanner
+@using Microsoft.Extensions.Logging
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Backup
 @using BTCPayApp.Core.BTCPayServer
@@ -7,6 +9,8 @@
 @inject BTCPayConnectionManager ConnectionManager
 @inject SyncService SyncService
 @inject IJSRuntime JS
+@inject ILogger<QrScanModal> Logger
+@implements IAsyncDisposable
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>@GetTitle()</PageTitle>
@@ -29,56 +33,48 @@
     {
         <style>#NavbarBottom { display: none; }</style>
         <p class="text-center">
-            Your encryption key is required to unlock the app.
-        </p>
-        <p class="text-center">
-            Enter or scan the encryption key of your master device.
-            In case you lost your device or do not have access to the encryption key,
-            you can also provide your wallet seed as a fallback.
+            Open Settings > Security > Device Pairing on your primary device and scan or enter your encryption key.
         </p>
         <div class="box my-4 mx-auto">
             <ValidationEditContext @ref="_validationEditContext" Model="@Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@_errorMessage">
-                <div class="form-group">
-                    <label for="EncryptionKey" class="form-label">Encryption Key</label>
-                    <div class="d-flex gap-2">
-                        <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" autocomplete="off"/>
-                        <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
-                            <Icon Symbol="scan-qr"/>
-                        </button>
-                    </div>
-                    <ValidationMessage For="@(() => Model.EncryptionKey)"/>
+                <div hidden="@(_enterManually is true)">
+                    <QRCodeScanner/>
                 </div>
-                <button type="submit" class="btn btn-primary w-100" disabled="@(!IsValidKey)">Unlock</button>
+                <div hidden="@(_enterManually is false)">
+                    <div class="mb-3">
+                        <label for="EncryptionKey" class="form-label">Encryption Key or Recovery Phrase</label>
+                        <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" autocomplete="off"/>
+                        <ValidationMessage For="@(() => Model.EncryptionKey)"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" disabled="@(!IsValidKey)">Unlock</button>
+                </div>
             </ValidationEditContext>
         </div>
-        <QrScanModal OnScan="@OnQrCodeScan"/>
+        <button type="button" class="btn btn-secondary rounded-pill d-flex w-100 align-items-center justify-content-center gap-1 mt-5" @onclick="() => { _enterManually = !_enterManually; }">
+            <Icon Symbol="@(_enterManually is false ? "key" : "scan-qr")"/>
+            @(_enterManually is false ? "Enter key manually" : "Scan QR code")
+        </button>
     }
     else if (!string.IsNullOrEmpty(Model.EncryptionKey))
     {
         <AuthorizeView Policy="@AppPolicies.CanModifySettings">
             <Authorized>
                 <p>
-                    You can use this app's wallet and Lightning node on multiple devices.
-                    To pair another device, install the app and log into your account.
+                    Scan this code with your new device to sync your wallet.
                 </p>
-                <p>
-                    You will be prompted for this encryption key, so that the data can be synced with the new device.
-                </p>
-                <QrCode Data="@Model.EncryptionKey" class="w-100 my-4 rounded"/>
-
-                <h2 class="text-center fs-5 mt-3">Backup</h2>
-                <p>
-                    In case you lose your device, the encryption key can also be used for restoring the app and its wallet.
-                    To restore your data without this key, you will need to provide your wallet seed.
-                </p>
-                <p>
-                    You can safely back up the encryption key using a password manager.
-                </p>
+                <QrCode Data="@Model.EncryptionKey" class="qr-code rounded"/>
                 <div class="box my-4 mx-auto">
                     <div class="form-floating form-group">
                         <TruncateCenter Text="@Model.EncryptionKey" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
                         <label>Your Encryption Key</label>
                     </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <Icon Symbol="info" class="mt-1" />
+                    <span>
+                        Save this encryption key in a secure password manager.
+                        You will need it to pair new devices or restore your wallet.
+                    </span>
                 </div>
             </Authorized>
             <NotAuthorized>
@@ -89,10 +85,12 @@
 </section>
 
 @code {
+    private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
     private ValidationEditContext? _validationEditContext;
     private EncryptionKeyModel Model { get; } = new ();
     private string? _errorMessage;
     private string? _qrInput;
+    private bool? _enterManually;
 
     private class EncryptionKeyModel
     {
@@ -105,6 +103,43 @@
         await base.OnInitializedAsync();
 
         Model.EncryptionKey = await SyncService.GetEncryptionKey();
+
+        if (NeedsEncryptionKey)
+        {
+            _enterManually = false;
+            await ActivateQrScanner();
+        }
+    }
+
+    public new async ValueTask DisposeAsync()
+    {
+        await DeactivateQrScanner();
+    }
+
+    private async Task ActivateQrScanner()
+    {
+        _qrCodeScannerJsInterop ??= new QRCodeScannerJsInterop(JS);
+        await _qrCodeScannerJsInterop.Init(OnScan);
+    }
+
+    private async Task DeactivateQrScanner()
+    {
+        if (_qrCodeScannerJsInterop == null) return;
+        await _qrCodeScannerJsInterop.StopRecording();
+    }
+
+    // ReSharper disable once AsyncVoidMethod
+    private async void OnScan(string code)
+    {
+        // prevent duplicate submission due to quirk in QR reader lib
+        if (code == _qrInput) return;
+        _qrInput = code;
+        Logger.LogInformation("Scanned QR code: {QrCode}", code);
+
+        Model.EncryptionKey = code;
+        StateHasChanged();
+
+        await HandleValidSubmit();
     }
 
     public async Task HandleValidSubmit()
@@ -121,17 +156,6 @@
         {
             _errorMessage = "Invalid encryption key: " + e.Message;
         }
-    }
-
-    private async void OnQrCodeScan(string code)
-    {
-        // prevent duplicate submission due to quirk in QR reader lib
-        if (code == _qrInput) return;
-        _qrInput = code;
-        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
-
-        Model.EncryptionKey = code;
-        StateHasChanged();
     }
 
     private string GetTitle() => NeedsEncryptionKey ? "Provide your encryption key" : "Pair another device";

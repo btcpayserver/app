@@ -1,0 +1,14 @@
+.container {
+  max-width: 25rem;
+}
+
+.container ::deep .qr-code {
+  display: block;
+  width: 100%;
+  margin: var(--btcpay-space-l) 0;
+}
+
+.container ::deep canvas {
+  display: block;
+  width: 100%;
+}

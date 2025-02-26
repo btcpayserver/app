@@ -37,7 +37,7 @@ public static class Routes
     public const string ChannelsPeers = "/settings/lightning/channels";
     public const string Account = "/settings/account";
     public const string ChangePassword = "/settings/password";
-    public const string EncryptionKey = "/settings/encryption";
+    public const string Pairing = "/settings/pairing";
     public const string LightningSend = "/lightning/send";
     public const string LightningReceive = "/lightning/receive";
 

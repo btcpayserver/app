@@ -24,7 +24,7 @@ public record RootState
         {
             if (action.State == BTCPayConnectionState.WaitingForEncryptionKey)
             {
-                dispatcher.Dispatch(new GoAction(navigationManager.ToAbsoluteUri(Routes.EncryptionKey).ToString()));
+                dispatcher.Dispatch(new GoAction(navigationManager.ToAbsoluteUri(Routes.Pairing).ToString()));
             }
             return Task.CompletedTask;
         }

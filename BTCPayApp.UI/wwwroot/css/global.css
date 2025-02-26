@@ -274,9 +274,9 @@
 }
 
 .icon.icon-info {
-  --icon-size: 1rem;
+  --icon-size: 1.125rem;
   position: relative;
-  top: -.05em;
+  top: -.1em;
   color: var(--btcpay-neutral-500);
 }
 

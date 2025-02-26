@@ -245,17 +245,9 @@
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item">
-                        <a href="@Routes.EncryptionKey">
-                            @if (NeedsEncryptionKey)
-                            {
-                                <Icon Symbol="key"/>
-                                <span>Encryption Key</span>
-                            }
-                            else
-                            {
-                                <Icon Symbol="nav-transactions"/>
-                                <span>Device pairing</span>
-                            }
+                        <a href="@Routes.Pairing">
+                            <Icon Symbol="nav-transactions"/>
+                            <span>Device pairing</span>
                             <Icon Symbol="caret-right"/>
                         </a>
                     </li>
