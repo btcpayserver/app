@@ -105,14 +105,18 @@
         Model.EncryptionKey = await SyncService.GetEncryptionKey();
 
         if (NeedsEncryptionKey)
-        {
             _enterManually = false;
-            await ActivateQrScanner();
-        }
     }
 
-    public new async ValueTask DisposeAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender && NeedsEncryptionKey)
+            await ActivateQrScanner();
+    }
+
+    protected override async ValueTask DisposeAsyncCore(bool disposing)
+    {
+        await base.DisposeAsyncCore(disposing);
         await DeactivateQrScanner();
     }
 
