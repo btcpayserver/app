@@ -4,6 +4,12 @@ Interop = {
   getWidth(el) {
     return el.clientWidth;
   },
+  setContext(selector, origin) {
+    const $el = document.querySelector(selector);
+    console.log(selector, origin, $el);
+    if (!$el) return console.warn('Selector does not exist:', selector);
+    $el.contentWindow.postMessage(JSON.stringify({ context: 'btcpayapp' }), origin);
+  },
   openModal(selector) {
     const $el = document.querySelector(selector);
     if (!$el) return console.warn('Selector does not exist:', selector);
