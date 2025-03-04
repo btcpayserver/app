@@ -113,7 +113,7 @@
             @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loaded or LightningNodeState.Stopped or LightningNodeState.Error)
             {
                 <h2>Lightning Control</h2>
-                <div class="box d-grid d-sm-flex flex-wrap gap-3 buttons">
+                <div class="box mb-2 d-grid d-sm-flex flex-wrap gap-3 buttons">
                     @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Stopped or LightningNodeState.Error)
                     {
                         <button class="btn btn-secondary" type="button" @onclick="LightningNodeManager.StartNode">START</button>
@@ -123,6 +123,17 @@
                         <button class="btn btn-outline-warning" type="button" @onclick="LightningNodeManager.StopNode">STOP</button>
                         <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
                     }
+                </div>
+                <div class="box">
+                    <ul class="list-group list-group-flush list-group-links">
+                        <li class="list-group-item">
+                            <a href="@Routes.ChannelsPeers">
+                                <Icon Symbol="lightning-node"/>
+                                <span>Channels and Peers</span>
+                                <Icon Symbol="caret-right"/>
+                            </a>
+                        </li>
+                    </ul>
                 </div>
             }
         </Authorized>

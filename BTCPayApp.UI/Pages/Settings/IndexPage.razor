@@ -15,7 +15,6 @@
 @inject IAccountManager AccountManager
 @inject IState<UserState> UserState
 @inject BTCPayConnectionManager ConnectionManager
-@inject LightningNodeManager LightningNodeManager
 @inject IJSRuntime JS
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -225,16 +224,6 @@
                                 <Icon Symbol="caret-right"/>
                             </a>
                         </li>
-                        @if (LightningNodeManager.IsActive)
-                        {
-                            <li class="list-group-item">
-                                <a href="@Routes.ChannelsPeers">
-                                    <Icon Symbol="lightning-node"/>
-                                    <span>Channels and Peers</span>
-                                    <Icon Symbol="caret-right"/>
-                                </a>
-                            </li>
-                        }
                     </ul>
                 </div>
             </AuthorizeView>

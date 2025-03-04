@@ -197,7 +197,6 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     private TaskCompletionSource? _started;
     private readonly SemaphoreSlim _semaphore = new(1);
 
-
     public IServiceProvider GetServiceProvider() => ServiceProvider;
 
     public Network Network => ServiceProvider.GetRequiredService<Network>();

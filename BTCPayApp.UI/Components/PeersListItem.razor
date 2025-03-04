@@ -1,0 +1,86 @@
+@using BTCPayApp.Core.Data
+@using BTCPayApp.Core.Helpers
+@using BTCPayApp.UI.Models
+
+<div class="accordion-item">
+    <div id="peer-@Peer.NodeId" class="d-flex align-items-center justify-content-between gap-2 accordion-header">
+        <TruncateCenter Text="@(string.IsNullOrEmpty(Peer.Info?.Label) ? Peer.NodeId : Peer.Info.Label)" Padding="10" class="fw-semibold"/>
+        <button class="accordion-button collapsed w-auto p-0" type="button" data-bs-toggle="collapse" data-bs-target="#peer-@Peer.NodeId-details" aria-expanded="false" aria-controls="peer-@Peer.NodeId-details">
+            <Icon Symbol="caret-down" />
+        </button>
+    </div>
+    <div id="peer-@Peer.NodeId-details" class="accordion-collapse collapse @(_showDetails ? "show" : null)" aria-labelledby="peer-@Peer.NodeId">
+        <div class="pt-2">
+            <div class="form-floating">
+                <TruncateCenter Text="@Peer.NodeId" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                <label>Node ID</label>
+            </div>
+            <div class="form-floating">
+                <TruncateCenter Text="@Peer.Socket" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                <label>Socket</label>
+            </div>
+            <div class="d-grid d-sm-flex flex-wrap gap-3 buttons mt-3">
+                @if (Peer.Connected && OnDisconnectPeer.HasDelegate)
+                {
+                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="DisconnectPeer">Disconnect</button>
+                }
+                else if (OnConnectPeer.HasDelegate)
+                {
+                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="ConnectPeer">Connect</button>
+                }
+                @if (OnUpdatePeer.HasDelegate)
+                {
+                    if (Peer.Remembered)
+                    {
+                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(null)">Forget peer</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(Peer.Info! with { Persistent = !Peer.Info!.Persistent })">
+                            @(Peer.Info?.Persistent is true ? "Disable persistent connection" : "Enable persistent connection")
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(Peer.Info! with { Trusted = !Peer.Info!.Trusted })">@(Peer.Info?.Trusted is true ? "Untrust" : "Trust")</button>
+                    }
+                    else if (!string.IsNullOrEmpty(Peer.Socket) && EndPointParser.TryParse(Peer.Socket, 9735, out var endpoint))
+                    {
+                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(new PeerInfo { Endpoint = endpoint })">Remember peer</button>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public LightningPeerModel Peer { get; set; } = null!;
+
+    private bool _showDetails;
+
+    [Parameter]
+    public EventCallback<LightningPeerModel> OnUpdatePeer { get; set; }
+
+    [Parameter]
+    public EventCallback<LightningPeerModel> OnConnectPeer { get; set; }
+
+    [Parameter]
+    public EventCallback<LightningPeerModel> OnDisconnectPeer { get; set; }
+
+    private async Task ConnectPeer()
+    {
+        if (OnConnectPeer.HasDelegate)
+            await OnConnectPeer.InvokeAsync(Peer);
+    }
+
+    private async Task DisconnectPeer()
+    {
+        if (OnDisconnectPeer.HasDelegate)
+            await OnDisconnectPeer.InvokeAsync(Peer);
+    }
+
+    private async Task UpdatePeer(PeerInfo? info)
+    {
+        if (OnUpdatePeer.HasDelegate)
+        {
+            Peer.Info = info;
+            await OnUpdatePeer.InvokeAsync(Peer);
+        }
+    }
+}

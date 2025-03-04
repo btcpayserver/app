@@ -1,0 +1,7 @@
+.peers-list .box {
+  margin-bottom: 0 !important;
+}
+
+.peers-list .box + .box {
+  margin-top: var(--btcpay-space-xs);
+}

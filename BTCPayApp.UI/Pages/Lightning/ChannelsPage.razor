@@ -1,11 +1,12 @@
 ﻿@attribute [Route(Routes.ChannelsPeers)]
 @using BTCPayApp.Core.Auth
-@using BTCPayApp.UI.Features
 @using BTCPayApp.Core.Data
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.Core.Helpers
 @using BTCPayApp.Core.LDK
 @using BTCPayApp.Core.Wallet
+@using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Models
 @using BTCPayApp.UI.Util
 @using LNURL
 @using NBitcoin
@@ -34,85 +35,7 @@
             @if (LightningNodeManager.IsActive)
             {
                 <h2>Peers</h2>
-                @if (_peers?.Any() is true || _config?.Peers.Any() is true)
-                {
-                    var rememberedButUnconnected = _config!.Peers.Keys.Where(peer => _peers!.All(p => !string.Equals(p.nodeId, peer, StringComparison.InvariantCultureIgnoreCase)));
-                    @foreach (var peer in _peers!)
-                    {
-                        var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
-                        <div class="box">
-                            <div class="form-floating">
-                                <TruncateCenter Text="@peer.nodeId" Padding="7" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                                <label>Node ID</label>
-                            </div>
-                            <div class="form-floating">
-                                <TruncateCenter Text="@peer.socket" Padding="30" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                                <label>Socket</label>
-                            </div>
-                            @if (!string.IsNullOrEmpty(peerConfig?.Label))
-                            {
-                                <div class="form-floating">
-                                    <TruncateCenter Text="@peerConfig.Label" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                                    <label>Peer label</label>
-                                </div>
-                            }
-                            <div class="d-grid d-sm-flex flex-wrap gap-3 buttons mt-3">
-                                <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => DisconnectPeer(peer.nodeId)">Disconnect</button>
-                                @if (peerRemembered)
-                                {
-                                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(peer.nodeId, null)">Forget peer</button>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig! with { Persistent = !peerConfig.Persistent })">
-                                        @(peerConfig!.Persistent? "Persistent connection enabled": "Persistent connection disabled")
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, peerConfig with { Trusted = !peerConfig.Trusted })">@(peerConfig.Trusted? "Trusted": "Untrusted")</button>
-                                }
-                                else if (peer.socket is not null && EndPointParser.TryParse(peer.socket, 9735, out var endpoint))
-                                {
-                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer.nodeId, new PeerInfo { Endpoint = endpoint })">Remember peer</button>
-                                }
-                            </div>
-                        </div>
-                    }
-
-                    @foreach (var peer in rememberedButUnconnected)
-                    {
-                        var peerConfig = _config.Peers[peer];
-
-                        <div class="box">
-                            <div class="form-floating">
-                                <TruncateCenter Text="@peer" Padding="7" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                                <label>Node ID</label>
-                            </div>
-                            <div class="form-floating">
-                                <TruncateCenter  Text="@peerConfig.Endpoint?.ToEndpointString()" Padding="30" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                                <label>Socket</label>
-                            </div>
-                            @if (!string.IsNullOrEmpty(peerConfig.Label))
-                            {
-                                <div class="form-floating">
-                                    <TruncateCenter Text="@peerConfig.Label" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
-                                    <label>Peer label</label>
-                                </div>
-                            }
-                            <div class="d-grid d-sm-flex flex-wrap gap-3 buttons mt-3">
-                                <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => ConnectPeer(peer, peerConfig)">Connect</button>
-
-                                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(peer, null)">Forget peer</button>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { Persistent = !peerConfig.Persistent })">
-                                        @(peerConfig.Persistent? "Persistent connection enabled": "Persistent connection disabled")
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(peer, peerConfig with { Trusted = !peerConfig.Trusted })">@(peerConfig.Trusted? "Trusted": "Untrusted")</button>
-
-                            </div>
-                        </div>
-                    }
-                }
-                else
-                {
-                    <div class="box">
-                        <p class="text-muted text-center py-4">There are no peers, yet.</p>
-                    </div>
-                }
+                <PeersList Peers="_peers" OnConnectPeer="ConnectPeer" OnDisconnectPeer="DisconnectPeer" OnUpdatePeer="UpdatePeer" class="mb-4"/>
 
                 @if (PeerModel != null)
                 {
@@ -164,7 +87,7 @@
                             <tbody>
                             @foreach (var channel in _channels)
                             {
-                                var connected = _peers?.Any(p => string.Equals(p.nodeId, channel.Value.channelDetails?.get_counterparty().get_node_id().ToString(), StringComparison.InvariantCultureIgnoreCase)) is true;
+                                var connected = _peers?.Any(p => string.Equals(p.NodeId, channel.Value.channelDetails?.get_counterparty().get_node_id().ToString(), StringComparison.InvariantCultureIgnoreCase)) is true;
                                 var active = false;
                                 var alternates = channel.Value.channel.Aliases.Select(alias => alias.Id).ToHashSet();
                                 if (channel.Value.channelDetails is not null)
@@ -252,7 +175,7 @@
                     </div>
                 }
 
-                @if (_peers?.Any() is true && _config?.Peers != null && ChannelModel != null)
+                @if (_peers?.Any() is true && ChannelModel != null)
                 {
                     <h2>Open Channel</h2>
                     <ValidationEditContext @ref="_openChannelEditContext" Model="ChannelModel" OnValidSubmit="() => OpenChannel()" SuccessMessage="@ChannelSuccessMessage" ErrorMessage="@ChannelErrorMessage">
@@ -264,12 +187,11 @@
                                     <option>Select peer</option>
                                     @foreach (var peer in _peers)
                                     {
-                                        var peerRemembered = _config.Peers.TryGetValue(peer.nodeId.ToLowerInvariant(), out var peerConfig);
-                                        <option value="@peer.nodeId">
-                                            @peer.nodeId
-                                            @if (!string.IsNullOrEmpty(peerConfig?.Label))
+                                        <option value="@peer.NodeId">
+                                            @peer.NodeId
+                                            @if (!string.IsNullOrEmpty(peer.Info?.Label))
                                             {
-                                                @($" - {peerConfig.Label}")
+                                                @($" - {peer.Info.Label}")
                                             }
                                         </option>
                                     }
@@ -310,7 +232,7 @@
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private LightningConfig? _config;
     private Dictionary<string, (Channel channel, ChannelDetails? channelDetails)>? _channels;
-    private (string nodeId, string? socket)[]? _peers;
+    private IEnumerable<LightningPeerModel>? _peers;
     private LDKNode? Node => LightningNodeManager.Node;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
@@ -366,7 +288,7 @@
             await _semaphore.WaitAsync();
             _config = await Node.GetConfig();
             _channels = await Node.GetChannels();
-            _peers = (await Node.GetPeers()).Select(peer => (nodeId: Convert.ToHexString(peer.get_counterparty_node_id()), socket: peer.get_socket_address() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null)).ToArray();
+            _peers = await GetPeers(_config.Peers);
         }
         finally
         {
@@ -374,6 +296,45 @@
             await InvokeAsync(StateHasChanged);
             _semaphore.Release();
         }
+    }
+
+    private async Task<IEnumerable<LightningPeerModel>?> GetPeers(Dictionary<string, PeerInfo> peerInfos)
+    {
+        if (Node == null) return [];
+        var peers = await Node.GetPeers();
+        var connected = peers
+            .Select(peer =>
+            {
+                var nodeId = Convert.ToHexString(peer.get_counterparty_node_id());
+                var remembered = peerInfos.TryGetValue(nodeId.ToLowerInvariant(), out var peerConfig);
+                var socket = peer.get_socket_address() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null;
+                EndPointParser.TryParse(socket, 9735, out var endpoint);
+                return new LightningPeerModel
+                {
+                    NodeId = nodeId,
+                    Socket = socket,
+                    Connected = true,
+                    Remembered = remembered,
+                    Info = peerConfig ?? new PeerInfo { Endpoint = endpoint }
+                };
+            });
+
+        var unconnected = peerInfos.Keys
+            .Where(peer => connected.All(p => !string.Equals(p.NodeId, peer, StringComparison.InvariantCultureIgnoreCase)))
+            .Select(peer =>
+            {
+                var remembered = peerInfos.TryGetValue(peer, out var peerConfig);
+                return new LightningPeerModel
+                {
+                    NodeId = peer,
+                    Socket = peerConfig?.Endpoint?.ToEndpointString(),
+                    Connected = false,
+                    Remembered = remembered,
+                    Info = peerConfig ?? new PeerInfo { Endpoint = peerConfig?.Endpoint }
+                };
+            });
+
+        return connected.Concat(unconnected);
     }
 
     private async Task ConnectToNewPeer()
@@ -394,8 +355,7 @@
             var result = await Node.PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
             if (result is not null)
             {
-                _peers = (await Node.GetPeers()).Select(peer => (nodeId: Convert.ToHexString(peer.get_counterparty_node_id()), socket: peer.get_socket_address() is Option_SocketAddressZ.Option_SocketAddressZ_Some some1 ? some1.some.to_str() : null)).ToArray();
-
+                _peers = await GetPeers(_config.Peers);
                 ConnectSuccessMessage = $"Connection to {PeerModel.PeerUrl} initiated";
                 PeerModel = new ConnectPeerModel();
             }
@@ -415,11 +375,11 @@
             await InvokeAsync(StateHasChanged);
         }
 
-        if (string.IsNullOrEmpty(ConnectErrorMessage))
-            _ = FetchData();
+        /*if (string.IsNullOrEmpty(ConnectErrorMessage))
+            _ = FetchData();*/
     }
 
-    private async void DisconnectPeer(string nodeId)
+    private async Task DisconnectPeer(LightningPeerModel peer)
     {
         if (Node == null) return;
         try
@@ -427,7 +387,7 @@
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            await Node.PeerHandler.DisconnectAsync(new PubKey(nodeId));
+            await Node.PeerHandler.DisconnectAsync(new PubKey(peer.NodeId));
         }
         finally
         {
@@ -438,7 +398,7 @@
         _ = FetchData();
     }
 
-    private async void UpdatePeer(string pubKeyHex, PeerInfo? value)
+    private async Task UpdatePeer(LightningPeerModel peer)
     {
         if (Node == null) return;
         try
@@ -446,7 +406,7 @@
             Loading = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
-            await Node.Peer(new PubKey(pubKeyHex), value);
+            await Node.Peer(new PubKey(peer.NodeId), peer.Info);
         }
         finally
         {
@@ -457,7 +417,7 @@
         _ = FetchData();
     }
 
-    private async Task ConnectPeer(string peer, PeerInfo peerConfig)
+    private async Task ConnectPeer(LightningPeerModel peer)
     {
         if (Node == null) return;
         try
@@ -466,7 +426,8 @@
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
 
-            if (peerConfig.Endpoint != null) await Node.PeerHandler.ConnectAsync(new PubKey(peer), peerConfig.Endpoint);
+            if (EndPointParser.TryParse(peer.Socket, 9735, out var endpoint))
+                await Node.PeerHandler.ConnectAsync(new PubKey(peer.NodeId), endpoint);
         }
         finally
         {
@@ -539,7 +500,7 @@
             }
 
             await Node.Peer(channelRequest.Uri.NodeId, new PeerInfo {Endpoint = endpoint, Label = name, Trusted = trusted});
-            await ConnectPeer(channelRequest.Uri.NodeId.ToString(), new PeerInfo {Endpoint = endpoint, Label = name, Trusted = trusted});
+            await ConnectPeer(new LightningPeerModel { NodeId = channelRequest.Uri.NodeId.ToString(), Socket = endpoint.ToEndpointString() });
             await channelRequest.SendRequest(Node.NodeId, true, http, new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
             ChannelSuccessMessage = "Successfully initiated channel creation. Please wait for the peer to execute.";
         }

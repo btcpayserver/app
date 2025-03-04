@@ -21,9 +21,10 @@ public class LDKPeerHandler : IScopedHostedService
     private readonly BTCPayConnectionManager _btcPayConnectionManager;
     private readonly BTCPayAppServerClient _btcPayAppServerClient;
     private CancellationTokenSource? _cts;
-
-
+    private TaskCompletionSource? _configTcs;
     private readonly ObservableConcurrentDictionary<string, LDKTcpDescriptor> _descriptors = new();
+
+    public EndPoint? Endpoint { get; set; }
 
     public LDKPeerHandler(PeerManager peerManager, LDKWalletLoggerFactory logger, ChannelManager channelManager,
         LDKNode node,
@@ -61,10 +62,10 @@ public class LDKPeerHandler : IScopedHostedService
     {
         var nodeInfo = NodeInfo.Parse(e);
         var config = await _node.GetConfig();
-        if (config.Peers.ContainsKey(nodeInfo.NodeId.ToString()))
-            return;
+        if (config.Peers.ContainsKey(nodeInfo.NodeId.ToString())) return;
+
         var endpoint = new IPEndPoint(IPAddress.Parse(nodeInfo.Host), nodeInfo.Port);
-        await _node.Peer(nodeInfo.NodeId, new PeerInfo()
+        await _node.Peer(nodeInfo.NodeId, new PeerInfo
         {
             Label = "BTCPay Server Node",
             Endpoint = endpoint,
@@ -72,8 +73,6 @@ public class LDKPeerHandler : IScopedHostedService
             Trusted = true
         });
     }
-
-    private TaskCompletionSource? _configTcs;
 
     private Task ConfigUpdated(object? sender, LightningConfig e)
     {
@@ -152,11 +151,10 @@ public class LDKPeerHandler : IScopedHostedService
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-
             var config = await _node.GetConfig();
             if (!config.AcceptInboundConnection)
             {
-                _configTcs ??= new();
+                _configTcs ??= new TaskCompletionSource();
                 await _configTcs.Task.WaitAsync(cancellationToken);
                 _configTcs = null;
                continue;
@@ -180,8 +178,6 @@ public class LDKPeerHandler : IScopedHostedService
         }
     }
 
-    public EndPoint? Endpoint { get; set; }
-
     public async Task<LDKTcpDescriptor?> ConnectAsync(NodeInfo nodeInfo,
         CancellationToken cancellationToken = default)
     {
@@ -195,8 +191,8 @@ public class LDKPeerHandler : IScopedHostedService
     {
         if (peerInfo.Endpoint is {} endpoint)
         {
-            if(peerInfo.Label is not null)
-                _logger.LogInformation($"Attempting to connect to {peerNodeId} at {endpoint} ({peerInfo.Label})");
+            if (peerInfo.Label is not null)
+                _logger.LogInformation("Attempting to connect to {NodeId} at {Endpoint} ({Label})", peerNodeId, endpoint.ToEndpointString(), peerInfo.Label);
             return await ConnectAsync(peerNodeId, endpoint, cancellationToken);
         }
 
@@ -206,11 +202,10 @@ public class LDKPeerHandler : IScopedHostedService
     public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey theirNodeId, EndPoint remote,
         CancellationToken cancellationToken = default)
     {
-        //cache this task so that we dont have multiple attempts to connect to the same place
-
+        //cache this task so that we don't have multiple attempts to connect to the same place
         if (_connectionTasks.TryGetValue(theirNodeId.ToString(), out var task))
         {
-            _logger.LogInformation($"Already attempting to connect to {theirNodeId}");
+            _logger.LogInformation("Already attempting to connect to {NodeId}", theirNodeId);
             return await task.WithCancellation(cancellationToken);
         }
 
@@ -227,7 +222,6 @@ public class LDKPeerHandler : IScopedHostedService
 
             var client = new TcpClient();
             await client.ConnectAsync(remote.IPEndPoint(), cancellationToken);
-
 
             var result = LDKTcpDescriptor.Outbound(_peerManager, client, _logger, theirNodeId, _descriptors);
             if (result is not null)
@@ -262,12 +256,11 @@ public class LDKPeerHandler : IScopedHostedService
         return await tcs.Task;
     }
 
-
-    public async Task DisconnectAsync(PubKey id)
+    public Task DisconnectAsync(PubKey id)
     {
-       _logger.LogInformation($"Disconnecting from {id}");
+       _logger.LogInformation("Disconnecting from {NodeId}", id);
        _peerManager.disconnect_by_node_id(id.ToBytes());
-       _logger.LogInformation($"Disconnected from {id}");
-
+       _logger.LogInformation("Disconnected from {NodeId}", id);
+       return Task.CompletedTask;
     }
 }

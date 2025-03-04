@@ -246,10 +246,8 @@ public static class LDKExtensions
         services.AddScoped<ChainParameters>(provider =>
         {
             var onchainWalletManager = provider.GetRequiredService<OnChainWalletManager>();
-            var resp = onchainWalletManager.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
-            var hash = uint256.Parse(resp.BlockHash).ToBytes();
-
-            var bestBlock = BestBlock.of(hash, (int) resp.BlockHeight);
+            var res = onchainWalletManager.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
+            var bestBlock = res != null ? BestBlock.of(uint256.Parse(res.BlockHash).ToBytes(), res.BlockHeight) : null;
             return ChainParameters.of(provider.GetRequiredService<Network>().GetLdkNetwork(), bestBlock);
         });
         services.AddScoped<Score>(provider => provider.GetRequiredService<ProbabilisticScorer>().as_Score());

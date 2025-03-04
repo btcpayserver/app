@@ -61,7 +61,7 @@
     public EventCallback OnToggleDisplayCurrency { get; set; }
 
     private bool _showDetails;
-    private string AmountClass => $"flex-grow-1 text-end fw-semibold text-{(Transaction.Type == TransactionType.Receive ? "success" : "danger")}";
+    private string AmountClass => $"text-end fw-semibold text-{(Transaction.Type == TransactionType.Receive ? "success" : "danger")}";
     private string BadgeClass
     {
         get
