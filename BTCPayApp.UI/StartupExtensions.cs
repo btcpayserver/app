@@ -11,7 +11,6 @@ public static class StartupExtensions
     public static IServiceCollection AddBTCPayAppUIServices(this IServiceCollection serviceCollection)
     {
         serviceCollection.AddOptions();
-
         serviceCollection.AddSingleton<DisplayFormatter>();
         serviceCollection.AddBlazorDragDrop();
         serviceCollection.AddCascadingAuthenticationState();

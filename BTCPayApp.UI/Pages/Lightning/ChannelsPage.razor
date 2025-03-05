@@ -320,13 +320,13 @@
             });
 
         var unconnected = peerInfos.Keys
-            .Where(peer => connected.All(p => !string.Equals(p.NodeId, peer, StringComparison.InvariantCultureIgnoreCase)))
-            .Select(peer =>
+            .Where(nodeId => connected.All(p => !string.Equals(p.NodeId, nodeId, StringComparison.InvariantCultureIgnoreCase)))
+            .Select(nodeId =>
             {
-                var remembered = peerInfos.TryGetValue(peer, out var peerConfig);
+                var remembered = peerInfos.TryGetValue(nodeId, out var peerConfig);
                 return new LightningPeerModel
                 {
-                    NodeId = peer,
+                    NodeId = nodeId,
                     Socket = peerConfig?.Endpoint?.ToEndpointString(),
                     Connected = false,
                     Remembered = remembered,

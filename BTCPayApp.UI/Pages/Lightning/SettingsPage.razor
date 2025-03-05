@@ -124,6 +124,9 @@
                         <button class="btn btn-outline-danger" type="button" @onclick="LightningNodeManager.CleanseTask">DESTROY</button>
                     }
                 </div>
+            }
+            @if (State.Value.LightningNodeState is LightningNodeState.Loaded)
+            {
                 <div class="box">
                     <ul class="list-group list-group-flush list-group-links">
                         <li class="list-group-item">
