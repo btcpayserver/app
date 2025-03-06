@@ -76,7 +76,7 @@ jobs:
         with:
           name: android build
           path: |
-            publish/android/*Signed.apk*
+            publish/android/org.btcpayserver.BTCPayApp-Signed.apk
 
   # build-desktop-win:
   #   runs-on: windows-latest
