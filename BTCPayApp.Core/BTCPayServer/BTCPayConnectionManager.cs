@@ -128,6 +128,7 @@ public class BTCPayConnectionManager(
                     newState = BTCPayConnectionState.WaitingForAuth;
                     break;
                 case BTCPayConnectionState.WaitingForAuth:
+                    await syncService.StopSync();
                     if (account is not null && await accountManager.CheckAuthenticated())
                     {
                         newState = BTCPayConnectionState.Connecting;
