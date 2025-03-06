@@ -1,5 +1,8 @@
-﻿
+﻿﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178 d17.12
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BTCPayApp.UI", "BTCPayApp.UI\BTCPayApp.UI.csproj", "{14A8EF70-7E90-4383-A0F3-7F041AD50173}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BTCPayApp.Server", "BTCPayApp.Server\BTCPayApp.Server.csproj", "{513ECA21-1606-4471-9490-82242B219051}"
@@ -48,8 +51,10 @@ Global
 		{513ECA21-1606-4471-9490-82242B219051}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1FF3372E-435B-4E4D-BBE1-0AB7D8835618}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{1FF3372E-435B-4E4D-BBE1-0AB7D8835618}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1FF3372E-435B-4E4D-BBE1-0AB7D8835618}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
 		{1FF3372E-435B-4E4D-BBE1-0AB7D8835618}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1FF3372E-435B-4E4D-BBE1-0AB7D8835618}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1FF3372E-435B-4E4D-BBE1-0AB7D8835618}.Release|Any CPU.Deploy.0 = Release|Any CPU
 		{07DFC925-715E-4A7C-A18E-91949B9CA7F9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{07DFC925-715E-4A7C-A18E-91949B9CA7F9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{07DFC925-715E-4A7C-A18E-91949B9CA7F9}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -98,6 +103,9 @@ Global
 		{BC5E2FB2-EDF1-40F3-961F-562CE1080D95}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BC5E2FB2-EDF1-40F3-961F-562CE1080D95}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BC5E2FB2-EDF1-40F3-961F-562CE1080D95}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{2464FC73-75E8-4254-A900-2090FB4D1EDD} = {1F7B46F8-2965-48B8-B402-E69A157709C1}
