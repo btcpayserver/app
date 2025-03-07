@@ -242,6 +242,11 @@ public class BTCPayConnectionManager(
                     break;
             }
         }
+        catch (System.Security.Cryptography.CryptographicException ex) when (newState is BTCPayConnectionState.Syncing or BTCPayConnectionState.Connecting)
+        {
+            logger.LogError(ex, "Error while changing connection state from {Old} to {New}", e.Old, e.New);
+            newState = BTCPayConnectionState.WaitingForEncryptionKey;
+        }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error while changing connection state from {Old} to {New}", e.Old, e.New);
