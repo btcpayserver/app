@@ -38,8 +38,6 @@
     <AndroidEnableMultiDex>False</AndroidEnableMultiDex>
     <AndroidCreatePackagePerAbi>False</AndroidCreatePackagePerAbi>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
-    <Optimize>False</Optimize>
-    <PublishTrimmed>False</PublishTrimmed>
     <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
   </PropertyGroup>
 
@@ -49,6 +47,7 @@
 
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' And '$(Configuration)' == 'Release'">
     <DebugSymbols>False</DebugSymbols>
+    <PublishTrimmed>False</PublishTrimmed>
     <AndroidKeyStore>True</AndroidKeyStore>
     <AndroidSigningKeyStore>../btcpayapp.keystore</AndroidSigningKeyStore>
     <AndroidSigningKeyAlias>btcpayapp</AndroidSigningKeyAlias>
