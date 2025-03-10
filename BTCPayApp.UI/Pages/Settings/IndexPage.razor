@@ -1,4 +1,4 @@
-﻿@attribute [Route(Routes.Settings)]
+@attribute [Route(Routes.Settings)]
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.BTCPayServer
@@ -282,6 +282,17 @@
                             }
                         </div>
                     </li>
+                    @if (InstanceInfo != null)
+                    {
+                        <li class="list-group-item">
+                            <div class="justify-content-start">
+                                <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster or BTCPayConnectionState.ConnectedAsSlave or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                                <span>
+                                    @InstanceInfo.ServerName: @InstanceInfo.BaseUrl
+                                </span>
+                            </div>
+                        </li>
+                    }
                     @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
                     {
                         <li class="list-group-item">
