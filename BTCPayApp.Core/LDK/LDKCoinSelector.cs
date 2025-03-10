@@ -24,20 +24,16 @@ public class LDKCoinSelector : CoinSelectionSourceInterface
             var tx = _onChainWalletManager.CreateTransaction(
                 txouts, feerate,
                 coins).GetAwaiter().GetResult();
-            
+
             var changeTxOut = tx.Tx.Outputs.FirstOrDefault(@out => @out.ScriptPubKey == tx.Change.ScriptPubKey);
-        
+
             var utxos = tx.SpentCoins.Select(x => Utxo.of(x.Outpoint.Outpoint(), x.TxOut.TxOut(), tx.Tx.Inputs.First(@in => @in.PrevOut == x.Outpoint).GetSerializedSize())).ToArray();
             return Result_CoinSelectionNoneZ.ok(CoinSelection.of(utxos, changeTxOut is null ? Option_TxOutZ.none() : Option_TxOutZ.some(changeTxOut.TxOut())));
         }
-        catch (Exception e)
+        catch (Exception)
         {
-           
             return Result_CoinSelectionNoneZ.err();
         }
-       
-
-      
     }
 
     public Result_TransactionNoneZ sign_psbt(byte[] psbtBytes)

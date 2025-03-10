@@ -127,7 +127,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_InProgress;
         }
-        catch (Exception _)
+        catch (Exception)
         {
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_UnrecoverableError;
         }

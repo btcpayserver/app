@@ -9,7 +9,7 @@
             <Icon Symbol="caret-down" />
         </button>
     </div>
-    <div id="peer-@Peer.NodeId-details" class="accordion-collapse collapse @(_showDetails ? "show" : null)" aria-labelledby="peer-@Peer.NodeId">
+    <div id="peer-@Peer.NodeId-details" class="accordion-collapse collapse" aria-labelledby="peer-@Peer.NodeId">
         <div class="pt-2">
             <div class="form-floating">
                 <TruncateCenter Text="@Peer.NodeId" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
@@ -51,8 +51,6 @@
 @code {
     [Parameter, EditorRequired]
     public LightningPeerModel Peer { get; set; } = null!;
-
-    private bool _showDetails;
 
     [Parameter]
     public EventCallback<LightningPeerModel> OnUpdatePeer { get; set; }

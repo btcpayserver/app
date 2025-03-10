@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.WebSockets;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Backup;
@@ -20,7 +20,6 @@ public class BTCPayConnectionManager(
     ILogger<BTCPayConnectionManager> logger,
     BTCPayAppServerClient btcPayAppServerClient,
     IBTCPayAppHubClient btcPayAppServerClientInterface,
-    ISecureConfigProvider secureProvider,
     ConfigProvider configProvider,
     SyncService syncService)
     : BaseHostedService(logger), IHubConnectionObserver
