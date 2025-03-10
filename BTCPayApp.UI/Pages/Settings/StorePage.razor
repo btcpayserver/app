@@ -40,7 +40,7 @@
                     <Alert Type="danger">@Error</Alert>
                 }
             }
-            else if (Model is not null)
+            else
             {
                 <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
                     <h2 class="mb-0">Store</h2>
@@ -219,7 +219,7 @@
     public string? StoreId { get; set; }
 
     private ValidationEditContext? _validationEditContext;
-    private StoreModel? Model { get; set; }
+    private StoreModel Model { get; set; } = new();
     private string? _successMessage;
     private string? _errorMessage;
     private bool? _canView;
@@ -252,8 +252,10 @@
 
         ActionSubscriber.SubscribeToAction<StoreState.UpdatedStore>(this, action =>
         {
-            if (action.Store == null || action.Error != null) return;
-            _successMessage = $"Store \"{action.Store.Name}\" successfully updated";
+            if (action.Store == null || action.Error != null)
+                _errorMessage = action.Error ?? "An error occurred while updating the store.";
+            else
+                _successMessage = $"Store \"{action.Store.Name}\" successfully updated";
             InvokeAsync(StateHasChanged);
         });
 
@@ -278,7 +280,7 @@
 
         var store = Store!;
         try {
-            if (!string.IsNullOrEmpty(Model!.LogoPath))
+            if (!string.IsNullOrEmpty(Model.LogoPath))
             {
                 var path = Model.LogoPath;
                 var mimeType = FileHelper.GetContentType(path);
@@ -289,7 +291,7 @@
                 Model.LogoPath = null;
                 _inputFileId = Guid.NewGuid();
             }
-            else if (string.IsNullOrEmpty(Model!.LogoUrl))
+            else if (string.IsNullOrEmpty(Model.LogoUrl))
             {
                 await AccountManager.GetClient().DeleteStoreLogo(store.Id);
             }
@@ -302,7 +304,7 @@
 
         Dispatcher.Dispatch(new StoreState.UpdateStore(StoreId!, new UpdateStoreRequest
         {
-            Name = Model!.Name,
+            Name = Model.Name,
             Website = Model.Website,
             BrandColor = Model.BrandColor,
             LogoUrl = Model.LogoUrl,
@@ -372,6 +374,13 @@
 
     private async Task LoadLogo(InputFileChangeEventArgs e)
     {
+        if (e.File.Size > 512000)
+        {
+            Model.LogoPath = null;
+            _errorMessage = "The logo file size should not exceed 0.5 MB.";
+            _inputFileId = Guid.NewGuid();
+            return;
+        }
         try
         {
             var appData = await DataDirectoryProvider.GetAppDataDirectory();
@@ -383,7 +392,7 @@
             await using FileStream fs = new(filePath, FileMode.Create);
             await e.File.OpenReadStream().CopyToAsync(fs);
             await fs.FlushAsync();
-            Model!.LogoPath = filePath;
+            Model.LogoPath = filePath;
             _errorMessage = null;
         }
         catch (Exception ex)
@@ -394,7 +403,7 @@
 
     private void UnsetLogo()
     {
-        Model!.LogoUrl = null;
+        Model.LogoUrl = null;
         Model.LogoPath = null;
         _inputFileId = Guid.NewGuid();
     }

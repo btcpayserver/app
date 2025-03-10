@@ -222,6 +222,13 @@
 
     private async Task LoadImage(InputFileChangeEventArgs e)
     {
+        if (e.File.Size > 512000)
+        {
+            SelectedItem.ImagePath = null;
+            _errorMessage = "The image file size should not exceed 0.5 MB.";
+            _inputFileId = Guid.NewGuid();
+            return;
+        }
         try
         {
             var appData = await DataDirectoryProvider.GetAppDataDirectory();

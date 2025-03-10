@@ -352,30 +352,6 @@ public class AuthStateProvider(
         }
     }
 
-    public async Task<FormResult<ApplicationUserData>> ChangeAccountInfo(string email, string? name, string? imageUrl, CancellationToken? cancellation = default)
-    {
-        var payload = new UpdateApplicationUserRequest
-        {
-            Email = email,
-            Name = name,
-            ImageUrl = imageUrl
-        };
-        try
-        {
-            var userData = await GetClient().UpdateCurrentUser(payload, cancellation.GetValueOrDefault());
-            if (UserInfo != null)
-            {
-                UserInfo.SetInfo(userData.Email!, userData.Name, userData.ImageUrl);
-                OnUserInfoChanged?.Invoke(this, UserInfo);
-            }
-            return new FormResult<ApplicationUserData>(true, "Your account info has been changed.", userData);
-        }
-        catch (Exception e)
-        {
-            return new FormResult<ApplicationUserData>(false, e.Message, null);
-        }
-    }
-
     public async Task<FormResult> SwitchMode(string storeId, string mode, CancellationToken? cancellation = default)
     {
         if (Account == null || !string.IsNullOrEmpty(Account.ModeToken))

@@ -18,7 +18,6 @@ public interface IAccountManager
     public Task<FormResult> Register(string serverUrl, string email, string password, CancellationToken? cancellation = default);
     public Task<FormResult> ResetPassword(string serverUrl, string email, string? resetCode, string? newPassword, CancellationToken? cancellation = default);
     public Task<FormResult<ApplicationUserData>> ChangePassword(string currentPassword, string newPassword, CancellationToken? cancellation = default);
-    public Task<FormResult<ApplicationUserData>> ChangeAccountInfo(string email, string? name, string? imageUrl, CancellationToken? cancellation = default);
     public Task<FormResult> SwitchMode(string storeId, string mode, CancellationToken? cancellation = default);
     public Task<FormResult> SwitchToOwner(string password, string? otp, CancellationToken? cancellation = default);
     public Task<FormResult> SetCurrentStoreId(string? storeId);

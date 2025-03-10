@@ -5,9 +5,11 @@
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
+@using BTCPayServer.Client.Models
 @inject IState<UserState> UserState
 @inject IActionSubscriber ActionSubscriber
 @inject IAccountManager AccountManager
+@inject IDispatcher Dispatcher
 @inject IDataDirectoryProvider DataDirectoryProvider
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -99,8 +101,15 @@
 
         ActionSubscriber.SubscribeToAction<UserState.UpdatedUser>(this, action =>
         {
-            if (action.UserData == null || action.Error != null) return;
-            _successMessage = "Your account information has been changed.";
+            if (action.UserData == null || action.Error != null)
+                _errorMessage = action.Error ?? "An error occurred while updating your account information.";
+            else
+            {
+                UpdateModel(action.UserData);
+                _successMessage = "Your account information has been changed.";
+                // refresh account manager
+                AccountManager.CheckAuthenticated(true);
+            }
             InvokeAsync(StateHasChanged);
         });
 
@@ -127,6 +136,16 @@
         };
     }
 
+    private void UpdateModel(ApplicationUserData? user)
+    {
+        Model = new AccountModel
+        {
+            Email = user?.Email,
+            Name = user?.Name,
+            ImageUrl = user?.ImageUrl
+        };
+    }
+
     public async Task HandleValidSubmit()
     {
         _errorMessage = _successMessage = null;
@@ -137,8 +156,7 @@
             {
                 var path = Model.ImagePath;
                 var mimeType = FileHelper.GetContentType(path);
-                var upload = await AccountManager.GetClient().UploadCurrentUserProfilePicture(path, mimeType);
-                Model.ImageUrl = upload.ImageUrl;
+                await AccountManager.GetClient().UploadCurrentUserProfilePicture(path, mimeType);
                 // cleanup
                 File.Delete(path);
                 Model.ImagePath = null;
@@ -155,26 +173,23 @@
             return;
         }
 
-        // TODO: Use state for modifying actions
-        var result = await AccountManager.ChangeAccountInfo(Model.Email!, Model.Name, Model.ImageUrl);
-        if (result.Succeeded)
+        // Don't pass image URL, if it changed it got set by the upload above
+        Dispatcher.Dispatch(new UserState.UpdateUser(new UpdateApplicationUserRequest
         {
-            var userData = result.Response!;
-            Model = new AccountModel
-            {
-                Email = userData.Email,
-                Name = userData.Name,
-                ImageUrl = userData.ImageUrl
-            };
-        }
-        else
-        {
-            _errorMessage = string.Join(",", result.Messages ?? ["Changing your account information failed."]);
-        }
+            Email = Model.Email,
+            Name = Model.Name
+        }));
     }
 
     private async Task LoadProfilePicture(InputFileChangeEventArgs e)
     {
+        if (e.File.Size > 512000)
+        {
+            Model.ImagePath = null;
+            _errorMessage = "The profile picture file size should not exceed 0.5 MB.";
+            _inputFileId = Guid.NewGuid();
+            return;
+        }
         try
         {
             var appData = await DataDirectoryProvider.GetAppDataDirectory();
