@@ -74,9 +74,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android build
-          path: |
-            publish/android/org.btcpayserver.BTCPayApp-Signed.apk
+          name: org.btcpayserver.BTCPayApp-Signed.apk
+          path: publish/android/org.btcpayserver.BTCPayApp-Signed.apk
+
 
   # build-desktop-win:
   #   runs-on: windows-latest
