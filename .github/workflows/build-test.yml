@@ -66,7 +66,8 @@ jobs:
       - name: Install workloads
         run: dotnet workload install maui
       - name: Build
-        # TODO: Add keystore https://learn.microsoft.com/en-us/dotnet/maui/android/deployment/publish-cli?view=net-maui-8.0#code-try-4
+        # TODO: Use proper keystore once we switch to real releases
+        # https://learn.microsoft.com/en-us/dotnet/maui/android/deployment/publish-cli?view=net-maui-8.0#code-try-4
         run: |
           dotnet publish BTCPayApp.Maui/BTCPayApp.Maui.csproj -f net8.0-android -c Release -o publish/android
         env:
@@ -77,15 +78,14 @@ jobs:
           name: org.btcpayserver.BTCPayApp-Signed.apk
           path: publish/android/org.btcpayserver.BTCPayApp-Signed.apk
       - name: Create pre-release
-        uses: underwindfall/create-release-with-debugapk@v2.0.0
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: marvinpinto/action-automatic-releases@latest
         with:
-          tag_name: latest
-          asset_path: publish/android/org.btcpayserver.BTCPayApp-Signed.apk
-          asset_name: org.btcpayserver.BTCPayApp-Signed.apk
-          asset_content_type: application/zip
-
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          automatic_release_tag: "latest"
+          prerelease: true
+          title: "Development Build"
+          files: |
+            publish/android/org.btcpayserver.BTCPayApp-Signed.apk
 
   # build-desktop-win:
   #   runs-on: windows-latest
