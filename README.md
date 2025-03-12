@@ -26,11 +26,6 @@ Now you can open up the IDE and run `DEV ALL` profile which builds both the App 
 The app should open in the browser and you should see the Welcome screen.
 Click the Connect button, use `http://localhost:14142` as the server URL and an existing account for the server.
 
-## Troubleshooting
-
-After the first run of `DEV ALL` on a Linux machine with a new .NET setup, you may run into the [dotnet dev-certs - Untrusted Root](https://github.com/dotnet/aspnetcore/issues/41503)
-error, and you may find a solution at the [following link](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-dev-certs)
-
 ## Lightning Channels
 
 To establish channels for local testing, you can use the Docker Lightning CLI scripts like this:
@@ -57,3 +52,15 @@ Besides establishing channel connections between the various BTCPay LN testing n
 
 - CLI: Generate an invoice with the peer script, e.g. `./docker-customer-lncli.sh addinvoice --amt 10000`
 - App: Pay the Lightning invoice on the Send view
+
+## Troubleshooting
+
+### Development certificates
+
+After the first run of `DEV ALL` on a Linux machine with a new .NET setup, you may run into the [dotnet dev-certs - Untrusted Root](https://github.com/dotnet/aspnetcore/issues/41503)
+error, and you may find a solution at the [following link](https://learn.microsoft.com/en-us/dotnet/core/tools/dotnet-dev-certs)
+
+### GrapheneOS
+
+If you are using GrapheneOS for the Android development, make sure to explicitely [enable code debugging](https://discuss.grapheneos.org/d/8330-app-compatibility-with-grapheneos).
+To run the app with debugger attached, the BTCPay app needs to get explicitely set as debug app in `Settings > System > Developer Settings > Debugging > Set Debug App`.
