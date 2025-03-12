@@ -125,7 +125,8 @@
         ErrorMessage = null;
         Sending = true;
 
-        var result = await AccountManager.Login(Model.Uri!, Model.Email!, Model.Password!, Model.TwoFactorCode);
+        var url = GetBaseUri(Model.Uri);
+        var result = await AccountManager.Login(url, Model.Email!, Model.Password!, Model.TwoFactorCode);
         Sending = false;
         if (!result.Succeeded)
         {

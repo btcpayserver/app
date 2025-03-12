@@ -8,7 +8,6 @@ public class LoginModel
     public bool RequireTwoFactor { get; set; }
 
     [Required]
-    [Url]
     public string? Uri { get; set; }
 
     [Required]

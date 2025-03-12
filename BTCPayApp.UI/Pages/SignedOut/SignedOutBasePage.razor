@@ -83,21 +83,22 @@
             Dispatcher.Dispatch(new UIState.SetInstanceInfo(null, null));
             return;
         }
-        var url = uri.Contains(InviteSeparator) ? uri.Split(InviteSeparator).First() : uri;
+        var url = GetBaseUri(uri);
+        url = url.Contains(InviteSeparator) ? url.Split(InviteSeparator).First() : url;
         if (url != InstanceInfo?.BaseUrl) Dispatcher.Dispatch(new UIState.FetchInstanceInfo(url));
     }
 
     protected async Task<bool?> HandleInput(string urlOrLoginCode)
     {
-        if (urlOrLoginCode.Contains(InviteSeparator))
+        var url = GetBaseUri(urlOrLoginCode);
+        if (url.Contains(InviteSeparator))
         {
-            return await HandleInviteUrl(urlOrLoginCode);
+            return await HandleInviteUrl(url);
         }
-        if (urlOrLoginCode.Contains(LoginCodeSeparator))
+        if (url.Contains(LoginCodeSeparator))
         {
-            return await HandleLoginCode(urlOrLoginCode);
+            return await HandleLoginCode(url);
         }
-
         return null;
     }
 
@@ -205,5 +206,10 @@
         var uri = string.IsNullOrEmpty(Success) ? route : NavigationManager.GetUriWithQueryParameters(route,
             new Dictionary<string, object?> { {"success", Success } } );
         NavigationManager.NavigateTo(uri);
+    }
+
+    protected string GetBaseUri(string? url)
+    {
+        return string.IsNullOrEmpty(url) ? string.Empty : url.Contains("://", StringComparison.OrdinalIgnoreCase) ? url : $"https://{url}";
     }
 }

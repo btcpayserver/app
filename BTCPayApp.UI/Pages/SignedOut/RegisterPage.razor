@@ -85,7 +85,8 @@
         ErrorMessage = null;
         Sending = true;
 
-        var result = await AccountManager.Register(Model.Uri!, Model.Email!, Model.Password!);
+        var url = GetBaseUri(Model.Uri);
+        var result = await AccountManager.Register(url, Model.Email!, Model.Password!);
         Sending = false;
         var authState = AuthState != null ? await AuthState : null;
         if (authState?.User.Identity?.IsAuthenticated is true) return;
