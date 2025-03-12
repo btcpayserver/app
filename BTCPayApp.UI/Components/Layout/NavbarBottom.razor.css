@@ -11,7 +11,8 @@
 .navbar-nav {
   margin: 0 auto;
   flex-direction: row;
-  gap: var(--btcpay-space-m);
+  flex-grow: 1;
+  max-width: 25rem;
 }
 
 .nav-item {
@@ -24,7 +25,7 @@
   align-items: center;
   justify-content: end;
   gap: var(--btcpay-space-xs);
-  padding: var(--btcpay-space-s) var(--btcpay-space-m);
+  padding: var(--btcpay-space-s);
   text-align: center;
   color: var(--btcpay-body-text-muted);
 }
