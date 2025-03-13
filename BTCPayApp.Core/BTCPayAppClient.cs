@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net.Http.Headers;
 using BTCPayApp.Core.Models;
 using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
@@ -71,5 +72,16 @@ public class BTCPayAppClient(string baseUri, string? apiKey = null, HttpClient? 
         if (req.Tip != null) query.Add("tip", req.Tip.Value.ToString(CultureInfo.InvariantCulture));
         if (req.PosData != null) query.Add("posData", req.PosData);
         return await SendHttpRequest<JObject?>($"apps/{req.AppId}/pos/light", query, HttpMethod.Post, cancellation);
+    }
+
+    public virtual async Task<T> UploadFileRequest<T>(string apiPath, StreamContent fileContent, string fileName, string mimeType, CancellationToken token = default)
+    {
+        using MultipartFormDataContent multipartContent = new();
+        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(mimeType);
+        multipartContent.Add(fileContent, "file", fileName);
+        var req = CreateHttpRequest(apiPath, null, HttpMethod.Post);
+        req.Content = multipartContent;
+        using var resp = await _httpClient.SendAsync(req, token);
+        return await HandleResponse<T>(resp);
     }
 }

@@ -14,17 +14,30 @@ public class DesktopDataDirectoryProvider : IDataDirectoryProvider
         _configuration = configuration;
         _logger = logger;
     }
-    
-    private string? _result = null;
+
+    private string? _dataDir;
+    private string? _cacheDir;
+
     public virtual Task<string> GetAppDataDirectory()
     {
-        if (_result != null)
-            return Task.FromResult(_result);
+        if (_dataDir != null)
+            return Task.FromResult(_dataDir);
         var def = "BTCPayApp";
         var dirName = _configuration.GetValue("BTCPAYAPP_DIRNAME", def);
-        _result = GetDirectory(dirName?? def);
-        _logger.LogInformation($"Using data directory: {_result}");
-        return Task.FromResult(_result);
+        _dataDir = GetDirectory(dirName?? def);
+        _logger.LogInformation($"Using data directory: {_dataDir}");
+        return Task.FromResult(_dataDir);
+    }
+
+    public virtual Task<string> GetCacheDirectory()
+    {
+        if (_cacheDir != null)
+            return Task.FromResult(_cacheDir);
+        var def = "BTCPayApp";
+        var dirName = _configuration.GetValue("BTCPAYAPP_DIRNAME", def);
+        _cacheDir = GetDirectory(Path.Combine(dirName ?? def, "cache"));
+        _logger.LogInformation($"Using cache directory: {_cacheDir}");
+        return Task.FromResult(_cacheDir);
     }
 
     private string GetDirectory(string appDirectory)

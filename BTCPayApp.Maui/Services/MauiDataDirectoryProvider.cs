@@ -6,6 +6,10 @@ public class MauiDataDirectoryProvider: IDataDirectoryProvider
 {
     public Task<string> GetAppDataDirectory()
     {
-       return Task.FromResult(FileSystem.AppDataDirectory);
+       return Task.FromResult(FileSystem.Current.AppDataDirectory);
+    }
+    public Task<string> GetCacheDirectory()
+    {
+        return Task.FromResult(FileSystem.Current.CacheDirectory);
     }
 }
