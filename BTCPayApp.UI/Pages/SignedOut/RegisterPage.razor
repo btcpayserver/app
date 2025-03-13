@@ -26,7 +26,7 @@
                         <LoadingIndicator />
                     }
                 </div>
-                <InputText @bind-Value="Model.Uri" @bind-Value:after="() => ResolveInstanceInfo(Model.Uri)" type="url" id="Uri" class="form-control"/>
+                <InputText @bind-Value="Model.Uri" @bind-Value:after="() => ResolveInstanceInfo(Model.Uri)" id="Uri" class="form-control"/>
                 <ValidationMessage For="@(() => Model.Uri)" />
             </div>
             <div class="form-group">

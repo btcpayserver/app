@@ -1,5 +1,6 @@
 ﻿@attribute [Route(Routes.Dashboard)]
 @using BTCPayApp.Core
+@using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.Core.Models
 @using BTCPayApp.UI.Features
@@ -12,6 +13,7 @@
 @inject IDispatcher Dispatcher
 @inject IState<UIState> UIState
 @inject IState<StoreState> StoreState
+@inject IAccountManager AccountManager
 @inject ConfigProvider ConfigProvider
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
@@ -114,7 +116,7 @@
     }
 
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
-    private string? StoreId => StoreInfo?.Id;
+    private string? StoreId => AccountManager.CurrentStore?.Id;
     private string? PosAppId => StoreInfo?.PosAppId;
     private bool BalanceLoading => StoreState.Value.OnchainBalance?.Loading is true || StoreState.Value.LightningBalance?.Loading is true;
     private string? BalanceError => StoreState.Value.OnchainBalance?.Error ?? StoreState.Value.LightningBalance?.Error;
