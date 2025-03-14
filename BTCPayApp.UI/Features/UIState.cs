@@ -26,7 +26,7 @@ public record UIState
     public record FetchInstanceInfo(string? Url);
     public record SetInstanceInfo(AppInstanceInfo? Instance, string? Error);
     public record ToggleDisplayCurrency(string? Currency = null);
-    public record SetFiatCurrency(string? Currency = null);
+    public record SetFiatCurrency(string? Currency = null, bool SetAsDisplayCurrency = false);
     public record SetHistogramType(HistogramType Type);
 
     public bool IsDarkMode => SelectedTheme == Themes.System? SystemTheme == Themes.Dark : SelectedTheme == Themes.Dark;
@@ -47,10 +47,16 @@ public record UIState
     {
         public override UIState Reduce(UIState state, SetFiatCurrency action)
         {
-            return state with
+            var s = state with { FiatCurrency = action.Currency };
+            if (string.IsNullOrEmpty(action.Currency) && s.DisplayCurrency is not CurrencyDisplay.BTC and not CurrencyDisplay.SATS)
             {
-                FiatCurrency = action.Currency
-            };
+                s.DisplayCurrency = CurrencyDisplay.SATS;
+            }
+            else if (!string.IsNullOrEmpty(action.Currency) && action.SetAsDisplayCurrency)
+            {
+                s.DisplayCurrency = action.Currency;
+            }
+            return s;
         }
     }
 

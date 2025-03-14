@@ -644,7 +644,7 @@ public record StoreState
                 dispatcher.Dispatch(new FetchUsers(storeId));*/
 
                 var currency = BitcoinUnits.Contains(store.DefaultCurrency) ? null : store.DefaultCurrency;
-                dispatcher.Dispatch(new UIState.SetFiatCurrency(currency));
+                dispatcher.Dispatch(new UIState.SetFiatCurrency(currency, true));
             }
             return Task.CompletedTask;
         }
