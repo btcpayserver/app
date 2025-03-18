@@ -8,13 +8,9 @@
         <SectionContent SectionId="_Layout.MainTop">
             <InstanceLogo/>
             <h1>@GetTitle()</h1>
-            @if (!string.IsNullOrEmpty(Error))
-            {
-                <Alert Type="danger">@Error</Alert>
-            }
         </SectionContent>
 
-        <ValidationEditContext @ref="ValidationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
+        <ValidationEditContext @ref="ValidationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@Error">
             <DataAnnotationsValidator />
             <div class="form-group">
                 <div class="d-flex justify-content-between mb-3">

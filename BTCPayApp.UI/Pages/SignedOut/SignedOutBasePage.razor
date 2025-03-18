@@ -74,6 +74,10 @@
         await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
 
         await HandleInput(code);
+        await InvokeAsync(StateHasChanged);
+
+        // reset temporary input
+        _qrInput = null;
     }
 
     protected void ResolveInstanceInfo(string? uri)

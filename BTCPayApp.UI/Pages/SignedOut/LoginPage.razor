@@ -11,16 +11,8 @@
         <SectionContent SectionId="_Layout.MainTop">
             <InstanceLogo/>
             <h1>@GetTitle()</h1>
-            @if (!string.IsNullOrEmpty(Error))
-            {
-                <Alert Type="danger">@Error</Alert>
-            }
-            else if (!string.IsNullOrEmpty(SuccessMessage))
-            {
-                <Alert Type="success">@SuccessMessage</Alert>
-            }
         </SectionContent>
-        <ValidationEditContext @ref="ValidationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit">
+        <ValidationEditContext @ref="ValidationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@Error" SuccessMessage="@SuccessMessage">
             <DataAnnotationsValidator />
             <div class="form-group" hidden="@Model.RequireTwoFactor">
                 <div class="d-flex justify-content-between">
