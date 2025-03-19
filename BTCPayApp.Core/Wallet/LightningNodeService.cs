@@ -61,7 +61,7 @@ public class LightningNodeManager : BaseHostedService
 
     public async Task StartNode()
     {
-        if (_nodeScope is not null || State is LightningNodeState.Loaded or LightningNodeState.NotConfigured )
+        if (_nodeScope is not null || State is LightningNodeState.Loaded or LightningNodeState.NotConfigured)
         {
             return;
         }
@@ -99,7 +99,8 @@ public class LightningNodeManager : BaseHostedService
     }
 
     public async Task StopNode() => await StopNode(true);
-    public async Task StopNode(bool setAsStopped = true)
+
+    private async Task StopNode(bool setAsStopped = true)
     {
         if (_nodeScope is null)
             return;

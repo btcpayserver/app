@@ -1,4 +1,4 @@
-﻿@attribute [AllowAnonymous]
+@attribute [AllowAnonymous]
 @layout SimpleLayout
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @using System.Net.Mail
@@ -7,7 +7,6 @@
 @using BTCPayApp.Core.Models
 @using BTCPayApp.UI.Features
 @using Microsoft.Extensions.Logging
-@using org.ldk.structs
 @inject IJSRuntime JS
 @inject IAccountManager AccountManager
 @inject BTCPayConnectionManager ConnectionManager
@@ -74,6 +73,10 @@
         await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
 
         await HandleInput(code);
+        await InvokeAsync(StateHasChanged);
+
+        // reset temporary input
+        _qrInput = null;
     }
 
     protected void ResolveInstanceInfo(string? uri)
