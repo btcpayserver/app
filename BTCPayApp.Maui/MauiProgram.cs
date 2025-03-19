@@ -1,8 +1,11 @@
 ﻿using BTCPayApp.Core.Extensions;
+using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 using Plugin.Fingerprint;
+using Serilog;
+using Serilog.Extensions.Logging;
 
 namespace BTCPayApp.Maui;
 
@@ -10,6 +13,23 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+        var storageService = new MauiDataDirectoryProvider();
+        var appdirectory = storageService.GetAppDataDirectory().GetAwaiter().GetResult();
+        // Configure Serilog
+        string logFilePath = Path.Combine(appdirectory, "logs", "app_log_.txt");
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Error() // Set minimum log level
+            .WriteTo.Console() // Output to debug console
+            .WriteTo.File(
+                logFilePath,
+                rollingInterval: RollingInterval.Day, // Creates new file daily
+                rollOnFileSizeLimit: true,
+                fileSizeLimitBytes: 1024 * 1024, // 1MB limit
+                retainedFileCountLimit: 7) // Keep 7 days of logs
+            .Enrich.FromLogContext()
+            .CreateLogger();
+
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>()
             .ConfigureFonts(fonts =>
@@ -17,11 +37,16 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
             });
 
+        // Clear any existing providers and add Serilog
+        builder.Logging
+            .ClearProviders() // Optional: removes default providers
+            .AddProvider(new SerilogLoggerProvider(Log.Logger, dispose: true));
+
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddBTCPayAppUIServices();
         builder.Services.ConfigureBTCPayAppCore();
         builder.Services.ConfigureBTCPayAppMaui();
-        builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddConsole());
+        //builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddConsole());
 
         builder.ConfigureLifecycleEvents(events =>
         {
@@ -61,7 +86,7 @@ public static class MauiProgram
             }
         });
 #if DEBUG
-        builder.Services.AddBlazorWebViewDeveloperTools();
+        //builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Services.AddDangerousSSLSettingsForDev();
         builder.Logging.AddDebug();
 #endif

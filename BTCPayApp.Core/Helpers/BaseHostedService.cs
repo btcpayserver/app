@@ -7,7 +7,6 @@ public abstract class BaseHostedService(ILogger logger) : IHostedService, IDispo
 {
     protected CancellationTokenSource CancellationTokenSource = new();
     protected readonly SemaphoreSlim ControlSemaphore = new(1, 1);
-    private Task? _currentTask;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {

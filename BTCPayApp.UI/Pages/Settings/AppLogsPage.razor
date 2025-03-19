@@ -1,0 +1,53 @@
+﻿@attribute [Route(Routes.AppLogs)]
+@using BTCPayApp.Core.Services
+@using BTCPayApp.UI.Components.Layout
+@layout BaseLayout
+
+@inject LogReaderService LogService
+
+<PageTitle>Application Logs</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back>
+        <h1>Logs</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    @if (isLoading)
+    {
+        <p>Loading logs...</p>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <p class="text-danger">@errorMessage</p>
+    }
+    else
+    {
+
+        <p>@logContent</p>
+    }
+</section>
+
+@code {
+    private string? logContent;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var logs = await LogService.GetLatestLogAsync();
+            logContent = logs;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load logs: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

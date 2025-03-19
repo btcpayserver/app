@@ -58,37 +58,41 @@
   <ItemGroup>
     <!-- App Icon -->
     <!-- Splash Screen -->
-    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#FFFFFF"/>
+    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#FFFFFF" />
     <!-- Images -->
-    <MauiImage Include="Resources\Images\*"/>
+    <MauiImage Include="Resources\Images\*" />
     <!-- Custom Fonts -->
-    <MauiFont Include="Resources\Fonts\*"/>
+    <MauiFont Include="Resources\Fonts\*" />
     <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
-    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)"/>
+    <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj"/>
-    <ProjectReference Include="..\BTCPayApp.UI\BTCPayApp.UI.csproj"/>
-    <PackageReference Include="org.ldk" Version="0.0.123"/>
-    <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1"/>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.100"/>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2"/>
-    <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100"/>
-    <PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.100"/>
+    <ProjectReference Include="..\BTCPayApp.Core\BTCPayApp.Core.csproj" />
+    <ProjectReference Include="..\BTCPayApp.UI\BTCPayApp.UI.csproj" />
+    <PackageReference Include="org.ldk" Version="0.0.123" />
+    <PackageReference Include="Plugin.Fingerprint" Version="3.0.0-beta.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="8.0.100" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Maui.Controls" Version="8.0.100" />
+    <PackageReference Include="Microsoft.Maui.Essentials" Version="8.0.100" />
+    <PackageReference Include="Serilog" Version="4.2.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
-    <Compile Remove="**\iOS\**\*.cs"/>
-    <None Include="**\iOS\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)"/>
+    <Compile Remove="**\iOS\**\*.cs" />
+    <None Include="**\iOS\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
   </ItemGroup>
 
   <ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">
-    <Compile Remove="**\Android\**\*.cs"/>
-    <None Include="**\Android\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)"/>
-    <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.10"/>
-    <PackageReference Include="SQLitePCLRaw.core" Version="2.1.10"/>
-    <PackageReference Include="SQLitePCLRaw.provider.dynamic_cdecl" Version="2.1.10"/>
-    <PackageReference Include="SQLitePCLRaw.provider.sqlite3" Version="2.1.10"/>
+    <Compile Remove="**\Android\**\*.cs" />
+    <None Include="**\Android\**\*.cs" Exclude="$(DefaultItemExcludes);$(DefaultExcludesInProjectFolder)" />
+    <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.10" />
+    <PackageReference Include="SQLitePCLRaw.core" Version="2.1.10" />
+    <PackageReference Include="SQLitePCLRaw.provider.dynamic_cdecl" Version="2.1.10" />
+    <PackageReference Include="SQLitePCLRaw.provider.sqlite3" Version="2.1.10" />
   </ItemGroup>
 </Project>

@@ -1,4 +1,5 @@
-﻿using BTCPayApp.UI.Util;
+﻿using BTCPayApp.Core.Services;
+using BTCPayApp.UI.Util;
 using Fluxor;
 using Fluxor.Blazor.Web.ReduxDevTools;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,6 +13,7 @@ public static class StartupExtensions
     {
         serviceCollection.AddOptions();
         serviceCollection.AddSingleton<DisplayFormatter>();
+        serviceCollection.AddSingleton<LogReaderService>();
         serviceCollection.AddBlazorDragDrop();
         serviceCollection.AddCascadingAuthenticationState();
         serviceCollection.AddFluxor(options =>

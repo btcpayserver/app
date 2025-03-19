@@ -25,6 +25,7 @@ public static class Routes
     public const string CreateStore = "/store/create";
     public const string Settings = "/settings";
     public const string ChangePasscode = "/settings/passcode";
+    public const string AppLogs = "/settings/applogs";
     public const string SelectStore = "/settings/select-store";
     public const string Store = "/settings/store/{StoreId}";
     public const string PosSettings = "/settings/pos/{AppId}";
