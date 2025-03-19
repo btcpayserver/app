@@ -22,12 +22,12 @@
                         <LoadingIndicator />
                     }
                 </div>
-                <InputText @bind-Value="Model.Uri" @bind-Value:after="() => ResolveInstanceInfo(Model.Uri)" id="Uri" class="form-control"/>
+                <InputText @bind-Value="Model.Uri" @bind-Value:after="() => ResolveInstanceInfo(Model.Uri)" id="Uri" class="form-control" disabled="@UseExistingAccount"/>
                 <ValidationMessage For="@(() => Model.Uri)" />
             </div>
             <div class="form-group" hidden="@Model.RequireTwoFactor">
                 <label for="Email" class="form-label">Email</label>
-                <InputText @bind-Value="Model.Email" type="email" id="Email" class="form-control"/>
+                <InputText @bind-Value="Model.Email" type="email" id="Email" class="form-control" disabled="@UseExistingAccount"/>
                 <ValidationMessage For="@(() => Model.Email)" />
             </div>
             <div class="form-group" hidden="@Model.RequireTwoFactor">
@@ -67,7 +67,7 @@
                     </button>
                 }
             </div>
-            @if (!Model.RequireTwoFactor && InstanceInfo is { RegistrationEnabled: true })
+            @if (!Model.RequireTwoFactor && !UseExistingAccount && InstanceInfo is { RegistrationEnabled: true })
             {
                 <p class="mt-4 text-center">
                     <NavLink href="@GetRegisterUrl()">Create an account</NavLink>
@@ -88,6 +88,9 @@
 </AuthorizeView>
 
 @code {
+    [SupplyParameterFromQuery]
+    protected bool UseExistingAccount { get; set; }
+
     private LoginModel Model { get; set; } = new();
 
     protected override void OnInitialized()

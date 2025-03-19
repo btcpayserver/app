@@ -1,5 +1,5 @@
 @using QRCoder
-<img style="image-rendering:pixelated;image-rendering:-moz-crisp-edges;min-width:@(Size)px;min-height:@(Size)px" src="data:image/png;base64,@(GetBase64(Data))" class="@CssClass" alt="QR Code" />
+<img style="image-rendering:pixelated;image-rendering:-moz-crisp-edges;min-width:@(Size)px;min-height:@(Size)px" src="data:image/png;base64,@(GetBase64(Data))" class="@CssClass" alt="@Data" />
 
 @code {
     [Parameter, EditorRequired]
