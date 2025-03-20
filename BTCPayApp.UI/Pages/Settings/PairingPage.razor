@@ -1,10 +1,12 @@
 ﻿@attribute [Route(Routes.Pairing)]
+@using BTCPayApp.Core
 @using ReactorBlazorQRCodeScanner
 @using Microsoft.Extensions.Logging
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Backup
 @using BTCPayApp.Core.BTCPayServer
 @using BTCPayApp.UI.Components.Layout
+@inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 @inject BTCPayConnectionManager ConnectionManager
 @inject SyncService SyncService
@@ -61,7 +63,7 @@
                 <p>
                     Scan this code with your new device to sync your wallet.
                 </p>
-                <QrCode Data="@Model.EncryptionKey" class="qr-code rounded"/>
+                <QrCode Data="@EncryptionKeyWithDetails" class="qr-code rounded"/>
                 <div class="box my-4 mx-auto">
                     <div class="form-floating form-group">
                         <TruncateCenter Text="@Model.EncryptionKey" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
@@ -101,7 +103,7 @@
     {
         await base.OnInitializedAsync();
 
-        Model.EncryptionKey = await SyncService.GetEncryptionKey();
+        Model.EncryptionKey = await AccountManager.GetEncryptionKey();
 
         if (NeedsEncryptionKey)
             _enterManually = false;
@@ -150,7 +152,8 @@
         _errorMessage = null;
         try
         {
-            if (IsValidKey && await SyncService.SetEncryptionKey(Model.EncryptionKey!))
+            var key = Model.EncryptionKey!.Split(Constants.EncryptionKeySeparator)[0];
+            if (IsValidKey && await SyncService.SetEncryptionKey(key))
                 NavigationManager.NavigateTo(Routes.Index);
             else
                 _errorMessage = "Invalid encryption key";
@@ -164,4 +167,18 @@
     private string GetTitle() => NeedsEncryptionKey ? "Provide your encryption key" : "Pair another device";
     private bool NeedsEncryptionKey => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey;
     private bool IsValidKey => !string.IsNullOrEmpty(Model.EncryptionKey);
+    private string? EncryptionKeyWithDetails
+    {
+        get
+        {
+            const string s = Constants.EncryptionKeySeparator;
+            var account = AccountManager.Account;
+            return Model.EncryptionKey is null
+                ? null
+                : account is null
+                    ? Model.EncryptionKey
+                    : $"{Model.EncryptionKey}{s}{account.BaseUri}{s}{account.Email}";
+        }
+    }
+
 }

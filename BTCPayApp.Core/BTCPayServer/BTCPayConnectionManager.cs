@@ -71,7 +71,7 @@ public class BTCPayConnectionManager(
         btcPayAppServerClient.OnNotifyServerEvent += OnNotifyServerEvent;
         btcPayAppServerClient.OnServerNodeInfo += OnServerNodeInfo;
         btcPayAppServerClient.OnMasterUpdated += OnMasterUpdated;
-        syncService.EncryptionKeyChanged += EncryptionKeyChanged;
+        accountManager.OnEncryptionKeyChanged += OnEncryptionKeyChanged;
         await OnConnectionChanged(this, (BTCPayConnectionState.Init, BTCPayConnectionState.Init));
     }
 
@@ -101,7 +101,7 @@ public class BTCPayConnectionManager(
         }, _cts.Token);
     }
 
-    private async Task EncryptionKeyChanged(object? sender)
+    private async Task OnEncryptionKeyChanged(object? sender, string encryptionKey)
     {
 #pragma warning disable CS1998 // Async method lacks 'await' operators and will run synchronously
         await WrapInLock(async () =>
@@ -315,7 +315,6 @@ public class BTCPayConnectionManager(
         await syncService.StopSync();
     }
 
-
     protected override async Task ExecuteStopAsync(CancellationToken cancellationToken)
     {
         await _cts.CancelAsync();
@@ -334,8 +333,7 @@ public class BTCPayConnectionManager(
         await Kill();
         authStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
         btcPayAppServerClient.OnNotifyNetwork -= OnNotifyNetwork;
-
-        syncService.EncryptionKeyChanged -= EncryptionKeyChanged;
+        accountManager.OnEncryptionKeyChanged -= OnEncryptionKeyChanged;
         ConnectionChanged -= OnConnectionChanged;
     }
 

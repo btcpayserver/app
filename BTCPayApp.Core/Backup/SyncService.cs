@@ -18,26 +18,19 @@ namespace BTCPayApp.Core.Backup;
 public class SyncService(
     ConfigProvider configProvider,
     ILogger<SyncService> logger,
-    ISecureConfigProvider secureConfigProvider,
     IAccountManager accountManager,
     IHttpClientFactory httpClientFactory,
     IDbContextFactory<AppDbContext> dbContextFactory)
     : IDisposable
 {
-    public AsyncEventHandler? EncryptionKeyChanged;
     public AsyncEventHandler<(List<Outbox> OutboxItemsProcesed, PutObjectRequest RemoteRequest)>? RemoteObjectUpdated;
     public AsyncEventHandler<string[]>? LocalUpdated;
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
     private readonly SemaphoreSlim _syncLock = new(1, 1);
 
-    public async Task<string?> GetEncryptionKey()
-    {
-       return  await secureConfigProvider.Get<string>("encryptionKey");
-    }
-
     private async Task<IDataProtector?> GetDataProtector()
     {
-        var key = await GetEncryptionKey();
+        var key = await accountManager.GetEncryptionKey();
         return string.IsNullOrEmpty(key) ? null : new SingleKeyDataProtector(Convert.FromHexString(key));
     }
 
@@ -83,10 +76,8 @@ public class SyncService(
 
     public async Task<bool> SetEncryptionKey(string key)
     {
-        if (key.Contains(' '))
-        {
-          return await SetEncryptionKey(new Mnemonic(key));
-        }
+        if (key.Contains(' ')) return await SetEncryptionKey(new Mnemonic(key));
+
         var dataProtector = new SingleKeyDataProtector(Convert.FromHexString(key));
         var encrypted = dataProtector.Protect("kukks"u8.ToArray());
         var api = await GetUnencryptedVSSAPI();
@@ -103,8 +94,7 @@ public class SyncService(
                 var decrypted = dataProtector.Unprotect(res.Value.Value.ToByteArray());
                 if ("kukks" == Encoding.UTF8.GetString(decrypted))
                 {
-                    await secureConfigProvider.Set("encryptionKey", key);
-                    EncryptionKeyChanged?.Invoke(this);
+                    await accountManager.SetEncryptionKey(key);
                     return true;
                 }
                 return false;
@@ -131,8 +121,7 @@ public class SyncService(
                 }
             },
         });
-        await secureConfigProvider.Set("encryptionKey", key);
-        EncryptionKeyChanged?.Invoke(this);
+        await accountManager.SetEncryptionKey(key);
         return true;
     }
 
@@ -429,7 +418,6 @@ public class SyncService(
     public void Dispose()
     {
         RemoteObjectUpdated = null;
-        EncryptionKeyChanged = null;
         LocalUpdated = null;
     }
 }
