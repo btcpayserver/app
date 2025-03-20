@@ -1,6 +1,9 @@
 ﻿using System.Drawing;
 using BTCPayApp.Core;
+using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Extensions;
+using BTCPayApp.Core.Helpers;
 using BTCPayApp.Desktop;
 using BTCPayApp.UI;
 using Microsoft.AspNetCore.Components.Web;
@@ -17,6 +20,8 @@ public static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        
+
         var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
 
         builder.Services.TryAddSingleton<IConfiguration>(_ =>
@@ -34,6 +39,13 @@ public static class Program
 #endif
         builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
+        var serviceProvider = builder.Services.BuildServiceProvider();
+        var dirProvider = serviceProvider.GetRequiredService<IDataDirectoryProvider>();
+
+        var logHelper = new LogHelper(dirProvider);
+        string logFilePath = logHelper.GetLogPath().GetAwaiter().GetResult();
+        // Configure logging
+        LoggingConfig.ConfigureLogging(logFilePath);
 
         var app = builder.Build();
 

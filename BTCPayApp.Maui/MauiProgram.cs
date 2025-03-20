@@ -1,11 +1,12 @@
-﻿using BTCPayApp.Core.Extensions;
+﻿using BTCPayApp.Core.Data;
+using BTCPayApp.Core.Extensions;
+using BTCPayApp.Core.Helpers;
 using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 using Plugin.Fingerprint;
 using Serilog;
-using Serilog.Extensions.Logging;
 
 namespace BTCPayApp.Maui;
 
@@ -14,21 +15,11 @@ public static class MauiProgram
     public static MauiApp CreateMauiApp()
     {
         var storageService = new MauiDataDirectoryProvider();
-        var appdirectory = storageService.GetAppDataDirectory().GetAwaiter().GetResult();
-        // Configure Serilog
-        string logFilePath = Path.Combine(appdirectory, "logs", "app_log_.txt");
+        var logHelper = new LogHelper(storageService);
+        string logFilePath = logHelper.GetLogPath().GetAwaiter().GetResult();
 
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Error() // Set minimum log level
-            .WriteTo.Console() // Output to debug console
-            .WriteTo.File(
-                logFilePath,
-                rollingInterval: RollingInterval.Day, // Creates new file daily
-                rollOnFileSizeLimit: true,
-                fileSizeLimitBytes: 1024 * 1024, // 1MB limit
-                retainedFileCountLimit: 7) // Keep 7 days of logs
-            .Enrich.FromLogContext()
-            .CreateLogger();
+        // Configure logging
+        LoggingConfig.ConfigureLogging(logFilePath);
 
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>()
@@ -36,11 +27,6 @@ public static class MauiProgram
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
             });
-
-        // Clear any existing providers and add Serilog
-        builder.Logging
-            .ClearProviders() // Optional: removes default providers
-            .AddProvider(new SerilogLoggerProvider(Log.Logger, dispose: true));
 
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddBTCPayAppUIServices();
@@ -90,6 +76,10 @@ public static class MauiProgram
         builder.Services.AddDangerousSSLSettingsForDev();
         builder.Logging.AddDebug();
 #endif
+        // Add Serilog to the logging pipeline
+        builder.Logging.ClearProviders();
+        builder.Logging.AddSerilog();
+
         return builder.Build();
     }
 }
