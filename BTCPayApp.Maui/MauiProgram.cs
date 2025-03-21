@@ -14,13 +14,6 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
-        var storageService = new MauiDataDirectoryProvider();
-        var logHelper = new LogHelper(storageService);
-        string logFilePath = logHelper.GetLogPath().GetAwaiter().GetResult();
-
-        // Configure logging
-        LoggingConfig.ConfigureLogging(logFilePath);
-
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>()
             .ConfigureFonts(fonts =>
@@ -30,9 +23,8 @@ public static class MauiProgram
 
         builder.Services.AddMauiBlazorWebView();
         builder.Services.AddBTCPayAppUIServices();
-        builder.Services.ConfigureBTCPayAppCore();
         builder.Services.ConfigureBTCPayAppMaui();
-        //builder.Services.AddLogging(loggingBuilder => loggingBuilder.AddConsole());
+        builder.Services.ConfigureBTCPayAppCore();
 
         builder.ConfigureLifecycleEvents(events =>
         {
@@ -72,7 +64,7 @@ public static class MauiProgram
             }
         });
 #if DEBUG
-        //builder.Services.AddBlazorWebViewDeveloperTools();
+        builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Services.AddDangerousSSLSettingsForDev();
         builder.Logging.AddDebug();
 #endif

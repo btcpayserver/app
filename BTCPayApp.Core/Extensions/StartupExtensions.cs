@@ -48,6 +48,14 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<IAuthorizationHandler, AuthorizationHandler>();
         serviceCollection.AddAuthorizationCore(options => options.AddPolicies());
 
+        // Configure logging
+        serviceCollection.AddLogging();
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+        var dirProvider = serviceProvider.GetRequiredService<IDataDirectoryProvider>();
+        var logHelper = new LogHelper(dirProvider);
+        var logFilePath = logHelper.GetLogPath().GetAwaiter().GetResult();
+        LoggingConfig.ConfigureLogging(logFilePath);
+
         return serviceCollection;
     }
 }

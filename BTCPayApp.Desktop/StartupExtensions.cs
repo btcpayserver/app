@@ -1,6 +1,7 @@
 ﻿using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Data;
+using BTCPayApp.Core.Helpers;
 using Microsoft.Extensions.DependencyInjection;
-using Plugin.Fingerprint;
 using Plugin.Fingerprint.Abstractions;
 
 namespace BTCPayApp.Desktop;
@@ -17,6 +18,7 @@ public static class StartupExtensions
         // serviceCollection.AddSingleton<IConfigProvider, DesktopConfigProvider>();
         serviceCollection.AddSingleton<ISecureConfigProvider, DesktopSecureConfigProvider>();
         serviceCollection.AddSingleton<IFingerprint, StubFingerprintProvider>();
+
         return serviceCollection;
     }
 }
