@@ -165,6 +165,9 @@ public class BTCPayConnectionManager(
                     {
                         try
                         {
+                            connection.Closed += OnClosed;
+                            connection.Reconnected += OnReconnected;
+                            connection.Reconnecting += OnReconnecting;
                             await connection.StartAsync();
                         }
                         catch (HttpRequestException ex) when (ex.StatusCode is HttpStatusCode.Unauthorized)
@@ -308,7 +311,13 @@ public class BTCPayConnectionManager(
         var conn = Connection;
         Connection = null;
         if (conn is not null)
+        {
+            conn.Closed -= OnClosed;
+            conn.Reconnected -= OnReconnected;
+            conn.Reconnecting -= OnReconnecting;
+
             await conn.StopAsync();
+        }
         _subscription?.Dispose();
         _subscription = null;
         HubProxy = null;

@@ -24,6 +24,7 @@ public class StateMiddleware(
 {
     public const string UiStateConfigKey = "uistate";
     private CancellationTokenSource? _ratesCts;
+    private bool _previouslyConnected;
 
     public override async Task InitializeAsync(IDispatcher dispatcher, IStore store)
     {
@@ -71,6 +72,16 @@ public class StateMiddleware(
             if (onChainWalletManager is { State: OnChainWalletState.NotConfigured } && await onChainWalletManager.CanConfigureWallet())
             {
                 await onChainWalletManager.Generate();
+            }
+
+            // refresh after returning from the background
+            if (btcPayConnectionManager.ConnectionState == BTCPayConnectionState.ConnectedFinishedInitialSync && !_previouslyConnected)
+            {
+                _previouslyConnected = true;
+            }
+            else if (btcPayConnectionManager.ConnectionState == BTCPayConnectionState.Syncing && _previouslyConnected && accountManager.CurrentStore is { } store)
+            {
+                dispatcher.Dispatch(new StoreState.RefreshStore(store));
             }
         };
 
