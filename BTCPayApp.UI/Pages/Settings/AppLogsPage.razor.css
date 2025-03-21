@@ -1,0 +1,10 @@
+pre {
+  --btcpay-pre-bg: var(--btcpay-light);
+  --btcpay-border-radius: var(--btcpay-border-radius-xl);
+
+  max-height: calc(100dvh - var(--navbar-top-height) - var(--navbar-bottom-height) - var(--btcpay-space-l));
+}
+
+pre code {
+  display: block;
+}
