@@ -179,7 +179,7 @@ public class BTCPayConnectionManager(
                         {
                             await Task.Delay(500);
                             if (ex is not TaskCanceledException)
-                                logger.LogError(ex, "Error while connecting to hub");
+                                logger.LogError($"Error while connecting to hub: {ex.Message}");
                         }
                     }
                     Connection = connection;
@@ -346,9 +346,9 @@ public class BTCPayConnectionManager(
         ConnectionChanged -= OnConnectionChanged;
     }
 
-    public Task OnClosed(Exception? exception)
+    public Task OnClosed(Exception? ex)
     {
-        logger.LogError(exception, "Hub connection closed");
+        logger.LogError($"Hub connection closed: {ex?.Message}");
         if (Connection?.State == HubConnectionState.Disconnected && ConnectionState != BTCPayConnectionState.Connecting)
         {
             ConnectionState = BTCPayConnectionState.Disconnected;
@@ -364,9 +364,9 @@ public class BTCPayConnectionManager(
         return Task.CompletedTask;
     }
 
-    public Task OnReconnecting(Exception? exception)
+    public Task OnReconnecting(Exception? ex)
     {
-        logger.LogWarning(exception, "Hub connection reconnecting");
+        logger.LogWarning($"Hub connection reconnecting: {ex?.Message}");
         ConnectionState = BTCPayConnectionState.Connecting;
         return Task.CompletedTask;
     }
