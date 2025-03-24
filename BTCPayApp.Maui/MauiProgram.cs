@@ -69,7 +69,6 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
         // Add Serilog to the logging pipeline
-        builder.Logging.ClearProviders();
         builder.Logging.AddSerilog();
 
         return builder.Build();
