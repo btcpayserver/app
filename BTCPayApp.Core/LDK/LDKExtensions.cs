@@ -229,9 +229,9 @@ public static class LDKExtensions
         services.AddScoped<OutputSweeper>(provider =>
         {
             var onchainWalletManager = provider.GetRequiredService<OnChainWalletManager>();
-            var resp = onchainWalletManager.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
-            var hash = uint256.Parse(resp.BlockHash).ToBytes();
-            var bestBlock = BestBlock.of(hash, (int) resp.BlockHeight);
+            var res = onchainWalletManager.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
+            if (res is null) throw new ApplicationException("Could not get best block to instantiate OutputSweeper");
+            var bestBlock = BestBlock.of(uint256.Parse(res.BlockHash).ToBytes(), res.BlockHeight);
             return OutputSweeper.of(bestBlock,
                 provider.GetRequiredService<BroadcasterInterface>(),
                 provider.GetRequiredService<FeeEstimator>(),
@@ -247,7 +247,8 @@ public static class LDKExtensions
         {
             var onchainWalletManager = provider.GetRequiredService<OnChainWalletManager>();
             var res = onchainWalletManager.GetBestBlock().ConfigureAwait(false).GetAwaiter().GetResult();
-            var bestBlock = res != null ? BestBlock.of(uint256.Parse(res.BlockHash).ToBytes(), res.BlockHeight) : null;
+            if (res is null) throw new ApplicationException("Could not get best block to instantiate ChainParameters");
+            var bestBlock = BestBlock.of(uint256.Parse(res.BlockHash).ToBytes(), res.BlockHeight);
             return ChainParameters.of(provider.GetRequiredService<Network>().GetLdkNetwork(), bestBlock);
         });
         services.AddScoped<Score>(provider => provider.GetRequiredService<ProbabilisticScorer>().as_Score());
@@ -257,11 +258,8 @@ public static class LDKExtensions
             provider.GetRequiredService<MultiThreadedLockableScore>().as_LockableScore());
         services.AddScoped<WriteableScore>(provider =>
             provider.GetRequiredService<MultiThreadedLockableScore>().as_WriteableScore());
-
         services.AddScoped<LDKWalletLogger>();
         services.AddScoped<Logger>(provider => Logger.new_impl(provider.GetRequiredService<LDKWalletLogger>()));
-
-
         services.AddScoped<LDKEntropySource>();
         services.AddScoped<EntropySource>(provider =>
             EntropySource.new_impl(provider.GetRequiredService<LDKEntropySource>()));
