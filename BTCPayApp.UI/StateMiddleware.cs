@@ -150,17 +150,10 @@ public class StateMiddleware(
             if (storeInfo != null)
             {
                 var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, true);
-                if (res is { onchain: {} onchain } && await onChainWalletManager.IsOnChainOurs(onchain))
-                {
-                    dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeInfo.Id));
-                    dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(storeInfo.Id));
-                }
-                if (res is { lightning: {} lightning } && await lightningNodeService.IsLightningOurs(lightning))
-                {
-                    dispatcher.Dispatch(new StoreState.FetchLightningBalance(storeInfo.Id));
-                    dispatcher.Dispatch(new StoreState.FetchLightningHistogram(storeInfo.Id));
-                }
-                dispatcher.Dispatch(new StoreState.FetchBalances(storeInfo.Id));
+                var refresh = res is { onchain: {} onchain } && await onChainWalletManager.IsOnChainOurs(onchain) ||
+                                   res is { lightning: {} lightning } && await lightningNodeService.IsLightningOurs(lightning);
+                if (refresh)
+                    dispatcher.Dispatch(new StoreState.FetchBalances(storeInfo.Id));
                 if (storeInfo.PosAppId != null)
                     dispatcher.Dispatch(new StoreState.FetchPointOfSaleStats(storeInfo.PosAppId));
             }
