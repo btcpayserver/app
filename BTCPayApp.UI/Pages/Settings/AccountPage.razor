@@ -58,17 +58,18 @@
                         </div>
                         <ValidationMessage For="@(() => Model.ImageUrl)"/>
                     </div>
-
-                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
-                        @if (Sending)
-                        {
-                            <LoadingIndicator/>
-                        }
-                        else
-                        {
-                            <span>Update Account</span>
-                        }
-                    </button>
+                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
+                            @if (Sending)
+                            {
+                                <LoadingIndicator/>
+                            }
+                            else
+                            {
+                                <span>Update Account</span>
+                            }
+                        </button>
+                    </div>
                 </ValidationEditContext>
             </div>
         </Authorized>

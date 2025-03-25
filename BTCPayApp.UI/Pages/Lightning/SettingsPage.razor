@@ -75,36 +75,6 @@
                     @*     } *@
                     @* } *@
                 </div>
-                @if (Node is not null)
-                {
-                    <h2>Lightning Settings</h2>
-                    <ValidationEditContext @ref="_validationEditContext"  Model="Model" OnValidSubmit="UpdateConfig" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
-                        <DataAnnotationsValidator/>
-                        <fieldset class="box">
-                            @if (_jitOptions?.Any() is true)
-                            {
-                                <div class="form-group">
-                                    <label for="JITLSP" class="form-label">Lightning Service Provider</label>
-                                    <InputSelect id="JITLSP" @bind-Value="Model.JitLsp" class="form-select">
-                                        <option value="">None</option>
-                                        @foreach (var jit in _jitOptions)
-                                        {
-                                            <option value="@jit">@jit</option>
-                                        }
-                                    </InputSelect>
-                                    <ValidationMessage For="@(() => Model.JitLsp)"/>
-                                </div>
-                            }
-                            <div class="form-group">
-                                <label for="RgsUrl" class="form-label">Rapid Gossip Sync Server URL</label>
-                                <InputText @bind-Value="Model.RgsUrl" type="url" class="form-control" id="RgsUrl"/>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100" disabled="@_validationEditContext!.Invalid">
-                                <span>Update Configuration</span>
-                            </button>
-                        </fieldset>
-                    </ValidationEditContext>
-                }
             }
             else
             {
@@ -138,6 +108,38 @@
                         </li>
                     </ul>
                 </div>
+            }
+            @if (Node is not null)
+            {
+                <h2>Lightning Settings</h2>
+                <ValidationEditContext @ref="_validationEditContext"  Model="Model" OnValidSubmit="UpdateConfig" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
+                    <DataAnnotationsValidator/>
+                    <fieldset class="box">
+                        @if (_jitOptions?.Any() is true)
+                        {
+                            <div class="form-group">
+                                <label for="JITLSP" class="form-label">Lightning Service Provider</label>
+                                <InputSelect id="JITLSP" @bind-Value="Model.JitLsp" class="form-select">
+                                    <option value="">None</option>
+                                    @foreach (var jit in _jitOptions)
+                                    {
+                                        <option value="@jit">@jit</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => Model.JitLsp)"/>
+                            </div>
+                        }
+                        <div class="form-group">
+                            <label for="RgsUrl" class="form-label">Rapid Gossip Sync Server URL</label>
+                            <InputText @bind-Value="Model.RgsUrl" type="url" class="form-control" id="RgsUrl"/>
+                        </div>
+                        <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                            <button type="submit" class="btn btn-primary w-100" disabled="@_validationEditContext!.Invalid">
+                                <span>Update Configuration</span>
+                            </button>
+                        </div>
+                    </fieldset>
+                </ValidationEditContext>
             }
         </Authorized>
         <NotAuthorized>

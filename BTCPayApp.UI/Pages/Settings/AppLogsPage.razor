@@ -8,12 +8,6 @@
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
         <h1>Logs</h1>
-        @if (HasLogs)
-        {
-            <SectionContent SectionId="Titlebar.End">
-                <button type="button" class="btn btn-sm btn-secondary text-nowrap p-2" data-clipboard-target="#logs">Copy logs</button>
-            </SectionContent>
-        }
     </Titlebar>
 </SectionContent>
 
@@ -36,6 +30,12 @@
     {
         <div class="box">
             <p class="text-muted my-0">There are no logs, yet.</p>
+        </div>
+    }
+    @if (HasLogs)
+    {
+        <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+            <button type="button" class="btn btn-primary w-100" data-clipboard-target="#logs">Copy logs</button>
         </div>
     }
 </section>

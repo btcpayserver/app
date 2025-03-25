@@ -109,16 +109,18 @@
                         </fieldset>
                         @if (_canModify is true)
                         {
-                            <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
-                                @if (Sending)
-                                {
-                                    <LoadingIndicator/>
-                                }
-                                else
-                                {
-                                    <span>Update Checkout</span>
-                                }
-                            </button>
+                            <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                                <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
+                                    @if (Sending)
+                                    {
+                                        <LoadingIndicator/>
+                                    }
+                                    else
+                                    {
+                                        <span>Update Checkout</span>
+                                    }
+                                </button>
+                            </div>
                         }
                     </ValidationEditContext>
                 }

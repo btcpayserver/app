@@ -22,7 +22,7 @@
 
 @if (_account != null)
 {
-    <section class="container">
+    <section class="container no-cta">
         <header class="d-flex align-items-center justify-content-between gap-3 my-4">
             <h1>Settings</h1>
             <AuthorizeView Policy="@AppPolicies.CanModifySettings">
@@ -240,13 +240,13 @@
                             <Icon Symbol="caret-right"/>
                         </a>
                     </li>
-                    <li class="list-group-item">
+                    @*<li class="list-group-item">
                         <a href="@Routes.ChangePasscode">
                             <Icon Symbol="key"/>
                             <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
                             <Icon Symbol="caret-right"/>
                         </a>
-                    </li>
+                    </li>*@
                     <li class="list-group-item">
                         <a href="@Routes.ChangePassword">
                             <Icon Symbol="dots" class="p-2"/>

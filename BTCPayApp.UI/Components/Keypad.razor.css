@@ -20,7 +20,7 @@
   border-color: transparent !important;
   font-weight: var(--btcpay-font-weight-bold);
   font-size: var(--icon-size);
-  min-height: 3.5rem;
+  min-height: 4rem;
   height: 8vh;
   max-height: 6rem;
   color: var(--btcpay-body-text);

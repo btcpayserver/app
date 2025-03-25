@@ -17,7 +17,7 @@
     </Titlebar>
 </SectionContent>
 
-<section class="container">
+<section class="container mt-4">
     <AuthorizeView Policy="@AppPolicies.CanModifySettings">
         <Authorized>
             @if (UserInfo is null)
@@ -64,18 +64,20 @@
                             }
                         </ul>
                     </InputRadioGroup>
-                    <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
-                        @if (_sending)
-                        {
-                            <LoadingIndicator />
-                        }
-                        else
-                        {
-                            <span>Select Store</span>
-                        }
-                    </button>
+                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                        <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
+                            @if (_sending)
+                            {
+                                <LoadingIndicator />
+                            }
+                            else
+                            {
+                                <span>Select Store</span>
+                            }
+                        </button>
+                    </div>
                 </ValidationEditContext>
-                <p class="mt-5 text-secondary text-center">In case you want to start with a blank slate, you can also create a new store for the app.</p>
+                <p class="mt-4 text-secondary text-center">In case you want to start with a blank slate, you can also create a new store for the app.</p>
                 <NavLink class="btn btn-outline-primary w-100" href="@GetCreateStoreUrl()" data-testid="CreateStoreButton">Create Store</NavLink>
             }
             else
@@ -147,6 +149,7 @@
 
         _errorMessage = null;
         _sending = true;
+        StateHasChanged();
 
         try
         {
@@ -165,6 +168,7 @@
         finally
         {
             _sending = false;
+            StateHasChanged();
         }
     }
 

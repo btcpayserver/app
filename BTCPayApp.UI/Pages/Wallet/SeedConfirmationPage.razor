@@ -57,9 +57,11 @@
                 }
                 @if (!Model.IsVerified)
                 {
-                    <button class="btn btn-primary w-100 rounded-pill" type="submit" disabled="@(!Model.AllFilled)">
-                        <span>Verify recovery phrase</span>
-                    </button>
+                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                        <button class="btn btn-primary w-100 rounded-pill" type="submit" disabled="@(!Model.AllFilled)">
+                            <span>Verify recovery phrase</span>
+                        </button>
+                    </div>
                 }
             </ValidationEditContext>
         </Authorized>

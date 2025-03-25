@@ -21,7 +21,7 @@
     </Titlebar>
 </SectionContent>
 
-<section class="container">
+<section class="container @(CanCheckout ? "" : "no-cta")">
     @if (string.IsNullOrEmpty(StoreId))
     {
         <section class="container">
@@ -38,6 +38,12 @@
                 }
                 @if (Invoice is not null)
                 {
+                    @if (CanCheckout)
+                    {
+                        <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                            <a class="btn btn-primary w-100" href="@Routes.CheckoutPath(Invoice.Id)">Checkout</a>
+                        </div>
+                    }
                     <div class="invoice">
                         <span>Invoice @Invoice.Id</span>
                         <div class="h3">
@@ -45,10 +51,6 @@
                         </div>
                         <div class="status d-flex flex-wrap align-items-center gap-2">
                             <InvoiceStatusDisplay Invoice="@Invoice"/>
-                            @if (Invoice.Status == InvoiceStatus.New)
-                            {
-                                <a href="@Routes.CheckoutPath(Invoice.Id)">Checkout</a>
-                            }
                         </div>
 
                         <h4 class="mt-4">General Information</h4>
@@ -102,7 +104,7 @@
                         }
                         @if (!string.IsNullOrEmpty(itemCode?.ToString()) || !string.IsNullOrEmpty(itemDesc?.ToString()) || taxIncluded is not null)
                         {
-                            <h4 class="mt-5">Product Information</h4>
+                            <h4 class="mt-4">Product Information</h4>
                             <div class="box">
                                 <table class="table my-0">
                                     <tbody>
@@ -150,7 +152,7 @@
                              !string.IsNullOrEmpty(buyerState?.ToString()) || !string.IsNullOrEmpty(buyerCountry?.ToString()) ||
                              !string.IsNullOrEmpty(buyerZip?.ToString()))
                         {
-                            <h4 class="mt-5">Buyer Information</h4>
+                            <h4 class="mt-4">Buyer Information</h4>
                             <div class="box">
                                 <table class="table my-0">
                                     <tbody>
@@ -250,10 +252,9 @@
                                 </div>
                             }
                         }
-
                     </div>
 
-                    <h4 class="mt-5">Payment Information</h4>
+                    <h4 class="mt-4">Payment Information</h4>
                     @if (!string.IsNullOrEmpty(PaymentMethodsError))
                     {
                         <Alert Type="danger">@PaymentMethodsError</Alert>
@@ -348,4 +349,5 @@
     }
 
     private string GetTitle() => $"Invoice {Invoice?.Id}".Trim();
+    private bool CanCheckout => Invoice is { Status: InvoiceStatus.New };
 }
