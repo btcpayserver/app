@@ -65,7 +65,7 @@
                         </ul>
                     </InputRadioGroup>
                     <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
-                        <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
+                        <button class="btn btn-primary w-100" type="submit" data-testid="SelectStoreButton" disabled="@(_validationEditContext?.Invalid is true || string.IsNullOrEmpty(Model.StoreId) || _sending)">
                             @if (_sending)
                             {
                                 <LoadingIndicator />
