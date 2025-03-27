@@ -147,7 +147,7 @@
                 <h2>Store</h2>
                 <div class="box">
                     <ul class="list-group list-group-flush list-group-links">
-                        @if (CurrentUser?.Stores?.Count() > 1 || CurrentStore == null)
+                        @if (CurrentUser?.Stores?.Count() > 0 || CurrentStore == null)
                         {
                             <li class="list-group-item">
                                 <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : "justify-content-start")">
@@ -183,8 +183,8 @@
                             <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id" Context="Store">
                                 <li class="list-group-item">
                                     <a href="@Routes.StorePath(CurrentStore.Id)">
-                                        <Icon Symbol="nav-store"/>
-                                        <span>@CurrentStore.Name</span>
+                                        <Icon Symbol="nav-store-settings"/>
+                                        <span>Store Settings</span>
                                         <Icon Symbol="caret-right"/>
                                     </a>
                                 </li>
