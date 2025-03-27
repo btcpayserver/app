@@ -53,7 +53,7 @@ public class CoreTests
         Assert.True(await node.AuthStateProvider.CheckAuthenticated());
         Assert.NotNull(node.AccountManager.Account?.OwnerToken);
 
-        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node.ConnectionManager.ConnectionState), 30_000);
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsPrimary, node.ConnectionManager.ConnectionState), 30_000);
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.NotConfigured, node.OnChainWalletManager.State));
 
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.WaitingForConnection, node.LNManager.State));
@@ -112,14 +112,14 @@ public class CoreTests
         Assert.True(await node2.App.Services.GetRequiredService<SyncService>().SetEncryptionKey((await node.OnChainWalletManager.GetConfig())!.Mnemonic));
 
         TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.Syncing, node2.ConnectionManager.ConnectionState));
-        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsSlave, node2.ConnectionManager.ConnectionState));
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsSecondary, node2.ConnectionManager.ConnectionState));
 
         var address = await node.OnChainWalletManager.DeriveScript(WalletDerivation.NativeSegwit);
 
-        await node.ConnectionManager.SwitchToSlave();
+        await node.ConnectionManager.SwitchToSecondary();
         _output.WriteLine("SLAVE CHECKPOINT");
-        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsSlave, node.ConnectionManager.ConnectionState));
-        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node2.ConnectionManager.ConnectionState));
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsSecondary, node.ConnectionManager.ConnectionState));
+        TestUtils.Eventually(() => Assert.Equal(BTCPayConnectionState.ConnectedAsPrimary, node2.ConnectionManager.ConnectionState));
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Loaded, node2.OnChainWalletManager.State));
         TestUtils.Eventually(() => Assert.Equal(LightningNodeState.Loaded, node2.LNManager.State));
 
@@ -232,7 +232,7 @@ public class CoreTests
         Assert.True((await node3.AccountManager.Register(btcpayUri.AbsoluteUri, username2, username2)).Succeeded);
         Assert.True(await node3.AuthStateProvider.CheckAuthenticated());
         TestUtils.Eventually(() =>
-            Assert.Equal(BTCPayConnectionState.ConnectedAsMaster, node3.ConnectionManager.ConnectionState));
+            Assert.Equal(BTCPayConnectionState.ConnectedAsPrimary, node3.ConnectionManager.ConnectionState));
         await node3.OnChainWalletManager.Generate();
         await node3.LNManager.Generate();
         TestUtils.Eventually(() => Assert.Equal(OnChainWalletState.Loaded, node3.OnChainWalletManager.State));

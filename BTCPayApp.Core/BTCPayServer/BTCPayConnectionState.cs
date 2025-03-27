@@ -8,7 +8,7 @@ public enum BTCPayConnectionState
     Connecting,
     Syncing,
     WaitingForEncryptionKey,
-    ConnectedAsMaster,
-    ConnectedAsSlave,
+    ConnectedAsPrimary,
+    ConnectedAsSecondary,
     ConnectedFinishedInitialSync
 }

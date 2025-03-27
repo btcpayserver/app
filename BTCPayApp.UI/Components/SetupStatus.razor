@@ -33,8 +33,8 @@
             BTCPayConnectionState.Connecting => SetupState.Pending,
             BTCPayConnectionState.Syncing => SetupState.Pending,
             BTCPayConnectionState.ConnectedFinishedInitialSync => SetupState.Pending,
-            BTCPayConnectionState.ConnectedAsMaster => SetupState.Completed,
-            BTCPayConnectionState.ConnectedAsSlave => SetupState.Completed,
+            BTCPayConnectionState.ConnectedAsPrimary => SetupState.Completed,
+            BTCPayConnectionState.ConnectedAsSecondary => SetupState.Completed,
             BTCPayConnectionState.Disconnected => SetupState.Failed,
             _ =>  SetupState.Undetermined
         };
