@@ -28,6 +28,8 @@ public static class Routes
     public const string AppLogs = "/settings/applogs";
     public const string SelectStore = "/settings/select-store";
     public const string Store = "/settings/store/{StoreId}";
+    public const string StoreUsers = "/settings/store/{StoreId}/users";
+    public const string StoreUser = "/settings/store/{StoreId}/users/{UserId}";
     public const string PosSettings = "/settings/pos/{AppId}";
     public const string NotificationSettings = "/settings/notifications";
     public const string WalletSettings = "/settings/wallet";
@@ -41,10 +43,15 @@ public static class Routes
     public const string Pairing = "/settings/pairing";
     public const string LightningSend = "/lightning/send";
     public const string LightningReceive = "/lightning/receive";
+    public const string ServerUsers = "/settings/server/users";
+    public const string ServerUser = "/settings/server/users/{UserId}";
 
     // paths with params
     public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);
+    public static string StoreUsersPath(string storeId) => StoreUsers.Replace("{StoreId}", storeId);
+    public static string StoreUserPath(string storeId, string userId) => StoreUser.Replace("{StoreId}", storeId).Replace("{UserId}", userId);
     public static string InvoicePath(string invoiceId) => Invoice.Replace("{InvoiceId}", invoiceId);
     public static string CheckoutPath(string invoiceId) => Checkout.Replace("{InvoiceId}", invoiceId);
     public static string PosSettingsPath(string appId) => PosSettings.Replace("{AppId}", appId);
+    public static string ServerUserPath(string userId) => ServerUser.Replace("{UserId}", userId);
 }

@@ -180,7 +180,7 @@
                         }
                         @if (CurrentStore != null)
                         {
-                            <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id" Context="Store">
+                            <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id" Context="store">
                                 <li class="list-group-item">
                                     <a href="@Routes.StorePath(CurrentStore.Id)">
                                         <Icon Symbol="nav-store-settings"/>
@@ -189,7 +189,14 @@
                                     </a>
                                 </li>
                             </AuthorizeView>
-                            <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id" Context="Store">
+                            <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id" Context="store">
+                                <li class="list-group-item">
+                                    <a href="@Routes.StoreUsersPath(CurrentStore.Id)">
+                                        <Icon Symbol="nav-account"/>
+                                        <span>Users</span>
+                                        <Icon Symbol="caret-right"/>
+                                    </a>
+                                </li>
                                 @if (CurrentStore.PosAppId != null)
                                 {
                                     <li class="list-group-item">

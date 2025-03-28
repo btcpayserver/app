@@ -652,9 +652,6 @@ public record StoreState
             dispatcher.Dispatch(new FetchRates(store));
             dispatcher.Dispatch(new FetchPointOfSale(posId));
             dispatcher.Dispatch(new FetchPointOfSaleStats(posId));
-            /* not needed currently
-            dispatcher.Dispatch(new FetchRoles(storeId));
-            dispatcher.Dispatch(new FetchUsers(storeId));*/
             return Task.CompletedTask;
         }
 
