@@ -1,0 +1,75 @@
+@attribute [Route(Routes.ServerUsers)]
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
+@using BTCPayServer.Client
+@using BTCPayServer.Client.Models
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IState<ServerState> ServerState
+@inject IDispatcher Dispatcher
+<PageTitle>Server Users</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back>
+        <h1>Server Users</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    <AuthorizeView Policy="@Policies.CanModifyServerSettings">
+        <Authorized>
+            @if (Users is not null)
+            {
+                @if (Users.Any())
+                {
+                    <div class="user-list">
+                        @foreach (var u in Users)
+                        {
+                            <a href="@Routes.ServerUserPath(u.Id)" class="user-item box">
+                                <span class="fw-semibold">@u.Email</span>
+                                @if (!string.IsNullOrEmpty(u.Name))
+                                {
+                                    <span class="text-muted">@u.Name</span>
+                                }
+                                <span class="badge bg-light">@string.Join(',', u.Roles)</span>
+                            </a>
+                        }
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(Error))
+                {
+                    <Alert Type="danger">@Error</Alert>
+                }
+                else
+                {
+                    <div class="box">
+                        <p class="text-muted my-0">There are no users, yet.</p>
+                    </div>
+                }
+            }
+            else if (Loading)
+            {
+                <div class="box">
+                    <div class="p-3 text-center">
+                        <LoadingIndicator/>
+                    </div>
+                </div>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
+</section>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        Dispatcher.Dispatch(new ServerState.FetchUsers());
+    }
+
+    private IEnumerable<ApplicationUserData>? Users => ServerState.Value.Users?.Data;
+    private bool Loading => ServerState.Value.Users?.Loading is true;
+    private string? Error => ServerState.Value.Users?.Error;
+}

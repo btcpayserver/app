@@ -263,6 +263,22 @@
                     </li>
                 </ul>
             </div>
+
+            <AuthorizeView Policy="@Policies.CanModifyServerSettings" Context="server">
+                <h2>Server</h2>
+                <div class="box">
+                    <ul class="list-group list-group-flush list-group-links">
+                        <li class="list-group-item">
+                            <a href="@Routes.ServerUsers">
+                                <Icon Symbol="nav-account"/>
+                                <span>Users</span>
+                                <Icon Symbol="caret-right"/>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </AuthorizeView>
+
             <h2>Debug</h2>
             <div class="box mb-2">
                 <ul class="list-group list-group-flush list-group-links">
