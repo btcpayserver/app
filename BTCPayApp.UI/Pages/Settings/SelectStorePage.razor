@@ -38,7 +38,7 @@
                 if (string.IsNullOrEmpty(_initialStoreId))
                 {
                     <p class="lead text-secondary mb-4 text-center">Select a store to begin accepting payments.</p>
-                    <style>#NavbarBottom { display: none; }</style>
+                    <style>#NavbarBottom { display: none; } #NavbarBottom ~ #MainContent { --cta-container-bottom: 0; }</style>
                 }
                 <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" ErrorMessage="@Error">
                     <DataAnnotationsValidator />

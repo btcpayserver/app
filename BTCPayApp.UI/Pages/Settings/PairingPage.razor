@@ -32,10 +32,7 @@
 <section class="container @(NeedsEncryptionKey ? "" : "no-cta")">
     @if (NeedsEncryptionKey)
     {
-        <style>
-            #NavbarBottom { display: none; }
-            #NavbarBottom ~ #MainContent { --cta-container-bottom: 0; }
-        </style>
+        <style>#NavbarBottom { display: none; } #NavbarBottom ~ #MainContent { --cta-container-bottom: 0; }</style>
         <p class="text-center">
             Open Settings > Security > Device Pairing on your primary device and scan or enter your encryption key.
         </p>
