@@ -9,6 +9,7 @@
 @inject IDispatcher Dispatcher
 @inject IAccountManager AccountManager
 @inject IActionSubscriber ActionSubscriber
+@inject IJSRuntime JS
 
 <PageTitle>@GetTitle()</PageTitle>
 
@@ -45,30 +46,44 @@
                 </div>
                 <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
                     <DataAnnotationsValidator/>
-                        <fieldset class="box">
-                            <div class="form-group">
-                                <label for="Role" class="form-label">Role</label>
-                                <InputSelect @bind-Value="Model.Role" id="Role" class="form-select">
-                                    @foreach (var r in Roles)
-                                    {
-                                        <option value="@r.Id" selected="@(Model.Role == r.Id)">@r.Role</option>
-                                    }
-                                </InputSelect>
-                                <ValidationMessage For="@(() => Model.Role)"/>
-                            </div>
-                        </fieldset>
-                        <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
-                            <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
-                                @if (_sending)
+                    <fieldset class="box">
+                        <div class="form-group">
+                            <label for="Role" class="form-label">Role</label>
+                            <InputSelect @bind-Value="Model.Role" id="Role" class="form-select">
+                                @foreach (var r in Roles)
                                 {
-                                    <LoadingIndicator/>
+                                    <option value="@r.Id" selected="@(Model.Role == r.Id)">@r.Role</option>
                                 }
-                                else
-                                {
-                                    <span>Update User</span>
-                                }
-                            </button>
+                            </InputSelect>
+                            <ValidationMessage For="@(() => Model.Role)"/>
                         </div>
+                    </fieldset>
+                    <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#RemoveUserModal">
+                        @if (_removing)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Remove User</span>
+                        }
+                    </button>
+                    <ConfirmModal id="RemoveUserModal"
+                                  Title="Remove User"
+                                  Description="@($"Do you really want to remove the user {User.Name ?? User.Email} from the store?")"
+                                  OnConfirm="RemoveUser"/>
+                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
+                            @if (_sending)
+                            {
+                                <LoadingIndicator/>
+                            }
+                            else
+                            {
+                                <span>Update User</span>
+                            }
+                        </button>
+                    </div>
                 </ValidationEditContext>
             }
         </Authorized>
@@ -88,6 +103,7 @@
     private string? _successMessage;
     private string? _errorMessage;
     private bool _sending;
+    private bool _removing;
     private StoreUserModel Model { get; set; } = new();
 
     protected override async Task OnInitializedAsync()
@@ -142,6 +158,25 @@
         finally
         {
             _sending = false;
+        }
+    }
+
+    private async Task RemoveUser()
+    {
+        _removing = true;
+
+        try
+        {
+            await AccountManager.GetClient().RemoveStoreUser(StoreId, UserId);
+            await JS.InvokeVoidAsync("history.back");
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        finally
+        {
+            _removing = false;
         }
     }
 

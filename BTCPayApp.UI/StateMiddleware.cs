@@ -173,6 +173,7 @@ public class StateMiddleware(
             var currentUserId = accountManager.UserInfo?.UserId;
             if (string.IsNullOrEmpty(currentUserId)) return;
             var currentStore = accountManager.CurrentStore;
+            var isCurrentUser = serverEvent.UserId == currentUserId;
             var isCurrentStore = serverEvent.StoreId != null && currentStore != null && serverEvent.StoreId == currentStore.Id;
             switch (serverEvent.Type)
             {
@@ -224,16 +225,13 @@ public class StateMiddleware(
                     if (serverEvent.StoreId != null)
                     {
                         await accountManager.CheckAuthenticated(true);
-                        if (currentStore == null || serverEvent.StoreId != currentStore.Id) return;
-                        if (serverEvent.Type is "store-removed" or "store-user-removed")
+                        if (currentStore == null || !isCurrentStore) return;
+                        if (serverEvent.Type is "store-user-removed" && isCurrentUser)
+                            await accountManager.SetCurrentStoreId(null);
+                        if (serverEvent.Type is "store-removed")
                             await accountManager.SetCurrentStoreId(null);
                         if (serverEvent.Type is "store-updated")
                             dispatcher.Dispatch(new StoreState.FetchStore(serverEvent.StoreId!));
-                        /* not needed currently
-                        if (serverEvent.Type.StartsWith("store-user-"))
-                            dispatcher.Dispatch(new StoreState.FetchUsers(serverEvent.StoreId!));
-                        if (serverEvent.Type.StartsWith("store-role-"))
-                            dispatcher.Dispatch(new StoreState.FetchRoles(serverEvent.StoreId!));*/
                     }
                     break;
             }
