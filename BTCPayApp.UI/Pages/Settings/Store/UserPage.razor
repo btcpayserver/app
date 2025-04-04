@@ -2,6 +2,7 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Util
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -15,7 +16,7 @@
 
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
-        <h1>@GetTitle()</h1>
+        <h1>Store User</h1>
     </Titlebar>
 </SectionContent>
 
@@ -37,12 +38,16 @@
             }
             else
             {
-                <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
-                    <h2 class="mb-0">@(User.Name ?? User.Email)</h2>
-                    @if (User.Role is not null)
-                    {
-                        <span class="badge bg-light">@User.Role</span>
-                    }
+                var status = UserHelper.GetUserStatus(User);
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <UserInfo Email="@User.Email" Name="@User.Name" ImageUrl="@User.ImageUrl" />
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        @if (User.StoreRole is not null)
+                        {
+                            <span class="badge bg-info">@User.StoreRole</span>
+                        }
+                        <span class="user-status badge bg-@status.Item2" text-translate="true">@status.Item1</span>
+                    </div>
                 </div>
                 <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
                     <DataAnnotationsValidator/>
@@ -98,6 +103,8 @@
     public string StoreId { get; set; } = null!;
     [Parameter, EditorRequired]
     public string UserId { get; set; } = null!;
+    [SupplyParameterFromQuery]
+    protected string? Success { get; set; }
 
     private ValidationEditContext? _validationEditContext;
     private string? _successMessage;
@@ -113,14 +120,14 @@
         ActionSubscriber.SubscribeToAction<StoreState.SetUsers>(this, action =>
         {
             if (action.Users == null) return;
-            Model.Role = User?.Role;
+            Model.Role = User?.StoreRole;
             InvokeAsync(StateHasChanged);
         });
 
         if (Users is null)
             Dispatcher.Dispatch(new StoreState.FetchUsers(StoreId));
         else
-            Model.Role = User?.Role;
+            Model.Role = User?.StoreRole;
 
         if (Roles is null)
             Dispatcher.Dispatch(new StoreState.FetchRoles(StoreId));
@@ -135,6 +142,14 @@
         return ValueTask.CompletedTask;
     }
 
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Success))
+        {
+            _successMessage = Uri.UnescapeDataString(Success);
+        }
+    }
+
     private async Task HandleValidSubmit()
     {
         _successMessage = _errorMessage = null;
@@ -144,8 +159,8 @@
         {
             var req = new StoreUserData
             {
-                UserId = UserId,
-                Role = Model.Role
+                Id = UserId,
+                StoreRole = Model.Role
             };
             await AccountManager.GetClient().UpdateStoreUser(StoreId, UserId, req);
             Dispatcher.Dispatch(new StoreState.FetchUsers(StoreId));
@@ -188,7 +203,7 @@
 
     private IEnumerable<RoleData>? Roles => StoreState.Value.Roles?.Data;
     private IEnumerable<StoreUserData>? Users => StoreState.Value.Users?.Data;
-    private StoreUserData? User => Users?.FirstOrDefault(u => u.UserId == UserId);
+    private StoreUserData? User => Users?.FirstOrDefault(u => u.Id == UserId);
     private bool Loading => StoreState.Value.Users?.Loading is true;
     private string? Error => _errorMessage ?? StoreState.Value.Users?.Error;
 

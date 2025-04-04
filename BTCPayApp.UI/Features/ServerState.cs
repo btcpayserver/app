@@ -77,7 +77,7 @@ public record ServerState
         }
     }
 
-    public class ServerEffects(IState<ServerState> state, IAccountManager accountManager)
+    public class ServerEffects(IAccountManager accountManager)
     {
         [EffectMethod]
         public async Task FetchRolesEffect(FetchRoles action, IDispatcher dispatcher)

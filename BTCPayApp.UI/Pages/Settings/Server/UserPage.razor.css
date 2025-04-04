@@ -1,20 +1,13 @@
 .user-list .user-item {
   display: flex;
-  flex-direction: column;
   flex-wrap: wrap;
-  gap: var(--btcpay-space-s);
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 0 !important;
+  gap: var(--btcpay-space-s);
   color: var(--btcpay-body-text);
 }
 
 .user-list .user-item + .user-item {
   margin-top: var(--btcpay-space-xs);
-}
-
-@media (min-width: 400px) {
-  .user-list .user-item {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
 }

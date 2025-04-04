@@ -1,0 +1,93 @@
+﻿@attribute [Route(Routes.InviteServerUser)]
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
+@using BTCPayServer.Client
+@using BTCPayServer.Client.Models
+@inject IAccountManager AccountManager
+@inject NavigationManager NavigationManager
+@inject IDispatcher Dispatcher
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>Invite User</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back>
+        <h1>Invite User</h1>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+    <AuthorizeView Policy="@Policies.CanModifyServerSettings">
+        <Authorized>
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage" class="box">
+                <DataAnnotationsValidator/>
+                <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                    <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
+                        @if (_sending)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Invite User</span>
+                        }
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label for="Email" class="form-label" data-required>Email</label>
+                    <InputText @bind-Value="Model.Email" id="Email" type="email" class="form-control"/>
+                    <ValidationMessage For="@(() => Model.Email)"/>
+                </div>
+                <div class="form-group">
+                    <label for="Name" class="form-label">Name</label>
+                    <InputText @bind-Value="Model.Name" id="Name" class="form-control"/>
+                    <ValidationMessage For="@(() => Model.Name)"/>
+                </div>
+            </ValidationEditContext>
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
+</section>
+
+@code {
+    private ValidationEditContext? _validationEditContext;
+    private InviteModel Model { get; set; } = new();
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _sending;
+
+    public async Task HandleValidSubmit()
+    {
+        _errorMessage = _successMessage = null;
+        _sending = true;
+
+        try
+        {
+            var request = new CreateApplicationUserRequest { Email = Model.Email, Name = Model.Name };
+            var user = await AccountManager.GetClient().CreateUser(request);
+            Dispatcher.Dispatch(new ServerState.FetchUsers());
+            Model = new InviteModel();
+
+            var param = new Dictionary<string, object?> { { "success", $"User {user.Email} successfully invited." } };
+            var userPage = NavigationManager.GetUriWithQueryParameters(Routes.ServerUserPath(user.Id), param);
+            NavigationManager.NavigateTo(userPage);
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+
+    private class InviteModel
+    {
+        [Required, EmailAddress]
+        public string? Email { get; set; }
+        public string? Name { get; set; }
+    }
+}

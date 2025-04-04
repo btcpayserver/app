@@ -117,14 +117,6 @@
   border-radius: var(--section-border-radius);
   box-shadow: var(--btcpay-box-shadow-lg);
 }
-.tile .buttons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--btcpay-space-m);
-}
-.tile > :last-child {
-  margin-bottom: 0;
-}
 
 @media (max-width: 400px) {
   .public-page-wrap {
@@ -181,12 +173,24 @@
   margin-bottom: 0;
 }
 
+.box .buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--btcpay-space-m);
+}
+
 /* Profile Picture */
 .profile-picture {
-  height: var(--profile-picture-size, 2.1rem);
-  width: var(--profile-picture-size, 2.1rem);
+  --profile-picture-size: 2rem;
+
+  height: var(--profile-picture-size);
+  width: var(--profile-picture-size);
   border-radius: 50%;
   object-fit: cover;
+}
+
+img.profile-picture {
+  padding: var(--btcpay-space-xs);
 }
 
 /* List Group */

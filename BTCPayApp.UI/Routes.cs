@@ -45,6 +45,7 @@ public static class Routes
     public const string LightningReceive = "/lightning/receive";
     public const string ServerUsers = "/settings/server/users";
     public const string ServerUser = "/settings/server/users/{UserId}";
+    public const string InviteServerUser = "/settings/server/invite-user";
 
     // paths with params
     public static string StorePath(string storeId) => Store.Replace("{StoreId}", storeId);

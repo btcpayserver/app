@@ -8,3 +8,7 @@
   --icon-size: 1.75rem;
   padding: 0;
 }
+
+.user ::deep .profile-picture {
+  --profile-picture-size: 3rem;
+}

@@ -1,6 +1,7 @@
 @attribute [Route(Routes.StoreUsers)]
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Util
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
@@ -25,13 +26,27 @@
                     <div class="user-list">
                         @foreach (var u in Users)
                         {
-                            <a href="@Routes.StoreUserPath(StoreId, u.UserId)" class="user-item box">
-                                <span class="fw-semibold">@u.Email</span>
-                                @if (!string.IsNullOrEmpty(u.Name))
-                                {
-                                    <span class="text-muted">@u.Name</span>
-                                }
-                                <span class="badge bg-light">@u.Role</span>
+                            var status = UserHelper.GetUserStatus(u);
+                            <a href="@Routes.StoreUserPath(StoreId, u.Id)" class="user-item box">
+                                <div class="d-flex align-items-center gap-2">
+                                    @if (!string.IsNullOrEmpty(u.ImageUrl))
+                                    {
+                                        <img src="@u.ImageUrl" alt="@(u.Name ?? u.Email)" class="profile-picture" />
+                                    }
+                                    else
+                                    {
+                                        <Icon Symbol="nav-account" class="profile-picture" />
+                                    }
+                                    <span class="fw-semibold">@u.Email</span>
+                                    @if (!string.IsNullOrEmpty(u.Name))
+                                    {
+                                        <span class="text-muted">@u.Name</span>
+                                    }
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between gap-2">
+                                    <span class="badge bg-info">@u.StoreRole</span>
+                                    <span class="user-status badge bg-@status.Item2" text-translate="true">@status.Item1</span>
+                                </div>
                             </a>
                         }
                     </div>
