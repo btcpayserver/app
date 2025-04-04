@@ -34,7 +34,7 @@
             }
             else if (Model.Notifications is not null)
             {
-                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
+                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error" class="box">
                     <DataAnnotationsValidator/>
                     @foreach (var item in Model.Notifications)
                     {
