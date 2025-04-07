@@ -1,7 +1,4 @@
-﻿using BTCPayApp.Core.Data;
-using BTCPayApp.Core.Extensions;
-using BTCPayApp.Core.Helpers;
-using BTCPayApp.Maui.Services;
+﻿using BTCPayApp.Core.Extensions;
 using BTCPayApp.UI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
@@ -40,7 +37,12 @@ public static class MauiProgram
                 })
                 .OnStop((activity) => { LogEvent(nameof(AndroidLifecycle.OnStop)); }).OnDestroy(activity =>
                 {
-                    IPlatformApplication.Current?.Services.GetRequiredService<HostedServiceInitializer>().Dispose();
+                    // This event is called whenever we use File.OpenReadStream().CopyToAsync(fs)
+                    // Immersive is being used to prevent the services from being disposed when the above method is used.
+                    if (activity.Immersive)
+                    {
+                        IPlatformApplication.Current?.Services.GetRequiredService<HostedServiceInitializer>().Dispose();
+                    }
                 }));
 #endif
 #if IOS
