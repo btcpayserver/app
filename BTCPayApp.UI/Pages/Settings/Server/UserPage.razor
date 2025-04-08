@@ -57,7 +57,7 @@
                 {
                     <Alert Type="success">@_successMessage</Alert>
                 }
-                @if (!string.IsNullOrEmpty(User.InvitationUrl))
+                if (!string.IsNullOrEmpty(User.InvitationUrl))
                 {
                     <div class="box">
                         <QrCode Data="@User.InvitationUrl" class="qr-code rounded mb-3"/>
@@ -68,58 +68,61 @@
                         </div>
                     </div>
                 }
-                <div class="box">
-                    <div class="buttons">
-                        @if (User.RequiresApproval)
-                        {
-                            var buttonClass = User.Approved ? "btn-warning" : "btn-primary";
-                            <button class="btn @buttonClass w-100" type="button" data-bs-toggle="modal" data-bs-target="#ToggleApproveUserModal">
-                                @if (_approving)
+                if (User.Id != AccountManager.UserInfo?.UserId)
+                {
+                    <div class="box">
+                        <div class="buttons">
+                            @if (User.RequiresApproval)
+                            {
+                                var buttonClass = User.Approved ? "btn-warning" : "btn-primary";
+                                <button class="btn @buttonClass w-100" type="button" data-bs-toggle="modal" data-bs-target="#ToggleApproveUserModal">
+                                    @if (_approving)
+                                    {
+                                        <LoadingIndicator/>
+                                    }
+                                    else
+                                    {
+                                        <span>@(User.Approved ? "Unapprove" : "Approve") User</span>
+                                    }
+                                </button>
+                                <ConfirmModal id="ToggleApproveUserModal"
+                                              Title="Approve User"
+                                              Description="@($"Do you really want to {(User.Approved ? "unapprove" : "approve")} the user {User.Name ?? User.Email}?")"
+                                              ButtonClass="@buttonClass"
+                                              OnConfirm="ApproveUser"/>
+                            }
+                            <button class="btn btn-outline-warning w-100" type="button" data-bs-toggle="modal" data-bs-target="#ToggleUserModal">
+                                @if (_toggling)
                                 {
                                     <LoadingIndicator/>
                                 }
                                 else
                                 {
-                                    <span>@(User.Approved ? "Unapprove" : "Approve") User</span>
+                                    <span>@(User.Disabled ? "Enable" : "Disable") User</span>
                                 }
                             </button>
-                            <ConfirmModal id="ToggleApproveUserModal"
-                                          Title="Approve User"
-                                          Description="@($"Do you really want to {(User.Approved ? "unapprove" : "approve")} the user {User.Name ?? User.Email}?")"
-                                          ButtonClass="@buttonClass"
-                                          OnConfirm="ApproveUser"/>
-                        }
-                        <button class="btn btn-outline-warning w-100" type="button" data-bs-toggle="modal" data-bs-target="#ToggleUserModal">
-                            @if (_toggling)
-                            {
-                                <LoadingIndicator/>
-                            }
-                            else
-                            {
-                                <span>@(User.Disabled ? "Enable" : "Disable") User</span>
-                            }
-                        </button>
-                        <ConfirmModal id="ToggleUserModal"
-                                      Title="@(User.Disabled ? "Enable User" : "Disable User")"
-                                      Description="@($"Do you really want to {(User.Disabled ? "enable" : "disable")} the user {User.Name ?? User.Email}?")"
-                                      ButtonClass="btn-warning"
-                                      OnConfirm="ToggleUser"/>
-                        <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#DeleteUserModal">
-                            @if (_removing)
-                            {
-                                <LoadingIndicator/>
-                            }
-                            else
-                            {
-                                <span>Delete User</span>
-                            }
-                        </button>
-                        <ConfirmModal id="DeleteUserModal"
-                                      Title="Delete User"
-                                      Description="@($"Do you really want to delete the user {User.Name ?? User.Email}?")"
-                                      OnConfirm="DeleteUser"/>
+                            <ConfirmModal id="ToggleUserModal"
+                                          Title="@(User.Disabled ? "Enable User" : "Disable User")"
+                                          Description="@($"Do you really want to {(User.Disabled ? "enable" : "disable")} the user {User.Name ?? User.Email}?")"
+                                          ButtonClass="btn-warning"
+                                          OnConfirm="ToggleUser"/>
+                            <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#DeleteUserModal">
+                                @if (_removing)
+                                {
+                                    <LoadingIndicator/>
+                                }
+                                else
+                                {
+                                    <span>Delete User</span>
+                                }
+                            </button>
+                            <ConfirmModal id="DeleteUserModal"
+                                          Title="Delete User"
+                                          Description="@($"Do you really want to delete the user {User.Name ?? User.Email}?")"
+                                          OnConfirm="DeleteUser"/>
+                        </div>
                     </div>
-                </div>
+                }
             }
         </Authorized>
         <NotAuthorized>
