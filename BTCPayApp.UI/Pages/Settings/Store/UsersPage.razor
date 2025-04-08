@@ -1,11 +1,15 @@
 @attribute [Route(Routes.StoreUsers)]
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.Models
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IState<UIState> UIState
 @inject IState<StoreState> StoreState
+@inject IAccountManager AccountManager
 @inject IDispatcher Dispatcher
 
 <PageTitle>Store Users</PageTitle>
@@ -61,6 +65,12 @@
                         <p class="text-muted my-0">There are no users, yet.</p>
                     </div>
                 }
+                if (_canInvite)
+                {
+                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                        <a class="btn btn-primary w-100" href="@Routes.InviteStoreUserPath(StoreId)">Invite User</a>
+                    </div>
+                }
             }
             else if (Loading)
             {
@@ -81,13 +91,18 @@
     [Parameter, EditorRequired]
     public string StoreId { get; set; } = null!;
 
+    private bool _canInvite;
+
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
 
+        _canInvite = await AccountManager.IsAuthorized(Policies.CanCreateUser) || InstanceInfo?.RegistrationEnabled is true;
+
         Dispatcher.Dispatch(new StoreState.FetchUsers(StoreId));
     }
 
+    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
     private IEnumerable<StoreUserData>? Users => StoreState.Value.Users?.Data;
     private bool Loading => StoreState.Value.Users?.Loading is true;
     private string? Error => StoreState.Value.Users?.Error;

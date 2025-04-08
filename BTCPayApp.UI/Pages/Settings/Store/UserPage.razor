@@ -63,6 +63,17 @@
                             <ValidationMessage For="@(() => Model.Role)"/>
                         </div>
                     </fieldset>
+                    @if (!string.IsNullOrEmpty(User.InvitationUrl))
+                    {
+                        <div class="box">
+                            <QrCode Data="@User.InvitationUrl" class="qr-code rounded mb-3"/>
+                            <div class="form-floating form-group">
+                                <TruncateCenter Text="@User.InvitationUrl" Padding="10" Copy="true" Elastic="true"
+                                                class="form-control-plaintext"/>
+                                <label>Invitation URL</label>
+                            </div>
+                        </div>
+                    }
                     <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#RemoveUserModal">
                         @if (_removing)
                         {

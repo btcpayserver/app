@@ -1,0 +1,151 @@
+﻿@attribute [Route(Routes.InviteStoreUser)]
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.Models
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
+@using BTCPayServer.Client
+@using BTCPayServer.Client.Models
+@inject IState<UIState> UIState
+@inject IState<StoreState> StoreState
+@inject IAccountManager AccountManager
+@inject NavigationManager NavigationManager
+@inject IDispatcher Dispatcher
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+
+<PageTitle>Invite User</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back>
+        <h1>Invite User</h1>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@StoreId">
+        <Authorized>
+            @if (Roles is null)
+            {
+                if (Loading)
+                {
+                    <div class="p-3 text-center">
+                        <LoadingIndicator/>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(Error))
+                {
+                    <Alert Type="danger">@Error</Alert>
+                }
+            }
+            else
+            {
+                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error" class="box">
+                    <DataAnnotationsValidator/>
+                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
+                            @if (_sending)
+                            {
+                                <LoadingIndicator/>
+                            }
+                            else
+                            {
+                                <span>Invite User</span>
+                            }
+                        </button>
+                    </div>
+                    <div class="form-group">
+                        <label for="Email" class="form-label" data-required>Email</label>
+                        <InputText @bind-Value="Model.Email" id="Email" type="email" class="form-control"/>
+                        <ValidationMessage For="@(() => Model.Email)"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="Role" class="form-label">Role</label>
+                        <InputSelect @bind-Value="Model.Role" id="Role" class="form-select">
+                            @foreach (var r in Roles)
+                            {
+                                <option value="@r.Id" selected="@(Model.Role == r.Id)">@r.Role</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="@(() => Model.Role)"/>
+                    </div>
+                </ValidationEditContext>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string StoreId { get; set; } = null!;
+
+    private ValidationEditContext? _validationEditContext;
+    private InviteModel Model { get; set; } = new();
+    private string? _errorMessage;
+    private string? _successMessage;
+    private bool _sending;
+    private bool _canInvite;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        _canInvite = await AccountManager.IsAuthorized(Policies.CanCreateUser) || InstanceInfo?.RegistrationEnabled is true;
+
+        if (Roles is null)
+            Dispatcher.Dispatch(new StoreState.FetchRoles(StoreId));
+    }
+
+    public async Task HandleValidSubmit()
+    {
+        _errorMessage = _successMessage = null;
+        _sending = true;
+
+        try
+        {
+            await AddStoreUser();
+        }
+        catch (GreenfieldAPIException e) when (e.Message.Contains("not found") && _canInvite)
+        {
+            // user isn't registered yet, we need to create them first
+            var request = new CreateApplicationUserRequest { Email = Model.Email };
+            await AccountManager.GetClient().CreateUser(request);
+            await AddStoreUser();
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+
+    private async Task AddStoreUser()
+    {
+        var data = new StoreUserData { Id = Model.Email, StoreRole = Model.Role };
+        await AccountManager.GetClient().AddStoreUser(StoreId, data);
+        Dispatcher.Dispatch(new StoreState.FetchUsers(StoreId));
+        var users = await AccountManager.GetClient().GetStoreUsers(StoreId);
+        var user = users.First(u => u.Email == Model.Email);
+        Model = new InviteModel();
+
+        var param = new Dictionary<string, object?> { { "success", $"User {user.Email} successfully invited." } };
+        var userPage = NavigationManager.GetUriWithQueryParameters(Routes.StoreUserPath(StoreId, user.Id), param);
+        NavigationManager.NavigateTo(userPage);
+    }
+
+    private class InviteModel
+    {
+        [Required, EmailAddress]
+        public string? Email { get; set; }
+        [Required]
+        public string? Role { get; set; }
+    }
+
+    private AppInstanceInfo? InstanceInfo => UIState.Value.Instance?.Data;
+    private IEnumerable<RoleData>? Roles => StoreState.Value.Roles?.Data;
+    private bool Loading => StoreState.Value.Roles?.Loading is true;
+    private string? Error => _errorMessage ?? StoreState.Value.Roles?.Error;
+}
