@@ -14,7 +14,7 @@
     <ApplicationTitle>BTCPay Server</ApplicationTitle>
 
     <!-- App Identifier -->
-    <ApplicationId>org.btcpayserver.BTCPayApp</ApplicationId>
+    <ApplicationId>org.btcpayserver.BTCPayApp.test</ApplicationId>
     <ApplicationIdGuid>8DD71ACC-C78F-44AB-937A-6B3A19D7E78E</ApplicationIdGuid>
     <RunAOTCompilation>false</RunAOTCompilation>
 
@@ -53,6 +53,16 @@
     <AndroidSigningKeyAlias>btcpayapp</AndroidSigningKeyAlias>
     <AndroidSigningKeyPass>env:ANDROID_SIGNING_PASSWORD</AndroidSigningKeyPass>
     <AndroidSigningStorePass>env:ANDROID_SIGNING_PASSWORD</AndroidSigningStorePass>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net8.0-android|AnyCPU'">
+    <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net8.0-android|AnyCPU'">
+    <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
+    <DebugSymbols>False</DebugSymbols>
+    <AndroidKeyStore>False</AndroidKeyStore>
   </PropertyGroup>
 
   <ItemGroup>
