@@ -5,12 +5,13 @@
 @using BTCPayApp.UI.Features
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IState<UIState> UIState
 @inject IState<StoreState> StoreState
 @inject IAccountManager AccountManager
 @inject NavigationManager NavigationManager
 @inject IDispatcher Dispatcher
-@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IActionSubscriber ActionSubscriber
 
 <PageTitle>Invite User</PageTitle>
 
@@ -92,8 +93,24 @@
 
         _canInvite = await AccountManager.IsAuthorized(Policies.CanCreateUser) || InstanceInfo?.RegistrationEnabled is true;
 
+        ActionSubscriber.SubscribeToAction<StoreState.SetRoles>(this, action =>
+        {
+            if (action.Roles == null) return;
+            Model.Role ??= action.Roles.FirstOrDefault()?.Id;
+            InvokeAsync(StateHasChanged);
+        });
+
         if (Roles is null)
             Dispatcher.Dispatch(new StoreState.FetchRoles(StoreId));
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        ActionSubscriber.UnsubscribeFromAllActions(this);
+
+        return ValueTask.CompletedTask;
     }
 
     public async Task HandleValidSubmit()
