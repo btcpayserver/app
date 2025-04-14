@@ -355,7 +355,7 @@
             var result = await Node.PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
             if (result is not null)
             {
-                _peers = await GetPeers(_config.Peers);
+                _peers = await GetPeers(_config!.Peers);
                 ConnectSuccessMessage = $"Connection to {PeerModel.PeerUrl} initiated";
                 PeerModel = new ConnectPeerModel();
             }

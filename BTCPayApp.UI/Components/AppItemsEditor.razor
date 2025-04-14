@@ -222,6 +222,7 @@
 
     private async Task LoadImage(InputFileChangeEventArgs e)
     {
+        if (SelectedItem == null) return;
         if (e.File.Size > 512000)
         {
             SelectedItem.ImagePath = null;
@@ -240,7 +241,7 @@
             await using FileStream fs = new(filePath, FileMode.Create);
             await e.File.OpenReadStream().CopyToAsync(fs);
             await fs.FlushAsync();
-            SelectedItem!.ImagePath = filePath;
+            SelectedItem.ImagePath = filePath;
             _errorMessage = null;
         }
         catch (Exception ex)
