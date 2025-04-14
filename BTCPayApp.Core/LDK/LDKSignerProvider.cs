@@ -21,12 +21,12 @@ public class LDKSignerProvider : SignerProviderInterface
         return _innerSigner.generate_channel_keys_id(inbound, channel_value_satoshis, user_channel_id);
     }
 
-    public WriteableEcdsaChannelSigner derive_channel_signer(long channel_value_satoshis, byte[] channel_keys_id)
+    public EcdsaChannelSigner derive_channel_signer(long channel_value_satoshis, byte[] channel_keys_id)
     {
         return _innerSigner.derive_channel_signer(channel_value_satoshis, channel_keys_id);
     }
 
-    public Result_WriteableEcdsaChannelSignerDecodeErrorZ read_chan_signer(byte[] reader)
+    public Result_EcdsaChannelSignerDecodeErrorZ read_chan_signer(byte[] reader)
     {
         return _innerSigner.read_chan_signer(reader);
     }
@@ -41,16 +41,13 @@ public class LDKSignerProvider : SignerProviderInterface
     {
         var script = _ldkNode.DeriveScript().GetAwaiter().GetResult();
 
-
         if (!script.IsScriptType(ScriptType.Witness))
-        { throw new NotSupportedException("Generated a non witness script."); }
-
+            throw new NotSupportedException("Generated a non witness script.");
 
         var witnessParams = PayToWitTemplate.Instance.ExtractScriptPubKeyParameters2(script);
-        var result = ShutdownScript.new_witness_program(new WitnessProgram(witnessParams.Program,
-            new WitnessVersion((byte) witnessParams.Version)));
-        if(result is Result_ShutdownScriptInvalidShutdownScriptZ.Result_ShutdownScriptInvalidShutdownScriptZ_OK ok)
-            return Result_ShutdownScriptNoneZ.ok(ok.res);
-        return Result_ShutdownScriptNoneZ.err();
+        var result = ShutdownScript.new_witness_program(new WitnessProgram(witnessParams.Program, new WitnessVersion((byte) witnessParams.Version)));
+        return result is Result_ShutdownScriptInvalidShutdownScriptZ.Result_ShutdownScriptInvalidShutdownScriptZ_OK ok
+            ? Result_ShutdownScriptNoneZ.ok(ok.res)
+            : Result_ShutdownScriptNoneZ.err();
     }
 }

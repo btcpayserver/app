@@ -31,17 +31,16 @@ public static class ChannelManagerHelper
         }).ToArray();
     }
 
-
     public static ChannelManager? Load(ChannelMonitor[] channelMonitors, byte[] channelManagerSerialized,
         EntropySource entropySource, SignerProvider signerProvider,
         NodeSigner nodeSigner, FeeEstimator feeEstimator,
         Watch watch, BroadcasterInterface txBroadcaster,
-        Router router, Logger logger, UserConfig config, Filter filter)
+        Router router, MessageRouter messageRouter, Logger logger, UserConfig config, Filter filter)
     {
         var resManager = UtilMethods.C2Tuple_ThirtyTwoBytesChannelManagerZ_read(channelManagerSerialized, entropySource,
             nodeSigner, signerProvider, feeEstimator,
             watch, txBroadcaster,
-            router, logger, config, channelMonitors);
+            router, messageRouter, logger, config, channelMonitors);
         if (!resManager.is_ok())
         {
             throw new SerializationException("Serialized ChannelManager was corrupt");

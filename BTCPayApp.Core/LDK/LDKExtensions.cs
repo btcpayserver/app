@@ -97,6 +97,7 @@ public static class LDKExtensions
             var watch = provider.GetRequiredService<Watch>();
             var broadcasterInterface = provider.GetRequiredService<BroadcasterInterface>();
             var router = provider.GetRequiredService<Router>();
+            var messageRouter = provider.GetRequiredService<MessageRouter>();
             var logger = provider.GetRequiredService<Logger>();
             var signerProvider = provider.GetRequiredService<SignerProvider>();
             var userConfig = provider.GetRequiredService<UserConfig>();
@@ -114,10 +115,10 @@ public static class LDKExtensions
             {
                 return ChannelManagerHelper.Load(channelManagerSerialized.Value.channelMonitors,
                     channelManagerSerialized.Value.serializedChannelManager, entropySource, signerProvider, nodeSigner,
-                    feeEstimator, watch, broadcasterInterface, router, logger, userConfig, filter);
+                    feeEstimator, watch, broadcasterInterface, router, messageRouter, logger, userConfig, filter);
             }
 
-            return ChannelManager.of(feeEstimator, watch, broadcasterInterface, router, logger, entropySource,
+            return ChannelManager.of(feeEstimator, watch, broadcasterInterface, router, messageRouter, logger, entropySource,
                 nodeSigner, signerProvider, userConfig, chainParameters,
                 (int) DateTimeOffset.Now.ToUnixTimeSeconds());
         });
@@ -131,9 +132,12 @@ public static class LDKExtensions
             provider.GetRequiredService<EntropySource>()));
         services.AddScoped(provider => provider.GetRequiredService<P2PGossipSync>().as_RoutingMessageHandler());
         services.AddScoped(provider => provider.GetRequiredService<DefaultMessageRouter>().as_MessageRouter());
-        services.AddScoped(provider => IgnoringMessageHandler.of().as_CustomOnionMessageHandler());
-        services.AddScoped(provider => IgnoringMessageHandler.of().as_CustomMessageHandler());
-        services.AddScoped<NodeIdLookUp>(provider => EmptyNodeIdLookUp.of().as_NodeIdLookUp());
+        services.AddScoped(_ => IgnoringMessageHandler.of().as_CustomOnionMessageHandler());
+        services.AddScoped(_ => IgnoringMessageHandler.of().as_CustomMessageHandler());
+        services.AddScoped(_ => IgnoringMessageHandler.of().as_DNSResolverMessageHandler());
+        services.AddScoped(_ => IgnoringMessageHandler.of().as_AsyncPaymentsMessageHandler());
+        services.AddScoped(_ => EmptyNodeIdLookUp.of().as_NodeIdLookUp());
+
         services.AddScoped<OnionMessenger>(provider =>
             OnionMessenger.of(
                 provider.GetRequiredService<EntropySource>(),
@@ -142,8 +146,9 @@ public static class LDKExtensions
                 provider.GetRequiredService<NodeIdLookUp>(),
                 provider.GetRequiredService<MessageRouter>(),
                 provider.GetRequiredService<OffersMessageHandler>(),
+                provider.GetRequiredService<AsyncPaymentsMessageHandler>(),
+                provider.GetRequiredService<DNSResolverMessageHandler>(),
                 provider.GetRequiredService<CustomOnionMessageHandler>()));
-
 
         services.AddScoped(provider => provider.GetRequiredService<OnionMessenger>().as_OnionMessageHandler());
         services.AddScoped<LDKBroadcaster>();
@@ -302,8 +307,6 @@ public static class LDKExtensions
             provider.GetRequiredService<LockableScore>(),
             ProbabilisticScoringFeeParameters.with_default()));
         services.AddScoped<Router>(provider => provider.GetRequiredService<DefaultRouter>().as_Router());
-
-
         services.AddScoped<VoltageFlow2Jit>();
         services.AddScoped<OlympusFlow2Jit>();
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
@@ -314,7 +317,7 @@ public static class LDKExtensions
         return services;
     }
 
-    public static IServiceCollection AddLDKEventHandler<T>(this IServiceCollection services)
+    private static IServiceCollection AddLDKEventHandler<T>(this IServiceCollection services)
         where T : class, ILDKEventHandler
     {
         services.TryAddScoped<T>();
@@ -322,8 +325,7 @@ public static class LDKExtensions
         return services;
     }
 
-
-    public static org.ldk.enums.Network GetLdkNetwork(this Network network)
+    private static org.ldk.enums.Network GetLdkNetwork(this Network network)
     {
         return network.ChainName switch
         {

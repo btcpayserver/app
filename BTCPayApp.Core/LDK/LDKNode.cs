@@ -125,32 +125,24 @@ public partial class LDKNode :
         }
     }
 
-
-    public async Task CloseChannel(ChannelId channelId, PubKey counterparty, bool force)
+    public Task CloseChannel(ChannelId channelId, PubKey counterparty, bool force)
     {
         var channelManager = ServiceProvider.GetRequiredService<ChannelManager>();
-        Result_NoneAPIErrorZ? result = null;
-        if (force)
-        {
-            result = channelManager.force_close_broadcasting_latest_txn(channelId, counterparty.ToBytes());
-        }
-        else
-        {
-            result =  channelManager.close_channel(channelId, counterparty.ToBytes());
+        var result = force
+            ? channelManager.force_close_broadcasting_latest_txn(channelId, counterparty.ToBytes(), "User-initiated force-close in unconnected channel state")
+            : channelManager.close_channel(channelId, counterparty.ToBytes());
 
-        }
-        if(result.is_ok())
+        var chanId = Convert.ToHexString(channelId.get_a()).ToLowerInvariant();
+        if (result.is_ok())
         {
-            _logger.LogInformation($"Channel {Convert.ToHexString(channelId.get_a()).ToLowerInvariant()} closed");
-            return;
+            _logger.LogInformation("Channel {ChannelId} {Action}", chanId, force ? "force closed" : "closed");
         }
-        if(result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_Err e && e.err.GetError() is  var message)
+        if (result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_Err e && e.err.GetError() is var message)
         {
-            _logger.LogError($"Error closing channel {Convert.ToHexString(channelId.get_a()).ToLowerInvariant()}: {message}");
+            _logger.LogError("Error {Action} channel {ChannelId}: {Message}", force ? "force closing" : "closing", chanId, message);
         }
-
+        return Task.CompletedTask;
     }
-
 
     public async Task<IJITService?> GetJITLSPService()
     {
@@ -538,8 +530,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             await context.LightningChannels.AddAsync(channel);
         }
 
-        channel.AdditionalData =  JsonSerializer.SerializeToNode(channel.AdditionalData)!.MergeDictionary(data).Deserialize<Dictionary<string, JsonElement>>();
+        channel.AdditionalData = JsonSerializer.SerializeToNode(channel.AdditionalData)!.MergeDictionary(data).Deserialize<Dictionary<string, JsonElement>>();
         await context.SaveChangesAsync();
     }
-
 }

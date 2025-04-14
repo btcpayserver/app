@@ -44,14 +44,12 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
         return Task.CompletedTask;
     }
 
-    public ChannelMonitorUpdateStatus persist_new_channel(OutPoint channelFundingOutpoint, ChannelMonitor data,
-        MonitorUpdateId update_id)
+    public ChannelMonitorUpdateStatus persist_new_channel(OutPoint channelFundingOutpoint, ChannelMonitor data)
     {
         try
         {
-            _logger.LogDebug("Persisting new channel, outpoint: {Outpoint}, updateid: {Hash}", channelFundingOutpoint.Outpoint(), update_id.hash());
-
-            var updateId = update_id.hash();
+            var updateId = data.get_latest_update_id();
+            _logger.LogDebug("Persisting new channel, outpoint: {Outpoint}, updateId: {UpdateId}", channelFundingOutpoint.Outpoint(), updateId);
 
             var taskResult = updateTasks.GetOrAdd(updateId, async l =>
             {
@@ -86,7 +84,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
                 }
 
                 // var trackTask = _node.TrackScripts(outs).ContinueWith(task => _logger.LogDebug($"Tracking scripts finished for  updateid: {update_id.hash()}"));;
-                var updateTask = _node.UpdateChannel(identifiers, data.write(), updateId).ContinueWith(task => _logger.LogDebug("Updating channel finished for  updateid: {Hash}", update_id.hash()));;
+                var updateTask = _node.UpdateChannel(identifiers, data.write(), updateId).ContinueWith(task => _logger.LogDebug("Updating channel finished for  updateId: {UpdateId}", updateId));
                 await updateTask;
                 // _logger.LogDebug("channel updated to local, waiting for remote sync to finish");
                 // await _updateTaskCompletionSources[updateId].Task;
@@ -95,10 +93,9 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
                 {
                     try
                     {
-                        _logger.LogDebug("Calling channel_monitor_updated, outpoint: {Outpoint}, updateid: {Hash}", channelFundingOutpoint.Outpoint(), update_id.hash());
-                        _serviceProvider.GetRequiredService<ChainMonitor>()
-                            .channel_monitor_updated(channelFundingOutpoint, update_id);
-                        _logger.LogDebug("Persisted new channel, outpoint: {Outpoint}, updateid: {Hash}", channelFundingOutpoint.Outpoint(), update_id.hash());
+                        _logger.LogDebug("Calling channel_monitor_updated, outpoint: {Outpoint}, updateId: {UpdateId}", channelFundingOutpoint.Outpoint(), updateId);
+                        _serviceProvider.GetRequiredService<ChainMonitor>().channel_monitor_updated(channelFundingOutpoint, updateId);
+                        _logger.LogDebug("Persisted new channel, outpoint: {Outpoint}, updateId: {UpdateId}", channelFundingOutpoint.Outpoint(), updateId);
                         updateTasks.TryRemove(updateId, out _);
                     }
                     catch (Exception e)
@@ -119,10 +116,8 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
             if (taskResult.IsCompleted)
             {
-
                 updateTasks.TryRemove(updateId, out _);
                 return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_Completed;
-
             }
 
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_InProgress;
@@ -131,15 +126,11 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
         {
             return ChannelMonitorUpdateStatus.LDKChannelMonitorUpdateStatus_UnrecoverableError;
         }
-
     }
 
-
-    public ChannelMonitorUpdateStatus update_persisted_channel(OutPoint channelFundingOutpoint, ChannelMonitorUpdate update,
-        ChannelMonitor data, MonitorUpdateId update_id)
+    public ChannelMonitorUpdateStatus update_persisted_channel(OutPoint channelFundingOutpoint, ChannelMonitorUpdate update, ChannelMonitor data)
     {
-
-        var updateId = update_id.hash();
+        var updateId = update.get_update_id();
 
         _updateTaskCompletionSources.TryAdd(updateId, new TaskCompletionSource());
         var taskResult = updateTasks.GetOrAdd(updateId, async l =>
@@ -175,14 +166,11 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
             await AsyncExtensions.RunInOtherThread(() =>
             {
-                _logger.LogDebug("Calling channel_monitor_updated, outpoint: {Outpoint}, updateid: {Hash}", channelFundingOutpoint.Outpoint(), update_id.hash());
-
-                _serviceProvider.GetRequiredService<ChainMonitor>()
-                    .channel_monitor_updated(channelFundingOutpoint, update_id);
-                _logger.LogDebug("Persisted update channel, outpoint: {Outpoint}, updateid: {Hash}", channelFundingOutpoint.Outpoint(), update_id.hash());
+                _logger.LogDebug("Calling channel_monitor_updated, outpoint: {Outpoint}, updateId: {UpdateId}", channelFundingOutpoint.Outpoint(), updateId);
+                _serviceProvider.GetRequiredService<ChainMonitor>().channel_monitor_updated(channelFundingOutpoint, updateId);
+                _logger.LogDebug("Persisted update channel, outpoint: {Outpoint}, updateId: {UpdateId}", channelFundingOutpoint.Outpoint(), updateId);
                 updateTasks.TryRemove(updateId, out _);
             });
-
         });
 
         if (taskResult.IsFaulted)

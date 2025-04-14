@@ -33,16 +33,17 @@ public class LDKAnnouncementBroadcaster : IScopedHostedService, ILDKEventHandler
     {
         while (cancellationToken.IsCancellationRequested == false)
         {
-            var channels = (await _ldkNode.GetChannels(cancellationToken)).Where(pair => pair.Value.channelDetails is not null)
+            var channels = (await _ldkNode.GetChannels(cancellationToken) ?? [])
+                .Where(pair => pair.Value.channelDetails is not null)
                 .Select(pair => pair.Value.channelDetails!).ToList();
 
-            if (channels.Any(details => details.get_is_public()))
+            if (channels.Any(details => details.get_is_announced()))
             {
                 var endpoint = _ldkPeerHandler.Endpoint?.Endpoint();
                 var config = await _ldkNode.GetConfig();
                 var alias = config.Alias;
                 _peerManager.broadcast_node_announcement(config.RGB,
-                    Encoding.UTF8.GetBytes(alias), endpoint is null ? Array.Empty<SocketAddress>() : new[] {endpoint});
+                    Encoding.UTF8.GetBytes(alias), endpoint is null ? [] : [endpoint]);
             }
 
             _tcs = new TaskCompletionSource();

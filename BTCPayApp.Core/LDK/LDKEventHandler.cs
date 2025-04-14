@@ -14,19 +14,20 @@ public class LDKEventHandler : EventHandlerInterface
         _ldkWalletLogger = ldkWalletLogger;
     }
 
-    public void handle_event(Event _event)
+    public Result_NoneReplayEventZ handle_event(Event @event)
     {
-        _ldkWalletLogger.LogInformation($"Received event {_event.GetType()}");
-        _eventHandlers.AsParallel().ForAll(async handler =>
+        _ldkWalletLogger.LogInformation("Received event {Type}", @event.GetType());
+        _eventHandlers.AsParallel().ForAll(async void (handler) =>
         {
             try
             {
-                await handler.Handle(_event);
+                await handler.Handle(@event);
             }
             catch (Exception ex)
             {
-                _ldkWalletLogger.LogError(ex, $"Error handling event {_event.GetType()} with handler {handler.GetType()}");
+                _ldkWalletLogger.LogError(ex, "Error handling event {EventType} with handler {HandlerType}", @event.GetType(), handler.GetType());
             }
         });
+        return Result_NoneReplayEventZ.ok();
     }
-}   
+}

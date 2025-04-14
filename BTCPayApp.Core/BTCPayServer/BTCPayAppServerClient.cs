@@ -224,7 +224,7 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
         {
             OffchainBalance = new OffchainBalance
             {
-                Local = LightMoney.MilliSatoshis(channels.Sum(channel => channel.get_balance_msat())),
+                Local = LightMoney.MilliSatoshis(channels.Sum(channel => channel.get_outbound_capacity_msat())),
                 Remote = LightMoney.MilliSatoshis(channels.Sum(channel => channel.get_inbound_capacity_msat())),
             }
         };

@@ -123,10 +123,10 @@
                                 </td>
                                 <td>@(channel.Value.channelDetails?.get_confirmations() is Option_u32Z.Option_u32Z_Some x1? x1.some: "")   </td>
                                 <td>@(channel.Value.channelDetails?.get_confirmations_required()is Option_u32Z.Option_u32Z_Some x2? x2.some: "") </td>
-                                <td>@(channel.Value.channelDetails is null? "": Convert.ToHexString(channel.Value.channelDetails?.get_funding_txo().get_txid()).ToLowerInvariant())</td>
+                                <td>@(channel.Value.channelDetails != null ? Convert.ToHexString(channel.Value.channelDetails.get_funding_txo().get_txid()).ToLowerInvariant() : "")</td>
                                 <td>@channel.Value.channelDetails?.get_is_usable()</td>
                                 <td>@channel.Value.channelDetails?.get_is_channel_ready()</td>
-                                <td>@channel.Value.channelDetails?.get_balance_msat()</td>
+                                <td>@channel.Value.channelDetails?.get_outbound_capacity_msat()</td>
                                 <td>@channel.Value.channelDetails?.get_inbound_capacity_msat()</td>
                                 <td>@channel.Value.channelDetails?.get_outbound_capacity_msat()</td>
                                 <td>
@@ -157,7 +157,7 @@
                                 <td>
                                     @if (active && channel.Value.channelDetails != null)
                                     {
-                                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => Node.CloseChannel(channel.Value.channelDetails.get_channel_id(), new PubKey(channel.Value.channelDetails.get_counterparty().get_node_id()), !connected) ">Close</button>
+                                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => Node.CloseChannel(channel.Value.channelDetails.get_channel_id(), new PubKey(channel.Value.channelDetails.get_counterparty().get_node_id()), !connected)">Close</button>
                                     }
                                 </td>
                                 </tr>
