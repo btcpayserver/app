@@ -309,9 +309,9 @@ public static class LDKExtensions
         services.AddScoped<Router>(provider => provider.GetRequiredService<DefaultRouter>().as_Router());
         services.AddScoped<VoltageFlow2Jit>();
         services.AddScoped<OlympusFlow2Jit>();
-        services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
+        //services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<OlympusFlow2Jit>());
-        services.AddScoped<IJITService, VoltageFlow2Jit>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
+        //services.AddScoped<IJITService, VoltageFlow2Jit>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
         services.AddScoped<IJITService, OlympusFlow2Jit>(provider => provider.GetRequiredService<OlympusFlow2Jit>());
 
         return services;

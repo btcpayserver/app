@@ -258,9 +258,9 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         return await _configProvider.Get<LightningConfig>(LightningConfig.Key) ?? new LightningConfig();
     }
 
-    public async Task<string[]?> GetJITLSPs()
+    public Task<string[]> GetJITLSPs()
     {
-        return ServiceProvider.GetServices<IJITService>().Select(jit => jit.ProviderName).ToArray();
+        return Task.FromResult(ServiceProvider.GetServices<IJITService>().Select(jit => jit.ProviderName).ToArray());
     }
 
     public async Task UpdateConfig(Func<LightningConfig, Task<(LightningConfig, bool)>> config)
