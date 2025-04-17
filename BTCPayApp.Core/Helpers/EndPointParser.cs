@@ -5,17 +5,14 @@ namespace BTCPayApp.Core.Helpers;
 //from wasabi
 public static class EndPointParser
 {
-
 	public static IPEndPoint IPEndPoint(this EndPoint endPoint)
 	{
-
 		if(endPoint is IPEndPoint ipEndPoint)
 			return ipEndPoint;
 		if(endPoint is not DnsEndPoint dnsEndPoint)
 			throw new FormatException($"Invalid endpoint: {endPoint}");
 
-
-		var addresses = System.Net.Dns.GetHostAddresses(dnsEndPoint.Host);
+		var addresses = Dns.GetHostAddresses(dnsEndPoint.Host);
 		if (addresses.Length == 0)
 		{
 			throw new ArgumentException(

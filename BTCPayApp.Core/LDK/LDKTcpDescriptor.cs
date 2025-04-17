@@ -32,7 +32,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         }
         if (result is Result_NonePeerHandleErrorZ.Result_NonePeerHandleErrorZ_Err)
         {
-            logger.LogError($"Failed to create inbound connection");
+            logger.LogError("Failed to create inbound connection");
             tcpClient.Dispose();
             return null;
         }

@@ -181,8 +181,10 @@ public class LDKPeerHandler : IScopedHostedService
     public async Task<LDKTcpDescriptor?> ConnectAsync(NodeInfo nodeInfo,
         CancellationToken cancellationToken = default)
     {
-        var remote = IPEndPoint.Parse(nodeInfo.Host + ":" + nodeInfo.Port);
-        return await ConnectAsync(nodeInfo.NodeId, remote, cancellationToken);
+        var remote = nodeInfo.Host + ":" + nodeInfo.Port;
+        if (EndPointParser.TryParse(remote, 9735, out var endpoint))
+            return await ConnectAsync(nodeInfo.NodeId, endpoint, cancellationToken);
+        throw new ArgumentException($"Invalid endpoint: {remote}", nameof(nodeInfo));
     }
 
     private readonly ConcurrentDictionary<string, Task<LDKTcpDescriptor?>> _connectionTasks = new();
@@ -213,15 +215,14 @@ public class LDKPeerHandler : IScopedHostedService
         try
         {
             if (!_connectionTasks.TryAdd(theirNodeId.ToString(), tcs.Task))
-            {
                 return null;
-            }
 
             if (_channelManager.get_our_node_id().SequenceEqual(theirNodeId.ToBytes()))
                 return null;
 
+            var ipEndpoint = remote.IPEndPoint();
             var client = new TcpClient();
-            await client.ConnectAsync(remote.IPEndPoint(), cancellationToken);
+            await client.ConnectAsync(ipEndpoint, cancellationToken);
 
             var result = LDKTcpDescriptor.Outbound(_peerManager, client, _logger, theirNodeId, _descriptors);
             if (result is not null)
