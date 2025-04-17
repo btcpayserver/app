@@ -189,7 +189,7 @@ public class LDKPeerHandler : IScopedHostedService
 
     private readonly ConcurrentDictionary<string, Task<LDKTcpDescriptor?>> _connectionTasks = new();
 
-    public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey peerNodeId,PeerInfo peerInfo, CancellationToken cancellationToken = default)
+    public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey peerNodeId, PeerInfo peerInfo, CancellationToken cancellationToken = default)
     {
         if (peerInfo.Endpoint is {} endpoint)
         {
@@ -201,8 +201,7 @@ public class LDKPeerHandler : IScopedHostedService
         return null;
     }
 
-    public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey theirNodeId, EndPoint remote,
-        CancellationToken cancellationToken = default)
+    public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey theirNodeId, EndPoint remote, CancellationToken cancellationToken = default)
     {
         //cache this task so that we don't have multiple attempts to connect to the same place
         if (_connectionTasks.TryGetValue(theirNodeId.ToString(), out var task))

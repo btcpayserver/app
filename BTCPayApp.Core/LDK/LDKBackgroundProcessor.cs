@@ -40,7 +40,6 @@ public class LDKBackgroundProcessor : IScopedHostedService
         _scorer = scorer;
     }
 
-
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         await StopAsync(CancellationToken.None);

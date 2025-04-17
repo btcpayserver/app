@@ -48,7 +48,6 @@ public partial class LDKNode :
 
     public async Task Handle(Event.Event_ChannelClosed evt)
     {
-
         _logger.LogInformation($"Channel {Convert.ToHexString(evt.channel_id.get_a()).ToLowerInvariant()} closed: {evt.GetReason()}");
         await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>()
         {
@@ -105,10 +104,7 @@ public partial class LDKNode :
         var channelManager = ServiceProvider.GetRequiredService<ChannelManager>();
         var entropySource = ServiceProvider.GetRequiredService<EntropySource>();
         var userConfig = ServiceProvider.GetRequiredService<UserConfig>().clone();
-
-
         var temporaryChannelId = ChannelId.temporary_from_entropy_source(entropySource);
-
         var userChannelId = new UInt128(temporaryChannelId.get_a().Take(16).ToArray());
         try
         {
@@ -297,9 +293,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     public PaymentsManager? PaymentsManager => ServiceProvider.GetRequiredService<PaymentsManager>();
     public LightningAPIKeyManager? ApiKeyManager => ServiceProvider.GetRequiredService<LightningAPIKeyManager>();
     public LDKPeerHandler PeerHandler => ServiceProvider.GetRequiredService<LDKPeerHandler>();
-
     public PubKey NodeId => new(ServiceProvider.GetRequiredService<ChannelManager>().get_our_node_id());
-
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
@@ -339,7 +333,6 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         // await StopAsync(CancellationToken.None);
     }
 
-
     private readonly TaskCompletionSource<ChannelMonitor[]?> icm = new();
     // private LightningConfig? _config;
 
@@ -374,7 +367,6 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         await _configProvider.Set("ln:ChannelManager", serializedChannelManager.write(), true);
     }
 
-
     public async Task UpdateNetworkGraph(NetworkGraph networkGraph)
     {
         await _configProvider.Set("ln:NetworkGraph", networkGraph.write(), true);
@@ -384,7 +376,6 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     {
         await _configProvider.Set("ln:Score", score.write(), true);
     }
-
 
     public async Task<(byte[] serializedChannelManager, ChannelMonitor[] channelMonitors)?> GetSerializedChannelManager(
         EntropySource entropySource, SignerProvider signerProvider)
@@ -473,23 +464,16 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         await context.SaveChangesAsync();
     }
 
-
     public async Task Peer(PubKey key, PeerInfo? value)
     {
         var toString = key.ToString().ToLowerInvariant();
-        await UpdateConfig(async config =>
+        await UpdateConfig(config =>
         {
-            if (value is null)
-            {
-                if (config.Peers.Remove(toString))
-                {
+            if (value is null && config.Peers.Remove(toString))
+                return Task.FromResult((config, true));
 
-                    return (config, true);
-                }
-            }
-
-            config.Peers.AddOrReplace(toString, value);
-            return (config, true);
+            config.Peers!.AddOrReplace(toString, value);
+            return Task.FromResult((config, true));
         });
     }
 
@@ -525,7 +509,6 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
                 Data = [],
                 Checkpoint = 0
             };
-
 
             await context.LightningChannels.AddAsync(channel);
         }
