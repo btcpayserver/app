@@ -179,10 +179,10 @@
 
     private async Task LoadProfilePicture(InputFileChangeEventArgs e)
     {
-        if (e.File.Size > 512000)
+        if (e.File.Size > 2000000)
         {
             Model.ImagePath = null;
-            _errorMessage = "The profile picture file size should not exceed 0.5 MB.";
+            _errorMessage = "The profile picture file size should not exceed 2 MB.";
             _inputFileId = Guid.NewGuid();
             return;
         }
