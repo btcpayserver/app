@@ -34,7 +34,7 @@
             }
             else if (Model.Notifications is not null)
             {
-                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
+                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error" class="box">
                     <DataAnnotationsValidator/>
                     @foreach (var item in Model.Notifications)
                     {
@@ -45,16 +45,18 @@
                             </label>
                         </div>
                     }
-                    <button type="submit" class="btn btn-primary w-100 mt-3" disabled="@(Settings == null || Sending)">
-                        @if (Sending)
-                        {
-                            <LoadingIndicator/>
-                        }
-                        else
-                        {
-                            <span>Update Settings</span>
-                        }
-                    </button>
+                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                        <button type="submit" class="btn btn-primary w-100 mt-3" disabled="@(Settings == null || Sending)">
+                            @if (Sending)
+                            {
+                                <LoadingIndicator/>
+                            }
+                            else
+                            {
+                                <span>Update Settings</span>
+                            }
+                        </button>
+                    </div>
                 </ValidationEditContext>
             }
         </Authorized>

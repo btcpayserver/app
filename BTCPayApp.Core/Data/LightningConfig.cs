@@ -18,7 +18,7 @@ public class LightningConfig
     {
         get
         {
-            if(string.IsNullOrEmpty(Color)){ return [0,0,0];}
+            if (string.IsNullOrEmpty(Color)){ return [0,0,0];}
 
             if (Color.StartsWith("#"))
             {
@@ -39,7 +39,7 @@ public class LightningConfig
             }
         }
     }
-    
+
     public Dictionary<string, PeerInfo> Peers { get; set; } = new();
 
     public bool AcceptInboundConnection{ get; set; }

@@ -34,7 +34,6 @@ public class HostedServiceInitializer : IMauiInitializeService, IDisposable
                 {
                     await service.StopAsync(CancellationToken.None);
                 }
-
             }
 
             _running = false;

@@ -29,10 +29,10 @@
     </Titlebar>
 </SectionContent>
 
-<section class="container">
+<section class="container @(NeedsEncryptionKey ? "" : "no-cta")">
     @if (NeedsEncryptionKey)
     {
-        <style>#NavbarBottom { display: none; }</style>
+        <style>#NavbarBottom { display: none; } #NavbarBottom ~ #MainContent { --cta-container-bottom: 0; }</style>
         <p class="text-center">
             Open Settings > Security > Device Pairing on your primary device and scan or enter your encryption key.
         </p>
@@ -47,11 +47,13 @@
                         <InputText @bind-Value="Model.EncryptionKey" id="EncryptionKey" class="form-control flex-grow-1" placeholder="Retrieve from your master device" autocomplete="off"/>
                         <ValidationMessage For="@(() => Model.EncryptionKey)"/>
                     </div>
+                </div>
+                <div id="CtaContainer" class="container d-flex align-items-center justify-content-between" hidden="@(_enterManually is false)">
                     <button type="submit" class="btn btn-primary w-100" disabled="@(!IsValidKey)">Unlock</button>
                 </div>
             </ValidationEditContext>
         </div>
-        <button type="button" class="btn btn-secondary rounded-pill d-flex w-100 align-items-center justify-content-center gap-1 mt-5" @onclick="() => { _enterManually = !_enterManually; }">
+        <button type="button" class="btn btn-secondary rounded-pill d-flex w-100 align-items-center justify-content-center gap-1 mt-4" @onclick="() => { _enterManually = !_enterManually; }">
             <Icon Symbol="@(_enterManually is false ? "key" : "scan-qr")"/>
             @(_enterManually is false ? "Enter key manually" : "Scan QR code")
         </button>

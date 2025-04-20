@@ -43,7 +43,6 @@
                     <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
                         <DataAnnotationsValidator />
                         <fieldset disabled="@(_canModify is not true)">
-                            <h2>Point of Sale</h2>
                             <fieldset class="box">
                                 <div class="form-group">
                                     <label for="Title" class="form-label">Title</label>
@@ -109,16 +108,18 @@
                         </fieldset>
                         @if (_canModify is true)
                         {
-                            <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
-                                @if (Sending)
-                                {
-                                    <LoadingIndicator/>
-                                }
-                                else
-                                {
-                                    <span>Update Checkout</span>
-                                }
-                            </button>
+                            <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                                <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
+                                    @if (Sending)
+                                    {
+                                        <LoadingIndicator/>
+                                    }
+                                    else
+                                    {
+                                        <span>Update Checkout</span>
+                                    }
+                                </button>
+                            </div>
                         }
                     </ValidationEditContext>
                 }

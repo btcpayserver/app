@@ -22,7 +22,7 @@
 
 @if (_account != null)
 {
-    <section class="container">
+    <section class="container no-cta">
         <header class="d-flex align-items-center justify-content-between gap-3 my-4">
             <h1>Settings</h1>
             <AuthorizeView Policy="@AppPolicies.CanModifySettings">
@@ -137,13 +137,6 @@
                             <Icon Symbol="caret-right"/>
                         </a>
                     </li>
-                     <li class="list-group-item">
-                        <a href="@Routes.AppLogs">
-                            <Icon Symbol="nav-notifications"/>
-                            <span>App Logs</span>
-                            <Icon Symbol="caret-right"/>
-                        </a>
-                    </li>
                 </ul>
             </div>
         </AuthorizeView>
@@ -154,7 +147,7 @@
                 <h2>Store</h2>
                 <div class="box">
                     <ul class="list-group list-group-flush list-group-links">
-                        @if (CurrentUser?.Stores?.Count() > 1 || CurrentStore == null)
+                        @if (CurrentUser?.Stores?.Count() > 0 || CurrentStore == null)
                         {
                             <li class="list-group-item">
                                 <a href="@Routes.SelectStore" class="@(CurrentStore != null ? "pt-1 pb-2" : "justify-content-start")">
@@ -187,16 +180,23 @@
                         }
                         @if (CurrentStore != null)
                         {
-                            <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id" Context="Store">
+                            <AuthorizeView Policy="@Policies.CanViewStoreSettings" Resource="@CurrentStore.Id" Context="store">
                                 <li class="list-group-item">
                                     <a href="@Routes.StorePath(CurrentStore.Id)">
-                                        <Icon Symbol="nav-store"/>
-                                        <span>@CurrentStore.Name</span>
+                                        <Icon Symbol="nav-store-settings"/>
+                                        <span>Store Settings</span>
                                         <Icon Symbol="caret-right"/>
                                     </a>
                                 </li>
                             </AuthorizeView>
-                            <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id" Context="Store">
+                            <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@CurrentStore.Id" Context="store">
+                                <li class="list-group-item">
+                                    <a href="@Routes.StoreUsersPath(CurrentStore.Id)">
+                                        <Icon Symbol="nav-account"/>
+                                        <span>Users</span>
+                                        <Icon Symbol="caret-right"/>
+                                    </a>
+                                </li>
                                 @if (CurrentStore.PosAppId != null)
                                 {
                                     <li class="list-group-item">
@@ -247,13 +247,13 @@
                             <Icon Symbol="caret-right"/>
                         </a>
                     </li>
-                    <li class="list-group-item">
+                    @*<li class="list-group-item">
                         <a href="@Routes.ChangePasscode">
                             <Icon Symbol="key"/>
                             <span>@(HasPasscode ? "Change" : "Set") Passcode</span>
                             <Icon Symbol="caret-right"/>
                         </a>
-                    </li>
+                    </li>*@
                     <li class="list-group-item">
                         <a href="@Routes.ChangePassword">
                             <Icon Symbol="dots" class="p-2"/>
@@ -263,28 +263,44 @@
                     </li>
                 </ul>
             </div>
+
+            <AuthorizeView Policy="@Policies.CanModifyServerSettings" Context="server">
+                <h2>Server</h2>
+                <div class="box">
+                    <ul class="list-group list-group-flush list-group-links">
+                        <li class="list-group-item">
+                            <a href="@Routes.ServerUsers">
+                                <Icon Symbol="nav-account"/>
+                                <span>Users</span>
+                                <Icon Symbol="caret-right"/>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </AuthorizeView>
+
             <h2>Debug</h2>
-            <div class="box">
+            <div class="box mb-2">
                 <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item">
                         <div class="justify-content-start">
-                            <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster or BTCPayConnectionState.ConnectedAsSlave or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                            <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
                             <span>
                                 Hub:
                                 @(State.Value.ConnectionState switch
                                 {
-                                    BTCPayConnectionState.ConnectedAsMaster => "Connected as primary device",
-                                    BTCPayConnectionState.ConnectedAsSlave => "Connected as secondary device",
+                                    BTCPayConnectionState.ConnectedAsPrimary => "Connected as primary device",
+                                    BTCPayConnectionState.ConnectedAsSecondary => "Connected as secondary device",
                                     BTCPayConnectionState.ConnectedFinishedInitialSync => "Connected, initial sync finished",
                                     BTCPayConnectionState.WaitingForAuth => "Waiting for authentication",
                                     BTCPayConnectionState.WaitingForEncryptionKey => "Waiting for encryption key",
                                     _ => State.Value.ConnectionState.ToString()
                                 })
                             </span>
-                            @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
+                            @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsPrimary)
                             {
-                                <button type="button" class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchToSlave">
-                                    <span>Switch to Slave</span>
+                                <button type="button" class="btn btn-link fw-semibold px-2 py-1 ms-auto" @onclick="SwitchToSecondary">
+                                    <span>Switch to Secondary</span>
                                 </button>
                             }
                         </div>
@@ -293,7 +309,7 @@
                     {
                         <li class="list-group-item">
                             <div class="justify-content-start">
-                                <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsMaster or BTCPayConnectionState.ConnectedAsSlave or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                                <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
                                 <span>
                                     Instance: @InstanceInfo.BaseUrl
                                     @if (!string.IsNullOrEmpty(InstanceInfo.ServerName))
@@ -304,7 +320,7 @@
                             </div>
                         </li>
                     }
-                    @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsMaster)
+                    @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsPrimary)
                     {
                         <li class="list-group-item">
                             <div class="justify-content-start">
@@ -337,15 +353,26 @@
                     }
                 </ul>
             </div>
+            <div class="box">
+                <ul class="list-group list-group-flush list-group-links">
+                    <li class="list-group-item">
+                        <a href="@Routes.AppLogs">
+                            <Icon Symbol="nav-notifications"/>
+                            <span>App Logs</span>
+                            <Icon Symbol="caret-right"/>
+                        </a>
+                    </li>
+                </ul>
+            </div>
             <h2>Logout</h2>
             <div class="box">
                 @switch (State.Value.ConnectionState)
                 {
-                    case BTCPayConnectionState.ConnectedAsMaster:
+                    case BTCPayConnectionState.ConnectedAsPrimary:
                         <p>This device is currently connected as primary device for communication with the BTCPay Server.</p>
                         <p>Please note, that when you sign out of the account on this device, your Lightning node will go offline and you will not be able to receive any payments.</p>
                         break;
-                    case BTCPayConnectionState.ConnectedAsSlave:
+                    case BTCPayConnectionState.ConnectedAsSecondary:
                         <p>This device is currently connected as additional device for communication with the BTCPay Server.</p>
                         <p>Please ensure, that your primary device is still connected to the BTCPay Server, because otherwise you will not be able to receive any payments.</p>
                         break;
@@ -402,10 +429,10 @@
         Dispatcher.Dispatch(new UIState.ApplyUserTheme(Model.Theme));
     }
 
-    private async Task SwitchToSlave()
+    private async Task SwitchToSecondary()
     {
         if (!await AccountManager.IsAuthorized(AppPolicies.CanModifySettings)) return;
-        _ = ConnectionManager.SwitchToSlave();
+        _ = ConnectionManager.SwitchToSecondary();
     }
 
     private async Task SwitchMode(string mode)

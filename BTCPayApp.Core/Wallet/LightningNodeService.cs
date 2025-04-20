@@ -21,7 +21,7 @@ public class LightningNodeManager : BaseHostedService
     private IServiceScope? _nodeScope;
     public LDKNode? Node => _nodeScope?.ServiceProvider.GetService<LDKNode>();
     private LightningNodeState _state = LightningNodeState.Init;
-    public bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsMaster;
+    public bool IsHubConnected => _btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsPrimary;
     private async Task<bool> IsOnchainLightningDerivationConfigured() => (await _onChainWalletManager.GetConfig())?.Derivations.ContainsKey(WalletDerivation.LightningScripts) is true;
     public  async Task<bool> CanConfigureLightningNode () => IsHubConnected && await _onChainWalletManager.IsConfigured() && !await IsOnchainLightningDerivationConfigured() && State == LightningNodeState.NotConfigured;
     // public string? ConnectionString => IsOnchainLightningDerivationConfigured && _accountManager.GetUserInfo() is {} acc
@@ -204,14 +204,14 @@ public class LightningNodeManager : BaseHostedService
             switch (state.New)
             {
                 case LightningNodeState.Init:
-                        newState = LightningNodeState.WaitingForConnection;
+                    newState = LightningNodeState.WaitingForConnection;
                     break;
+
                 case LightningNodeState.WaitingForConnection:
-                {
                     if (IsHubConnected)
                         newState = LightningNodeState.Loading;
                     break;
-                }
+
                 case LightningNodeState.Loading:
                     await StopNode(false);
                     if (!IsHubConnected)
@@ -219,7 +219,6 @@ public class LightningNodeManager : BaseHostedService
                         newState = LightningNodeState.WaitingForConnection;
                         break;
                     }
-
                     if (!await _onChainWalletManager.IsConfigured() || !await IsOnchainLightningDerivationConfigured())
                     {
                         newState = LightningNodeState.NotConfigured;

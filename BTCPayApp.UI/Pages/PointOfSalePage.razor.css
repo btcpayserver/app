@@ -1,19 +1,29 @@
 .container {
+  --container-max-width: 28rem;
+
   flex: 1 0 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   margin-top: var(--btcpay-space-m);
+  margin-bottom: calc(var(--cta-container-bottom) + var(--btcpay-space-xl));
 }
 
 .container ::deep .alert {
   width: 100%;
-  max-width: 500px;
+  max-width: var(--container-max-width);
+}
+
+.container ::deep #pay-button {
+  width: calc(100% - 2rem);
+  max-width: var(--container-max-width);
+  position: fixed;
+  bottom: calc(var(--cta-container-bottom) + var(--btcpay-space-l));
 }
 
 .keypad-wrap {
   width: 100%;
-  max-width: 500px;
+  max-width: var(--container-max-width);
   overflow: hidden;
   position: relative;
   flex: 1 0 100%;

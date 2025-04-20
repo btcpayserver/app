@@ -23,42 +23,38 @@
 <section class="container">
     <AuthorizeView Policy="@AppPolicies.CanModifySettings">
         <Authorized>
-            <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
-                <h2 class="mb-0">Your Account</h2>
-            </div>
-            <div class="box">
-                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error" enctype="multipart/form-data">
-                    <DataAnnotationsValidator/>
-                    <div class="form-group">
-                        <label for="Email" class="form-label" data-required>Email</label>
-                        <InputText @bind-Value="Model.Email" id="Email" type="email" class="form-control"/>
-                        <ValidationMessage For="@(() => Model.Email)"/>
+            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error" enctype="multipart/form-data" class="box">
+                <DataAnnotationsValidator/>
+                <div class="form-group">
+                    <label for="Email" class="form-label" data-required>Email</label>
+                    <InputText @bind-Value="Model.Email" id="Email" type="email" class="form-control"/>
+                    <ValidationMessage For="@(() => Model.Email)"/>
+                </div>
+                <div class="form-group">
+                    <label for="Name" class="form-label">Name</label>
+                    <InputText @bind-Value="Model.Name" id="Name" class="form-control"/>
+                    <ValidationMessage For="@(() => Model.Name)"/>
+                </div>
+                <div class="form-group">
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                        <label for="ProfilePicture" class="form-label">Profile Picture</label>
+                        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                        {
+                            <button type="button" class="btn btn-link p-0 text-danger" @onclick="UnsetProfilePicture">
+                                <Icon Symbol="cross"/> Remove
+                            </button>
+                        }
                     </div>
-                    <div class="form-group">
-                        <label for="Name" class="form-label">Name</label>
-                        <InputText @bind-Value="Model.Name" id="Name" class="form-control"/>
-                        <ValidationMessage For="@(() => Model.Name)"/>
+                    <div class="d-flex align-items-center gap-3">
+                        <InputFile OnChange="@LoadProfilePicture" @key="@_inputFileId" id="ProfilePicture" class="form-control" accept="image/*"/>
+                        @if (!string.IsNullOrEmpty(Model.ImageUrl))
+                        {
+                            <img src="@Model.ImageUrl" alt="Profile picture" class="profile-picture"/>
+                        }
                     </div>
-                    <div class="form-group">
-                        <div class="d-flex align-items-center justify-content-between gap-2">
-                            <label for="ProfilePicture" class="form-label">Profile Picture</label>
-                            @if (!string.IsNullOrEmpty(Model.ImageUrl))
-                            {
-                                <button type="button" class="btn btn-link p-0 text-danger" @onclick="UnsetProfilePicture">
-                                    <Icon Symbol="cross"/> Remove
-                                </button>
-                            }
-                        </div>
-                        <div class="d-flex align-items-center gap-3">
-                            <InputFile OnChange="@LoadProfilePicture" @key="@_inputFileId" id="ProfilePicture" class="form-control"/>
-                            @if (!string.IsNullOrEmpty(Model.ImageUrl))
-                            {
-                                <img src="@Model.ImageUrl" alt="Profile picture" class="profile-picture"/>
-                            }
-                        </div>
-                        <ValidationMessage For="@(() => Model.ImageUrl)"/>
-                    </div>
-
+                    <ValidationMessage For="@(() => Model.ImageUrl)"/>
+                </div>
+                <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
                     <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
                         @if (Sending)
                         {
@@ -69,8 +65,8 @@
                             <span>Update Account</span>
                         }
                     </button>
-                </ValidationEditContext>
-            </div>
+                </div>
+            </ValidationEditContext>
         </Authorized>
         <NotAuthorized>
             <Alert Type="danger">Unauthorized.</Alert>
@@ -183,10 +179,10 @@
 
     private async Task LoadProfilePicture(InputFileChangeEventArgs e)
     {
-        if (e.File.Size > 512000)
+        if (e.File.Size > 2000000)
         {
             Model.ImagePath = null;
-            _errorMessage = "The profile picture file size should not exceed 0.5 MB.";
+            _errorMessage = "The profile picture file size should not exceed 2 MB.";
             _inputFileId = Guid.NewGuid();
             return;
         }

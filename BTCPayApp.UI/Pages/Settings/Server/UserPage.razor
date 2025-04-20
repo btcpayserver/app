@@ -1,0 +1,246 @@
+@attribute [Route(Routes.ServerUser)]
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Util
+@using BTCPayServer.Client
+@using BTCPayServer.Client.Models
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IState<ServerState> ServerState
+@inject IDispatcher Dispatcher
+@inject IAccountManager AccountManager
+@inject IActionSubscriber ActionSubscriber
+@inject IJSRuntime JS
+
+<PageTitle>@GetTitle()</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back>
+        <h1>Server User</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    <AuthorizeView Policy="@Policies.CanModifyServerSettings">
+        <Authorized>
+            @if (User is null || Roles is null)
+            {
+                if (Loading)
+                {
+                    <div class="p-3 text-center">
+                        <LoadingIndicator/>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(Error))
+                {
+                    <Alert Type="danger">@Error</Alert>
+                }
+            }
+            else
+            {
+                var status = UserHelper.GetUserStatus(User);
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <UserInfo Email="@User.Email" Name="@User.Name" ImageUrl="@User.ImageUrl"/>
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        @if (User.Roles?.Any() is true)
+                        {
+                            <span class="badge bg-info">@string.Join(',', User.Roles)</span>
+                        }
+                        <span class="user-status badge bg-@status.Item2" text-translate="true">@status.Item1</span>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(Error))
+                {
+                    <Alert Type="danger">@Error</Alert>
+                }
+                else if (!string.IsNullOrEmpty(_successMessage))
+                {
+                    <Alert Type="success">@_successMessage</Alert>
+                }
+                if (!string.IsNullOrEmpty(User.InvitationUrl))
+                {
+                    <div class="box">
+                        <QrCode Data="@User.InvitationUrl" class="qr-code rounded mb-3"/>
+                        <div class="form-floating form-group">
+                            <TruncateCenter Text="@User.InvitationUrl" Padding="10" Copy="true" Elastic="true"
+                                            class="form-control-plaintext"/>
+                            <label>Invitation URL</label>
+                        </div>
+                    </div>
+                }
+                if (User.Id != AccountManager.UserInfo?.UserId)
+                {
+                    <div class="box">
+                        <div class="buttons">
+                            @if (User.RequiresApproval)
+                            {
+                                var buttonClass = User.Approved ? "btn-warning" : "btn-primary";
+                                <button class="btn @buttonClass w-100" type="button" data-bs-toggle="modal" data-bs-target="#ToggleApproveUserModal">
+                                    @if (_approving)
+                                    {
+                                        <LoadingIndicator/>
+                                    }
+                                    else
+                                    {
+                                        <span>@(User.Approved ? "Unapprove" : "Approve") User</span>
+                                    }
+                                </button>
+                                <ConfirmModal id="ToggleApproveUserModal"
+                                              Title="Approve User"
+                                              Description="@($"Do you really want to {(User.Approved ? "unapprove" : "approve")} the user {User.Name ?? User.Email}?")"
+                                              ButtonClass="@buttonClass"
+                                              OnConfirm="ApproveUser"/>
+                            }
+                            <button class="btn btn-outline-warning w-100" type="button" data-bs-toggle="modal" data-bs-target="#ToggleUserModal">
+                                @if (_toggling)
+                                {
+                                    <LoadingIndicator/>
+                                }
+                                else
+                                {
+                                    <span>@(User.Disabled ? "Enable" : "Disable") User</span>
+                                }
+                            </button>
+                            <ConfirmModal id="ToggleUserModal"
+                                          Title="@(User.Disabled ? "Enable User" : "Disable User")"
+                                          Description="@($"Do you really want to {(User.Disabled ? "enable" : "disable")} the user {User.Name ?? User.Email}?")"
+                                          ButtonClass="btn-warning"
+                                          OnConfirm="ToggleUser"/>
+                            <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#DeleteUserModal">
+                                @if (_removing)
+                                {
+                                    <LoadingIndicator/>
+                                }
+                                else
+                                {
+                                    <span>Delete User</span>
+                                }
+                            </button>
+                            <ConfirmModal id="DeleteUserModal"
+                                          Title="Delete User"
+                                          Description="@($"Do you really want to delete the user {User.Name ?? User.Email}?")"
+                                          OnConfirm="DeleteUser"/>
+                        </div>
+                    </div>
+                }
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string StoreId { get; set; } = null!;
+    [Parameter, EditorRequired]
+    public string UserId { get; set; } = null!;
+    [SupplyParameterFromQuery]
+    protected string? Success { get; set; }
+
+    private string? _successMessage;
+    private string? _errorMessage;
+    private bool _approving;
+    private bool _toggling;
+    private bool _removing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        if (Users is null)
+            Dispatcher.Dispatch(new ServerState.FetchUsers());
+
+        if (Roles is null)
+            Dispatcher.Dispatch(new ServerState.FetchRoles());
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        ActionSubscriber.UnsubscribeFromAllActions(this);
+
+        return ValueTask.CompletedTask;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Success))
+        {
+            _successMessage = Uri.UnescapeDataString(Success);
+        }
+    }
+
+    private async Task ApproveUser()
+    {
+        if (User?.RequiresApproval is false) return;
+
+        _approving = true;
+
+        try
+        {
+            var approved = !User!.Approved;
+            await AccountManager.GetClient().ApproveUser(UserId, approved);
+            Dispatcher.Dispatch(new ServerState.FetchUsers());
+            _successMessage = $"User successfully {(approved ? "approved" : "unapproved")}.";
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        finally
+        {
+            _approving = false;
+        }
+    }
+
+    private async Task ToggleUser()
+    {
+        _toggling = true;
+
+        try
+        {
+            var disabled = !User!.Disabled;
+            await AccountManager.GetClient().LockUser(UserId, disabled);
+            Dispatcher.Dispatch(new ServerState.FetchUsers());
+            _successMessage = $"User successfully {(disabled ? "disabled" : "enabled")}.";
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        finally
+        {
+            _toggling = false;
+        }
+    }
+
+    private async Task DeleteUser()
+    {
+        _removing = true;
+
+        try
+        {
+            await AccountManager.GetClient().DeleteUser(UserId);
+            await JS.InvokeVoidAsync("history.back");
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        finally
+        {
+            _removing = false;
+        }
+    }
+
+    private IEnumerable<RoleData>? Roles => ServerState.Value.Roles?.Data;
+    private IEnumerable<ApplicationUserData>? Users => ServerState.Value.Users?.Data;
+    private ApplicationUserData? User => Users?.FirstOrDefault(u => u.Id == UserId);
+    private bool Loading => ServerState.Value.Users?.Loading is true;
+    private string? Error => _errorMessage ?? ServerState.Value.Users?.Error;
+
+    private string GetTitle() => User?.Email ?? "User";
+}

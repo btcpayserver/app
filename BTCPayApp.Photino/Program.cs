@@ -1,6 +1,9 @@
 ﻿using System.Drawing;
 using BTCPayApp.Core;
+using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Extensions;
+using BTCPayApp.Core.Helpers;
 using BTCPayApp.Desktop;
 using BTCPayApp.UI;
 using Microsoft.AspNetCore.Components.Web;
@@ -18,7 +21,6 @@ public static class Program
     private static void Main(string[] args)
     {
         var builder = PhotinoBlazorAppBuilder.CreateDefault(args);
-
         builder.Services.TryAddSingleton<IConfiguration>(_ =>
         {
             var configBuilder = new ConfigurationBuilder();
@@ -26,27 +28,23 @@ public static class Program
             return configBuilder.Build();
         });
         builder.Services.AddBTCPayAppUIServices();
-        builder.Services.ConfigureBTCPayAppCore();
         builder.Services.ConfigureBTCPayAppDesktop();
-        builder.Services.AddLogging();
+        builder.Services.ConfigureBTCPayAppCore();
 #if DEBUG
         builder.Services.AddDangerousSSLSettingsForDev();
 #endif
         builder.RootComponents.Add<App>("#app");
         builder.RootComponents.Add<HeadOutlet>("head::after");
 
+        // Configure app
         var app = builder.Build();
-
-        // customize window.
         app.MainWindow
             .SetResizable(true)
             .SetZoom(0)
             .SetTitle("BTCPay Server");
-
         app.MainWindow.Center();
         Size? size = null;
         Size? lastAcceptedSize = null;
-
         app.MainWindow.WindowSizeChangedHandler += (sender, e) =>
         {
             try

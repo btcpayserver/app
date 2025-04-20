@@ -43,6 +43,9 @@
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
+
+  --cta-container-z-index: 995;
+  --cta-container-bottom: 0;
 }
 
 #Titlebar.fixed ~ #MainContent {
@@ -57,14 +60,32 @@
 #NavbarBottom ~ #MainContent {
   padding-bottom: var(--navbar-bottom-height);
   min-height: 100dvh;
+
+  --cta-container-bottom: var(--navbar-bottom-height);
 }
 
 #MainContent > section.container:last-child {
+  margin-bottom: calc(var(--cta-container-bottom) + var(--btcpay-space-m));
+}
+
+#MainContent > section.container:last-child > *:last-child,
+#MainContent > section.container:last-child fieldset > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+#MainContent > section.container.no-cta:last-child {
   margin-bottom: var(--btcpay-space-l);
 }
 
-#MainContent > section.container:last-child > *:last-child {
-  margin-bottom: 0 !important;
+#CtaContainer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--cta-container-bottom);
+  z-index: var(--cta-container-z-index);
+  padding-top: var(--btcpay-space-s);
+  padding-bottom: var(--btcpay-space-m);
+  background-color: var(--btcpay-body-bg);
 }
 
 .public-page-wrap {
@@ -95,14 +116,6 @@
   background: var(--btcpay-bg-tile);
   border-radius: var(--section-border-radius);
   box-shadow: var(--btcpay-box-shadow-lg);
-}
-.tile .buttons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--btcpay-space-m);
-}
-.tile > :last-child {
-  margin-bottom: 0;
 }
 
 @media (max-width: 400px) {
@@ -160,12 +173,24 @@
   margin-bottom: 0;
 }
 
+.box .buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--btcpay-space-m);
+}
+
 /* Profile Picture */
 .profile-picture {
-  height: var(--profile-picture-size, 2.1rem);
-  width: var(--profile-picture-size, 2.1rem);
+  --profile-picture-size: 2rem;
+
+  height: var(--profile-picture-size);
+  width: var(--profile-picture-size);
   border-radius: 50%;
   object-fit: cover;
+}
+
+img.profile-picture {
+  padding: var(--btcpay-space-xs);
 }
 
 /* List Group */
@@ -290,6 +315,10 @@
 .form-floating button {
   padding: 0 0 var(--btcpay-space-xs) 0;
   font-weight: var(--btcpay-font-weight-semibold);
+}
+
+.btn-primary .text-success {
+  color: var(--btcpay-btn-color);
 }
 
 /* Definition List */

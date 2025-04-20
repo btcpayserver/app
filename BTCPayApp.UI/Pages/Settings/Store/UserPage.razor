@@ -1,0 +1,222 @@
+@attribute [Route(Routes.StoreUser)]
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Util
+@using BTCPayServer.Client
+@using BTCPayServer.Client.Models
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IState<StoreState> StoreState
+@inject IDispatcher Dispatcher
+@inject IAccountManager AccountManager
+@inject IActionSubscriber ActionSubscriber
+@inject IJSRuntime JS
+
+<PageTitle>@GetTitle()</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back>
+        <h1>Store User</h1>
+    </Titlebar>
+</SectionContent>
+
+<section class="container">
+    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="@StoreId">
+        <Authorized>
+            @if (User is null || Roles is null)
+            {
+                if (Loading)
+                {
+                    <div class="p-3 text-center">
+                        <LoadingIndicator/>
+                    </div>
+                }
+                else if (!string.IsNullOrEmpty(Error))
+                {
+                    <Alert Type="danger">@Error</Alert>
+                }
+            }
+            else
+            {
+                var status = UserHelper.GetUserStatus(User);
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <UserInfo Email="@User.Email" Name="@User.Name" ImageUrl="@User.ImageUrl" />
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                        @if (User.StoreRole is not null)
+                        {
+                            <span class="badge bg-info">@User.StoreRole</span>
+                        }
+                        <span class="user-status badge bg-@status.Item2" text-translate="true">@status.Item1</span>
+                    </div>
+                </div>
+                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@Error">
+                    <DataAnnotationsValidator/>
+                    <fieldset class="box">
+                        <div class="form-group">
+                            <label for="Role" class="form-label">Role</label>
+                            <InputSelect @bind-Value="Model.Role" id="Role" class="form-select">
+                                @foreach (var r in Roles)
+                                {
+                                    <option value="@r.Id" selected="@(Model.Role == r.Id)">@r.Role</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => Model.Role)"/>
+                        </div>
+                    </fieldset>
+                    @if (!string.IsNullOrEmpty(User.InvitationUrl))
+                    {
+                        <div class="box">
+                            <QrCode Data="@User.InvitationUrl" class="qr-code rounded mb-3"/>
+                            <div class="form-floating form-group">
+                                <TruncateCenter Text="@User.InvitationUrl" Padding="10" Copy="true" Elastic="true"
+                                                class="form-control-plaintext"/>
+                                <label>Invitation URL</label>
+                            </div>
+                        </div>
+                    }
+                    <button class="btn btn-outline-danger w-100" type="button" data-bs-toggle="modal" data-bs-target="#RemoveUserModal">
+                        @if (_removing)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Remove User</span>
+                        }
+                    </button>
+                    <ConfirmModal id="RemoveUserModal"
+                                  Title="Remove User"
+                                  Description="@($"Do you really want to remove the user {User.Name ?? User.Email} from the store?")"
+                                  OnConfirm="RemoveUser"/>
+                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || _sending)">
+                            @if (_sending)
+                            {
+                                <LoadingIndicator/>
+                            }
+                            else
+                            {
+                                <span>Update User</span>
+                            }
+                        </button>
+                    </div>
+                </ValidationEditContext>
+            }
+        </Authorized>
+        <NotAuthorized>
+            <Alert Type="danger">Unauthorized.</Alert>
+        </NotAuthorized>
+    </AuthorizeView>
+</section>
+
+@code {
+    [Parameter, EditorRequired]
+    public string StoreId { get; set; } = null!;
+    [Parameter, EditorRequired]
+    public string UserId { get; set; } = null!;
+    [SupplyParameterFromQuery]
+    protected string? Success { get; set; }
+
+    private ValidationEditContext? _validationEditContext;
+    private string? _successMessage;
+    private string? _errorMessage;
+    private bool _sending;
+    private bool _removing;
+    private StoreUserModel Model { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        ActionSubscriber.SubscribeToAction<StoreState.SetUsers>(this, action =>
+        {
+            if (action.Users == null) return;
+            Model.Role = User?.StoreRole;
+            InvokeAsync(StateHasChanged);
+        });
+
+        if (Users is null)
+            Dispatcher.Dispatch(new StoreState.FetchUsers(StoreId));
+        else
+            Model.Role = User?.StoreRole;
+
+        if (Roles is null)
+            Dispatcher.Dispatch(new StoreState.FetchRoles(StoreId));
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        ActionSubscriber.UnsubscribeFromAllActions(this);
+
+        return ValueTask.CompletedTask;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(Success))
+        {
+            _successMessage = Uri.UnescapeDataString(Success);
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        _successMessage = _errorMessage = null;
+        _sending = true;
+
+        try
+        {
+            var req = new StoreUserData
+            {
+                Id = UserId,
+                StoreRole = Model.Role
+            };
+            await AccountManager.GetClient().UpdateStoreUser(StoreId, UserId, req);
+            Dispatcher.Dispatch(new StoreState.FetchUsers(StoreId));
+            _successMessage = "Store user updated.";
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+
+    private async Task RemoveUser()
+    {
+        _removing = true;
+
+        try
+        {
+            await AccountManager.GetClient().RemoveStoreUser(StoreId, UserId);
+            await JS.InvokeVoidAsync("history.back");
+        }
+        catch (Exception e)
+        {
+            _errorMessage = e.Message;
+        }
+        finally
+        {
+            _removing = false;
+        }
+    }
+
+    private class StoreUserModel
+    {
+        [Required]
+        public string? Role { get; set; }
+    }
+
+    private IEnumerable<RoleData>? Roles => StoreState.Value.Roles?.Data;
+    private IEnumerable<StoreUserData>? Users => StoreState.Value.Users?.Data;
+    private StoreUserData? User => Users?.FirstOrDefault(u => u.Id == UserId);
+    private bool Loading => StoreState.Value.Users?.Loading is true;
+    private string? Error => _errorMessage ?? StoreState.Value.Users?.Error;
+
+    private string GetTitle() => User?.Email ?? "Store User";
+}

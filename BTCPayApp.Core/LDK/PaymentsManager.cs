@@ -101,27 +101,17 @@ public class PaymentsManager :
             lsp = null;
         }
 
-        var result = await Task.Run(() =>
-            org.ldk.util.UtilMethods.create_invoice_from_channelmanager_with_description_hash_and_duration_since_epoch(
-                _channelManager, _nodeSigner, _logger,
-                _network.GetLdkCurrency(), amt, descHashBytes, epoch, (int) Math.Ceiling(expiry.TotalSeconds),
-                Option_u16Z.none()));
+        var result = await Task.Run(() => org.ldk.util.UtilMethods.create_invoice_from_channelmanager_with_description_hash(_channelManager, amt, descHashBytes, (int) Math.Ceiling(expiry.TotalSeconds), Option_u16Z.none()));
         if (result is Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_Err err)
         {
             throw new Exception(err.err.to_str());
         }
 
-        var originalInvoice =
-            ((Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_OK) result)
-            .res;
-
-
-        var preimageResult =
-            _channelManager.get_payment_preimage(originalInvoice.payment_hash(), originalInvoice.payment_secret());
+        var originalInvoice = ((Result_Bolt11InvoiceSignOrCreationErrorZ.Result_Bolt11InvoiceSignOrCreationErrorZ_OK) result).res;
+        var preimageResult = _channelManager.get_payment_preimage(originalInvoice.payment_hash(), originalInvoice.payment_secret());
         var preimage = preimageResult switch
         {
-            Result_ThirtyTwoBytesAPIErrorZ.Result_ThirtyTwoBytesAPIErrorZ_Err errx => throw new Exception(
-                errx.err.GetError()),
+            Result_ThirtyTwoBytesAPIErrorZ.Result_ThirtyTwoBytesAPIErrorZ_Err errx => throw new Exception(errx.err.GetError()),
             Result_ThirtyTwoBytesAPIErrorZ.Result_ThirtyTwoBytesAPIErrorZ_OK ok => ok.res,
             _ => throw new Exception("Unknown error retrieving preimage")
         };
@@ -393,22 +383,20 @@ public class PaymentsManager :
             preimage is null ? null : Convert.ToHexString(preimage).ToLower());
     }
 
-    public async Task Handle(Event.Event_PaymentFailed @eventPaymentFailed)
+    public async Task Handle(Event.Event_PaymentFailed eventPaymentFailed)
     {
-        await PaymentUpdate(new uint256(eventPaymentFailed.payment_hash), false,
+        var paymentHash = uint256.Parse(Convert.ToHexString(((Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some)eventPaymentFailed.payment_hash).some).ToLower());
+        await PaymentUpdate(paymentHash, false,
             Convert.ToHexString(eventPaymentFailed.payment_id).ToLower(), true, null);
     }
 
     public async Task Handle(Event.Event_PaymentSent eventPaymentSent)
     {
-
         var paymentHash =  uint256.Parse(Convert.ToHexString(eventPaymentSent.payment_hash).ToLower());
         await PaymentUpdate(paymentHash, false,
             Convert.ToHexString(
-                ((Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some) eventPaymentSent.payment_id).some).ToLower(),
+                ((Option_ThirtyTwoBytesZ.Option_ThirtyTwoBytesZ_Some)eventPaymentSent.payment_id).some).ToLower(),
             false,
             Convert.ToHexString(eventPaymentSent.payment_preimage).ToLower());
     }
-
-
 }

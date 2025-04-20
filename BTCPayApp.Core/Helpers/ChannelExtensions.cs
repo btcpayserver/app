@@ -83,10 +83,10 @@ public static class ChannelExtensions
         // channelConfig.set
         // result.set_channel_config(channelConfig);
         result.set_accept_intercept_htlcs(true);
-        result.set_accept_mpp_keysend(true);
+        //result.set_accept_mpp_keysend(true);
         result.set_manually_accept_inbound_channels(true);
         var channelHandshakeConfig = ChannelHandshakeConfig.with_default();
-        channelHandshakeConfig.set_announced_channel(false);
+        //channelHandshakeConfig.set_announced_channel(false);
         // channelHandshakeConfig.set(false);
         channelHandshakeConfig.set_negotiate_anchors_zero_fee_htlc_tx(true);
         channelHandshakeConfig.set_minimum_depth(1);

@@ -1,0 +1,92 @@
+@implements IAsyncDisposable
+@using Microsoft.Extensions.Logging
+@inject IJSRuntime JS
+@inject ILogger<QrScanModal> Logger
+
+<div tabindex="-1" data-bs-backdrop="static" @attributes="InputAttributes" class="@CssClass" id="@ModalId">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title">@Title</h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                    <Icon Symbol="close" />
+                </button>
+            </div>
+            <div class="modal-body pt-0">
+                <div id="ConfirmDescription">
+                    @Description
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="ConfirmCancel">Cancel</button>
+                <button type="button" class="btn @ButtonClass" id="ConfirmContinue" @onclick="HandleConfirm">@(ButtonTitle ?? Title)</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public string Description { get; set; } = null!;
+
+    [Parameter]
+    public string? ButtonTitle { get; set; }
+
+    [Parameter]
+    public string ButtonClass { get; set; } = "btn-danger";
+
+    [Parameter, EditorRequired]
+    public EventCallback OnConfirm { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender) return;
+        var reference = DotNetObjectReference.Create(this);
+        try
+        {
+            await JS.InvokeVoidAsync("Interop.addEventListener", reference, $"#{ModalId}", "show.bs.modal", "OnShow");
+            await JS.InvokeVoidAsync("Interop.addEventListener", reference, $"#{ModalId}", "hide.bs.modal", "OnHide");
+        }
+        catch (JSDisconnectedException)
+        {
+            // ignored, see https://learn.microsoft.com/en-us/aspnet/core/blazor/javascript-interoperability/?view=aspnetcore-8.0#javascript-interop-calls-without-a-circuit
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Error adding {ModalId} event listeners");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        var show = new[] {$"#{ModalId}", "show.bs.modal", "OnShow"};
+        var hide = new[] {$"#{ModalId}", "hide.bs.modal", "OnHide"};
+        try
+        {
+            await JS.InvokeVoidAsync("Interop.removeEventListeners", [show, hide]);
+        }
+        catch (JSDisconnectedException)
+        {
+            // ignored, see https://learn.microsoft.com/en-us/aspnet/core/blazor/javascript-interoperability/?view=aspnetcore-8.0#javascript-interop-calls-without-a-circuit
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Error removing {ModalId} event listeners");
+        }
+    }
+
+    private async Task HandleConfirm()
+    {
+        if (!OnConfirm.HasDelegate) return;
+        await JS.InvokeVoidAsync("Interop.closeModal", $"#{ModalId}");
+        await OnConfirm.InvokeAsync();
+    }
+    private string CssClass => $"modal {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
+    private string ModalId => InputAttributes?.ContainsKey("id") is true ? InputAttributes["id"].ToString()! : "ConfirmModal";
+}

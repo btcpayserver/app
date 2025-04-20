@@ -1,7 +1,10 @@
 <span @attributes="InputAttributes" class="@CssClass">
     <span class="truncate-center-truncated" data-bs-toggle="@(IsTruncated ? "tooltip" : null)" title="@(IsTruncated ? Text : null)">
-        <span class="truncate-center-start">@(IsTruncated && !Elastic ? $"{Start}…" : Text)</span>
-        <span class="truncate-center-end">@End</span>
+        <span class="truncate-center-start">@(IsTruncated && !Elastic ? $"{Start}…" : (Elastic && End != null ? Text!.Replace(End, "") : Text))</span>
+        @if (End != null)
+        {
+            <span class="truncate-center-end">@End</span>
+        }
     </span>
     <span class="truncate-center-text">@Text</span>
     @if (Copy)

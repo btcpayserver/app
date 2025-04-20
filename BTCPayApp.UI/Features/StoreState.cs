@@ -71,6 +71,7 @@ public record StoreState
     public record UpdatedPointOfSale(PointOfSaleAppData? AppData, string? Error) : SetPointOfSale(AppData, Error);
     public record SetPosItemStats(List<AppItemStats>? ItemStats, string? Error);
     public record SetPosSalesStats(AppSalesStats? SalesStats, string? Error);
+    public record RefreshStore(AppUserStoreInfo Store);
 
     protected class SetStoreInfoReducer : Reducer<StoreState, SetStoreInfo>
     {
@@ -629,23 +630,28 @@ public record StoreState
             var store = action.StoreInfo;
             if (store != null)
             {
-                var storeId = store.Id;
-                var posId = store.PosAppId!;
-                var histogramType = state.Value.HistogramType ?? uiState.Value.HistogramType;
-                dispatcher.Dispatch(new FetchStore(storeId));
-                dispatcher.Dispatch(new FetchBalances(storeId, histogramType));
-                dispatcher.Dispatch(new FetchNotifications(storeId));
-                dispatcher.Dispatch(new FetchInvoices(storeId));
-                dispatcher.Dispatch(new FetchRates(store));
-                dispatcher.Dispatch(new FetchPointOfSale(posId));
-                dispatcher.Dispatch(new FetchPointOfSaleStats(posId));
-                /* not needed currently
-                dispatcher.Dispatch(new FetchRoles(storeId));
-                dispatcher.Dispatch(new FetchUsers(storeId));*/
+                dispatcher.Dispatch(new RefreshStore(store));
 
                 var currency = BitcoinUnits.Contains(store.DefaultCurrency) ? null : store.DefaultCurrency;
                 dispatcher.Dispatch(new UIState.SetFiatCurrency(currency, true));
             }
+            return Task.CompletedTask;
+        }
+
+        [EffectMethod]
+        public Task RefreshStoreEffect(RefreshStore action, IDispatcher dispatcher)
+        {
+            var store = action.Store;
+            var storeId = store.Id;
+            var posId = store.PosAppId!;
+            var histogramType = state.Value.HistogramType ?? uiState.Value.HistogramType;
+            dispatcher.Dispatch(new FetchStore(storeId));
+            dispatcher.Dispatch(new FetchBalances(storeId, histogramType));
+            dispatcher.Dispatch(new FetchNotifications(storeId));
+            dispatcher.Dispatch(new FetchInvoices(storeId));
+            dispatcher.Dispatch(new FetchRates(store));
+            dispatcher.Dispatch(new FetchPointOfSale(posId));
+            dispatcher.Dispatch(new FetchPointOfSaleStats(posId));
             return Task.CompletedTask;
         }
 

@@ -24,6 +24,7 @@ public class StateMiddleware(
 {
     public const string UiStateConfigKey = "uistate";
     private CancellationTokenSource? _ratesCts;
+    private bool _previouslyConnected;
 
     public override async Task InitializeAsync(IDispatcher dispatcher, IStore store)
     {
@@ -71,6 +72,16 @@ public class StateMiddleware(
             if (onChainWalletManager is { State: OnChainWalletState.NotConfigured } && await onChainWalletManager.CanConfigureWallet())
             {
                 await onChainWalletManager.Generate();
+            }
+
+            // refresh after returning from the background
+            if (btcPayConnectionManager.ConnectionState == BTCPayConnectionState.ConnectedFinishedInitialSync && !_previouslyConnected)
+            {
+                _previouslyConnected = true;
+            }
+            else if (btcPayConnectionManager.ConnectionState == BTCPayConnectionState.Syncing && _previouslyConnected && accountManager.CurrentStore is { } store)
+            {
+                dispatcher.Dispatch(new StoreState.RefreshStore(store));
             }
         };
 
@@ -139,17 +150,10 @@ public class StateMiddleware(
             if (storeInfo != null)
             {
                 var res = await accountManager.TryApplyingAppPaymentMethodsToCurrentStore(onChainWalletManager, lightningNodeService, true, true);
-                if (res is { onchain: {} onchain } && await onChainWalletManager.IsOnChainOurs(onchain))
-                {
-                    dispatcher.Dispatch(new StoreState.FetchOnchainBalance(storeInfo.Id));
-                    dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(storeInfo.Id));
-                }
-                if (res is { lightning: {} lightning } && await lightningNodeService.IsLightningOurs(lightning))
-                {
-                    dispatcher.Dispatch(new StoreState.FetchLightningBalance(storeInfo.Id));
-                    dispatcher.Dispatch(new StoreState.FetchLightningHistogram(storeInfo.Id));
-                }
-                dispatcher.Dispatch(new StoreState.FetchBalances(storeInfo.Id));
+                var refresh = res is { onchain: {} onchain } && await onChainWalletManager.IsOnChainOurs(onchain) ||
+                                   res is { lightning: {} lightning } && await lightningNodeService.IsLightningOurs(lightning);
+                if (refresh)
+                    dispatcher.Dispatch(new StoreState.FetchBalances(storeInfo.Id));
                 if (storeInfo.PosAppId != null)
                     dispatcher.Dispatch(new StoreState.FetchPointOfSaleStats(storeInfo.PosAppId));
             }
@@ -169,6 +173,7 @@ public class StateMiddleware(
             var currentUserId = accountManager.UserInfo?.UserId;
             if (string.IsNullOrEmpty(currentUserId)) return;
             var currentStore = accountManager.CurrentStore;
+            var isCurrentUser = serverEvent.UserId == currentUserId;
             var isCurrentStore = serverEvent.StoreId != null && currentStore != null && serverEvent.StoreId == currentStore.Id;
             switch (serverEvent.Type)
             {
@@ -220,16 +225,13 @@ public class StateMiddleware(
                     if (serverEvent.StoreId != null)
                     {
                         await accountManager.CheckAuthenticated(true);
-                        if (currentStore == null || serverEvent.StoreId != currentStore.Id) return;
-                        if (serverEvent.Type is "store-removed" or "store-user-removed")
+                        if (currentStore == null || !isCurrentStore) return;
+                        if (serverEvent.Type is "store-user-removed" && isCurrentUser)
+                            await accountManager.SetCurrentStoreId(null);
+                        if (serverEvent.Type is "store-removed")
                             await accountManager.SetCurrentStoreId(null);
                         if (serverEvent.Type is "store-updated")
                             dispatcher.Dispatch(new StoreState.FetchStore(serverEvent.StoreId!));
-                        /* not needed currently
-                        if (serverEvent.Type.StartsWith("store-user-"))
-                            dispatcher.Dispatch(new StoreState.FetchUsers(serverEvent.StoreId!));
-                        if (serverEvent.Type.StartsWith("store-role-"))
-                            dispatcher.Dispatch(new StoreState.FetchRoles(serverEvent.StoreId!));*/
                     }
                     break;
             }

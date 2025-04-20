@@ -67,7 +67,6 @@ public class HeadlessTestNode : IDisposable
         hostBuilder
             .ConfigureLogging(builder =>
             {
-
                 // builder.Services.Replace(ServiceDescriptor.Singleton<ILoggerFactory, TestLoggerFactory>(provider => new TestLoggerFactory(nodeName)));
                 // check if scopes are used in normal operation
                 var useScopes = builder.UsesScopes();
@@ -85,6 +84,12 @@ public class HeadlessTestNode : IDisposable
                     ]));
         hostBuilder.ConfigureServices(collection =>
         {
+            collection.Replace(ServiceDescriptor.Singleton<ILoggerFactory, TestLoggerFactory>(provider => new TestLoggerFactory(nodeName, ActivatorUtilities.CreateInstance<LoggerFactory>(provider))));
+            // collection.Replace(ServiceDescriptor.Singleton<IDbContextFactory<AppDbContext>, TestDbContextFactory>());
+            collection.AddDataProtection(options => { options.ApplicationDiscriminator = "BTCPayApp"; });
+            collection.AddSingleton<ISecureConfigProvider, DesktopSecureConfigProvider>();
+            collection.AddSingleton<IFingerprint, StubFingerprintProvider>();
+            collection.AddSingleton<IDataDirectoryProvider, DesktopDataDirectoryProvider>();
             collection.ConfigureBTCPayAppCore();
             collection.PostConfigure<LoggerFilterOptions>(options =>
             {
@@ -92,13 +97,6 @@ public class HeadlessTestNode : IDisposable
               options.Rules.Clear();
 options.Rules.AddRange(newRules);
             });
-
-            collection.Replace(ServiceDescriptor.Singleton<ILoggerFactory, TestLoggerFactory>(provider => new TestLoggerFactory(nodeName, ActivatorUtilities.CreateInstance<LoggerFactory>(provider))));
-            // collection.Replace(ServiceDescriptor.Singleton<IDbContextFactory<AppDbContext>, TestDbContextFactory>());
-            collection.AddDataProtection(options => { options.ApplicationDiscriminator = "BTCPayApp"; });
-            collection.AddSingleton<ISecureConfigProvider, DesktopSecureConfigProvider>();
-            collection.AddSingleton<IFingerprint, StubFingerprintProvider>();
-            collection.AddSingleton<IDataDirectoryProvider, DesktopDataDirectoryProvider>();
         });
         App = hostBuilder.Build();
     }

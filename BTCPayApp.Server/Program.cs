@@ -1,6 +1,7 @@
 using BTCPayApp.Core.Extensions;
 using BTCPayApp.Desktop;
 using BTCPayApp.UI;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
@@ -8,12 +9,14 @@ builder.WebHost.UseStaticWebAssets();
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddBTCPayAppUIServices();
-builder.Services.ConfigureBTCPayAppCore();
 builder.Services.ConfigureBTCPayAppDesktop();
-builder.Services.AddLogging();
+builder.Services.ConfigureBTCPayAppCore();
 #if DEBUG
 builder.Services.AddDangerousSSLSettingsForDev();
 #endif
+// Add Serilog to the logging pipeline
+builder.Logging.AddSerilog();
+
 // Configure the HTTP request pipeline.
 var app = builder.Build();
 if (!app.Environment.IsDevelopment())

@@ -28,7 +28,6 @@
     }
 </SectionContent>
 
-
 <AuthorizeView Policy="@AppPolicies.CanModifySettings">
     <Authorized>
         @if (_loading)
@@ -65,16 +64,18 @@
                         <ValidationMessage For="@(() => Model.PreferredExchange)"/>
                     </div>
                 }
-                <button class="btn btn-primary w-100" type="submit" data-testid="CreateStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
-                    @if (_sending)
-                    {
-                        <LoadingIndicator />
-                    }
-                    else
-                    {
-                        <span>Create Store</span>
-                    }
-                </button>
+                <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                    <button class="btn btn-primary w-100" type="submit" data-testid="CreateStoreButton" disabled="@(_validationEditContext?.Invalid is true || _sending)">
+                        @if (_sending)
+                        {
+                            <LoadingIndicator />
+                        }
+                        else
+                        {
+                            <span>Create Store</span>
+                        }
+                    </button>
+                </div>
             </ValidationEditContext>
         }
     </Authorized>
