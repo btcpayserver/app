@@ -12,6 +12,7 @@
 @inject IDispatcher Dispatcher
 @inject IState<StoreState> StoreState
 @inject DisplayFormatter DisplayFormatter
+@inject ClipboardHelper ClipboardHelper
 
 <PageTitle>@GetTitle()</PageTitle>
 
@@ -39,7 +40,7 @@
                 @if (Invoice is not null)
                 {
                     <div class="invoice">
-                        <span>Invoice @Invoice.Id</span>
+                        <span>Invoice @Invoice.Id <Icon @onclick="CopyInvoiceIDToClipboard" Symbol="actions-copy" class="ml-2 p-1" /></span>
                         <div class="h3">
                             <span data-sensitive>@DisplayFormatter.Currency(Invoice.Amount, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
                         </div>
@@ -348,4 +349,9 @@
     }
 
     private string GetTitle() => $"Invoice {Invoice?.Id}".Trim();
+
+    private async Task CopyInvoiceIDToClipboard()
+    {
+        await ClipboardHelper.CopyToClipboard(InvoiceId);
+    }
 }
