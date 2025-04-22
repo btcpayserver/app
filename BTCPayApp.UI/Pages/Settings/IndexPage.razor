@@ -13,6 +13,7 @@
 @inject IDispatcher Dispatcher
 @inject ConfigProvider ConfigProvider
 @inject IAccountManager AccountManager
+@inject OnChainWalletManager OnChainWalletManager
 @inject IState<UserState> UserState
 @inject BTCPayConnectionManager ConnectionManager
 @inject IJSRuntime JS
@@ -314,7 +315,7 @@
                                     Instance: @InstanceInfo.BaseUrl
                                     @if (!string.IsNullOrEmpty(InstanceInfo.ServerName))
                                     {
-                                        @($"({InstanceInfo.ServerName})")
+                                        @($" ({InstanceInfo.ServerName})")
                                     }
                                 </span>
                             </div>
@@ -355,6 +356,21 @@
             </div>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
+                    @if (_fees is { Length: 4 })
+                    {
+                        <li class="list-group-item">
+                            <div class="justify-content-start py-3">
+                                <Icon Symbol="block"/>
+                                <span>
+                                    <span>Fees in sat/vB:</span>
+                                    <span>@_fees[0] (high)</span>
+                                    <span>@_fees[1] (mid)</span>
+                                    <span>@_fees[2] (low)</span>
+                                    <span>@_fees[3] (eco)</span>
+                                </span>
+                            </div>
+                        </li>
+                    }
                     <li class="list-group-item">
                         <a href="@Routes.AppLogs">
                             <Icon Symbol="nav-notifications"/>
@@ -396,6 +412,7 @@
     private bool NeedsEncryptionKey => ConnectionManager.ConnectionState == BTCPayConnectionState.WaitingForEncryptionKey;
     private bool _sending;
     private string? _errorMessage;
+    private int[]? _fees;
 
     private class SettingsModel
     {
@@ -418,9 +435,37 @@
     {
         await base.OnInitializedAsync();
 
-        Model.Theme = UiState.Value.SelectedTheme;
         _account = AccountManager.Account;
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
+
+        Model.Theme = UiState.Value.SelectedTheme;
+        ConnectionManager.ConnectionChanged += OnConnectionChanged;
+
+        await UpdateFees();
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        ConnectionManager.ConnectionChanged += OnConnectionChanged;
+
+        return ValueTask.CompletedTask;
+    }
+
+    private async Task OnConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) e)
+    {
+        await UpdateFees();
+    }
+
+    private async Task UpdateFees()
+    {
+        _fees = (ConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary) ? [
+            (int)(await OnChainWalletManager.GetFeeRate(1)).SatoshiPerByte,
+            (int)(await OnChainWalletManager.GetFeeRate(2)).SatoshiPerByte,
+            (int)(await OnChainWalletManager.GetFeeRate(6)).SatoshiPerByte,
+            (int)(await OnChainWalletManager.GetFeeRate(12)).SatoshiPerByte
+        ] : null;
     }
 
     private void SetTheme(string theme)
