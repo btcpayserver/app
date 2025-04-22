@@ -698,12 +698,13 @@ public class OnChainWalletManager : BaseHostedService
         await HubProxy.BroadcastTransaction(valueTx.ToHex());
     }
 
-    public async Task<FeeRate> GetFeeRate(int blockTarget)
+    public async Task<FeeRate> GetFeeRate(int blockTarget, string? subject = null)
     {
+        var detail = $"fee rate for {blockTarget} blocks" + (string.IsNullOrEmpty(subject) ? "" : $" ({subject})");
         var defaultRate = new FeeRate(100m);
         if (HubProxy == null || !IsHubConnected)
         {
-            _logger.LogWarning("Cannot get fee rate: Hub not connected, using hardcoded {DefaultRate}", defaultRate);
+            _logger.LogWarning("Cannot get {Detail}: Hub not connected, using hardcoded {DefaultRate}", detail, defaultRate);
             return defaultRate;
         }
 
@@ -711,19 +712,18 @@ public class OnChainWalletManager : BaseHostedService
         {
             return await _memoryCache.GetOrCreateAsync($"feerate_{blockTarget}", async entry =>
             {
-                _logger.LogInformation("Getting fee rate for block target {BlockTarget}", blockTarget);
-
                 entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
 
-                var result = new FeeRate(await HubProxy.GetFeeRate(blockTarget));
+                var feeRate = await HubProxy.GetFeeRate(blockTarget);
+                var result = new FeeRate(feeRate);
 
-                _logger.LogInformation("Got fee rate for block target {BlockTarget} {Result}", blockTarget, result);
+                _logger.LogInformation("New {Detail}: {Result}", detail, result);
                 return result;
             }) ?? defaultRate;
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error getting fee rate, using hardcoded hardcoded {DefaultRate}", defaultRate);
+            _logger.LogError(e, "Error getting {Detail}, using hardcoded {DefaultRate}", detail, defaultRate);
             return defaultRate;
         }
     }
