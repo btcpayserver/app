@@ -347,7 +347,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
         var data = await db.LightningChannels
-            .Where(channel => !channel.Archived && channel.Data != null)
+            .Where(channel => !channel.Archived && channel.Data != null && channel.Data.Length > 0)
             .Select(channel => channel.Data!)
             .ToArrayAsync();
 
