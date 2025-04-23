@@ -20,16 +20,17 @@ public class LDKFeeEstimator : FeeEstimatorInterface
     public int get_est_sat_per_1000_weight(ConfirmationTarget confirmationTarget)
     {
         // https://docs.rs/lightning/latest/lightning/chain/chaininterface/enum.ConfirmationTarget.html
+        // https://github.com/lightningdevkit/ldk-node/blob/main/src/fee_estimator.rs#L87
         var targetBlocks = confirmationTarget switch
         {
             ConfirmationTarget.LDKConfirmationTarget_MaximumFeeEstimate => 1,
-            ConfirmationTarget.LDKConfirmationTarget_UrgentOnChainSweep => 32,
-            ConfirmationTarget.LDKConfirmationTarget_MinAllowedAnchorChannelRemoteFee => 12,
-            ConfirmationTarget.LDKConfirmationTarget_MinAllowedNonAnchorChannelRemoteFee => 4,
-            ConfirmationTarget.LDKConfirmationTarget_AnchorChannelFee => 12,
-            ConfirmationTarget.LDKConfirmationTarget_NonAnchorChannelFee => 2,
-            ConfirmationTarget.LDKConfirmationTarget_ChannelCloseMinimum => 64,
-            ConfirmationTarget.LDKConfirmationTarget_OutputSpendingFee => 144,
+            ConfirmationTarget.LDKConfirmationTarget_UrgentOnChainSweep => 6,
+            ConfirmationTarget.LDKConfirmationTarget_MinAllowedAnchorChannelRemoteFee => 1008,
+            ConfirmationTarget.LDKConfirmationTarget_MinAllowedNonAnchorChannelRemoteFee => 144,
+            ConfirmationTarget.LDKConfirmationTarget_AnchorChannelFee => 1008,
+            ConfirmationTarget.LDKConfirmationTarget_NonAnchorChannelFee => 12,
+            ConfirmationTarget.LDKConfirmationTarget_ChannelCloseMinimum => 144,
+            ConfirmationTarget.LDKConfirmationTarget_OutputSpendingFee => 12,
             _ => throw new ArgumentOutOfRangeException(nameof(confirmationTarget), confirmationTarget, null)
         };
 
