@@ -67,9 +67,10 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
 
             return descriptor;
         }
-        if (result is Result_CVec_u8ZPeerHandleErrorZ.Result_CVec_u8ZPeerHandleErrorZ_Err err)
+        if (result is Result_CVec_u8ZPeerHandleErrorZ.Result_CVec_u8ZPeerHandleErrorZ_Err errResult)
         {
-            logger.LogError("Failed to create outbound connection: {Error}", err.err.ToString());
+            logger.LogError("Failed to create outbound connection: {Error}",
+                errResult.err is { } peerError ? peerError.ToString() : errResult.ToString());
             tcpClient.Dispose();
             return null;
         }
@@ -178,7 +179,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         }
         catch (Exception e)
         {
-            _logger.LogError(e,"Failed to send data");
+            _logger.LogError("Failed to send {Bytes} bytes of data to peer: {Error} - disconnecting socket", data.Length, e.Message);
             disconnect_socket();
             return 0;
         }
