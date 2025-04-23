@@ -356,7 +356,7 @@
             </div>
             <div class="box">
                 <ul class="list-group list-group-flush list-group-links">
-                    @if (_fees is { Length: 4 })
+                    @if (false && _fees is { Length: > 0 })
                     {
                         <li class="list-group-item">
                             <div class="justify-content-start py-3">
@@ -366,7 +366,6 @@
                                     <span>@_fees[0] (high)</span>
                                     <span>@_fees[1] (mid)</span>
                                     <span>@_fees[2] (low)</span>
-                                    <span>@_fees[3] (eco)</span>
                                 </span>
                             </div>
                         </li>
@@ -462,7 +461,6 @@
     {
         _fees = (ConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary) ? [
             (int)(await OnChainWalletManager.GetFeeRate(1)).SatoshiPerByte,
-            (int)(await OnChainWalletManager.GetFeeRate(2)).SatoshiPerByte,
             (int)(await OnChainWalletManager.GetFeeRate(6)).SatoshiPerByte,
             (int)(await OnChainWalletManager.GetFeeRate(12)).SatoshiPerByte
         ] : null;
