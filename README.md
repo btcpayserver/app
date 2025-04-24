@@ -64,3 +64,7 @@ error, and you may find a solution at the [following link](https://learn.microso
 
 If you are using GrapheneOS for the Android development, make sure to explicitely [enable code debugging](https://discuss.grapheneos.org/d/8330-app-compatibility-with-grapheneos).
 To run the app with debugger attached, the BTCPay app needs to get explicitely set as debug app in `Settings > System > Developer Settings > Debugging > Set Debug App`.
+
+### Sunmi V2s
+
+To enable developer mode on the POS device, go to `Settings > About device` and tap the `Build number` list item seven times. It will conmfirm "You are now a developer" and afterwards you will find `Settings > System > Developer options` being present. There you can turn on USB debugging and select BTCPay app for debugging.
