@@ -13,7 +13,6 @@ public static class StartupExtensions
     {
         serviceCollection.AddOptions();
         serviceCollection.AddSingleton<DisplayFormatter>();
-        serviceCollection.AddScoped<ClipboardHelper>();
         serviceCollection.AddSingleton<LogReaderService>();
         serviceCollection.AddBlazorDragDrop();
         serviceCollection.AddCascadingAuthenticationState();
