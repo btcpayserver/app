@@ -5,8 +5,7 @@
 }
 
 .loading-container {
-  min-height: -webkit-fill-available;
-  min-height: 100dvh;
+  flex: 1 1 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -20,5 +19,6 @@ iframe {
   top: 0;
   left: 0;
   width: 100%;
-  height: calc(100dvh - var(--navbar-bottom-height));
+  height: 100%; /* fallback for older webviews */
+  height: calc(100% - var(--navbar-bottom-height));
 }

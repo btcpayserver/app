@@ -285,7 +285,7 @@
                 <ul class="list-group list-group-flush list-group-links">
                     <li class="list-group-item">
                         <div class="justify-content-start">
-                            <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                            <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
                             <span>
                                 Hub:
                                 @(State.Value.ConnectionState switch
@@ -310,7 +310,7 @@
                     {
                         <li class="list-group-item">
                             <div class="justify-content-start">
-                                <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                                <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
                                 <span>
                                     Instance: @InstanceInfo.BaseUrl
                                     @if (!string.IsNullOrEmpty(InstanceInfo.ServerName))
@@ -325,7 +325,7 @@
                     {
                         <li class="list-group-item">
                             <div class="justify-content-start">
-                                <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.OnchainWalletState switch { OnChainWalletState.Loaded => "enabled", OnChainWalletState.Init => "disabled", _ => "pending" })"></span>
+                                <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.OnchainWalletState switch { OnChainWalletState.Loaded => "enabled", OnChainWalletState.Init => "disabled", _ => "pending" })"></span>
                                 <span>
                                     Wallet:
                                     @(State.Value.OnchainWalletState switch
@@ -339,7 +339,7 @@
                         </li>
                         <li class="list-group-item">
                             <div class="justify-content-start">
-                                <span class="m-2 me-1 btcpay-status btcpay-status--@(State.Value.LightningNodeState switch { LightningNodeState.Loaded => "enabled", LightningNodeState.Error or LightningNodeState.Stopped=> "disabled", _ => "pending" })"></span>
+                                <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.LightningNodeState switch { LightningNodeState.Loaded => "enabled", LightningNodeState.Error or LightningNodeState.Stopped=> "disabled", _ => "pending" })"></span>
                                 <span>
                                     Lightning:
                                     @(State.Value.LightningNodeState switch

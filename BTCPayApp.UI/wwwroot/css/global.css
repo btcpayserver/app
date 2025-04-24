@@ -226,7 +226,6 @@ img.profile-picture {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--btcpay-space-m);
   font-weight: var(--btcpay-font-weight-semibold);
 }
 
@@ -236,6 +235,7 @@ img.profile-picture {
   background: var(--btcpay-neutral-400);
   border-radius: var(--btcpay-border-radius-l);
   margin: calc(var(--btcpay-space-xs) * -1) 0;
+  margin-right: var(--btcpay-space-m);
 }
 
 .list-group-flush.list-group-links .list-group-item > * > .icon:last-child {
