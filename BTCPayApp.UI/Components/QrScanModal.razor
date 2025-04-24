@@ -13,7 +13,11 @@
                 </button>
             </div>
             <div class="modal-body">
-                <QRCodeScanner Width="100%" />
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <Alert Type="danger">@_errorMessage</Alert>
+                }
+                <QRCodeScanner Width="100%"/>
             </div>
         </div>
     </div>
@@ -21,6 +25,7 @@
 
 @code {
     private QRCodeScannerJsInterop? _qrCodeScannerJsInterop;
+    private string? _errorMessage;
 
     [Parameter]
     public Action<string>? OnScan { get; set; }
@@ -67,7 +72,9 @@
     {
         if (OnScan == null) return;
         _qrCodeScannerJsInterop ??= new QRCodeScannerJsInterop(JS);
-        await _qrCodeScannerJsInterop.Init(OnScan);
+        await _qrCodeScannerJsInterop.Init(OnScan, OnError);
+        _errorMessage = null;
+        await InvokeAsync(StateHasChanged);
     }
 
     [JSInvokable]
@@ -75,6 +82,13 @@
     {
         if (_qrCodeScannerJsInterop == null) return;
         await _qrCodeScannerJsInterop.StopRecording();
+    }
+
+    // ReSharper disable once AsyncVoidMethod
+    private async void OnError(string err)
+    {
+        _errorMessage = err == "{}" ? "No camera found" : err;
+        await InvokeAsync(StateHasChanged);
     }
 }
 
