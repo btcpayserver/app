@@ -1,5 +1,5 @@
 .container {
-  min-height: -webkit-fill-available;
+  min-height: 100%; /* fallback for older webviews */
   min-height: 100dvh;
   display: flex;
   flex-direction: column;

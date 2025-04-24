@@ -1,5 +1,5 @@
 #MainLayout {
-  min-height: -webkit-fill-available;
+  min-height: 100%; /* fallback for older webviews */
   min-height: 100dvh;
   scroll-padding-top: calc(var(--sticky-header-height) + var(--btcpay-space-m));
 }

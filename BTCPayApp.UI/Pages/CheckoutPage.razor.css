@@ -4,15 +4,6 @@
   padding-bottom: var(--btcpay-space-l);
 }
 
-.loading-container {
-  flex: 1 1 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--btcpay-space-m);
-}
-
 iframe {
   position: fixed;
   z-index: 1;
