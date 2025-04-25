@@ -4,7 +4,11 @@
 
 <div class="accordion-item">
     <div id="peer-@Peer.NodeId" class="d-flex align-items-center justify-content-between gap-2 accordion-header">
-        <TruncateCenter Text="@(string.IsNullOrEmpty(Peer.Info?.Label) ? Peer.NodeId : Peer.Info.Label)" Padding="10" class="fw-semibold"/>
+        <TruncateCenter Text="@(string.IsNullOrEmpty(Peer.Info?.Label) ? Peer.NodeId : Peer.Info.Label)" Padding="10" class="fw-semibold me-auto"/>
+        @if (Loading)
+        {
+            <LoadingIndicator/>
+        }
         <button class="accordion-button collapsed w-auto p-0" type="button" data-bs-toggle="collapse" data-bs-target="#peer-@Peer.NodeId-details" aria-expanded="false" aria-controls="peer-@Peer.NodeId-details">
             <Icon Symbol="caret-down" />
         </button>
@@ -40,7 +44,7 @@
                     }
                     else if (!string.IsNullOrEmpty(Peer.Socket) && EndPointParser.TryParse(Peer.Socket, 9735, out var endpoint))
                     {
-                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(new PeerInfo { Endpoint = endpoint })">Remember peer</button>
+                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(new PeerInfo { Endpoint = endpoint, Persistent = true, Trusted = true })">Remember peer</button>
                     }
                 }
             </div>
@@ -60,6 +64,9 @@
 
     [Parameter]
     public EventCallback<LightningPeerModel> OnDisconnectPeer { get; set; }
+
+    [Parameter]
+    public bool Loading { get; set; }
 
     private async Task ConnectPeer()
     {

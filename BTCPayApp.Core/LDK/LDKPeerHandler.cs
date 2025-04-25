@@ -38,7 +38,7 @@ public class LDKPeerHandler : IScopedHostedService
         _logger = logger.CreateLogger<LDKPeerHandler>();
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _node.ConfigUpdated += ConfigUpdated;
@@ -46,11 +46,12 @@ public class LDKPeerHandler : IScopedHostedService
         _ = ListenForInboundConnections(_cts.Token);
         _ = ContinuouslyAttemptToConnectToPersistentPeers(_cts.Token);
         _ = PeriodicTicker(_cts.Token, 1000, () => _peerManager.process_events());
-        _btcPayAppServerClient.OnServerNodeInfo += BtcPayAppServerClientOnOnServerNodeInfo;
+
+        _btcPayAppServerClient.OnServerNodeInfo += PeerBtcPayServerHost;
         if (!string.IsNullOrEmpty(_btcPayConnectionManager.ReportedNodeInfo))
-        {
-            _ = BtcPayAppServerClientOnOnServerNodeInfo(null, _btcPayConnectionManager.ReportedNodeInfo);
-        }
+            _ = PeerBtcPayServerHost(null, _btcPayConnectionManager.ReportedNodeInfo);
+
+        return Task.CompletedTask;
     }
 
     private void DescriptorsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -58,7 +59,7 @@ public class LDKPeerHandler : IScopedHostedService
         _node.PeersChanged();
     }
 
-    private async Task BtcPayAppServerClientOnOnServerNodeInfo(object? sender, string? e)
+    private async Task PeerBtcPayServerHost(object? sender, string? e)
     {
         var nodeInfo = NodeInfo.Parse(e);
         var config = await _node.GetConfig();
@@ -87,8 +88,9 @@ public class LDKPeerHandler : IScopedHostedService
             try
             {
                 var connected = _peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()).ToLower());
-                var channels = (await _node.GetChannels(ctsToken)).Where(pair => pair.Value.channelDetails is not null)
-                    .Select(pair => pair.Value.channelDetails!).ToList();
+                var chans = await _node.GetChannels(ctsToken);
+                var channels = chans?.Where(pair => pair.Value.channelDetails is not null)
+                    .Select(pair => pair.Value.channelDetails!).ToList() ?? [];
 
                 var channelPeers = channels
                     .Select(details => Convert.ToHexString(details.get_counterparty().get_node_id()).ToLower()).Distinct();
@@ -140,10 +142,9 @@ public class LDKPeerHandler : IScopedHostedService
             _peerManager.disconnect_all_peers();
 
         }, cancellationToken);
+
         _node.ConfigUpdated -= ConfigUpdated;
-
-        _btcPayAppServerClient.OnServerNodeInfo -= BtcPayAppServerClientOnOnServerNodeInfo;
-
+        _btcPayAppServerClient.OnServerNodeInfo -= PeerBtcPayServerHost;
         _descriptors.CollectionChanged -= DescriptorsOnCollectionChanged;
     }
 
@@ -232,7 +233,7 @@ public class LDKPeerHandler : IScopedHostedService
                 var config = await _node.GetConfig();
                 if (!config.Peers.TryGetValue(theirNodeId.ToString(), out var peer))
                 {
-                    peer = new PeerInfo();
+                    peer = new PeerInfo { Persistent = true, Trusted = true };
                 }
 
                 if (peer.Endpoint?.ToEndpointString() != remote.ToString())

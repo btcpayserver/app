@@ -27,6 +27,12 @@
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
         <h1>Peers and Channels</h1>
+        <SectionContent SectionId="Titlebar.End">
+            @if (Loading)
+            {
+                <LoadingIndicator/>
+            }
+        </SectionContent>
     </Titlebar>
 </SectionContent>
 <section class="container">
@@ -35,7 +41,7 @@
             @if (LightningNodeManager.IsActive)
             {
                 <h2>Peers</h2>
-                <PeersList Peers="_peers" OnConnectPeer="ConnectPeer" OnDisconnectPeer="DisconnectPeer" OnUpdatePeer="UpdatePeer" class="mb-4"/>
+                <PeersList Peers="_peers" OnConnectPeer="ConnectPeer" OnDisconnectPeer="DisconnectPeer" OnUpdatePeer="UpdatePeer" UpdatingPeerId="@_updatingPeer" class="mb-4"/>
 
                 @if (PeerModel != null)
                 {
@@ -48,8 +54,8 @@
                                 <InputText @bind-Value="PeerModel.PeerUrl" id="PeerUrl" class="form-control"/>
                                 <ValidationMessage For="@(() => PeerModel.PeerUrl)"/>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100" disabled="@(_connectEditContext!.Invalid || PeerConnecting)">
-                                @if (PeerConnecting)
+                            <button type="submit" class="btn btn-primary w-100" disabled="@(_connectEditContext!.Invalid || _connectingNewPeer)">
+                                @if (_connectingNewPeer)
                                 {
                                     <LoadingIndicator/>
                                 }
@@ -108,7 +114,7 @@
                                     }
                                 </td>
                                 <td>
-                                    @if (channel.Value.channelDetails is not null && channel.Value.channelDetails.get_counterparty() is ChannelCounterparty counterparty)
+                                    @if (channel.Value.channelDetails is not null && channel.Value.channelDetails.get_counterparty() is { } counterparty)
                                     {
                                         var counterpartyNodeId = Convert.ToHexString(counterparty.get_node_id()).ToLowerInvariant();
                                         if (_config.Peers.TryGetValue(counterpartyNodeId, out var peerConfig) && !string.IsNullOrEmpty(peerConfig.Label))
@@ -161,9 +167,7 @@
                                     }
                                 </td>
                                 </tr>
-
                             }
-
                             </tbody>
                         </table>
                     </div>
@@ -203,8 +207,8 @@
                                 <InputAmount Id="Amount" @bind-Value="ChannelModel.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
                                 <ValidationMessage For="@(() => ChannelModel.Amount)"/>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100" disabled="@(_openChannelEditContext!.Invalid || ChannelOpening)">
-                                @if (ChannelOpening)
+                            <button type="submit" class="btn btn-primary w-100" disabled="@(_openChannelEditContext!.Invalid || _openingChannel)">
+                                @if (_openingChannel)
                                 {
                                     <LoadingIndicator/>
                                 }
@@ -238,15 +242,17 @@
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
     private string DisplayCurrency => UIState.Value.DisplayCurrency;
     private MoneyUnit UnitMoney => DisplayCurrency == CurrencyDisplay.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
-    private bool Loading { get; set; }
+    private bool _loading;
+    private bool _connectingNewPeer;
+    private bool _openingChannel;
+    private bool Loading => _loading || LightningNodeManager.State == LightningNodeState.Loading;
+    private string? _updatingPeer;
 
-    private bool ChannelOpening { get; set; }
     private string? ChannelSuccessMessage { get; set; }
     private string? ChannelErrorMessage { get; set; }
     private ValidationEditContext? _openChannelEditContext;
     private OpenChannelModel? ChannelModel { get; set; } = new();
 
-    private bool PeerConnecting { get; set; }
     private string? ConnectSuccessMessage { get; set; }
     private string? ConnectErrorMessage { get; set; }
     private ValidationEditContext? _connectEditContext;
@@ -280,22 +286,15 @@
     private async Task FetchData()
     {
         if (Node == null) return;
-        Loading = true;
+        _loading = true;
         await InvokeAsync(StateHasChanged);
 
-        try
-        {
-            await _semaphore.WaitAsync();
-            _config = await Node.GetConfig();
-            _channels = await Node.GetChannels();
-            _peers = await GetPeers(_config.Peers);
-        }
-        finally
-        {
-            Loading = false;
-            await InvokeAsync(StateHasChanged);
-            _semaphore.Release();
-        }
+        _config = await Node.GetConfig();
+        _channels = await Node.GetChannels();
+        _peers = await GetPeers(_config.Peers);
+
+        _loading = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task<IEnumerable<LightningPeerModel>?> GetPeers(Dictionary<string, PeerInfo> peerInfos)
@@ -341,21 +340,19 @@
     {
         if (Node == null || PeerModel == null) return;
         ConnectSuccessMessage = ConnectErrorMessage = null;
+
         try
         {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
             if (!NodeInfo.TryParse(PeerModel.PeerUrl, out var nodeInfo))
             {
                 ConnectErrorMessage = $"Invalid peer URL: {PeerModel.PeerUrl}";
                 return;
             }
 
+            _connectingNewPeer = true;
             var result = await Node.PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
             if (result is not null)
             {
-                _peers = await GetPeers(_config!.Peers);
                 ConnectSuccessMessage = $"Connection to {PeerModel.PeerUrl} initiated";
                 PeerModel = new ConnectPeerModel();
             }
@@ -368,74 +365,56 @@
         {
             ConnectErrorMessage = e.Message;
         }
-        finally
-        {
-            Loading = false;
-            _semaphore.Release();
-            await InvokeAsync(StateHasChanged);
-        }
 
-        /*if (string.IsNullOrEmpty(ConnectErrorMessage))
-            _ = FetchData();*/
-    }
-
-    private async Task DisconnectPeer(LightningPeerModel peer)
-    {
-        if (Node == null) return;
-        try
-        {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-            await Node.PeerHandler.DisconnectAsync(new PubKey(peer.NodeId));
-        }
-        finally
-        {
-            Loading = false;
-            _semaphore.Release();
-            await InvokeAsync(StateHasChanged);
-        }
-        _ = FetchData();
-    }
-
-    private async Task UpdatePeer(LightningPeerModel peer)
-    {
-        if (Node == null) return;
-        try
-        {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-            await Node.Peer(new PubKey(peer.NodeId), peer.Info);
-        }
-        finally
-        {
-            Loading = false;
-            await InvokeAsync(StateHasChanged);
-            _semaphore.Release();
-        }
-        _ = FetchData();
+        _connectingNewPeer = false;
+        if (string.IsNullOrEmpty(ConnectErrorMessage))
+            await FetchData();
     }
 
     private async Task ConnectPeer(LightningPeerModel peer)
     {
         if (Node == null) return;
+        _updatingPeer = peer.NodeId;
+
         try
         {
-            Loading = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
-
             if (EndPointParser.TryParse(peer.Socket, 9735, out var endpoint))
                 await Node.PeerHandler.ConnectAsync(new PubKey(peer.NodeId), endpoint);
         }
-        finally
+        catch (Exception e)
         {
-            Loading = false;
-            await InvokeAsync(StateHasChanged);
-            _semaphore.Release();
+            ConnectErrorMessage = e.Message;
         }
-        _ = FetchData();
+
+        _updatingPeer = null;
+        await FetchData();
+    }
+
+    private async Task DisconnectPeer(LightningPeerModel peer)
+    {
+        if (Node == null) return;
+        _updatingPeer = peer.NodeId;
+
+        try
+        {
+            await Node.PeerHandler.DisconnectAsync(new PubKey(peer.NodeId));
+        }
+        catch (Exception e)
+        {
+            ConnectErrorMessage = e.Message;
+        }
+
+        _updatingPeer = null;
+        await FetchData();
+    }
+
+    private async Task UpdatePeer(LightningPeerModel peer)
+    {
+        if (Node == null) return;
+        _updatingPeer = peer.NodeId;
+        await Node.Peer(new PubKey(peer.NodeId), peer.Info);
+        _updatingPeer = null;
+        await FetchData();
     }
 
     private async Task OpenChannel()
@@ -444,7 +423,7 @@
         try
         {
             ChannelSuccessMessage = ChannelErrorMessage = null;
-            ChannelOpening = true;
+            _openingChannel = true;
             await InvokeAsync(StateHasChanged);
             await _semaphore.WaitAsync();
             var amount = new Money(ChannelModel.Amount.Value, MoneyUnit.Satoshi);
@@ -466,7 +445,7 @@
         finally
         {
             _semaphore.Release();
-            ChannelOpening = false;
+            _openingChannel = false;
             await InvokeAsync(StateHasChanged);
         }
 
@@ -480,7 +459,7 @@
         try
         {
             ChannelSuccessMessage = ChannelErrorMessage = null;
-            ChannelOpening = true;
+            _openingChannel = true;
             await InvokeAsync(StateHasChanged);
 
             var uri = LNURL.Parse(lnurl, out var tag);
@@ -513,7 +492,7 @@
             if(ChannelSuccessMessage is null && ChannelErrorMessage is null)
                 ChannelErrorMessage = "Error opening channel";
             _semaphore.Release();
-            ChannelOpening = false;
+            _openingChannel = false;
             await InvokeAsync(StateHasChanged);
         }
         if (string.IsNullOrEmpty(ChannelErrorMessage))

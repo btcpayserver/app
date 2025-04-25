@@ -13,7 +13,7 @@
             @foreach (var p in Peers)
             {
                 <div class="box accordion">
-                    <PeersListItem Peer="@p" OnConnectPeer="OnConnectPeer" OnDisconnectPeer="OnDisconnectPeer" OnUpdatePeer="OnUpdatePeer"/>
+                    <PeersListItem Peer="@p" OnConnectPeer="OnConnectPeer" OnDisconnectPeer="OnDisconnectPeer" OnUpdatePeer="OnUpdatePeer" Loading="@(UpdatingPeerId == p.NodeId)"/>
                 </div>
             }
         }
@@ -39,6 +39,9 @@
 
     [Parameter]
     public string? Error { get; set; }
+
+    [Parameter]
+    public string? UpdatingPeerId { get; set; }
 
     [Parameter]
     public EventCallback<LightningPeerModel> OnUpdatePeer { get; set; }

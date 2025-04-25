@@ -27,7 +27,7 @@ public partial class LDKNode :
         return (await _memoryCache.GetOrCreateAsync(nameof(GetChannels), async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            using var dbContext =  await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var dbContext =  await _dbContextFactory.CreateDbContextAsync(cancellationToken);
             var dbChannels = dbContext.LightningChannels.AsNoTracking().Include(channel => channel.Aliases).AsAsyncEnumerable();
             var channels = ServiceProvider.GetRequiredService<ChannelManager>().list_channels();
 
@@ -45,10 +45,9 @@ public partial class LDKNode :
         }).WithCancellation(cancellationToken))!;
     }
 
-
     public async Task Handle(Event.Event_ChannelClosed evt)
     {
-        _logger.LogInformation($"Channel {Convert.ToHexString(evt.channel_id.get_a()).ToLowerInvariant()} closed: {evt.GetReason()}");
+        _logger.LogInformation("Channel {ChannelId} closed: {Reason}", Convert.ToHexString(evt.channel_id.get_a()).ToLowerInvariant(), evt.GetReason());
         await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>()
         {
             {"CloseReason", JsonSerializer.SerializeToElement(evt.reason.write())},
@@ -282,9 +281,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
             _semaphore.Release();
         }
-
     }
-
 
     public AsyncEventHandler<LightningConfig>? ConfigUpdated;
 
