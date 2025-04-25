@@ -46,7 +46,7 @@
                 @if (PeerModel != null)
                 {
                     <h2>Connect Peer</h2>
-                    <ValidationEditContext @ref="_connectEditContext" Model="PeerModel" OnValidSubmit="ConnectToNewPeer" SuccessMessage="@ConnectSuccessMessage" ErrorMessage="@ConnectErrorMessage">
+                    <ValidationEditContext @ref="_connectEditContext" Model="PeerModel" OnValidSubmit="ConnectToNewPeer" SuccessMessage="@_connectSuccessMessage" ErrorMessage="@_connectErrorMessage">
                         <DataAnnotationsValidator/>
                         <fieldset class="box">
                             <div class="form-group">
@@ -182,7 +182,7 @@
                 @if (_peers?.Any() is true && ChannelModel != null)
                 {
                     <h2>Open Channel</h2>
-                    <ValidationEditContext @ref="_openChannelEditContext" Model="ChannelModel" OnValidSubmit="() => OpenChannel()" SuccessMessage="@ChannelSuccessMessage" ErrorMessage="@ChannelErrorMessage">
+                    <ValidationEditContext @ref="_openChannelEditContext" Model="ChannelModel" OnValidSubmit="() => OpenChannel()" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage">
                         <DataAnnotationsValidator/>
                         <fieldset class="box">
                             <div class="form-group">
@@ -233,7 +233,6 @@
 </section>
 
 @code {
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
     private LightningConfig? _config;
     private Dictionary<string, (Channel channel, ChannelDetails? channelDetails)>? _channels;
     private IEnumerable<LightningPeerModel>? _peers;
@@ -242,19 +241,20 @@
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
     private string DisplayCurrency => UIState.Value.DisplayCurrency;
     private MoneyUnit UnitMoney => DisplayCurrency == CurrencyDisplay.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
-    private bool _loading;
-    private bool _connectingNewPeer;
-    private bool _openingChannel;
-    private bool Loading => _loading || LightningNodeManager.State == LightningNodeState.Loading;
-    private string? _updatingPeer;
 
-    private string? ChannelSuccessMessage { get; set; }
-    private string? ChannelErrorMessage { get; set; }
+    private string? _updatingPeer;
+    private bool _loading;
+    private bool Loading => _loading || LightningNodeManager.State == LightningNodeState.Loading;
+
+    private bool _openingChannel;
+    private string? _channelSuccessMessage;
+    private string? _channelErrorMessage;
     private ValidationEditContext? _openChannelEditContext;
     private OpenChannelModel? ChannelModel { get; set; } = new();
 
-    private string? ConnectSuccessMessage { get; set; }
-    private string? ConnectErrorMessage { get; set; }
+    private bool _connectingNewPeer;
+    private string? _connectSuccessMessage;
+    private string? _connectErrorMessage;
     private ValidationEditContext? _connectEditContext;
     private ConnectPeerModel? PeerModel { get; set; } = new();
 
@@ -274,27 +274,21 @@
         await base.OnInitializedAsync();
 
         if (await LightningNodeManager.CanConfigureLightningNode())
-        {
             NavigationManager.NavigateTo(Routes.LightningSettings);
-        }
         else
-        {
-            _ = FetchData();
-        }
+            await FetchData();
     }
 
     private async Task FetchData()
     {
         if (Node == null) return;
         _loading = true;
-        await InvokeAsync(StateHasChanged);
 
         _config = await Node.GetConfig();
         _channels = await Node.GetChannels();
         _peers = await GetPeers(_config.Peers);
 
         _loading = false;
-        await InvokeAsync(StateHasChanged);
     }
 
     private async Task<IEnumerable<LightningPeerModel>?> GetPeers(Dictionary<string, PeerInfo> peerInfos)
@@ -333,19 +327,19 @@
                 };
             });
 
-        return connected.Concat(unconnected);
+        return connected.Concat(unconnected).OrderBy(p => p.NodeId);
     }
 
     private async Task ConnectToNewPeer()
     {
         if (Node == null || PeerModel == null) return;
-        ConnectSuccessMessage = ConnectErrorMessage = null;
+        _connectSuccessMessage = _connectErrorMessage = null;
 
         try
         {
             if (!NodeInfo.TryParse(PeerModel.PeerUrl, out var nodeInfo))
             {
-                ConnectErrorMessage = $"Invalid peer URL: {PeerModel.PeerUrl}";
+                _connectErrorMessage = $"Invalid peer URL: {PeerModel.PeerUrl}";
                 return;
             }
 
@@ -353,21 +347,21 @@
             var result = await Node.PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
             if (result is not null)
             {
-                ConnectSuccessMessage = $"Connection to {PeerModel.PeerUrl} initiated";
+                _connectSuccessMessage = $"Connection to {PeerModel.PeerUrl} initiated";
                 PeerModel = new ConnectPeerModel();
             }
             else
             {
-                ConnectErrorMessage = "Error establishing connection";
+                _connectErrorMessage = "Error establishing connection";
             }
         }
         catch (Exception e)
         {
-            ConnectErrorMessage = e.Message;
+            _connectErrorMessage = e.Message;
         }
 
         _connectingNewPeer = false;
-        if (string.IsNullOrEmpty(ConnectErrorMessage))
+        if (string.IsNullOrEmpty(_connectErrorMessage))
             await FetchData();
     }
 
@@ -380,10 +374,12 @@
         {
             if (EndPointParser.TryParse(peer.Socket, 9735, out var endpoint))
                 await Node.PeerHandler.ConnectAsync(new PubKey(peer.NodeId), endpoint);
+            else
+                _connectErrorMessage = $"Could not resolve endpoint for socket {peer.Socket}";
         }
         catch (Exception e)
         {
-            ConnectErrorMessage = e.Message;
+            _connectErrorMessage = e.Message;
         }
 
         _updatingPeer = null;
@@ -401,7 +397,7 @@
         }
         catch (Exception e)
         {
-            ConnectErrorMessage = e.Message;
+            _connectErrorMessage = e.Message;
         }
 
         _updatingPeer = null;
@@ -420,83 +416,71 @@
     private async Task OpenChannel()
     {
         if (Loading || Node == null || ChannelModel?.Amount is null || string.IsNullOrEmpty(ChannelModel.PeerId)) return;
+
+        _channelSuccessMessage = _channelErrorMessage = null;
+        _openingChannel = true;
         try
         {
-            ChannelSuccessMessage = ChannelErrorMessage = null;
-            _openingChannel = true;
-            await InvokeAsync(StateHasChanged);
-            await _semaphore.WaitAsync();
             var amount = new Money(ChannelModel.Amount.Value, MoneyUnit.Satoshi);
             var result = await Node.OpenChannel(amount, new PubKey(ChannelModel.PeerId));
             if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
             {
-                ChannelSuccessMessage = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
+                _channelSuccessMessage = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
                 ChannelModel = new OpenChannelModel();
             }
             else if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
             {
-                ChannelErrorMessage = $"Error: {err.err.GetError()}";
+                _channelErrorMessage = $"Error: {err.err.GetError()}";
             }
         }
         catch (Exception e)
         {
-            ChannelErrorMessage = e.Message;
-        }
-        finally
-        {
-            _semaphore.Release();
-            _openingChannel = false;
-            await InvokeAsync(StateHasChanged);
+            _channelErrorMessage = e.Message;
         }
 
-        if (string.IsNullOrEmpty(ChannelErrorMessage))
-            _ = FetchData();
+        _openingChannel = false;
+        if (string.IsNullOrEmpty(_channelErrorMessage))
+            await FetchData();
     }
 
     private async Task ParseChannelRequest(string lnurl, string name, bool trusted)
     {
         if (Loading || Node == null || ChannelModel?.Amount is null || string.IsNullOrEmpty(ChannelModel.PeerId)) return;
+        _channelSuccessMessage = _channelErrorMessage = null;
+
         try
         {
-            ChannelSuccessMessage = ChannelErrorMessage = null;
-            _openingChannel = true;
-            await InvokeAsync(StateHasChanged);
-
             var uri = LNURL.Parse(lnurl, out var tag);
             var http = HttpClientFactory.CreateClient();
             var channelRequest = (LNURLChannelRequest) await LNURL.FetchInformation(uri, tag, http, new CancellationTokenSource(TimeSpan.FromSeconds(5)).Token);
             if (channelRequest is null)
             {
-                ChannelErrorMessage = "The channel request is invalid";
+                _channelErrorMessage = "The channel request is invalid";
                 return;
             }
-
 
             if (!EndPointParser.TryParse($"{channelRequest.Uri.Host}:{channelRequest.Uri.Port}", 9735, out var endpoint))
             {
-                ChannelErrorMessage = "The channel request provided an invalid endpoint for the peer";
+                _channelErrorMessage = "The channel request provided an invalid endpoint for the peer";
                 return;
             }
 
-            await Node.Peer(channelRequest.Uri.NodeId, new PeerInfo {Endpoint = endpoint, Label = name, Trusted = trusted});
+            _openingChannel = true;
+            await Node.Peer(channelRequest.Uri.NodeId, new PeerInfo { Endpoint = endpoint, Label = name, Trusted = trusted });
             await ConnectPeer(new LightningPeerModel { NodeId = channelRequest.Uri.NodeId.ToString(), Socket = endpoint.ToEndpointString() });
             await channelRequest.SendRequest(Node.NodeId, true, http, new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
-            ChannelSuccessMessage = "Successfully initiated channel creation. Please wait for the peer to execute.";
+            _channelSuccessMessage = "Successfully initiated channel creation. Please wait for the peer to execute.";
         }
         catch (Exception e)
         {
-            ChannelErrorMessage = e.Message;
+            _channelErrorMessage = e.Message;
         }
-        finally
-        {
-            if(ChannelSuccessMessage is null && ChannelErrorMessage is null)
-                ChannelErrorMessage = "Error opening channel";
-            _semaphore.Release();
-            _openingChannel = false;
-            await InvokeAsync(StateHasChanged);
-        }
-        if (string.IsNullOrEmpty(ChannelErrorMessage))
-            _ = FetchData();
+
+        _openingChannel = false;
+        if (_channelSuccessMessage is null && _channelErrorMessage is null)
+            _channelErrorMessage = "Error opening channel";
+        else
+            await FetchData();
     }
 
     private void ToggleDisplayCurrency()

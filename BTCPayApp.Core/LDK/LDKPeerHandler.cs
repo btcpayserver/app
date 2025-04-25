@@ -12,61 +12,50 @@ using NodeInfo = BTCPayServer.Lightning.NodeInfo;
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKPeerHandler : IScopedHostedService
+public class LDKPeerHandler(
+    PeerManager peerManager,
+    LDKWalletLoggerFactory logger,
+    ChannelManager channelManager,
+    LDKNode node,
+    BTCPayConnectionManager btcPayConnectionManager,
+    BTCPayAppServerClient btcPayAppServerClient)
+    : IScopedHostedService
 {
-    private readonly ILogger<LDKPeerHandler> _logger;
-    private readonly PeerManager _peerManager;
-    private readonly ChannelManager _channelManager;
-    private readonly LDKNode _node;
-    private readonly BTCPayConnectionManager _btcPayConnectionManager;
-    private readonly BTCPayAppServerClient _btcPayAppServerClient;
+    private readonly ILogger<LDKPeerHandler> _logger = logger.CreateLogger<LDKPeerHandler>();
     private CancellationTokenSource? _cts;
     private TaskCompletionSource? _configTcs;
     private readonly ObservableConcurrentDictionary<string, LDKTcpDescriptor> _descriptors = new();
-
     public EndPoint? Endpoint { get; set; }
-
-    public LDKPeerHandler(PeerManager peerManager, LDKWalletLoggerFactory logger, ChannelManager channelManager,
-        LDKNode node,
-        BTCPayConnectionManager btcPayConnectionManager, BTCPayAppServerClient btcPayAppServerClient)
-    {
-        _peerManager = peerManager;
-        _channelManager = channelManager;
-        _node = node;
-        _btcPayConnectionManager = btcPayConnectionManager;
-        _btcPayAppServerClient = btcPayAppServerClient;
-        _logger = logger.CreateLogger<LDKPeerHandler>();
-    }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _node.ConfigUpdated += ConfigUpdated;
+        node.ConfigUpdated += ConfigUpdated;
         _descriptors.CollectionChanged += DescriptorsOnCollectionChanged;
         _ = ListenForInboundConnections(_cts.Token);
         _ = ContinuouslyAttemptToConnectToPersistentPeers(_cts.Token);
-        _ = PeriodicTicker(_cts.Token, 1000, () => _peerManager.process_events());
+        _ = PeriodicTicker(_cts.Token, 1000, peerManager.process_events);
 
-        _btcPayAppServerClient.OnServerNodeInfo += PeerBtcPayServerHost;
-        if (!string.IsNullOrEmpty(_btcPayConnectionManager.ReportedNodeInfo))
-            _ = PeerBtcPayServerHost(null, _btcPayConnectionManager.ReportedNodeInfo);
+        btcPayAppServerClient.OnServerNodeInfo += PeerBtcPayServerHost;
+        if (!string.IsNullOrEmpty(btcPayConnectionManager.ReportedNodeInfo))
+            _ = PeerBtcPayServerHost(null, btcPayConnectionManager.ReportedNodeInfo);
 
         return Task.CompletedTask;
     }
 
     private void DescriptorsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        _node.PeersChanged();
+        node.PeersChanged();
     }
 
     private async Task PeerBtcPayServerHost(object? sender, string? e)
     {
         var nodeInfo = NodeInfo.Parse(e);
-        var config = await _node.GetConfig();
+        var config = await node.GetConfig();
         if (config.Peers.ContainsKey(nodeInfo.NodeId.ToString())) return;
 
         var endpoint = new IPEndPoint(IPAddress.Parse(nodeInfo.Host), nodeInfo.Port);
-        await _node.Peer(nodeInfo.NodeId, new PeerInfo
+        await node.Peer(nodeInfo.NodeId, new PeerInfo
         {
             Label = "BTCPay Server Node",
             Endpoint = endpoint,
@@ -87,14 +76,14 @@ public class LDKPeerHandler : IScopedHostedService
         {
             try
             {
-                var connected = _peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()).ToLower());
-                var chans = await _node.GetChannels(ctsToken);
+                var connected = peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()).ToLower());
+                var chans = await node.GetChannels(ctsToken);
                 var channels = chans?.Where(pair => pair.Value.channelDetails is not null)
                     .Select(pair => pair.Value.channelDetails!).ToList() ?? [];
 
                 var channelPeers = channels
                     .Select(details => Convert.ToHexString(details.get_counterparty().get_node_id()).ToLower()).Distinct();
-                var config = await _node.GetConfig();
+                var config = await node.GetConfig();
                 var missingConnections = config.Peers
                     .Where(pair => pair.Value.Persistent || channelPeers.Contains(pair.Key)).Select(pair => pair.Key)
                     .Except(connected, StringComparer.InvariantCultureIgnoreCase).ToList();
@@ -139,12 +128,12 @@ public class LDKPeerHandler : IScopedHostedService
         await Task.Run(() =>
         {
             _logger.LogInformation("Stopping, disconnecting all peers");
-            _peerManager.disconnect_all_peers();
+            peerManager.disconnect_all_peers();
 
         }, cancellationToken);
 
-        _node.ConfigUpdated -= ConfigUpdated;
-        _btcPayAppServerClient.OnServerNodeInfo -= PeerBtcPayServerHost;
+        node.ConfigUpdated -= ConfigUpdated;
+        btcPayAppServerClient.OnServerNodeInfo -= PeerBtcPayServerHost;
         _descriptors.CollectionChanged -= DescriptorsOnCollectionChanged;
     }
 
@@ -152,7 +141,7 @@ public class LDKPeerHandler : IScopedHostedService
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            var config = await _node.GetConfig();
+            var config = await node.GetConfig();
             if (!config.AcceptInboundConnection)
             {
                 _configTcs ??= new TaskCompletionSource();
@@ -167,13 +156,13 @@ public class LDKPeerHandler : IScopedHostedService
             Endpoint = new IPEndPoint(IPAddress.Loopback, (int) ip.Port());
             while (!cancellationToken.IsCancellationRequested)
             {
-                var result = LDKTcpDescriptor.Inbound(_peerManager,
+                var result = LDKTcpDescriptor.Inbound(peerManager,
                     await listener.AcceptTcpClientAsync(cancellationToken),
                     _logger, _descriptors);
                 if (result is not null)
                 {
                     _descriptors.TryAdd(result.Id, result);
-                    _peerManager.process_events();
+                    peerManager.process_events();
                 }
             }
         }
@@ -217,30 +206,38 @@ public class LDKPeerHandler : IScopedHostedService
             if (!_connectionTasks.TryAdd(theirNodeId.ToString(), tcs.Task))
                 return null;
 
-            if (_channelManager.get_our_node_id().SequenceEqual(theirNodeId.ToBytes()))
+            if (channelManager.get_our_node_id().SequenceEqual(theirNodeId.ToBytes()))
                 return null;
 
             var ipEndpoint = remote.IPEndPoint();
             var client = new TcpClient();
             await client.ConnectAsync(ipEndpoint, cancellationToken);
 
-            var result = LDKTcpDescriptor.Outbound(_peerManager, client, _logger, theirNodeId, _descriptors);
+            var result = LDKTcpDescriptor.Outbound(peerManager, client, _logger, theirNodeId, _descriptors);
             if (result is not null)
             {
-                _descriptors.TryAdd(result.Id, result);
-                _peerManager.process_events();
-
-                var config = await _node.GetConfig();
+                var needsUpdate = false;
+                var config = await node.GetConfig();
                 if (!config.Peers.TryGetValue(theirNodeId.ToString(), out var peer))
                 {
-                    peer = new PeerInfo { Persistent = true, Trusted = true };
+                    peer = new PeerInfo { Trusted = true };
+                    needsUpdate = true;
                 }
-
+                if (!peer.Persistent)
+                {
+                    peer.Persistent = true;
+                    needsUpdate = true;
+                }
                 if (peer.Endpoint?.ToEndpointString() != remote.ToString())
                 {
                     peer.Endpoint = remote;
-                    await _node.Peer(theirNodeId, peer);
+                    needsUpdate = true;
                 }
+                if (needsUpdate)
+                    await node.Peer(theirNodeId, peer);
+                _descriptors.TryAdd(result.Id, result);
+                peerManager.process_events();
+                await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
             }
 
             tcs.TrySetResult(result);
@@ -257,11 +254,17 @@ public class LDKPeerHandler : IScopedHostedService
         return await tcs.Task;
     }
 
-    public Task DisconnectAsync(PubKey id)
+    public async Task DisconnectAsync(PubKey id)
     {
        _logger.LogInformation("Disconnecting from {NodeId}", id);
-       _peerManager.disconnect_by_node_id(id.ToBytes());
+       peerManager.disconnect_by_node_id(id.ToBytes());
+
+       var config = await node.GetConfig();
+       if (config.Peers.TryGetValue(id.ToString(), out var peer) && peer.Persistent)
+       {
+           peer.Persistent = false;
+           await node.Peer(id, peer);
+       }
        _logger.LogInformation("Disconnected from {NodeId}", id);
-       return Task.CompletedTask;
     }
 }

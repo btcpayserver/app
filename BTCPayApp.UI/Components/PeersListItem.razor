@@ -9,6 +9,7 @@
         {
             <LoadingIndicator/>
         }
+        <span class="btcpay-status btcpay-status--@(Peer.Connected ? "enabled" : "pending")"></span>
         <button class="accordion-button collapsed w-auto p-0" type="button" data-bs-toggle="collapse" data-bs-target="#peer-@Peer.NodeId-details" aria-expanded="false" aria-controls="peer-@Peer.NodeId-details">
             <Icon Symbol="caret-down" />
         </button>
@@ -26,7 +27,7 @@
             <div class="d-grid d-sm-flex flex-wrap gap-3 buttons mt-3">
                 @if (Peer.Connected && OnDisconnectPeer.HasDelegate)
                 {
-                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="DisconnectPeer">Disconnect</button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" @onclick="DisconnectPeer">Disconnect</button>
                 }
                 else if (OnConnectPeer.HasDelegate)
                 {
@@ -36,11 +37,11 @@
                 {
                     if (Peer.Remembered)
                     {
-                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(null)">Forget peer</button>
-                        <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(Peer.Info! with { Persistent = !Peer.Info!.Persistent })">
+                        @*<button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(Peer.Info! with { Persistent = !Peer.Info!.Persistent })">
                             @(Peer.Info?.Persistent is true ? "Disable persistent connection" : "Enable persistent connection")
-                        </button>
+                        </button>*@
                         <button type="button" class="btn btn-outline-primary btn-sm" @onclick="() => UpdatePeer(Peer.Info! with { Trusted = !Peer.Info!.Trusted })">@(Peer.Info?.Trusted is true ? "Untrust" : "Trust")</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" @onclick="() => UpdatePeer(null)">Forget peer</button>
                     }
                     else if (!string.IsNullOrEmpty(Peer.Socket) && EndPointParser.TryParse(Peer.Socket, 9735, out var endpoint))
                     {

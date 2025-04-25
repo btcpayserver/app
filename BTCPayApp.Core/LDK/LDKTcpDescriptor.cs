@@ -17,8 +17,24 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
 
     private SocketDescriptor SocketDescriptor { get; set; }
     public string Id { get; set; }
-    readonly SemaphoreSlim _readSemaphore = new(1, 1);
+    private readonly SemaphoreSlim _readSemaphore = new(1, 1);
     private readonly TaskCompletionSource _tcs;
+
+    private LDKTcpDescriptor(PeerManager peerManager, TcpClient tcpClient, ILogger logger, Action<string> onDisconnect)
+    {
+        _peerManager = peerManager;
+        _tcpClient = tcpClient;
+        _logger = logger;
+        _onDisconnect = onDisconnect;
+        _stream = tcpClient.GetStream();
+        Id = Guid.NewGuid().ToString();
+        SocketDescriptor = SocketDescriptor.new_impl(this);
+
+        _cts = new CancellationTokenSource();
+        _tcs = new TaskCompletionSource();
+        _ = CheckConnection(_cts.Token);
+        _ = ReadEvents(_cts.Token);
+    }
 
     public static LDKTcpDescriptor? Inbound(PeerManager peerManager, TcpClient tcpClient, ILogger logger, ObservableConcurrentDictionary<string, LDKTcpDescriptor> descriptors)
     {
@@ -45,53 +61,35 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         PubKey pubKey, ObservableConcurrentDictionary<string, LDKTcpDescriptor> descriptors)
     {
         var descriptor = new LDKTcpDescriptor(peerManager, tcpClient, logger, s => descriptors.TryRemove(s, out _));
-        var saSocketAddress = tcpClient.Client?.GetSocketAddress();
-        if (saSocketAddress is null)
+        var saSocketAddress = tcpClient.Client.GetSocketAddress();
+        if (saSocketAddress is Option_SocketAddressZ.Option_SocketAddressZ_None)
         {
-            logger.LogWarning("Failed to get tcp client or socket address so cannot create outbound connection");
+            logger.LogWarning("Failed to get TCP client socket address, cannot create outbound connection to {PubKey}", pubKey);
             descriptor.disconnect_socket();
             return null;
         }
 
-        logger.LogInformation("Connected to {PubKey} at {Str}", pubKey, ((Option_SocketAddressZ.Option_SocketAddressZ_Some)saSocketAddress).some.to_str());
+        var saStr = ((Option_SocketAddressZ.Option_SocketAddressZ_Some)saSocketAddress).some.to_str();
+        logger.LogInformation("Connecting to {PubKey}@{Str}", pubKey, saStr);
         descriptor.Start();
-        var result = peerManager.new_outbound_connection(pubKey.ToBytes(), descriptor.SocketDescriptor,saSocketAddress);
+        var result = peerManager.new_outbound_connection(pubKey.ToBytes(), descriptor.SocketDescriptor, saSocketAddress);
         if (result is Result_CVec_u8ZPeerHandleErrorZ.Result_CVec_u8ZPeerHandleErrorZ_OK ok)
         {
             descriptor.send_data(ok.res, true);
         }
-
         if (result.is_ok())
         {
-            logger.LogInformation("New outbound connection accepted");
-
+            logger.LogInformation("Connection to {PubKey}@{Str} accepted", pubKey, saStr);
             return descriptor;
         }
         if (result is Result_CVec_u8ZPeerHandleErrorZ.Result_CVec_u8ZPeerHandleErrorZ_Err errResult)
         {
-            logger.LogError("Failed to create outbound connection: {Error}",
-                errResult.err is { } peerError ? peerError.ToString() : errResult.ToString());
+            logger.LogError("Connecting to {PubKey}@{Str} failed: {Error}", pubKey, saStr, errResult.err is { } peerError ? peerError.ToString() : errResult.ToString());
             tcpClient.Dispose();
             return null;
         }
         descriptor.disconnect_socket();
         return null;
-    }
-
-    private LDKTcpDescriptor(PeerManager peerManager, TcpClient tcpClient, ILogger logger, Action<string> onDisconnect)
-    {
-        _peerManager = peerManager;
-        _tcpClient = tcpClient;
-        _logger = logger;
-        _onDisconnect = onDisconnect;
-        _stream = tcpClient.GetStream();
-        Id = Guid.NewGuid().ToString();
-        SocketDescriptor = SocketDescriptor.new_impl(this);
-
-        _cts = new CancellationTokenSource();
-        _tcs = new TaskCompletionSource();
-        _ = CheckConnection(_cts.Token);
-        _ = ReadEvents(_cts.Token);
     }
 
     private void Start()
@@ -118,13 +116,11 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
     private async Task ReadEvents(CancellationToken cancellationToken)
     {
         await _tcs.Task.WaitAsync(cancellationToken);
-        //max 4kib
-        var bufSz = 4096;
+        const int bufSz = 4096; // max 4kib
         var buffer = new byte[bufSz];
         while (_tcpClient.Connected && !_cts.IsCancellationRequested)
         {
             var read = await _stream.ReadAsync(buffer,cancellationToken);
-
             if (read == 0)
             {
                 _logger.LogWarning("Read 0 bytes of data from peer");
@@ -158,8 +154,7 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         try
         {
             _readSemaphore.Release();
-
-            _logger.LogInformation("resuming read");
+            _logger.LogDebug("Resuming read");
         }
         catch (Exception)
         {

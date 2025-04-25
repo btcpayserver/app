@@ -80,7 +80,7 @@ public partial class LDKNode :
     {
         return await _memoryCache.GetOrCreateAsync(nameof(GetPeers), async entry =>
         {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
             return ServiceProvider.GetRequiredService<PeerManager>().list_peers();
         }).WithCancellation(cancellationToken);
     }
@@ -98,7 +98,7 @@ public partial class LDKNode :
 
     public async Task<Result_ChannelIdAPIErrorZ> OpenChannel(Money amount, PubKey nodeId)
     {
-        _logger.LogInformation("Opening channel with {nodeId} for {amount}", nodeId, amount);
+        _logger.LogInformation("Opening channel with {NodeId} for {Amount}", nodeId, amount);
 
         var channelManager = ServiceProvider.GetRequiredService<ChannelManager>();
         var entropySource = ServiceProvider.GetRequiredService<EntropySource>();
