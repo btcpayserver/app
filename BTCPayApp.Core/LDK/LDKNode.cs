@@ -22,16 +22,17 @@ public partial class LDKNode :
     ILDKEventHandler<Event.Event_ChannelPending>,
     ILDKEventHandler<Event.Event_ChannelReady>
 {
-    public async Task<Dictionary<string, (Channel channel, ChannelDetails? channelDetails)>?> GetChannels(CancellationToken cancellationToken = default)
+    public async Task<IEnumerable<(Channel channel, ChannelDetails? channelDetails)>?> GetChannels(CancellationToken cancellationToken = default)
     {
         return (await _memoryCache.GetOrCreateAsync(nameof(GetChannels), async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
             await using var dbContext =  await _dbContextFactory.CreateDbContextAsync(cancellationToken);
-            var dbChannels = dbContext.LightningChannels.AsNoTracking().Include(channel => channel.Aliases).AsAsyncEnumerable();
+            var dbChannels = dbContext.LightningChannels.AsNoTracking()
+                .Include(channel => channel.Aliases).AsAsyncEnumerable();
             var channels = ServiceProvider.GetRequiredService<ChannelManager>().list_channels();
 
-            var result = new Dictionary<string, (Channel channel, ChannelDetails? channelDetails)>();
+            var result = new List<(Channel channel, ChannelDetails? channelDetails)>();
             await foreach (var dbChannel in dbChannels)
             {
                 var channel = channels.FirstOrDefault(channel =>
@@ -39,7 +40,7 @@ public partial class LDKNode :
                     var id = Convert.ToHexString(channel.get_channel_id().get_a()).ToLowerInvariant();
                     return id == dbChannel.Id || dbChannel.Aliases.Any(alias => alias.Id == id);
                 });
-                result.Add(dbChannel.Id, (dbChannel, channel));
+                result.Add((dbChannel, channel));
             }
             return result;
         }).WithCancellation(cancellationToken))!;
@@ -116,27 +117,40 @@ public partial class LDKNode :
         }
         finally
         {
-            _logger.LogInformation("finished (trying to) opening channel with {nodeId} for {amount}", nodeId, amount);
+            _logger.LogInformation("Finished (trying to) opening channel with {NodeId} for {Amount}", nodeId, amount);
         }
     }
 
-    public Task CloseChannel(ChannelId channelId, PubKey counterparty, bool force)
+    public async Task CloseChannel(ChannelId channelId, PubKey counterparty, bool force)
     {
-        var channelManager = ServiceProvider.GetRequiredService<ChannelManager>();
-        var result = force
-            ? channelManager.force_close_broadcasting_latest_txn(channelId, counterparty.ToBytes(), "User-initiated force-close in unconnected channel state")
-            : channelManager.close_channel(channelId, counterparty.ToBytes());
+        _logger.LogInformation("Closing channel {ChannelId} with {Counterparty}{Type}", channelId.ToString(), counterparty, force ? " (force-close)" : "");
 
-        var chanId = Convert.ToHexString(channelId.get_a()).ToLowerInvariant();
-        if (result.is_ok())
+        var channelManager = ServiceProvider.GetRequiredService<ChannelManager>();
+
+        try
         {
-            _logger.LogInformation("Channel {ChannelId} {Action}", chanId, force ? "force closed" : "closed");
+            await AsyncExtensions.RunInOtherThread(() =>
+            {
+                var result = force
+                    ? channelManager.force_close_broadcasting_latest_txn(channelId, counterparty.ToBytes(), "User-initiated force-close in unconnected channel state")
+                    : channelManager.close_channel(channelId, counterparty.ToBytes());
+
+                var chanId = Convert.ToHexString(channelId.get_a()).ToLowerInvariant();
+                if (result.is_ok())
+                {
+                    _logger.LogInformation("Channel {ChannelId} {Action}", chanId, force ? "force closed" : "closed");
+                }
+                if (result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_Err e && e.err.GetError() is var message)
+                {
+                    _logger.LogError("Error {Action} channel {ChannelId}: {Message}", force ? "force closing" : "closing", chanId, message);
+                }
+            });
         }
-        if (result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_Err e && e.err.GetError() is var message)
+        finally
         {
-            _logger.LogError("Error {Action} channel {ChannelId}: {Message}", force ? "force closing" : "closing", chanId, message);
+            _logger.LogInformation("Finished (trying to) close channel {ChannelId} with {Counterparty}{Type}",
+                channelId.ToString(), counterparty, force ? " (force-close)" : "");
         }
-        return Task.CompletedTask;
     }
 
     public async Task<IJITService?> GetJITLSPService()

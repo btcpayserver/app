@@ -6,43 +6,36 @@ using org.ldk.structs;
 namespace BTCPayApp.Core.LDK;
 
 // a background service that periodically checks if we have any public channels if so, publish a node announcement to the lightning network to be discoverable.
-public class LDKAnnouncementBroadcaster : IScopedHostedService, ILDKEventHandler<Event.Event_ChannelReady>
+public class LDKAnnouncementBroadcaster(
+    LDKPeerHandler ldkPeerHandler,
+    PeerManager peerManager,
+    LDKNode ldkNode)
+    : IScopedHostedService, ILDKEventHandler<Event.Event_ChannelReady>
 {
-    private readonly LDKPeerHandler _ldkPeerHandler;
-    private readonly PeerManager _peerManager;
-    private readonly LDKNode _ldkNode;
     private CancellationTokenSource? _cts;
+    private TaskCompletionSource? _tcs;
 
-    public LDKAnnouncementBroadcaster(LDKPeerHandler ldkPeerHandler,
-        PeerManager peerManager,  LDKNode ldkNode)
-    {
-        _ldkPeerHandler = ldkPeerHandler;
-        _peerManager = peerManager;
-        _ldkNode = ldkNode;
-    }
-
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _ = RegularlyBroadcastAnnouncement(_cts.Token);
+        return Task.CompletedTask;
     }
-
-    private TaskCompletionSource? _tcs;
 
     private async Task RegularlyBroadcastAnnouncement(CancellationToken cancellationToken)
     {
         while (cancellationToken.IsCancellationRequested == false)
         {
-            var channels = (await _ldkNode.GetChannels(cancellationToken) ?? [])
-                .Where(pair => pair.Value.channelDetails is not null)
-                .Select(pair => pair.Value.channelDetails!).ToList();
+            var channels = (await ldkNode.GetChannels(cancellationToken) ?? [])
+                .Where(pair => pair.channelDetails is not null)
+                .Select(pair => pair.channelDetails!).ToList();
 
             if (channels.Any(details => details.get_is_announced()))
             {
-                var endpoint = _ldkPeerHandler.Endpoint?.Endpoint();
-                var config = await _ldkNode.GetConfig();
+                var endpoint = ldkPeerHandler.Endpoint?.Endpoint();
+                var config = await ldkNode.GetConfig();
                 var alias = config.Alias;
-                _peerManager.broadcast_node_announcement(config.RGB,
+                peerManager.broadcast_node_announcement(config.RGB,
                     Encoding.UTF8.GetBytes(alias), endpoint is null ? [] : [endpoint]);
             }
 
@@ -56,8 +49,9 @@ public class LDKAnnouncementBroadcaster : IScopedHostedService, ILDKEventHandler
         await (_cts?.CancelAsync().WithCancellation(cancellationToken) ?? Task.CompletedTask);
     }
 
-    public async Task Handle(Event.Event_ChannelReady @event)
+    public Task Handle(Event.Event_ChannelReady @event)
     {
         _tcs?.TrySetResult();
+        return Task.CompletedTask;
     }
 }

@@ -1,0 +1,54 @@
+@using BTCPayApp.UI.Models
+
+<div @attributes="InputAttributes" class="@CssClass">
+    @if (Loading)
+    {
+        <div class="p-3 text-center">
+            <LoadingIndicator/>
+        </div>
+    }
+    @if (Channels is not null)
+    {
+        @if (Channels.Any())
+        {
+            @foreach (var c in Channels)
+            {
+                <div class="box accordion">
+                    <ChannelsListItem Channel="@c" OnCloseChannel="OnCloseChannel" Loading="@(UpdatingChannelId == c.Id)"/>
+                </div>
+            }
+        }
+        else if (!string.IsNullOrEmpty(Error))
+        {
+            <Alert Type="danger">@Error</Alert>
+        }
+        else
+        {
+            <div class="box">
+                <p class="text-muted my-0">There are no channels, yet.</p>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IEnumerable<LightningChannelModel>? Channels { get; set; }
+
+    [Parameter]
+    public bool Loading { get; set; }
+
+    [Parameter]
+    public string? Error { get; set; }
+
+    [Parameter]
+    public string? UpdatingChannelId { get; set; }
+
+    [Parameter]
+    public EventCallback<LightningChannelModel> OnCloseChannel { get; set; }
+
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? InputAttributes { get; set; }
+
+    private string CssClass => $"channels-list {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
+}

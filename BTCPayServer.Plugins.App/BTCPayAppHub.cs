@@ -149,22 +149,23 @@ public class BTCPayAppHub : Hub<IBTCPayAppHubClient>, IBTCPayAppHubServer
 
     public async Task<bool> BroadcastTransaction(string tx)
     {
-       Transaction txObj = Transaction.Parse(tx, _network.NBitcoinNetwork);
+       var txObj = Transaction.Parse(tx, _network.NBitcoinNetwork);
        var result = await _explorerClient.BroadcastAsync(txObj);
        return result.Success;
     }
 
     public async Task<decimal> GetFeeRate(int blockTarget)
     {
-        _logger.LogInformation("Getting fee rate for {BlockTarget}", blockTarget);
-        var feeProvider =  _feeProviderFactory.CreateFeeProvider( _network);
+        _logger.LogInformation("Getting fee rate for {BlockTarget} blocks", blockTarget);
+        var feeProvider = _feeProviderFactory.CreateFeeProvider( _network);
+        var feeRate = await feeProvider.GetFeeRateAsync(blockTarget);
         try
         {
-            return (await feeProvider.GetFeeRateAsync(blockTarget)).SatoshiPerByte;
+            return feeRate.SatoshiPerByte;
         }
         finally
         {
-            _logger.LogInformation("Getting fee rate for {BlockTarget} done", blockTarget);
+            _logger.LogInformation("Getting fee rate for {BlockTarget} blocks done: {FeeRate}", blockTarget, feeRate);
         }
     }
 

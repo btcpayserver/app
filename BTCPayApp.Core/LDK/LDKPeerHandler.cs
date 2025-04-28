@@ -78,8 +78,8 @@ public class LDKPeerHandler(
             {
                 var connected = peerManager.list_peers().Select(p => Convert.ToHexString(p.get_counterparty_node_id()).ToLower());
                 var chans = await node.GetChannels(ctsToken);
-                var channels = chans?.Where(pair => pair.Value.channelDetails is not null)
-                    .Select(pair => pair.Value.channelDetails!).ToList() ?? [];
+                var channels = chans?.Where(pair => pair.channelDetails is not null)
+                    .Select(pair => pair.channelDetails!).ToList() ?? [];
 
                 var channelPeers = channels
                     .Select(details => Convert.ToHexString(details.get_counterparty().get_node_id()).ToLower()).Distinct();

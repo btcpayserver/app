@@ -8,8 +8,10 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Models
 @using BTCPayApp.UI.Util
+@using BTCPayServer.Lightning
 @using LNURL
 @using NBitcoin
+@using Newtonsoft.Json
 @using org.ldk.enums
 @using org.ldk.structs
 @using NodeInfo = BTCPayServer.Lightning.NodeInfo
@@ -69,115 +71,7 @@
                 }
 
                 <h2>Channels</h2>
-                @if (Node != null && _config != null && _channels?.Any() is true)
-                {
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                            <tr>
-                                <th>Channel ID</th>
-                                <th>Alternate IDs</th>
-                                <th>Counterparty</th>
-                                <th>Confirmations</th>
-                                <th>Confirmations Required</th>
-                                <th>Funding Transaction Hash</th>
-                                <th>Usable</th>
-                                <th>Ready</th>
-                                <th>Balance</th>
-                                <th>Inbound</th>
-                                <th>Outbound</th>
-                                <th>State</th>
-                                <th>Actions</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach (var channel in _channels)
-                            {
-                                var connected = _peers?.Any(p => string.Equals(p.NodeId, channel.Value.channelDetails?.get_counterparty().get_node_id().ToString(), StringComparison.InvariantCultureIgnoreCase)) is true;
-                                var active = false;
-                                var alternates = channel.Value.channel.Aliases.Select(alias => alias.Id).ToHashSet();
-                                if (channel.Value.channelDetails is not null)
-                                {
-                                    if(channel.Value.channelDetails.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some)
-                                    {
-                                        alternates.Add(some.some.ToString());
-                                    }
-                                    alternates.Add(Convert.ToHexString(channel.Value.channelDetails.get_channel_id().get_a()).ToLowerInvariant());
-                                }
-                                alternates.Remove(channel.Key);
-                                <tr>
-                                <td>@channel.Key</td>
-                                <td>
-                                    @foreach (var alternateId in alternates)
-                                    {
-                                        <span>@alternateId</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (channel.Value.channelDetails is not null && channel.Value.channelDetails.get_counterparty() is { } counterparty)
-                                    {
-                                        var counterpartyNodeId = Convert.ToHexString(counterparty.get_node_id()).ToLowerInvariant();
-                                        if (_config.Peers.TryGetValue(counterpartyNodeId, out var peerConfig) && !string.IsNullOrEmpty(peerConfig.Label))
-                                        {
-                                            <span>@peerConfig.Label</span>
-                                        }
-                                        else
-                                        {
-                                            <span>@counterpartyNodeId</span>
-                                        }
-                                    }
-                                </td>
-                                <td>@(channel.Value.channelDetails?.get_confirmations() is Option_u32Z.Option_u32Z_Some x1? x1.some: "")   </td>
-                                <td>@(channel.Value.channelDetails?.get_confirmations_required()is Option_u32Z.Option_u32Z_Some x2? x2.some: "") </td>
-                                <td>@(channel.Value.channelDetails != null ? Convert.ToHexString(channel.Value.channelDetails.get_funding_txo().get_txid()).ToLowerInvariant() : "")</td>
-                                <td>@channel.Value.channelDetails?.get_is_usable()</td>
-                                <td>@channel.Value.channelDetails?.get_is_channel_ready()</td>
-                                <td>@channel.Value.channelDetails?.get_outbound_capacity_msat()</td>
-                                <td>@channel.Value.channelDetails?.get_inbound_capacity_msat()</td>
-                                <td>@channel.Value.channelDetails?.get_outbound_capacity_msat()</td>
-                                <td>
-                                    @if (channel.Value.channel.Archived)
-                                    {
-                                        <span>Archived</span>
-                                    }else if (channel.Value.channelDetails is null)
-                                    {
-                                        @if (channel.Value.channel.AdditionalData.TryGetValue("CloseReasonHuman", out var reasonHuman))
-                                        {
-                                            <span>@reasonHuman.GetString()</span>
-                                        }
-                                        else
-                                        {
-                                            <span>Unknown but probably closed</span>
-                                        }
-                                    }
-                                    else if(channel.Value.channelDetails.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some && some.some != ChannelShutdownState.LDKChannelShutdownState_NotShuttingDown  )
-                                    {
-                                        <span>@some.some.ToString()</span>
-                                    }
-                                    else
-                                    {
-                                        active = true;
-                                        <span>Active</span>
-                                    }
-                                </td>
-                                <td>
-                                    @if (active && channel.Value.channelDetails != null)
-                                    {
-                                        <button type="button" class="btn btn-primary btn-sm" @onclick="() => Node.CloseChannel(channel.Value.channelDetails.get_channel_id(), new PubKey(channel.Value.channelDetails.get_counterparty().get_node_id()), !connected)">Close</button>
-                                    }
-                                </td>
-                                </tr>
-                            }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-                else
-                {
-                    <div class="box">
-                        <p class="text-muted text-center py-4">There are no channels, yet.</p>
-                    </div>
-                }
+                <ChannelsList Channels="_channels" OnCloseChannel="CloseChannel" UpdatingPeerId="@_updatingPeer" class="mb-4"/>
 
                 @if (_peers?.Any() is true && ChannelModel != null)
                 {
@@ -234,8 +128,8 @@
 
 @code {
     private LightningConfig? _config;
-    private Dictionary<string, (Channel channel, ChannelDetails? channelDetails)>? _channels;
     private IEnumerable<LightningPeerModel>? _peers;
+    private IEnumerable<LightningChannelModel>? _channels;
     private LDKNode? Node => LightningNodeManager.Node;
     private string? Currency => StoreState.Value.StoreInfo?.DefaultCurrency;
     private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
@@ -243,6 +137,7 @@
     private MoneyUnit UnitMoney => DisplayCurrency == CurrencyDisplay.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
 
     private string? _updatingPeer;
+    private string? _updatingChannel;
     private bool _loading;
     private bool Loading => _loading || LightningNodeManager.State == LightningNodeState.Loading;
 
@@ -285,10 +180,78 @@
         _loading = true;
 
         _config = await Node.GetConfig();
-        _channels = await Node.GetChannels();
         _peers = await GetPeers(_config.Peers);
+        _channels = await GetChannels(_peers);
 
         _loading = false;
+    }
+
+    private async Task<IEnumerable<LightningChannelModel>?> GetChannels(IEnumerable<LightningPeerModel> peers)
+    {
+        if (Node == null) return [];
+        var chans = await Node.GetChannels() ?? [];
+        return chans.Select(channel =>
+        {
+            var details = channel.channelDetails;
+            var channelId = details?.get_channel_id().get_a();
+            var outbound = details?.get_outbound_capacity_msat();
+            var inbound = details?.get_inbound_capacity_msat();
+
+            var chan = new LightningChannelModel
+            {
+                Id = channel.channel.Id,
+                ChannelId = channelId,
+                Connected = _peers?.Any(p => string.Equals(p.NodeId, details?.get_counterparty().get_node_id().ToString(), StringComparison.InvariantCultureIgnoreCase)) is true,
+                Confirmations = details?.get_confirmations() is Option_u32Z.Option_u32Z_Some x1 ? x1.some : null,
+                ConfirmationsRequired = details?.get_confirmations_required() is Option_u32Z.Option_u32Z_Some x2 ? x2.some : null,
+                FundingTxHash = details != null ? Convert.ToHexString(details.get_funding_txo().get_txid()).ToLowerInvariant() : null,
+                Usable = details?.get_is_usable(),
+                Ready = details?.get_is_channel_ready(),
+                Announced = details?.get_is_announced(),
+                CapacityOutbound = outbound is not null ? new LightMoney(outbound) : null,
+                CapacityInbound = inbound is not null ? new LightMoney(inbound) : null,
+            };
+
+            var alternates = channel.channel.Aliases.Select(alias => alias.Id).ToHashSet();
+            if (details is not null)
+            {
+                if (details.get_short_channel_id() is Option_u64Z.Option_u64Z_Some some)
+                    alternates.Add(some.some.ToString());
+                if (channelId is not null)
+                    alternates.Add(Convert.ToHexString(channelId).ToLowerInvariant());
+            }
+
+            alternates.Remove(channel.channel.Id);
+            chan.AlternateIds = alternates.ToArray();
+
+            if (details?.get_counterparty() is { } counterparty)
+            {
+                chan.CounterpartyNodeId = Convert.ToHexString(counterparty.get_node_id()).ToLowerInvariant();
+                chan.CounterpartyLabel = peers.FirstOrDefault(p => p.NodeId == chan.CounterpartyNodeId && !string.IsNullOrEmpty(p.Info?.Label))?.Info?.Label;
+            }
+
+            if (channel.channel.Archived)
+            {
+                chan.State = "Archived";
+            }
+            else if (details is null)
+            {
+                chan.State = channel.channel.AdditionalData.TryGetValue("CloseReasonHuman", out var reasonHuman)
+                    ? reasonHuman.GetString()
+                    : "Unknown but probably closed";
+            }
+            else if (details.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some && some.some != ChannelShutdownState.LDKChannelShutdownState_NotShuttingDown)
+            {
+                chan.State = some.some.ToString();
+            }
+            else
+            {
+                chan.Active = true;
+                chan.State = "Active";
+            }
+
+            return chan;
+        });
     }
 
     private async Task<IEnumerable<LightningPeerModel>?> GetPeers(Dictionary<string, PeerInfo> peerInfos)
@@ -333,7 +296,7 @@
     private async Task ConnectToNewPeer()
     {
         if (Node == null || PeerModel == null) return;
-        _connectSuccessMessage = _connectErrorMessage = null;
+        _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
 
         try
         {
@@ -368,6 +331,7 @@
     private async Task ConnectPeer(LightningPeerModel peer)
     {
         if (Node == null) return;
+        _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
         _updatingPeer = peer.NodeId;
 
         try
@@ -389,6 +353,7 @@
     private async Task DisconnectPeer(LightningPeerModel peer)
     {
         if (Node == null) return;
+        _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
         _updatingPeer = peer.NodeId;
 
         try
@@ -407,6 +372,7 @@
     private async Task UpdatePeer(LightningPeerModel peer)
     {
         if (Node == null) return;
+        _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
         _updatingPeer = peer.NodeId;
         await Node.Peer(new PubKey(peer.NodeId), peer.Info);
         _updatingPeer = null;
@@ -417,7 +383,7 @@
     {
         if (Loading || Node == null || ChannelModel?.Amount is null || string.IsNullOrEmpty(ChannelModel.PeerId)) return;
 
-        _channelSuccessMessage = _channelErrorMessage = null;
+        _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
         _openingChannel = true;
         try
         {
@@ -446,7 +412,7 @@
     private async Task ParseChannelRequest(string lnurl, string name, bool trusted)
     {
         if (Loading || Node == null || ChannelModel?.Amount is null || string.IsNullOrEmpty(ChannelModel.PeerId)) return;
-        _channelSuccessMessage = _channelErrorMessage = null;
+        _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
 
         try
         {
@@ -481,6 +447,39 @@
             _channelErrorMessage = "Error opening channel";
         else
             await FetchData();
+    }
+
+    private async Task CloseChannel(LightningChannelModel channel)
+    {
+        if (Node == null) return;
+        _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
+
+        if (channel.ChannelId is null)
+        {
+            _channelErrorMessage = "Could not resolve Channel ID";
+            return;
+        }
+
+        if (channel.CounterpartyNodeId is null)
+        {
+            _channelErrorMessage = "Could not resolve Counterparty Node ID";
+            return;
+        }
+
+        _updatingChannel = channel.Id;
+        try
+        {
+            var channelId = ChannelId.from_bytes(channel.ChannelId);
+            var counterparty = new PubKey(channel.CounterpartyNodeId);
+            await Node.CloseChannel(channelId, counterparty, !channel.Connected);
+        }
+        catch (Exception e)
+        {
+            _channelErrorMessage = e.Message;
+        }
+
+        _updatingChannel = null;
+        await FetchData();
     }
 
     private void ToggleDisplayCurrency()

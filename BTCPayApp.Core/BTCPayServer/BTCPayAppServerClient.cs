@@ -191,8 +191,8 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
         var peers = await Node.GetPeers();
         var chans = await Node.GetChannels() ?? [];
         var channels = chans
-            .Where(channel => channel.Value.channelDetails is not null)
-            .Select(channel => channel.Value.channelDetails)
+            .Where(channel => channel.channelDetails is not null)
+            .Select(channel => channel.channelDetails)
             .OfType<ChannelDetails>()
             .ToArray();
         var bb = await _serviceProvider.GetRequiredService<OnChainWalletManager>().GetBestBlock();
@@ -216,8 +216,8 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
 
         var chans = await Node.GetChannels() ?? [];
         var channels = chans
-            .Where(channel => channel.Value.channelDetails is not null)
-            .Select(channel => channel.Value.channelDetails)
+            .Where(channel => channel.channelDetails is not null)
+            .Select(channel => channel.channelDetails)
             .OfType<ChannelDetails>()
             .ToArray();
         return new LightningNodeBalance

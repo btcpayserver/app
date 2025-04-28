@@ -1,0 +1,99 @@
+@using BTCPayApp.UI.Models
+@using BTCPayApp.UI.Util
+@using BTCPayServer.Lightning
+
+<div class="accordion-item">
+    <div id="channel-@Channel.Id" class="d-flex flex-column gap-2 accordion-header">
+        <div class="d-flex align-items-center justify-content-between gap-2">
+            <TruncateCenter Text="@Channel.Id" Padding="10" class="fw-semibold me-auto"/>
+            @if (!string.IsNullOrEmpty(Channel.CounterpartyLabel))
+            {
+                <span class="me-auto">@Channel.CounterpartyLabel</span>
+            }
+            @if (Loading)
+            {
+                <LoadingIndicator/>
+            }
+            <span class="btcpay-status btcpay-status--@(Channel.Active ? "enabled" : "pending")"></span>
+            <button class="accordion-button collapsed w-auto p-0" type="button" data-bs-toggle="collapse" data-bs-target="#peer-@Channel.Id-details" aria-expanded="false" aria-controls="peer-@Channel.Id-details">
+                <Icon Symbol="caret-down"/>
+            </button>
+        </div>
+        @if (Channel.CapacityOutbound is not null && Channel.CapacityInbound is not null)
+        {
+            var inbound = (long)Channel.CapacityInbound.ToUnit(LightMoneyUnit.Satoshi);
+            var outbound = (long)Channel.CapacityOutbound.ToUnit(LightMoneyUnit.Satoshi);
+            var ourPerc = (int)(outbound * 100 / (inbound + outbound));
+            <div class="d-flex align-items-center justify-content-between gap-2">
+                <AmountDisplay Sats="@outbound" Currency="@CurrencyDisplay.SATS" />
+                <AmountDisplay Sats="@inbound" Currency="@CurrencyDisplay.SATS" />
+            </div>
+            <div class="progress w-100" role="progressbar" aria-label="Channel Capacity" aria-valuenow="@ourPerc" aria-valuemin="0" aria-valuemax="100">
+                <div class="progress-bar bg-success" style="width:@(ourPerc)%"></div>
+            </div>
+        }
+    </div>
+    <div id="peer-@Channel.Id-details" class="accordion-collapse collapse" aria-labelledby="peer-@Channel.Id">
+        <div class="pt-2">
+            @if (!string.IsNullOrEmpty(Channel.CounterpartyNodeId))
+            {
+                <div class="form-floating">
+                    <TruncateCenter Text="@Channel.CounterpartyNodeId" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <label>Counterparty Node ID</label>
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(Channel.FundingTxHash))
+            {
+                <div class="form-floating">
+                    <TruncateCenter Text="@Channel.FundingTxHash" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                    <label>Funding Transaction</label>
+                </div>
+            }
+            <dl>
+                <div>
+                    <dt>State:</dt>
+                    <dd>@Channel.State</dd>
+                </div>
+                <div>
+                    <dt>Connected:</dt>
+                    <dd>@Channel.Connected</dd>
+                </div>
+                <div>
+                    <dt>Usable:</dt>
+                    <dd>@Channel.Usable</dd>
+                </div>
+                <div>
+                    <dt>Ready:</dt>
+                    <dd>@Channel.Ready</dd>
+                </div>
+                <div>
+                    <dt>Announced:</dt>
+                    <dd>@Channel.Announced</dd>
+                </div>
+            </dl>
+            @if (Channel.Active && OnCloseChannel.HasDelegate)
+            {
+                <div class="d-grid d-sm-flex flex-wrap gap-3 buttons mt-3">
+                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="CloseChannel">Close</button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public LightningChannelModel Channel { get; set; } = null!;
+
+    [Parameter]
+    public EventCallback<LightningChannelModel> OnCloseChannel { get; set; }
+
+    [Parameter]
+    public bool Loading { get; set; }
+
+    private async Task CloseChannel()
+    {
+        if (OnCloseChannel.HasDelegate)
+            await OnCloseChannel.InvokeAsync(Channel);
+    }
+}

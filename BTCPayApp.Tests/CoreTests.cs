@@ -267,28 +267,28 @@ public class CoreTests(ITestOutputHelper output)
             var node2Channel = Assert.Single(await node2.LNManager.Node.GetChannels());
             var node3Channel = Assert.Single(await node3.LNManager.Node.GetChannels());
 
-            Assert.Equal(node2Channel.Key, node3Channel.Key);
+            Assert.Equal(node2Channel.channel.Id, node3Channel.channel.Id);
             Assert.Equal(
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations()).some,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations())
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.channelDetails.get_confirmations()).some,
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.channelDetails.get_confirmations())
                     .some);
 
             Assert.Equal(0,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations())
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.channelDetails.get_confirmations())
                     .some);
 
-            Assert.False(node3Channel.Value.channelDetails.get_is_channel_ready());
-            Assert.False(node2Channel.Value.channelDetails.get_is_channel_ready());
-            Assert.False(node3Channel.Value.channelDetails.get_is_usable());
-            Assert.False(node2Channel.Value.channelDetails.get_is_usable());
+            Assert.False(node3Channel.channelDetails.get_is_channel_ready());
+            Assert.False(node2Channel.channelDetails.get_is_channel_ready());
+            Assert.False(node3Channel.channelDetails.get_is_usable());
+            Assert.False(node2Channel.channelDetails.get_is_usable());
 
             Assert.Equal(1,
                 Assert.IsType<Option_u32Z.Option_u32Z_Some>(
-                        node3Channel.Value.channelDetails.get_confirmations_required())
+                        node3Channel.channelDetails.get_confirmations_required())
                     .some);
             Assert.Equal(1,
                 Assert.IsType<Option_u32Z.Option_u32Z_Some>(
-                        node2Channel.Value.channelDetails.get_confirmations_required())
+                        node2Channel.channelDetails.get_confirmations_required())
                     .some);
         });
 
@@ -297,26 +297,26 @@ public class CoreTests(ITestOutputHelper output)
         {
             var node2Channel = Assert.Single(await node2.LNManager.Node.GetChannels() ?? []);
             var node3Channel = Assert.Single(await node3.LNManager.Node.GetChannels() ?? []);
-            var node2ChannelReserve = node2Channel.Value.channelDetails?.get_unspendable_punishment_reserve() is Option_u64Z.Option_u64Z_Some amtX ? amtX.some : 0;
+            var node2ChannelReserve = node2Channel.channelDetails?.get_unspendable_punishment_reserve() is Option_u64Z.Option_u64Z_Some amtX ? amtX.some : 0;
 
-            Assert.Equal(node2Channel.Key, node3Channel.Key);
+            Assert.Equal(node2Channel.channel.Id, node3Channel.channel.Id);
             Assert.Equal(
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails?.get_confirmations()).some,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails?.get_confirmations())
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.channelDetails?.get_confirmations()).some,
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.channelDetails?.get_confirmations())
                     .some);
 
-            Assert.True(node3Channel.Value.channelDetails.get_is_channel_ready());
-            Assert.True(node2Channel.Value.channelDetails.get_is_channel_ready());
-            Assert.True(node3Channel.Value.channelDetails.get_is_usable());
-            Assert.True(node2Channel.Value.channelDetails.get_is_usable());
+            Assert.True(node3Channel.channelDetails.get_is_channel_ready());
+            Assert.True(node2Channel.channelDetails.get_is_channel_ready());
+            Assert.True(node3Channel.channelDetails.get_is_usable());
+            Assert.True(node2Channel.channelDetails.get_is_usable());
 
             Assert.Equal(1,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.Value.channelDetails.get_confirmations_required()).some);
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node3Channel.channelDetails.get_confirmations_required()).some);
             Assert.Equal(1,
-                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.Value.channelDetails.get_confirmations_required()).some);
-            Assert.Equal(channelMoney.Satoshi, node2Channel.Value.channelDetails.get_channel_value_satoshis());
-            Assert.Equal(LightMoney.Satoshis(channelMoney.Satoshi - node2ChannelReserve).MilliSatoshi, node2Channel.Value.channelDetails.get_outbound_capacity_msat());
-            Assert.Equal(0, node3Channel.Value.channelDetails.get_outbound_capacity_msat());
+                Assert.IsType<Option_u32Z.Option_u32Z_Some>(node2Channel.channelDetails.get_confirmations_required()).some);
+            Assert.Equal(channelMoney.Satoshi, node2Channel.channelDetails.get_channel_value_satoshis());
+            Assert.Equal(LightMoney.Satoshis(channelMoney.Satoshi - node2ChannelReserve).MilliSatoshi, node2Channel.channelDetails.get_outbound_capacity_msat());
+            Assert.Equal(0, node3Channel.channelDetails.get_outbound_capacity_msat());
         });
         var node3PR = await node3.LNManager.Node.PaymentsManager.RequestPayment(LightMoney.Coins(0.01m),
             TimeSpan.FromHours(2),

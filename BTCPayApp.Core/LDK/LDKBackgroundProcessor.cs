@@ -46,8 +46,9 @@ public class LDKBackgroundProcessor : IScopedHostedService
         _processor = BackgroundProcessor.start(_persister, _eventHandler, _chainMonitor, _channelManager, _onionMessenger, _gossipSync, _peerManager, _logger, Option_WriteableScoreZ.some(_scorer));
     }
 
-    public async Task StopAsync(CancellationToken cancellationToken)
+    public Task StopAsync(CancellationToken cancellationToken)
     {
         _processor?.stop();
+        return Task.CompletedTask;
     }
 }

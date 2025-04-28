@@ -28,11 +28,12 @@ public class LDKRapidGossipSyncer : IScopedHostedService
         _logger = logger;
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
+    public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _ldkNode.ConfigUpdated += OnConfigUpdated;
         _ = UpdateNetworkGraph();
+        return Task.CompletedTask;
     }
 
     private Task OnConfigUpdated(object? sender, LightningConfig e)
@@ -63,7 +64,7 @@ public class LDKRapidGossipSyncer : IScopedHostedService
                     // wait until config is updated or _cts is cancelled
                 }
 
-                var timestamp  = _networkGraph.get_last_rapid_gossip_sync_timestamp() is Option_u32Z.Option_u32Z_Some some 
+                var timestamp  = _networkGraph.get_last_rapid_gossip_sync_timestamp() is Option_u32Z.Option_u32Z_Some some
                     ? some.some : 0;
                 var uri = new Uri(config.RapidGossipSyncUrl, $"/snapshot/{timestamp}");
                 var response = await _httpClientFactory.CreateClient("rgs").GetAsync(uri, _cts.Token);
@@ -72,7 +73,7 @@ public class LDKRapidGossipSyncer : IScopedHostedService
                     _logger.LogError("Failed to download snapshot from {uri}", uri);
                     continue;
                 }
-                
+
                 var snapshot = await response.Content.ReadAsByteArrayAsync();
                 var result =
                     _rapidGossipSync.update_network_graph_no_std(snapshot,

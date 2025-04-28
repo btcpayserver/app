@@ -2,19 +2,14 @@
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKSpendableOutputEventHandler : ILDKEventHandler<Event.Event_SpendableOutputs>
+public class LDKSpendableOutputEventHandler(OutputSweeper outputSweeper)
+    : ILDKEventHandler<Event.Event_SpendableOutputs>
 {
-    private readonly OutputSweeper _outputSweeper;
-
-    public LDKSpendableOutputEventHandler(OutputSweeper outputSweeper)
+    public Task Handle(Event.Event_SpendableOutputs eventSpendableOutputs)
     {
-        _outputSweeper = outputSweeper;
-    }
-
-    public async Task Handle(Event.Event_SpendableOutputs eventSpendableOutputs)
-    {
-        _outputSweeper.track_spendable_outputs(eventSpendableOutputs.outputs, eventSpendableOutputs.channel_id, true,
+        outputSweeper.track_spendable_outputs(eventSpendableOutputs.outputs, eventSpendableOutputs.channel_id, true,
             Option_u32Z.none());
+        return Task.CompletedTask;
     }
 }
 // }
@@ -30,8 +25,8 @@ public class LDKSpendableOutputEventHandler : ILDKEventHandler<Event.Event_Spend
 //     public LDKSpendableOutputEventHandler(
 //         BTCPayConnectionManager connectionManager,
 //         OnChainWalletManager onChainWalletManager,
-//         BTCPayAppServerClient appServerClient, 
-//         LDKNode node, 
+//         BTCPayAppServerClient appServerClient,
+//         LDKNode node,
 //         IDbContextFactory<AppDbContext> dbContextFactory, OutputSweeper outputSweeper)
 //     {
 //         _connectionManager = connectionManager;
@@ -50,13 +45,13 @@ public class LDKSpendableOutputEventHandler : ILDKEventHandler<Event.Event_Spend
 //     }
 //     //
 //     // var toPersist = eventSpendableOutputs.outputs.Where(descriptor => descriptor is not SpendableOutputDescriptor.SpendableOutputDescriptor_StaticOutput);
-//     //     
+//     //
 //     //     await PersistSpendableOutputs(toPersist);
 //     // }
 //     //
 //     // private async Task PersistSpendableOutputs(IEnumerable<SpendableOutputDescriptor> toPersist)
 //     // {
-//     //     
+//     //
 //     //     await using var context = await _dbContextFactory.CreateDbContextAsync();
 //     //     List<Script> scripts = new();
 //     //     var spendableOutputs =  toPersist.Select(descriptor =>
@@ -73,7 +68,7 @@ public class LDKSpendableOutputEventHandler : ILDKEventHandler<Event.Event_Spend
 //     //                     Outpoint = outpoint,
 //     //                     Script = txout.ScriptPubKey.ToHex(),
 //     //                     Data = descriptor.write()
-//     //               
+//     //
 //     //                 };
 //     //             }
 //     //             case SpendableOutputDescriptor.SpendableOutputDescriptor_StaticPaymentOutput staticPaymentOutput:
@@ -126,7 +121,7 @@ public class LDKSpendableOutputEventHandler : ILDKEventHandler<Event.Event_Spend
 //     //     }
 //     //     // }else if(_onChainWalletManager.WalletConfig.Derivations[WalletDerivation.SpendableOutputs].Identifier != e.identifier)
 //     //     //     return;
-//     //     //  
+//     //     //
 //     //     //
 //     //     // await using var context = await _dbContextFactory.CreateDbContextAsync();
 //     //     // var spendableCoins = await context.SpendableCoins
@@ -142,8 +137,8 @@ public class LDKSpendableOutputEventHandler : ILDKEventHandler<Event.Event_Spend
 //     //     //
 //     //     // var spendableOutputDescriptors = spendableCoins.Select(coin => (coin, SpendableOutputDescriptor.read(coin.Data))).ToArray();
 //     //     //
-//     //     
-//     //     
+//     //
+//     //
 //     // }
 //     //
 //     // public async Task StartAsync(CancellationToken cancellationToken)

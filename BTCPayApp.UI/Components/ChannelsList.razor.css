@@ -1,0 +1,7 @@
+.channels-list .box {
+  margin-bottom: 0 !important;
+}
+
+.channels-list .box + .box {
+  margin-top: var(--btcpay-space-xs);
+}
