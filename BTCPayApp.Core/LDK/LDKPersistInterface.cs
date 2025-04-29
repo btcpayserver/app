@@ -34,7 +34,6 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
 
     private Task RemoteObjectUpdated(object? sender, (List<Outbox> OutboxItemsProcesed, PutObjectRequest RemoteRequest) e)
     {
-
         var channelUpdates = e.RemoteRequest.TransactionItems.Where(x => x.Key.StartsWith("Channel_")).Select(value => JsonSerializer.Deserialize<Channel>(value.Value.ToStringUtf8())!).ToArray();
         foreach (var channelUpdate in channelUpdates)
         {
@@ -128,9 +127,9 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
         }
     }
 
-    public ChannelMonitorUpdateStatus update_persisted_channel(OutPoint channelFundingOutpoint, ChannelMonitorUpdate update, ChannelMonitor data)
+    public ChannelMonitorUpdateStatus update_persisted_channel(OutPoint channelFundingOutpoint, ChannelMonitorUpdate? update, ChannelMonitor data)
     {
-        var updateId = update.get_update_id();
+        var updateId = update?.get_update_id() ?? data.get_latest_update_id();
 
         _updateTaskCompletionSources.TryAdd(updateId, new TaskCompletionSource());
         var taskResult = updateTasks.GetOrAdd(updateId, async l =>
