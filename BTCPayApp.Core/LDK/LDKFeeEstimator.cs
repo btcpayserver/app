@@ -1,5 +1,4 @@
 ﻿using BTCPayApp.Core.Wallet;
-using NBitcoin;
 using org.ldk.enums;
 using org.ldk.structs;
 using Network = NBitcoin.Network;
@@ -19,13 +18,19 @@ public class LDKFeeEstimator : FeeEstimatorInterface
 
     public int get_est_sat_per_1000_weight(ConfirmationTarget confirmationTarget)
     {
+        // Try fixing this to 1sat/vByte, see also
+        // https://github.com/lightningdevkit/rust-lightning/blob/master/lightning/src/chain/chaininterface.rs#L183
+        // https://github.com/MutinyWallet/mutiny-node/blob/master/mutiny-core/src/fees.rs#L193
+        if (confirmationTarget == ConfirmationTarget.LDKConfirmationTarget_MinAllowedAnchorChannelRemoteFee)
+            return 253;
+
         // https://docs.rs/lightning/latest/lightning/chain/chaininterface/enum.ConfirmationTarget.html
         // https://github.com/lightningdevkit/ldk-node/blob/main/src/fee_estimator.rs#L87
         var targetBlocks = confirmationTarget switch
         {
             ConfirmationTarget.LDKConfirmationTarget_MaximumFeeEstimate => 1,
             ConfirmationTarget.LDKConfirmationTarget_UrgentOnChainSweep => 6,
-            ConfirmationTarget.LDKConfirmationTarget_MinAllowedAnchorChannelRemoteFee => 1008,
+            //ConfirmationTarget.LDKConfirmationTarget_MinAllowedAnchorChannelRemoteFee => 1008,
             ConfirmationTarget.LDKConfirmationTarget_MinAllowedNonAnchorChannelRemoteFee => 144,
             ConfirmationTarget.LDKConfirmationTarget_AnchorChannelFee => 1008,
             ConfirmationTarget.LDKConfirmationTarget_NonAnchorChannelFee => 12,
