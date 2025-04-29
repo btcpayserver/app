@@ -14,9 +14,10 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 namespace BTCPayApp.Core.LSP.JIT;
 
 /// <summary>
-/// https://docs.voltage.cloud/flow/flow-2.0
+/// https://www.voltage.cloud/blog/introducing-flow-v2
+/// https://www.voltage.cloud/blog/deprecating-flow-2-0---paving-the-way-for-a-superior-solution
 /// </summary>
-public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandler<Event.Event_ChannelPending>
+public abstract class Flow2Jit : IJITService, IScopedHostedService, ILDKEventHandler<Event.Event_ChannelPending>
 {
     private const string LightningPaymentOriginalPaymentRequest = "OriginalPaymentRequest";
     private const string LightningPaymentJITFeeKey = "JITFeeKey";
@@ -26,37 +27,20 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
     private readonly Network _network;
     private readonly LDKNode _node;
     private readonly ChannelManager _channelManager;
-    private readonly ILogger<VoltageFlow2Jit> _logger;
+    private readonly ILogger<Flow2Jit> _logger;
     private readonly LDKOpenChannelRequestEventHandler _openChannelRequestEventHandler;
     private CancellationTokenSource _cts = new();
     private readonly ConcurrentDictionary<long, Event.Event_OpenChannelRequest> _acceptedChannels = new();
     public bool Active { get; }
 
-    public virtual string ProviderName => "Voltage";
+    public virtual string ProviderName => "Abstract Flow 2.0 Provider";
     protected virtual LightMoney NonChannelOpenFee => LightMoney.Zero;
 
     private FlowInfoResponse? _info;
-
-    public VoltageFlow2Jit(bool active)
-    {
-        Active = active;
-    }
-
     private readonly SemaphoreSlim _semaphore = new(1, 1);
 
-    protected virtual Uri? BaseAddress(Network network)
-    {
-        return network switch
-        {
-            not null when network == Network.Main => new Uri("https://lsp.voltageapi.com"),
-            not null when network == Network.TestNet => new Uri("https://testnet-lsp.voltageapi.com"),
-            // not null when network == Network.RegTest => new Uri("https://localhost:5001/jit-lsp"),
-            _ => null
-        };
-    }
-
-    public VoltageFlow2Jit(IHttpClientFactory httpClientFactory, Network network, LDKNode node,
-        ChannelManager channelManager, ILogger<VoltageFlow2Jit> logger,
+    protected Flow2Jit(IHttpClientFactory httpClientFactory, Network network, LDKNode node,
+        ChannelManager channelManager, ILogger<Flow2Jit> logger,
         LDKOpenChannelRequestEventHandler openChannelRequestEventHandler)
     {
         var httpClientInstance = httpClientFactory.CreateClient("VoltageFlow2JIT");
@@ -69,6 +53,17 @@ public class VoltageFlow2Jit : IJITService, IScopedHostedService, ILDKEventHandl
         _channelManager = channelManager;
         _logger = logger;
         _openChannelRequestEventHandler = openChannelRequestEventHandler;
+    }
+
+    protected virtual Uri? BaseAddress(Network network)
+    {
+        return network switch
+        {
+            not null when network == Network.Main => new Uri("https://lsp.voltageapi.com"),
+            not null when network == Network.TestNet => new Uri("https://testnet-lsp.voltageapi.com"),
+            // not null when network == Network.RegTest => new Uri("https://localhost:5001/jit-lsp"),
+            _ => null
+        };
     }
 
     private async Task<FlowInfoResponse> GetInfo(CancellationToken cancellationToken = default)

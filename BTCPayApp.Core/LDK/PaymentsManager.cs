@@ -358,7 +358,7 @@ public class PaymentsManager :
             _channelManager.claim_funds(preimage);
             return;
         }
-        if (accept.AdditionalData.TryGetValue(VoltageFlow2Jit.LightningPaymentLSPKey, out var lspDoc) &&
+        if (accept.AdditionalData.TryGetValue(Flow2Jit.LightningPaymentLSPKey, out var lspDoc) &&
             lspDoc.Deserialize<string>() is { } lsp &&
             await _ldkNode.GetJITLSPService() is { } lspService && lspService.ProviderName == lsp &&
             await lspService.IsAcceptable(accept!, eventPaymentClaimable))

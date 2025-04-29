@@ -6,14 +6,17 @@ using org.ldk.structs;
 
 namespace BTCPayApp.Core.LSP.JIT;
 
+/// <summary>
+/// https://docs.zeusln.app/lsp/services/flow
+/// </summary>
 public class OlympusFlow2Jit(
     IHttpClientFactory httpClientFactory,
     Network network,
     LDKNode node,
     ChannelManager channelManager,
-    ILogger<VoltageFlow2Jit> logger,
+    ILogger<OlympusFlow2Jit> logger,
     LDKOpenChannelRequestEventHandler openChannelRequestEventHandler)
-    : VoltageFlow2Jit(httpClientFactory, network, node, channelManager, logger, openChannelRequestEventHandler)
+    : Flow2Jit(httpClientFactory, network, node, channelManager, logger, openChannelRequestEventHandler)
 {
     protected override Uri? BaseAddress(Network network)
     {

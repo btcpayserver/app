@@ -307,7 +307,7 @@ public static class LDKExtensions
             provider.GetRequiredService<LockableScore>(),
             ProbabilisticScoringFeeParameters.with_default()));
         services.AddScoped<Router>(provider => provider.GetRequiredService<DefaultRouter>().as_Router());
-        services.AddScoped<VoltageFlow2Jit>();
+        //services.AddScoped<VoltageFlow2Jit>();
         services.AddScoped<OlympusFlow2Jit>();
         //services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<VoltageFlow2Jit>());
         services.AddScoped<IScopedHostedService>(provider => provider.GetRequiredService<OlympusFlow2Jit>());
