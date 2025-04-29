@@ -4,6 +4,8 @@ using BTCPayApp.UI;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.SetBasePath(Directory.GetCurrentDirectory());
+builder.Configuration.AddJsonFile(path: "appsettings.json");
 builder.Configuration.AddEnvironmentVariables();
 builder.WebHost.UseStaticWebAssets();
 builder.Services.AddRazorPages();

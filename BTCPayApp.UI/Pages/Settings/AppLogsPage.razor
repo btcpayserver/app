@@ -1,7 +1,10 @@
 ﻿@attribute [Route(Routes.AppLogs)]
+@using BTCPayApp.Core.Contracts
 @using BTCPayApp.Core.Services
 @using BTCPayApp.UI.Components.Layout
-@inject LogReaderService LogService
+@using Serilog.Events
+@inject ConfigProvider ConfigProvider
+@inject LoggingService LogService
 
 <PageTitle>Application Logs</PageTitle>
 
@@ -21,6 +24,18 @@
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
         <Alert Type="danger">@_errorMessage</Alert>
+    }
+    @if (!_isLoading)
+    {
+        <div class="form-group">
+            <label for="LogLevel" class="form-label me-1">Log Level</label>
+            <InputSelect @bind-Value="LogService.LogLevel" @bind-Value:after="() => PersistLogLevel(LogService.LogLevel)" id="LogLevel" class="form-select w-auto">
+                @foreach (var lvl in LogLevels)
+                {
+                    <option value="@lvl" selected="@(LogService.LogLevel == lvl)">@lvl</option>
+                }
+            </InputSelect>
+        </div>
     }
     @if (HasLogs)
     {
@@ -45,6 +60,7 @@
     private string? _logContent;
     private string? _errorMessage;
 
+    private static LogEventLevel[] LogLevels => [LogEventLevel.Error, LogEventLevel.Warning, LogEventLevel.Information, LogEventLevel.Debug];
     private bool HasLogs => !string.IsNullOrEmpty(_logContent);
 
     protected override async Task OnInitializedAsync()
@@ -62,5 +78,10 @@
         {
             _isLoading = false;
         }
+    }
+
+    private async Task PersistLogLevel(LogEventLevel logLevel)
+    {
+        await ConfigProvider.Set("logLevel", logLevel, false);
     }
 }

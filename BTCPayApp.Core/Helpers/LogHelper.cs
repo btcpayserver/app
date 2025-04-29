@@ -1,19 +1,11 @@
 ﻿using BTCPayApp.Core.Contracts;
 
-namespace BTCPayApp.Core.Helpers
+namespace BTCPayApp.Core.Helpers;
+
+public class LogHelper(IDataDirectoryProvider storageService)
 {
-    public class LogHelper
+    public async Task<string> GetLogPath()
     {
-        private readonly IDataDirectoryProvider _storageService;
-
-        public LogHelper(IDataDirectoryProvider storageService)
-        {
-            _storageService = storageService;
-        }
-
-        public async Task<string> GetLogPath()
-        {
-            return Path.Combine(await _storageService.GetAppDataDirectory(), "logs", "app_log.txt");
-        }
+        return Path.Combine(await storageService.GetAppDataDirectory(), "logs", "btcpayapp-.log");
     }
 }
