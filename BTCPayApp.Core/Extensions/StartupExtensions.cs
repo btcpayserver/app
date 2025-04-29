@@ -13,6 +13,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
 namespace BTCPayApp.Core.Extensions;
 
@@ -49,12 +51,13 @@ public static class StartupExtensions
         serviceCollection.AddAuthorizationCore(options => options.AddPolicies());
 
         // Configure logging
-        serviceCollection.AddLogging();
+        var levelSwitch = new LoggingLevelSwitch { MinimumLevel = LogEventLevel.Warning };
+        serviceCollection.AddSingleton(levelSwitch);
         var serviceProvider = serviceCollection.BuildServiceProvider();
         var dirProvider = serviceProvider.GetRequiredService<IDataDirectoryProvider>();
         var logHelper = new LogHelper(dirProvider);
         var logFilePath = logHelper.GetLogPath().GetAwaiter().GetResult();
-        LoggingConfig.ConfigureLogging(logFilePath);
+        LoggingConfig.ConfigureLogging(levelSwitch, logFilePath);
 
         return serviceCollection;
     }

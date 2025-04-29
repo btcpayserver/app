@@ -2,11 +2,14 @@
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Pages
 @using BTCPayApp.Core.Contracts
+@using BTCPayApp.Core.Services
 @using BTCPayApp.UI.Pages.SignedOut
+@using Serilog.Events
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IDispatcher Dispatcher
 @inject IAccountManager AccountManager
 @inject ConfigProvider ConfigProvider
+@inject LoggingService LoggingService
 
 <PageTitle>BTCPay Server</PageTitle>
 <Fluxor.Blazor.Web.StoreInitializer  />
@@ -32,6 +35,11 @@
     {
         await base.OnInitializedAsync();
 
+        // Logging
+        var logLevel = await ConfigProvider.Get<LogEventLevel?>("logLevel");
+        if (logLevel.HasValue) LoggingService.LogLevel = logLevel.Value;
+
+        // UI
         var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
         if (!string.IsNullOrEmpty(state?.SelectedTheme))
         {
