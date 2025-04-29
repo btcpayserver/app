@@ -106,51 +106,34 @@ public partial class LDKNode :
         var userConfig = ServiceProvider.GetRequiredService<UserConfig>().clone();
         var temporaryChannelId = ChannelId.temporary_from_entropy_source(entropySource);
         var userChannelId = new UInt128(temporaryChannelId.get_a().Take(16).ToArray());
-        try
-        {
-            return await AsyncExtensions.RunInOtherThread(() => channelManager.create_channel(nodeId.ToBytes(),
-                amount.Satoshi,
-                0,
-                userChannelId,
-                temporaryChannelId,
-                userConfig));
-        }
-        finally
-        {
-            _logger.LogInformation("Finished (trying to) opening channel with {NodeId} for {Amount}", nodeId, amount);
-        }
+        var result = await AsyncExtensions.RunInOtherThread(() => channelManager.create_channel(nodeId.ToBytes(),
+            amount.Satoshi,
+            0,
+            userChannelId,
+            temporaryChannelId,
+            userConfig));
+
+        if (result.is_ok())
+            _logger.LogInformation("Opened channel with {NodeId} for {Amount}", nodeId, amount);
+        else if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err e && e.err.GetError() is var message)
+            _logger.LogError("Opening channel with {NodeId} for {Amount} failed: {Message}", nodeId, amount, message);
+        return result;
     }
 
-    public async Task CloseChannel(ChannelId channelId, PubKey counterparty, bool force)
+    public async Task<Result_NoneAPIErrorZ> CloseChannel(ChannelId channelId, PubKey counterparty, bool force)
     {
-        _logger.LogInformation("Closing channel {ChannelId} with {Counterparty}{Type}", channelId.ToString(), counterparty, force ? " (force-close)" : "");
+        var chanId = Convert.ToHexString(channelId.get_a()).ToLowerInvariant();
+        _logger.LogInformation("{Action} channel {ChannelId} with {Counterparty}", force ? "Force-closing" : "Closing", chanId, counterparty);
 
         var channelManager = ServiceProvider.GetRequiredService<ChannelManager>();
-
-        try
-        {
-            await AsyncExtensions.RunInOtherThread(() =>
-            {
-                var result = force
+        var result = await AsyncExtensions.RunInOtherThread(() => force
                     ? channelManager.force_close_broadcasting_latest_txn(channelId, counterparty.ToBytes(), "User-initiated force-close in unconnected channel state")
-                    : channelManager.close_channel(channelId, counterparty.ToBytes());
-
-                var chanId = Convert.ToHexString(channelId.get_a()).ToLowerInvariant();
-                if (result.is_ok())
-                {
-                    _logger.LogInformation("Channel {ChannelId} {Action}", chanId, force ? "force closed" : "closed");
-                }
-                if (result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_Err e && e.err.GetError() is var message)
-                {
-                    _logger.LogError("Error {Action} channel {ChannelId}: {Message}", force ? "force closing" : "closing", chanId, message);
-                }
-            });
-        }
-        finally
-        {
-            _logger.LogInformation("Finished (trying to) close channel {ChannelId} with {Counterparty}{Type}",
-                channelId.ToString(), counterparty, force ? " (force-close)" : "");
-        }
+                    : channelManager.close_channel(channelId, counterparty.ToBytes()));
+        if (result.is_ok())
+            _logger.LogInformation("Channel {ChannelId} {Action} with {Counterparty}", chanId, counterparty, force ? "force closed" : "closed");
+        if (result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_Err e && e.err.GetError() is var message)
+            _logger.LogError("{Action} channel {ChannelId} with {Counterparty} failed: {Message}", force ? "Force-closing" : "Closing", chanId, counterparty, message);
+        return result;
     }
 
     public async Task<IJITService?> GetJITLSPService()

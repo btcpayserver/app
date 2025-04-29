@@ -5,7 +5,7 @@ using NBitcoin;
 namespace BTCPayApp.Core.Helpers;
 
 public static class AsyncExtensions
-{  
+{
     public static async Task RunInOtherThread(Action action)
     {
         await Task.Factory.StartNew(action);
@@ -16,8 +16,6 @@ public static class AsyncExtensions
        return await Task.Factory.StartNew(action);
     }
 
-    
-    
     public static async Task RunInOtherThread(this Task task)
     {
         await Task.Factory.StartNew(async () => await task).Unwrap();
@@ -25,8 +23,7 @@ public static class AsyncExtensions
 
     public static async Task<T> RunInOtherThread<T>(this Task<T> task)
     {
-        
-     return    await Task.Factory.StartNew(async () => await task).Unwrap();
+        return await Task.Factory.StartNew(async () => await task).Unwrap();
     }
     /// <summary>
     /// Allows a cancellation token to be awaited.
@@ -57,7 +54,7 @@ public static class AsyncExtensions
         public object GetResult()
         {
             // this is called by compiler generated methods when the
-            // task has completed. Instead of returning a result, we 
+            // task has completed. Instead of returning a result, we
             // just throw an exception.
             if (IsCompleted) throw new OperationCanceledException();
             else throw new InvalidOperationException("The cancellation token has not yet been cancelled.");

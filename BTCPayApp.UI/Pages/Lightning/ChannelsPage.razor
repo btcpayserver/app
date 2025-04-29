@@ -1,4 +1,4 @@
-﻿@attribute [Route(Routes.ChannelsPeers)]
+@attribute [Route(Routes.ChannelsPeers)]
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Data
 @using BTCPayApp.UI.Components.Layout
@@ -471,7 +471,17 @@
         {
             var channelId = ChannelId.from_bytes(channel.ChannelId);
             var counterparty = new PubKey(channel.CounterpartyNodeId);
-            await Node.CloseChannel(channelId, counterparty, !channel.Connected);
+            var force = !channel.Connected;
+            var result = await Node.CloseChannel(channelId, counterparty, force);
+            if (result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_OK)
+            {
+                _channelSuccessMessage = $"{(force ? "Force-closing" : "Closing")} channel {channelId} with {counterparty}.";
+                ChannelModel = new OpenChannelModel();
+            }
+            else if (result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_Err err)
+            {
+                _channelErrorMessage = $"{(force ? "Force-closing" : "Closing")} channel {channelId} with {counterparty} failed: {err.err.GetError()}";
+            }
         }
         catch (Exception e)
         {
