@@ -133,12 +133,12 @@
                             <label for="RgsUrl" class="form-label">Rapid Gossip Sync Server URL</label>
                             <InputText @bind-Value="Model.RgsUrl" type="url" class="form-control" id="RgsUrl"/>
                         </div>
-                        <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
-                            <button type="submit" class="btn btn-primary w-100" disabled="@_validationEditContext!.Invalid">
-                                <span>Update Configuration</span>
-                            </button>
-                        </div>
                     </fieldset>
+                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@_validationEditContext!.Invalid">
+                            <span>Update Configuration</span>
+                        </button>
+                    </div>
                 </ValidationEditContext>
             }
         </Authorized>
