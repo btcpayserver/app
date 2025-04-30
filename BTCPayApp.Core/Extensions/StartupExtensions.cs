@@ -22,16 +22,21 @@ public static class StartupExtensions
 {
     public static IServiceCollection ConfigureBTCPayAppCore(this IServiceCollection serviceCollection)
     {
+
+        serviceCollection.AddMemoryCache();
+        serviceCollection.AddHttpClient();
         serviceCollection.AddDbContextFactory<AppDbContext>((provider, options) =>
         {
             var dir = provider.GetRequiredService<IDataDirectoryProvider>().GetAppDataDirectory().ConfigureAwait(false).GetAwaiter().GetResult();
             options.UseSqlite($"Data Source={dir}/app.db");
             options.UseSqlLiteTriggers();
         });
-
-        serviceCollection.AddMemoryCache();
-        serviceCollection.AddHttpClient();
+        serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
+
+        // Configure logging
+        LoggingConfig.ConfigureLogging(serviceCollection);
+
         serviceCollection.AddSingleton<BTCPayConnectionManager>();
         serviceCollection.AddSingleton<SyncService>();
         serviceCollection.AddSingleton<LightningNodeManager>();
@@ -45,19 +50,9 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>(provider => provider.GetRequiredService<AuthStateProvider>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<AuthStateProvider>());
         serviceCollection.AddSingleton(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
-        serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
-        serviceCollection.AddLDK();
         serviceCollection.AddSingleton<IAuthorizationHandler, AuthorizationHandler>();
         serviceCollection.AddAuthorizationCore(options => options.AddPolicies());
-
-        // Configure logging
-        var levelSwitch = new LoggingLevelSwitch { MinimumLevel = LogEventLevel.Warning };
-        serviceCollection.AddSingleton(levelSwitch);
-        var serviceProvider = serviceCollection.BuildServiceProvider();
-        var dirProvider = serviceProvider.GetRequiredService<IDataDirectoryProvider>();
-        var logHelper = new LogHelper(dirProvider);
-        var logFilePath = logHelper.GetLogPath().GetAwaiter().GetResult();
-        LoggingConfig.ConfigureLogging(levelSwitch, logFilePath);
+        serviceCollection.AddLDK();
 
         return serviceCollection;
     }
