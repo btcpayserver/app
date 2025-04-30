@@ -11,6 +11,14 @@
 <SectionContent SectionId="_Layout.Top">
     <Titlebar Back>
         <h1>Logs</h1>
+        <SectionContent SectionId="Titlebar.End">
+            <InputSelect @bind-Value="LogService.LogLevel" @bind-Value:after="() => PersistLogLevel(LogService.LogLevel)" id="LogLevel" class="form-select form-select-sm px-2 py-1 w-auto" style="padding-right: var(--btcpay-space-l) !important;background-position-x:90%;">
+                @foreach (var lvl in LogLevels)
+                {
+                    <option value="@lvl" selected="@(LogService.LogLevel == lvl)">@lvl</option>
+                }
+            </InputSelect>
+        </SectionContent>
     </Titlebar>
 </SectionContent>
 
@@ -24,18 +32,6 @@
     else if (!string.IsNullOrEmpty(_errorMessage))
     {
         <Alert Type="danger">@_errorMessage</Alert>
-    }
-    @if (!_isLoading)
-    {
-        <div class="form-group">
-            <label for="LogLevel" class="form-label me-1">Log Level</label>
-            <InputSelect @bind-Value="LogService.LogLevel" @bind-Value:after="() => PersistLogLevel(LogService.LogLevel)" id="LogLevel" class="form-select w-auto">
-                @foreach (var lvl in LogLevels)
-                {
-                    <option value="@lvl" selected="@(LogService.LogLevel == lvl)">@lvl</option>
-                }
-            </InputSelect>
-        </div>
     }
     @if (HasLogs)
     {
@@ -60,7 +56,7 @@
     private string? _logContent;
     private string? _errorMessage;
 
-    private static LogEventLevel[] LogLevels => [LogEventLevel.Error, LogEventLevel.Warning, LogEventLevel.Information, LogEventLevel.Debug];
+    private static LogEventLevel[] LogLevels => [LogEventLevel.Error, LogEventLevel.Warning, LogEventLevel.Information, LogEventLevel.Debug, LogEventLevel.Verbose];
     private bool HasLogs => !string.IsNullOrEmpty(_logContent);
 
     protected override async Task OnInitializedAsync()

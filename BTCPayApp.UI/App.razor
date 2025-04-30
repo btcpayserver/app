@@ -35,11 +35,6 @@
     {
         await base.OnInitializedAsync();
 
-        // Logging
-        var logLevel = await ConfigProvider.Get<LogEventLevel?>("logLevel");
-        if (logLevel.HasValue) LoggingService.LogLevel = logLevel.Value;
-
-        // UI
         var state = await ConfigProvider.Get<UIState>(StateMiddleware.UiStateConfigKey);
         if (!string.IsNullOrEmpty(state?.SelectedTheme))
         {

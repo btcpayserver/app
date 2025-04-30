@@ -16,8 +16,6 @@ builder.Services.ConfigureBTCPayAppCore();
 #if DEBUG
 builder.Services.AddDangerousSSLSettingsForDev();
 #endif
-// Add Serilog to the logging pipeline
-builder.Logging.AddSerilog();
 
 // Configure the HTTP request pipeline.
 var app = builder.Build();
