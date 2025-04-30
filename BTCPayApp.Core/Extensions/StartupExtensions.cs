@@ -12,9 +12,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Serilog;
-using Serilog.Core;
-using Serilog.Events;
 
 namespace BTCPayApp.Core.Extensions;
 
@@ -22,21 +19,20 @@ public static class StartupExtensions
 {
     public static IServiceCollection ConfigureBTCPayAppCore(this IServiceCollection serviceCollection)
     {
-
-        serviceCollection.AddMemoryCache();
-        serviceCollection.AddHttpClient();
         serviceCollection.AddDbContextFactory<AppDbContext>((provider, options) =>
         {
             var dir = provider.GetRequiredService<IDataDirectoryProvider>().GetAppDataDirectory().ConfigureAwait(false).GetAwaiter().GetResult();
             options.UseSqlite($"Data Source={dir}/app.db");
             options.UseSqlLiteTriggers();
         });
-        serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddHostedService<AppDatabaseMigrator>();
+        serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
 
         // Configure logging
         LoggingConfig.ConfigureLogging(serviceCollection);
 
+        serviceCollection.AddMemoryCache();
+        serviceCollection.AddHttpClient();
         serviceCollection.AddSingleton<BTCPayConnectionManager>();
         serviceCollection.AddSingleton<SyncService>();
         serviceCollection.AddSingleton<LightningNodeManager>();

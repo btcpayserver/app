@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using BTCPayApp.Core.Backup;
+﻿using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
