@@ -12,15 +12,25 @@ public static class LoggingConfig
     {
         var serviceProvider = serviceCollection.BuildServiceProvider();
         var configProvider = serviceProvider.GetRequiredService<ConfigProvider>();
-        var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-        var defaultMinLevel = env == "Development" ? LogEventLevel.Debug : LogEventLevel.Information;
-        var logLevel = configProvider.Get<LogEventLevel?>("logLevel").ConfigureAwait(false).GetAwaiter().GetResult();
-        var levelSwitch = new LoggingLevelSwitch { MinimumLevel = logLevel ?? defaultMinLevel };
+        var isDevEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+        var logLevel = isDevEnv  ? LogEventLevel.Debug : LogEventLevel.Information;
+        if (!isDevEnv)
+        {
+            try
+            {
+                var storedLevel = configProvider.Get<LogEventLevel?>("logLevel").ConfigureAwait(false).GetAwaiter().GetResult();
+                if (storedLevel is not null) logLevel = storedLevel.Value;
+            }
+            catch (Exception) { /* ignored */ }
+        }
+
+        var levelSwitch = new LoggingLevelSwitch { MinimumLevel = logLevel };
         serviceCollection.AddSingleton(levelSwitch);
         serviceCollection.AddSerilog();
 
         var outputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} ({SourceContext}){NewLine}{Exception}";
         var config = new LoggerConfiguration()
+            .Enrich.FromLogContext()
             .WriteTo.Console(outputTemplate: outputTemplate) // Write to the console (optional)
             .MinimumLevel.ControlledBy(levelSwitch)
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
@@ -33,7 +43,7 @@ public static class LoggingConfig
         "LDK.BTCPayApp.Core.LDK.LDKPeerHandler": "Information",
         "LDK.lightning_background_processor": "Information"*/
 
-        if (env == "Production")
+        if (!isDevEnv)
         {
             var dirProvider = serviceProvider.GetRequiredService<IDataDirectoryProvider>();
             var appDir = dirProvider.GetAppDataDirectory().ConfigureAwait(false).GetAwaiter().GetResult();
