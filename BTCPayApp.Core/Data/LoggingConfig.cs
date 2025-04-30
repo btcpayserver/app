@@ -40,8 +40,11 @@ public static class LoggingConfig
             var logFilePath = Path.Combine(appDir, "logs", "btcpayapp-.log");
             config.WriteTo.File(
                 logFilePath,
-                retainedFileCountLimit: 7,
+                buffered: true,
+                fileSizeLimitBytes: 5 * 1024 * 1024, // 5 MB
+                rollOnFileSizeLimit: true,
                 rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 7,
                 outputTemplate: outputTemplate
             );
         }
