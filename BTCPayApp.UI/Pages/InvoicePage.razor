@@ -45,7 +45,10 @@
                         </div>
                     }
                     <div class="invoice">
-                        <span>Invoice @Invoice.Id</span>
+                        <div class="d-inline-block">
+                            <span>Invoice</span>
+                            <TruncateCenter Text="@Invoice.Id" Padding="15" Copy="true" />
+                        </div>
                         <div class="h3">
                             <span data-sensitive>@DisplayFormatter.Currency(Invoice.Amount, Invoice.Currency, DisplayFormatter.CurrencyFormat.Symbol)</span>
                         </div>
