@@ -727,11 +727,11 @@
     // ReSharper disable once AsyncVoidMethod
     private async void OnQrCodeScan(string code)
     {
+        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
         // prevent duplicate submission due to quirk in QR reader lib
         if (code == _qrInput) return;
-        _qrInput = code;
-        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
 
+        _qrInput = code;
         Model.Destination = code;
         await UpdateForDestination(Model.Destination);
         StateHasChanged();
