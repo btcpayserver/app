@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Serilog;
 
 namespace BTCPayApp.Core.Extensions;
 
@@ -26,10 +25,14 @@ public static class StartupExtensions
             options.UseSqlite($"Data Source={dir}/app.db");
             options.UseSqlLiteTriggers();
         });
+        serviceCollection.AddHostedService<AppDatabaseMigrator>();
+        serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
+
+        // Configure logging
+        LoggingConfig.ConfigureLogging(serviceCollection);
 
         serviceCollection.AddMemoryCache();
         serviceCollection.AddHttpClient();
-        serviceCollection.AddHostedService<AppDatabaseMigrator>();
         serviceCollection.AddSingleton<BTCPayConnectionManager>();
         serviceCollection.AddSingleton<SyncService>();
         serviceCollection.AddSingleton<LightningNodeManager>();
@@ -43,18 +46,9 @@ public static class StartupExtensions
         serviceCollection.AddSingleton<AuthenticationStateProvider, AuthStateProvider>(provider => provider.GetRequiredService<AuthStateProvider>());
         serviceCollection.AddSingleton<IHostedService>(provider => provider.GetRequiredService<AuthStateProvider>());
         serviceCollection.AddSingleton(sp => (IAccountManager)sp.GetRequiredService<AuthenticationStateProvider>());
-        serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
-        serviceCollection.AddLDK();
         serviceCollection.AddSingleton<IAuthorizationHandler, AuthorizationHandler>();
         serviceCollection.AddAuthorizationCore(options => options.AddPolicies());
-
-        // Configure logging
-        serviceCollection.AddLogging();
-        var serviceProvider = serviceCollection.BuildServiceProvider();
-        var dirProvider = serviceProvider.GetRequiredService<IDataDirectoryProvider>();
-        var logHelper = new LogHelper(dirProvider);
-        var logFilePath = logHelper.GetLogPath().GetAwaiter().GetResult();
-        LoggingConfig.ConfigureLogging(logFilePath);
+        serviceCollection.AddLDK();
 
         return serviceCollection;
     }

@@ -68,10 +68,7 @@ public static class MauiProgram
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
         builder.Services.AddDangerousSSLSettingsForDev();
-        builder.Logging.AddDebug();
 #endif
-        // Add Serilog to the logging pipeline
-        builder.Logging.AddSerilog();
 
         return builder.Build();
     }

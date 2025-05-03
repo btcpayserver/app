@@ -1,21 +1,64 @@
-﻿using Serilog;
+﻿using BTCPayApp.Core.Contracts;
+using Microsoft.Extensions.DependencyInjection;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
-namespace BTCPayApp.Core.Data
+namespace BTCPayApp.Core.Data;
+
+public static class LoggingConfig
 {
-    public static class LoggingConfig
+    public static void ConfigureLogging(IServiceCollection serviceCollection)
     {
-        public static void ConfigureLogging(string logFilePath = "logs/log-.txt")
+        var serviceProvider = serviceCollection.BuildServiceProvider();
+        var configProvider = serviceProvider.GetRequiredService<ConfigProvider>();
+        var isDevEnv = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
+        var logLevel = isDevEnv  ? LogEventLevel.Debug : LogEventLevel.Information;
+        if (!isDevEnv)
         {
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Error() // Set the minimum logging level
-                .WriteTo.Console()    // Write to the console (optional)
-                .WriteTo.File(
-                    logFilePath,         // Path to the log files
-                    rollingInterval: RollingInterval.Day, // Creates a new log file daily
-                    retainedFileCountLimit: 7,           // Retain logs for 7 days
-                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level}] {Message}{NewLine}{Exception}" // Format
-                )
-                .CreateLogger();
+            try
+            {
+                var storedLevel = configProvider.Get<LogEventLevel?>("logLevel").ConfigureAwait(false).GetAwaiter().GetResult();
+                if (storedLevel is not null) logLevel = storedLevel.Value;
+            }
+            catch (Exception) { /* ignored */ }
         }
+
+        var levelSwitch = new LoggingLevelSwitch { MinimumLevel = logLevel };
+        serviceCollection.AddSingleton(levelSwitch);
+        serviceCollection.AddSerilog();
+
+        var outputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} ({SourceContext}){NewLine}{Exception}";
+        var config = new LoggerConfiguration()
+            .Enrich.FromLogContext()
+            .WriteTo.Console(outputTemplate: outputTemplate) // Write to the console (optional)
+            .MinimumLevel.ControlledBy(levelSwitch)
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+            .MinimumLevel.Override("System", LogEventLevel.Warning);
+
+        /*
+        "LDK": "Trace",
+        "LDK.lightning::ln::peer_handler": "Debug",
+        "LDK.lightning::routing::gossip": "Information",
+        "LDK.BTCPayApp.Core.LDK.LDKPeerHandler": "Information",
+        "LDK.lightning_background_processor": "Information"*/
+
+        if (!isDevEnv)
+        {
+            var dirProvider = serviceProvider.GetRequiredService<IDataDirectoryProvider>();
+            var appDir = dirProvider.GetAppDataDirectory().ConfigureAwait(false).GetAwaiter().GetResult();
+            var logFilePath = Path.Combine(appDir, "logs", "btcpayapp-.log");
+            config.WriteTo.File(
+                logFilePath,
+                buffered: true,
+                fileSizeLimitBytes: 5 * 1024 * 1024, // 5 MB
+                rollOnFileSizeLimit: true,
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 7,
+                outputTemplate: outputTemplate
+            );
+        }
+
+        Log.Logger = config.CreateLogger();
     }
 }
