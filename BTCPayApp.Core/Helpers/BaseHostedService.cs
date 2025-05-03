@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Hosting;
+﻿using AsyncKeyedLock;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace BTCPayApp.Core.Helpers;
@@ -6,38 +7,23 @@ namespace BTCPayApp.Core.Helpers;
 public abstract class BaseHostedService(ILogger logger) : IHostedService, IDisposable
 {
     protected CancellationTokenSource CancellationTokenSource = new();
-    protected readonly SemaphoreSlim ControlSemaphore = new(1, 1);
+    protected readonly AsyncNonKeyedLocker ControlSemaphore = new();
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await ControlSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            CancellationTokenSource = new CancellationTokenSource();
-            await ExecuteStartAsync(CancellationTokenSource.CreateLinkedTokenSource(CancellationTokenSource.Token, cancellationToken).Token);
-        }
-        finally
-        {
-            ControlSemaphore.Release();
-        }
+        using var _ = ControlSemaphore.LockAsync(cancellationToken);
+        CancellationTokenSource = new CancellationTokenSource();
+        await ExecuteStartAsync(CancellationTokenSource.CreateLinkedTokenSource(CancellationTokenSource.Token, cancellationToken).Token);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
         logger.LogInformation("Stopping service");
         await CancellationTokenSource.CancelAsync();
-        await ControlSemaphore.WaitAsync(cancellationToken);
+        using var _ = await ControlSemaphore.LockAsync(cancellationToken);
+        await ExecuteStopAsync(CancellationTokenSource.Token);
 
-        try
-        {
-            await ExecuteStopAsync(CancellationTokenSource.Token);
-
-            logger.LogInformation("Stopped");
-        }
-        finally
-        {
-            ControlSemaphore.Release();
-        }
+        logger.LogInformation("Stopped");
     }
 
     protected abstract Task ExecuteStartAsync(CancellationToken cancellationToken);
@@ -51,14 +37,7 @@ public abstract class BaseHostedService(ILogger logger) : IHostedService, IDispo
 
     protected async Task WrapInLock(Func<Task> act, CancellationToken cancellationToken)
     {
-        await ControlSemaphore.WaitAsync(cancellationToken);
-        try
-        {
-            await act();
-        }
-        finally
-        {
-            ControlSemaphore.Release();
-        }
+        using var _ = ControlSemaphore.LockAsync(cancellationToken);
+        await act();
     }
 }

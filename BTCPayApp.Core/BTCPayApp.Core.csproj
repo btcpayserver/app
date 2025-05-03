@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\submodules\btcpayserver\BTCPayServer.Client\BTCPayServer.Client.csproj"/>
-    <PackageReference Include="AsyncKeyedLock" Version="7.1.4"/>
+    <PackageReference Include="AsyncKeyedLock" Version="7.1.6"/>
     <PackageReference Include="FlexLabs.EntityFrameworkCore.Upsert" Version="8.1.0"/>
     <PackageReference Include="Laraue.EfCoreTriggers.SqlLite" Version="8.1.2"/>
     <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.15" />

@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using AsyncKeyedLock;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.Models;
@@ -23,7 +24,7 @@ public class AuthStateProvider(
     private bool _refreshUserInfo;
     private string? _currentStoreId;
     private CancellationTokenSource? _pingCts;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private readonly AsyncNonKeyedLocker _semaphore = new();
     private readonly ClaimsPrincipal _unauthenticated = new(new ClaimsIdentity());
 
     public BTCPayAccount? Account { get; private set; }
@@ -80,7 +81,7 @@ public class AuthStateProvider(
         var user = _unauthenticated;
         try
         {
-            await _semaphore.WaitAsync();
+            using var _ = await _semaphore.LockAsync();
 
             // initialize with persisted account
             if (!_isInitialized && Account == null)
@@ -134,10 +135,6 @@ public class AuthStateProvider(
         {
             UserInfo = null;
             return new AuthenticationState(user);
-        }
-        finally
-        {
-            _semaphore.Release();
         }
     }
 

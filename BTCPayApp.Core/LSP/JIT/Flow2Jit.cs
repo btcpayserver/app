@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using AsyncKeyedLock;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
@@ -37,7 +38,7 @@ public abstract class Flow2Jit : IJITService, IScopedHostedService, ILDKEventHan
     protected virtual LightMoney NonChannelOpenFee => LightMoney.Zero;
 
     private FlowInfoResponse? _info;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private readonly AsyncNonKeyedLocker _semaphore = new();
 
     protected Flow2Jit(IHttpClientFactory httpClientFactory, Network network, LDKNode node,
         ChannelManager channelManager, ILogger<Flow2Jit> logger,
@@ -189,7 +190,7 @@ public abstract class Flow2Jit : IJITService, IScopedHostedService, ILDKEventHan
         if (_acceptedChannels.TryRemove(paymentClaimable.via_channel_id.hash(), out _) && paymentClaimable.counterparty_skimmed_fee_msat == fee.LSPFee.MilliSatoshi)
             return Task.FromResult(true);
 
-        return Task.FromResult(paymentClaimable.counterparty_skimmed_fee_msat == NonChannelOpenFee.MilliSatoshi || paymentClaimable.amount_msat ==  (lightningPayment.Value - NonChannelOpenFee ));
+        return Task.FromResult(paymentClaimable.counterparty_skimmed_fee_msat == NonChannelOpenFee.MilliSatoshi || paymentClaimable.amount_msat == (lightningPayment.Value - NonChannelOpenFee));
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -219,41 +220,18 @@ public abstract class Flow2Jit : IJITService, IScopedHostedService, ILDKEventHan
 
     private async Task ConfigUpdated(object? sender, LightningConfig e)
     {
-        try
+        using var _ = await _semaphore.LockAsync();
+        if (e.JITLSP == ProviderName)
         {
-            await _semaphore.WaitAsync();
-            if (e.JITLSP == ProviderName)
-            {
-                _info = await GetInfo();
+            _info = await GetInfo();
 
-                var configPeers = await _node.GetConfig();
-                var pubkey = new PubKey(_info.PubKey);
-                if (configPeers.Peers.TryGetValue(_info.PubKey, out var peer))
-                {
-                    //check if the endpoint matches any of the info ones
-                    if (!_info.ConnectionMethods.Any(a =>
-                            a.ToEndpoint().ToEndpointString().Equals(peer.Endpoint.ToEndpointString(), StringComparison.OrdinalIgnoreCase)))
-                    {
-                        peer = new PeerInfo
-                        {
-                            Label = ProviderName,
-                            Endpoint = _info.ConnectionMethods.First().ToEndpoint(), Persistent = true,
-                            Trusted = true
-                        };
-                    }
-                    else if (peer is {Persistent: true, Trusted: true})
-                        return;
-                    else
-                    {
-                        peer = peer with
-                        {
-                            Label = ProviderName,
-                            Persistent = true,
-                            Trusted = true
-                        };
-                    }
-                }
-                else
+            var configPeers = await _node.GetConfig();
+            var pubkey = new PubKey(_info.PubKey);
+            if (configPeers.Peers.TryGetValue(_info.PubKey, out var peer))
+            {
+                //check if the endpoint matches any of the info ones
+                if (!_info.ConnectionMethods.Any(a =>
+                        a.ToEndpoint().ToEndpointString().Equals(peer.Endpoint.ToEndpointString(), StringComparison.OrdinalIgnoreCase)))
                 {
                     peer = new PeerInfo
                     {
@@ -263,13 +241,30 @@ public abstract class Flow2Jit : IJITService, IScopedHostedService, ILDKEventHan
                         Trusted = true
                     };
                 }
-
-                _ = _node.Peer(pubkey, peer);
+                else if (peer is { Persistent: true, Trusted: true })
+                    return;
+                else
+                {
+                    peer = peer with
+                    {
+                        Label = ProviderName,
+                        Persistent = true,
+                        Trusted = true
+                    };
+                }
             }
-        }
-        finally
-        {
-            _semaphore.Release();
+            else
+            {
+                peer = new PeerInfo
+                {
+                    Label = ProviderName,
+                    Endpoint = _info.ConnectionMethods.First().ToEndpoint(),
+                    Persistent = true,
+                    Trusted = true
+                };
+            }
+
+            _ = _node.Peer(pubkey, peer);
         }
     }
 

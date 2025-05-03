@@ -27,7 +27,7 @@ public partial class LDKNode :
         return (await _memoryCache.GetOrCreateAsync(nameof(GetChannels), async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            await using var dbContext =  await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
             var dbChannels = dbContext.LightningChannels.AsNoTracking()
                 .Include(channel => channel.Aliases).AsAsyncEnumerable();
             var channels = ServiceProvider.GetRequiredService<ChannelManager>().list_channels();
@@ -179,7 +179,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
     private IServiceProvider ServiceProvider { get; }
     private TaskCompletionSource? _started;
-    private readonly SemaphoreSlim _semaphore = new(1);
+    private readonly AsyncNonKeyedLocker _semaphore = new();
 
     public IServiceProvider GetServiceProvider() => ServiceProvider;
 
@@ -188,15 +188,10 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         bool exists;
-        try
+        using (await _semaphore.LockAsync(cancellationToken))
         {
-            await _semaphore.WaitAsync(cancellationToken);
             exists = _started is not null;
             _started ??= new TaskCompletionSource();
-        }
-        finally
-        {
-            _semaphore.Release();
         }
 
         if (exists)
@@ -416,7 +411,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
     public async Task UpdateChannel(List<ChannelAlias> identifiers, byte[] write, long checkpoint)
     {
-        using var releaser = await channelLocker.LockAsync(identifiers.First().Id);
+        using var _ = await channelLocker.LockAsync(identifiers.First().Id);
         //TODO: convert to upsert and ensure aliases are saved with upsert too
         var ids = identifiers.Select(alias => alias.Id).ToArray();
         await using var context = await _dbContextFactory.CreateDbContextAsync();
