@@ -11,7 +11,7 @@ public abstract class BaseHostedService(ILogger logger) : IHostedService, IDispo
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        using var _ = ControlSemaphore.LockAsync(cancellationToken);
+        using var _ = await ControlSemaphore.LockAsync(cancellationToken);
         CancellationTokenSource = new CancellationTokenSource();
         await ExecuteStartAsync(CancellationTokenSource.CreateLinkedTokenSource(CancellationTokenSource.Token, cancellationToken).Token);
     }
@@ -37,7 +37,7 @@ public abstract class BaseHostedService(ILogger logger) : IHostedService, IDispo
 
     protected async Task WrapInLock(Func<Task> act, CancellationToken cancellationToken)
     {
-        using var _ = ControlSemaphore.LockAsync(cancellationToken);
+        using var _ = await ControlSemaphore.LockAsync(cancellationToken);
         await act();
     }
 }
