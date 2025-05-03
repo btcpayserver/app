@@ -1,6 +1,7 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using AsyncKeyedLock;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
@@ -26,7 +27,7 @@ public class SyncService(
     public AsyncEventHandler<(List<Outbox> OutboxItemsProcesed, PutObjectRequest RemoteRequest)>? RemoteObjectUpdated;
     public AsyncEventHandler<string[]>? LocalUpdated;
     private (Task syncTask, CancellationTokenSource cts, bool local)? _syncTask;
-    private readonly SemaphoreSlim _syncLock = new(1, 1);
+    private readonly AsyncNonKeyedLocker _syncLock = new();
 
     private async Task<IDataProtector?> GetDataProtector()
     {
@@ -48,7 +49,7 @@ public class SyncService(
                 Key = "encryptionKeyTest"
             });
 
-            if (res.Value is null or {Value.Length: 0})
+            if (res.Value is null or { Value.Length: 0 })
                 return false;
 
             if (dataProtector is null)
@@ -89,7 +90,7 @@ public class SyncService(
                 Key = "encryptionKeyTest"
             });
 
-            if (res.Value is {Value.Length: > 0})
+            if (res.Value is { Value.Length: > 0 })
             {
                 var decrypted = dataProtector.Unprotect(res.Value.Value.ToByteArray());
                 if ("kukks" == Encoding.UTF8.GetString(decrypted))
@@ -305,71 +306,65 @@ public class SyncService(
 
     public async Task SyncToRemote(CancellationToken cancellationToken = default)
     {
-        try
+        using var _ = await _syncLock.LockAsync(cancellationToken);
+
+        var backupAPi = await GetVSSAPI();
+        if (backupAPi is null)
+            return;
+        await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var putObjectRequest = new PutObjectRequest
         {
-            await _syncLock.WaitAsync(cancellationToken);
-
-            var backupAPi = await GetVSSAPI();
-            if (backupAPi is null)
-                return;
-            await using var db = await dbContextFactory.CreateDbContextAsync(cancellationToken);
-
-            var putObjectRequest = new PutObjectRequest
+            GlobalVersion = await configProvider.GetDeviceIdentifier()
+        };
+        var outbox = await db.OutboxItems.GroupBy(outbox1 => outbox1.Key)
+            .ToListAsync(cancellationToken: cancellationToken);
+        if (outbox.Count != 0)
+        {
+            logger.LogInformation("Syncing to remote {Count} outbox items", outbox.Count);
+        }
+        var removedOutboxItems = new List<Outbox>();
+        foreach (var outboxItemSet in outbox)
+        {
+            var orderedEnumerable = outboxItemSet.OrderByDescending(outbox1 => outbox1.Version)
+                .ThenByDescending(outbox1 => outbox1.ActionType).ToArray();
+            foreach (var item in orderedEnumerable)
             {
-                GlobalVersion = await configProvider.GetDeviceIdentifier()
-            };
-            var outbox = await db.OutboxItems.GroupBy(outbox1 => outbox1.Key)
-                .ToListAsync(cancellationToken: cancellationToken);
-            if (outbox.Count != 0)
-            {
-                logger.LogInformation("Syncing to remote {Count} outbox items", outbox.Count);
-            }
-            var removedOutboxItems = new List<Outbox>();
-            foreach (var outboxItemSet in outbox)
-            {
-                var orderedEnumerable = outboxItemSet.OrderByDescending(outbox1 => outbox1.Version)
-                    .ThenByDescending(outbox1 => outbox1.ActionType).ToArray();
-                foreach (var item in orderedEnumerable)
+                if (item.ActionType == OutboxAction.Delete)
                 {
-                    if (item.ActionType == OutboxAction.Delete)
+                    putObjectRequest.DeleteItems.Add(new KeyValue()
                     {
-                        putObjectRequest.DeleteItems.Add(new KeyValue()
-                        {
-                            Key = item.Key, Version = item.Version
-                        });
-                    }
-                    else
+                        Key = item.Key,
+                        Version = item.Version
+                    });
+                }
+                else
+                {
+                    var kv = await GetValue(db, item);
+                    if (kv != null)
                     {
-                        var kv = await GetValue(db, item);
-                        if (kv != null)
-                        {
-                            putObjectRequest.TransactionItems.Add(kv);
-                            break;
-                        }
+                        putObjectRequest.TransactionItems.Add(kv);
+                        break;
                     }
                 }
-
-                db.OutboxItems.RemoveRange(orderedEnumerable);
-                removedOutboxItems.AddRange(orderedEnumerable);
-                // Process outbox item
             }
 
-            if (putObjectRequest.TransactionItems.Count == 0 && putObjectRequest.DeleteItems.Count == 0 && _syncTask is not null) return;
+            db.OutboxItems.RemoveRange(orderedEnumerable);
+            removedOutboxItems.AddRange(orderedEnumerable);
+            // Process outbox item
+        }
 
-            await backupAPi.PutObjectAsync(putObjectRequest, cancellationToken);
-            await db.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Synced to remote {TransactionItemsCount} items and deleted {DeleteItemsCount} items {Join}",
-                putObjectRequest.TransactionItems.Count,
-                putObjectRequest.DeleteItems.Count,
-                string.Join(", ", putObjectRequest.TransactionItems.Select(kv => kv.Key + " " + kv.Version)));
-            RemoteObjectUpdated?.Invoke(this, (removedOutboxItems, putObjectRequest.Clone()));
-        }
-        finally
-        {
-            _syncLock.Release();
-        }
+        if (putObjectRequest.TransactionItems.Count == 0 && putObjectRequest.DeleteItems.Count == 0 && _syncTask is not null) return;
+
+        await backupAPi.PutObjectAsync(putObjectRequest, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        logger.LogInformation("Synced to remote {TransactionItemsCount} items and deleted {DeleteItemsCount} items {Join}",
+            putObjectRequest.TransactionItems.Count,
+            putObjectRequest.DeleteItems.Count,
+            string.Join(", ", putObjectRequest.TransactionItems.Select(kv => kv.Key + " " + kv.Version)));
+        RemoteObjectUpdated?.Invoke(this, (removedOutboxItems, putObjectRequest.Clone()));
     }
-    public async Task StartSync(bool local,CancellationToken cancellationToken = default)
+    public async Task StartSync(bool local, CancellationToken cancellationToken = default)
     {
         if (_syncTask.HasValue && _syncTask.Value.local == local && !_syncTask.Value.cts.IsCancellationRequested)
             return;

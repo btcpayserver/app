@@ -108,7 +108,7 @@ public class DatabaseConfigProvider(
 
     public override async Task Set<T>(string key, T? value, bool backup) where T : default
     {
-        using var releaser = await _lock.LockAsync(key);
+        using var _ = await _lock.LockAsync(key);
         logger.LogDebug("Setting {Key} to {Value} {Backup}", key, value, backup ? "backup": "no backup");
         await using var dbContext = await dbContextFactory.CreateDbContextAsync();
         if (value is null)

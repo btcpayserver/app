@@ -1,4 +1,5 @@
-﻿using BTCPayApp.Core.Contracts;
+﻿using AsyncKeyedLock;
+using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Helpers;
 using org.ldk.structs;
 using Script = NBitcoin.Script;
@@ -9,7 +10,7 @@ public class LDKFilter : FilterInterface
 {
     private readonly LDKNode _ldkNode;
     private readonly ConfigProvider _configProvider;
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private readonly AsyncNonKeyedLocker _semaphore = new();
 
     public LDKFilter(LDKNode ldkNode, ConfigProvider configProvider)
     {
@@ -43,23 +44,16 @@ public class LDKFilter : FilterInterface
 
     private async Task AddOrUpdateWatchedOutput(LDKWatchedOutput output)
     {
-        try
+        using var _ = await _semaphore.LockAsync();
+        var watchedOutputs = await GetWatchedOutputs();
+        var existing = watchedOutputs.FirstOrDefault(w => w.Outpoint == output.Outpoint);
+        if (existing != null)
         {
-            _ = _semaphore.WaitAsync();
-            var watchedOutputs = await GetWatchedOutputs();
-            var existing = watchedOutputs.FirstOrDefault(w => w.Outpoint == output.Outpoint);
-            if (existing != null)
-            {
-                watchedOutputs.Remove(existing);
-            }
+            watchedOutputs.Remove(existing);
+        }
 
-            watchedOutputs.Add(output);
-            await _configProvider.Set("ln:watchedOutputs", watchedOutputs, true);
-        }
-        finally
-        {
-            _semaphore.Release();
-        }
+        watchedOutputs.Add(output);
+        await _configProvider.Set("ln:watchedOutputs", watchedOutputs, true);
     }
 
 

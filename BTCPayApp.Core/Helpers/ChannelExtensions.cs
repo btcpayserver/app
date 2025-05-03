@@ -1,4 +1,5 @@
 ﻿using System.Threading.Channels;
+using AsyncKeyedLock;
 using BTCPayApp.Core.Data;
 using NBitcoin;
 using NBitcoin.Scripting;
@@ -69,7 +70,7 @@ public static class ChannelExtensions
         switch (od)
         {
             case OutputDescriptor.WPKH wpkh:
-                var res=  ExtractFromPkProvider(wpkh.PkProvider);
+                var res = ExtractFromPkProvider(wpkh.PkProvider);
                 return (res.Item1, res.Item2, ScriptPubKeyType.Segwit);
         }
 
@@ -146,7 +147,7 @@ public static class ChannelExtensions
     public class DisposableWrapper : IDisposable, IAsyncDisposable
     {
         private readonly Func<Task> _disposeAsync;
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1);
+        private readonly AsyncNonKeyedLocker _semaphore = new();
         private readonly TaskCompletionSource _tcs = new();
 
         public DisposableWrapper(Func<Task> disposeAsync)
@@ -161,18 +162,11 @@ public static class ChannelExtensions
 
         public async ValueTask DisposeAsync()
         {
-            await _semaphore.WaitAsync();
-            try
-            {
-                if (_tcs.Task.IsCompleted)
-                    return;
-                await _disposeAsync();
-                _tcs.TrySetResult();
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
+            using var _ = await _semaphore.LockAsync();
+            if (_tcs.Task.IsCompleted)
+                return;
+            await _disposeAsync();
+            _tcs.TrySetResult();
         }
     }
 }

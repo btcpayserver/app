@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.WebSockets;
+using AsyncKeyedLock;
 using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.Contracts;
@@ -26,7 +27,7 @@ public class BTCPayConnectionManager(
 {
     private BTCPayConnectionState _connectionState = BTCPayConnectionState.Init;
     private CancellationTokenSource _cts = new();
-    private readonly SemaphoreSlim _lock = new(1, 1);
+    private readonly AsyncNonKeyedLocker _lock = new();
     private IDisposable? _subscription;
     private IBTCPayAppHubServer? _hubProxy;
     public IBTCPayAppHubServer? HubProxy
@@ -46,19 +47,12 @@ public class BTCPayConnectionManager(
         get => _connectionState;
         private set
         {
-            _lock.Wait();
-            try
-            {
-                if (_connectionState == value) return;
-                var old = _connectionState;
-                _connectionState = value;
-                logger.LogInformation("Connection state changed: {Old} -> {ConnectionState}", old, _connectionState);
-                ConnectionChanged?.Invoke(this, (old, _connectionState));
-            }
-            finally
-            {
-               _lock.Release();
-            }
+            using var _ = _lock.Lock();
+            if (_connectionState == value) return;
+            var old = _connectionState;
+            _connectionState = value;
+            logger.LogInformation("Connection state changed: {Old} -> {ConnectionState}", old, _connectionState);
+            ConnectionChanged?.Invoke(this, (old, _connectionState));
         }
     }
 

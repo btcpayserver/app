@@ -326,7 +326,7 @@
 </section>
 
 @code {
-    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private readonly AsyncNonKeyedLocker _semaphore = new();
     private LDKNode? Node => LightningNodeManager.Node;
     private PaymentsManager? PaymentsManager => Node?.PaymentsManager;
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
@@ -592,9 +592,9 @@
 
     private async Task<FormResult> SendOnchain(BitcoinAddress address, Money amount, decimal? feeRate)
     {
+        using var _ = await _semaphore.LockAsync();
         try
         {
-            await _semaphore.WaitAsync();
             return Model.Transaction == null
                 ? await CreateTx(address, amount, feeRate)
                 : await BroadcastTx(Model.Transaction.Value.Tx);
@@ -602,10 +602,6 @@
         catch (Exception ex)
         {
             return new FormResult(false, "Payment failed: " + ex.Message);
-        }
-        finally
-        {
-            _semaphore.Release();
         }
     }
 

@@ -106,7 +106,7 @@ public class OnChainWalletManager : BaseHostedService
     private async Task OnStateChanged(object? sender, (OnChainWalletState Old, OnChainWalletState New) e)
     {
         var config = await GetConfig();
-        if (e is {New: OnChainWalletState.Loaded} && IsConfigured(config))
+        if (e is { New: OnChainWalletState.Loaded } && IsConfigured(config))
         {
             await Track();
         }
@@ -119,172 +119,151 @@ public class OnChainWalletManager : BaseHostedService
 
     public async Task Restore()
     {
-        try
+        if (_state != OnChainWalletState.WaitingForConnection)
+            throw new InvalidOperationException("Cannot restore wallet in current state");
+
+        var config = await GetConfig();
+        if (config is null || !IsConfigured(config) || HubProxy == null)
+            throw new InvalidOperationException("Cannot restore wallet in current state");
+
+        using var _ = await ControlSemaphore.LockAsync();
+
+        // step1: Track our derivations
+        //for groups, we need to generate a new one and replace the local one with its identifier
+        //for derivations, we need to call track with the latest index
+        //for groups, we need to fetch all tracked scripts and add them to the group tracked source
+        // step2: import the UTXOS
+        // step3: sync the backup data
+        var identifiers = config.Derivations.Select(pair => pair.Value.Identifier!).ToArray();
+        var response = await HubProxy.Handshake(new AppHandshake { Identifiers = identifiers });
+
+        var missing = config.Derivations
+            .Where(pair => response.IdentifiersAcknowledged?.Contains(pair.Value.Identifier) is not true)
+            .ToList();
+
+        foreach (var x in missing)
         {
-            if (_state != OnChainWalletState.WaitingForConnection)
-                throw new InvalidOperationException("Cannot restore wallet in current state");
-
-            var config = await GetConfig();
-            if (config is null || !IsConfigured(config) || HubProxy == null)
-                throw new InvalidOperationException("Cannot restore wallet in current state");
-
-            await ControlSemaphore.WaitAsync();
-
-            // step1: Track our derivations
-            //for groups, we need to generate a new one and replace the local one with its identifier
-            //for derivations, we need to call track with the latest index
-            //for groups, we need to fetch all tracked scripts and add them to the group tracked source
-            // step2: import the UTXOS
-            // step3: sync the backup data
-            var identifiers = config.Derivations.Select(pair => pair.Value.Identifier!).ToArray();
-            var response = await HubProxy.Handshake(new AppHandshake { Identifiers = identifiers });
-
-            var missing = config.Derivations
-                .Where(pair => response.IdentifiersAcknowledged?.Contains(pair.Value.Identifier) is not true)
-                .ToList();
-
-            foreach (var x in missing)
-            {
-                var result = await HubProxy.Pair(new PairRequest
-                {
-                    Derivations = new Dictionary<string, DerivationItem>
-                    {
-                        [x.Key] = new()
-                        {
-                            Descriptor = x.Value.Descriptor,
-                            Index = x.Value.LastKnownIndex ?? 0
-                        }
-                    }
-                });
-
-                config.Derivations[x.Key] = new WalletDerivation
-                {
-                    Name = x.Value.Name,
-                    Descriptor = x.Value.Descriptor,
-                    Identifier = result[x.Key]
-                };
-
-                if (x.Key == WalletDerivation.LightningScripts)
-                {
-                    var scripts = await LDKFilter.GetWatchedOutputs(_configProvider);
-                    var identifier = config.Derivations[x.Key].Identifier;
-                    if (!string.IsNullOrEmpty(identifier))
-                    {
-                        await HubProxy.TrackScripts(identifier, scripts.Select(output => output.Script.ToHex()).ToArray());
-                    }
-                }
-            }
-
-            await _configProvider.Set(WalletConfig.Key, config, true);
-        }
-        finally
-        {
-            ControlSemaphore.Release();
-        }
-    }
-
-    public async Task Generate()
-    {
-        await ControlSemaphore.WaitAsync();
-        try
-        {
-            if (State != OnChainWalletState.NotConfigured || ReportedNetwork == null || HubProxy == null || !IsHubConnected ||
-                IsConfigured(await GetConfig()) || await GetBestBlock() is not { } block)
-                throw new InvalidOperationException("Cannot generate wallet in current state");
-
-            _logger.LogInformation("Generating wallet");
-
-            var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
-            var mainnet = ReportedNetwork == Network.Main;
-            var path = new KeyPath($"m/84'/{(mainnet ? "0" : "1")}'/0'");
-            var fingerprint = mnemonic.DeriveExtKey().GetPublicKey().GetHDFingerPrint();
-            var xpub = mnemonic.DeriveExtKey().Derive(path).Neuter().ToString(ReportedNetwork);
-            var snapshot = new BlockSnapshot
-            {
-                BlockHash = uint256.Parse(block.BlockHash),
-                BlockHeight = (uint)block.BlockHeight
-            };
-            var walletConfig = new WalletConfig
-            {
-                Birthday = snapshot,
-                Mnemonic = mnemonic.ToString(),
-                Network = ReportedNetwork.ToString(),
-                Derivations = new Dictionary<string, WalletDerivation>
-                {
-                    [WalletDerivation.NativeSegwit] = new()
-                    {
-                        Identifier = null,
-                        Name = "Native Segwit",
-                        Descriptor = OutputDescriptor.AddChecksum(
-                            $"wpkh([{fingerprint.ToString()}/{path}]{xpub}/0/*)")
-                    }
-                },
-                CoinSnapshot = new CoinSnapshot
-                {
-                    Coins = new Dictionary<string, SavedCoin[]>(),
-                    BlockSnapshot = snapshot
-                }
-            };
-
-            var result = await HubProxy.Pair(new PairRequest
-            {
-                Derivations = walletConfig.Derivations.ToDictionary(pair => pair.Key, pair => new DerivationItem
-                {
-                    Descriptor = pair.Value.Descriptor
-                })
-            });
-            foreach (var keyValuePair in result)
-            {
-                walletConfig.Derivations[keyValuePair.Key].Identifier = keyValuePair.Value;
-            }
-
-            if (!await _syncService.SetEncryptionKey(mnemonic))
-            {
-                _logger.LogError("Failed to set encryption key");
-                return;
-            }
-
-            await _configProvider.Set(WalletConfig.Key, walletConfig, true);
-            State = OnChainWalletState.Loaded;
-        }
-        finally
-        {
-            ControlSemaphore.Release();
-        }
-    }
-
-    public async Task AddDerivation(string key, string name, string? descriptor)
-    {
-        await ControlSemaphore.WaitAsync();
-        try
-        {
-            var config = await GetConfig();
-            if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
-                throw new InvalidOperationException("Cannot add deriv in current state");
-
-            if (config.Derivations.ContainsKey(key))
-                throw new InvalidOperationException("Derivation already exists");
-
             var result = await HubProxy.Pair(new PairRequest
             {
                 Derivations = new Dictionary<string, DerivationItem>
                 {
-                    [key] = new() { Descriptor = descriptor }
+                    [x.Key] = new()
+                    {
+                        Descriptor = x.Value.Descriptor,
+                        Index = x.Value.LastKnownIndex ?? 0
+                    }
                 }
             });
 
-            config.Derivations[key] = new WalletDerivation
+            config.Derivations[x.Key] = new WalletDerivation
             {
-                Name = name,
-                Descriptor = descriptor,
-                Identifier = result[key]
+                Name = x.Value.Name,
+                Descriptor = x.Value.Descriptor,
+                Identifier = result[x.Key]
             };
-            await _configProvider.Set(WalletConfig.Key, config, true);
+
+            if (x.Key == WalletDerivation.LightningScripts)
+            {
+                var scripts = await LDKFilter.GetWatchedOutputs(_configProvider);
+                var identifier = config.Derivations[x.Key].Identifier;
+                if (!string.IsNullOrEmpty(identifier))
+                {
+                    await HubProxy.TrackScripts(identifier, scripts.Select(output => output.Script.ToHex()).ToArray());
+                }
+            }
         }
-        finally
+
+        await _configProvider.Set(WalletConfig.Key, config, true);
+    }
+
+    public async Task Generate()
+    {
+        using var _ = await ControlSemaphore.LockAsync();
+        if (State != OnChainWalletState.NotConfigured || ReportedNetwork == null || HubProxy == null || !IsHubConnected ||
+            IsConfigured(await GetConfig()) || await GetBestBlock() is not { } block)
+            throw new InvalidOperationException("Cannot generate wallet in current state");
+
+        _logger.LogInformation("Generating wallet");
+
+        var mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
+        var mainnet = ReportedNetwork == Network.Main;
+        var path = new KeyPath($"m/84'/{(mainnet ? "0" : "1")}'/0'");
+        var fingerprint = mnemonic.DeriveExtKey().GetPublicKey().GetHDFingerPrint();
+        var xpub = mnemonic.DeriveExtKey().Derive(path).Neuter().ToString(ReportedNetwork);
+        var snapshot = new BlockSnapshot
         {
-            ControlSemaphore.Release();
+            BlockHash = uint256.Parse(block.BlockHash),
+            BlockHeight = (uint)block.BlockHeight
+        };
+        var walletConfig = new WalletConfig
+        {
+            Birthday = snapshot,
+            Mnemonic = mnemonic.ToString(),
+            Network = ReportedNetwork.ToString(),
+            Derivations = new Dictionary<string, WalletDerivation>
+            {
+                [WalletDerivation.NativeSegwit] = new()
+                {
+                    Identifier = null,
+                    Name = "Native Segwit",
+                    Descriptor = OutputDescriptor.AddChecksum(
+                        $"wpkh([{fingerprint.ToString()}/{path}]{xpub}/0/*)")
+                }
+            },
+            CoinSnapshot = new CoinSnapshot
+            {
+                Coins = new Dictionary<string, SavedCoin[]>(),
+                BlockSnapshot = snapshot
+            }
+        };
+
+        var result = await HubProxy.Pair(new PairRequest
+        {
+            Derivations = walletConfig.Derivations.ToDictionary(pair => pair.Key, pair => new DerivationItem
+            {
+                Descriptor = pair.Value.Descriptor
+            })
+        });
+        foreach (var keyValuePair in result)
+        {
+            walletConfig.Derivations[keyValuePair.Key].Identifier = keyValuePair.Value;
         }
+
+        if (!await _syncService.SetEncryptionKey(mnemonic))
+        {
+            _logger.LogError("Failed to set encryption key");
+            return;
+        }
+
+        await _configProvider.Set(WalletConfig.Key, walletConfig, true);
+        State = OnChainWalletState.Loaded;
+    }
+
+    public async Task AddDerivation(string key, string name, string? descriptor)
+    {
+        using var _ = await ControlSemaphore.LockAsync();
+        var config = await GetConfig();
+        if (State != OnChainWalletState.Loaded || HubProxy == null || !IsHubConnected || config is null || !IsConfigured(config))
+            throw new InvalidOperationException("Cannot add deriv in current state");
+
+        if (config.Derivations.ContainsKey(key))
+            throw new InvalidOperationException("Derivation already exists");
+
+        var result = await HubProxy.Pair(new PairRequest
+        {
+            Derivations = new Dictionary<string, DerivationItem>
+            {
+                [key] = new() { Descriptor = descriptor }
+            }
+        });
+
+        config.Derivations[key] = new WalletDerivation
+        {
+            Name = name,
+            Descriptor = descriptor,
+            Identifier = result[key]
+        };
+        await _configProvider.Set(WalletConfig.Key, config, true);
     }
 
     private async Task ConnectionChanged(object? sender, (BTCPayConnectionState Old, BTCPayConnectionState New) valueTuple)
@@ -308,11 +287,11 @@ public class OnChainWalletManager : BaseHostedService
                 State = OnChainWalletState.WaitingForConnection;
                 break;
             default:
-            {
-                if (!configured)
-                    State = OnChainWalletState.NotConfigured;
-                break;
-            }
+                {
+                    if (!configured)
+                        State = OnChainWalletState.NotConfigured;
+                    break;
+                }
         }
     }
 
@@ -374,61 +353,47 @@ public class OnChainWalletManager : BaseHostedService
         if (HubProxy == null || !IsHubConnected || bb is null || config is null || !IsConfigured(config))
             throw new InvalidOperationException("Cannot update snapshot in current state");
 
-        await ControlSemaphore.WaitAsync();
-        try
+        using var _ = await ControlSemaphore.LockAsync();
+        var identifiers = config.Derivations.Values
+            .Where(d => !string.IsNullOrEmpty(d.Identifier))
+            .Select(d => d.Identifier!)
+            .ToArray();
+        var utxos = await HubProxy.GetUTXOs(identifiers);
+        config.CoinSnapshot = new CoinSnapshot
         {
-            var identifiers = config.Derivations.Values
-                .Where(d => !string.IsNullOrEmpty(d.Identifier))
-                .Select(d => d.Identifier!)
-                .ToArray();
-            var utxos = await HubProxy.GetUTXOs(identifiers);
-            config.CoinSnapshot = new CoinSnapshot
+            BlockSnapshot = new BlockSnapshot
             {
-                BlockSnapshot = new BlockSnapshot
-                {
-                    BlockHash = uint256.Parse(bb.BlockHash),
-                    BlockHeight = (uint)bb.BlockHeight
-                },
-                Coins = utxos.ToDictionary(kv => kv.Key, kv => kv.Value.Select(coin => new SavedCoin
-                {
-                    Outpoint = OutPoint.Parse(coin.Outpoint!),
-                    Path = coin.Path is null ? null : KeyPath.Parse(coin.Path)
-                }).ToArray())
-            };
-            await _configProvider.Set(WalletConfig.Key, config, true);
-            OnSnapshotUpdate?.Invoke(this, config.CoinSnapshot);
-        }
-        finally
-        {
-            ControlSemaphore.Release();
-        }
+                BlockHash = uint256.Parse(bb.BlockHash),
+                BlockHeight = (uint)bb.BlockHeight
+            },
+            Coins = utxos.ToDictionary(kv => kv.Key, kv => kv.Value.Select(coin => new SavedCoin
+            {
+                Outpoint = OutPoint.Parse(coin.Outpoint!),
+                Path = coin.Path is null ? null : KeyPath.Parse(coin.Path)
+            }).ToArray())
+        };
+        await _configProvider.Set(WalletConfig.Key, config, true);
+        OnSnapshotUpdate?.Invoke(this, config.CoinSnapshot);
     }
 
     public async Task<BitcoinAddress?> DeriveScript(string derivationId)
     {
-        await ControlSemaphore.WaitAsync();
-        try
-        {
-            var config = await GetConfig();
-            if (State != OnChainWalletState.Loaded || ReportedNetwork == null || HubProxy == null || !IsHubConnected ||
-                config == null || !IsConfigured(config))
-                throw new InvalidOperationException("Cannot derive script in current state");
+        using var _ = await ControlSemaphore.LockAsync();
+        var config = await GetConfig();
+        if (State != OnChainWalletState.Loaded || ReportedNetwork == null || HubProxy == null || !IsHubConnected ||
+            config == null || !IsConfigured(config))
+            throw new InvalidOperationException("Cannot derive script in current state");
 
-            var derivation = config.Derivations[derivationId];
-            var identifier = derivation?.Identifier;
-            if (derivation == null || identifier == null)
-                throw new InvalidOperationException("Missing identifier");
+        var derivation = config.Derivations[derivationId];
+        var identifier = derivation?.Identifier;
+        if (derivation == null || identifier == null)
+            throw new InvalidOperationException("Missing identifier");
 
-            var addr = await HubProxy.DeriveScript(identifier);
-            var keyPath = KeyPath.Parse(addr.KeyPath);
-            derivation.LastKnownIndex = (int?)keyPath.Indexes.Last();
-            await _configProvider.Set(WalletConfig.Key, config, true);
-            return Script.FromHex(addr.Script).GetDestinationAddress(ReportedNetwork);
-        }
-        finally
-        {
-            ControlSemaphore.Release();
-        }
+        var addr = await HubProxy.DeriveScript(identifier);
+        var keyPath = KeyPath.Parse(addr.KeyPath);
+        derivation.LastKnownIndex = (int?)keyPath.Indexes.Last();
+        await _configProvider.Set(WalletConfig.Key, config, true);
+        return Script.FromHex(addr.Script).GetDestinationAddress(ReportedNetwork);
     }
 
     public async Task<PSBT?> SignTransaction(byte[] psbtBytes)
@@ -492,7 +457,7 @@ public class OnChainWalletManager : BaseHostedService
     //         switch (Descriptor)
     //         {
     //             case SpendableOutputDescriptor.Spendatput spendableOutputDescriptorDelayedPaymentOutput:
-                                                            //                 spendableOutputDescriptorDelayedPaymentOutput.delayed_payment_output.bleOutputDescriptor_DelayedPaymentOu
+    //                 spendableOutputDescriptorDelayedPaymentOutput.delayed_payment_output.bleOutputDescriptor_DelayedPaymentOu
     //                 break;
     //             case SpendableOutputDescriptor.SpendableOutputDescriptor_StaticOutput spendableOutputDescriptorStaticOutput:
     //                 //ignore
@@ -638,23 +603,16 @@ public class OnChainWalletManager : BaseHostedService
 
     public async Task RemoveDerivation(params string[] key)
     {
-        await ControlSemaphore.WaitAsync();
-        try
+        using var _ = await ControlSemaphore.LockAsync();
+        var config = await GetConfig();
+        if (State != OnChainWalletState.Loaded || config is null)
         {
-            var config = await GetConfig();
-            if (State != OnChainWalletState.Loaded || config is null)
-            {
-                throw new InvalidOperationException("Cannot remove derivation in current state");
-            }
+            throw new InvalidOperationException("Cannot remove derivation in current state");
+        }
 
-            var updated = key.Aggregate(false, (current, k) => current || config.Derivations.Remove(k));
-            if (updated)
-                await _configProvider.Set(WalletConfig.Key, config, true);
-        }
-        finally
-        {
-            ControlSemaphore.Release();
-        }
+        var updated = key.Aggregate(false, (current, k) => current || config.Derivations.Remove(k));
+        if (updated)
+            await _configProvider.Set(WalletConfig.Key, config, true);
     }
 
     public async Task<BestBlockResponse?> GetBestBlock()
