@@ -75,10 +75,8 @@ public class PaymentsManager :
     public async Task<AppLightningPayment> RequestPayment(LightMoney amount, TimeSpan expiry, uint256 descriptionHash)
     {
         var amt = amount == LightMoney.Zero ? Option_u64Z.none() : Option_u64Z.some(amount.MilliSatoshi);
-
         var now = DateTimeOffset.UtcNow;
         var epoch = now.ToUnixTimeSeconds();
-
         var descHashBytes = Sha256.from_bytes(descriptionHash.ToBytes());
         var lsp = await _ldkNode.GetJITLSPService();
 
@@ -117,7 +115,7 @@ public class PaymentsManager :
         };
 
         var parsedOriginalInvoice = BOLT11PaymentRequest.Parse(originalInvoice.to_str(), _network);
-        var lp = new AppLightningPayment()
+        var lp = new AppLightningPayment
         {
             Inbound = true,
             PaymentId = "default",

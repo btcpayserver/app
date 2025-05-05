@@ -140,10 +140,7 @@ public partial class LDKNode :
     {
         var config = await GetConfig();
         var lsp = config.JITLSP;
-        if (lsp is null)
-        {
-            return null;
-        }
+        if (string.IsNullOrEmpty(lsp)) return null;
 
         var jits = ServiceProvider.GetServices<IJITService>();
         return jits.FirstOrDefault(jit => jit.ProviderName == lsp);

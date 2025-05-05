@@ -112,7 +112,7 @@
             @if (Node is not null)
             {
                 <h2>Lightning Settings</h2>
-                <ValidationEditContext @ref="_validationEditContext"  Model="Model" OnValidSubmit="UpdateConfig" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
+                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="UpdateConfig" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
                     <DataAnnotationsValidator/>
                     <fieldset class="box">
                         @if (_jitOptions?.Any() is true)
@@ -200,7 +200,7 @@
         {
             await Node.UpdateConfig(config =>
             {
-                config.JITLSP = Model.JitLsp;
+                config.JITLSP = string.IsNullOrEmpty(Model.JitLsp) ? null : Model.JitLsp;
                 config.RapidGossipSyncUrl = string.IsNullOrEmpty(Model.RgsUrl) ? null : Uri.TryCreate(Model.RgsUrl, UriKind.Absolute, out var uri) ? uri: null;
                 return Task.FromResult((config, true));
             });
