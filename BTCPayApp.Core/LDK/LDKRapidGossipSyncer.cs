@@ -6,32 +6,21 @@ using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKRapidGossipSyncer : IScopedHostedService
+public class LDKRapidGossipSyncer(
+    LDKNode ldkNode,
+    RapidGossipSync rapidGossipSync,
+    NetworkGraph networkGraph,
+    IHttpClientFactory httpClientFactory,
+    ILogger<LDKRapidGossipSyncer> logger)
+    : IScopedHostedService
 {
-    private readonly LDKNode _ldkNode;
-    private readonly RapidGossipSync _rapidGossipSync;
-    private readonly NetworkGraph _networkGraph;
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger<LDKRapidGossipSyncer> _logger;
     private CancellationTokenSource? _cts;
     private TaskCompletionSource _configUpdated = new();
-
-    public LDKRapidGossipSyncer(LDKNode ldkNode,
-        RapidGossipSync rapidGossipSync,
-        NetworkGraph networkGraph,
-        IHttpClientFactory httpClientFactory, ILogger<LDKRapidGossipSyncer> logger)
-    {
-        _ldkNode = ldkNode;
-        _rapidGossipSync = rapidGossipSync;
-        _networkGraph = networkGraph;
-        _httpClientFactory = httpClientFactory;
-        _logger = logger;
-    }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        _ldkNode.ConfigUpdated += OnConfigUpdated;
+        ldkNode.ConfigUpdated += OnConfigUpdated;
         _ = UpdateNetworkGraph();
         return Task.CompletedTask;
     }
@@ -49,7 +38,7 @@ public class LDKRapidGossipSyncer : IScopedHostedService
             try
             {
                 _configUpdated = new();
-                var config = await _ldkNode.GetConfig();
+                var config = await ldkNode.GetConfig();
                 if (config.RapidGossipSyncUrl is null)
                 {
                     try
@@ -64,30 +53,30 @@ public class LDKRapidGossipSyncer : IScopedHostedService
                     // wait until config is updated or _cts is cancelled
                 }
 
-                var timestamp  = _networkGraph.get_last_rapid_gossip_sync_timestamp() is Option_u32Z.Option_u32Z_Some some
+                var timestamp  = networkGraph.get_last_rapid_gossip_sync_timestamp() is Option_u32Z.Option_u32Z_Some some
                     ? some.some : 0;
                 var uri = new Uri(config.RapidGossipSyncUrl, $"/snapshot/{timestamp}");
-                var response = await _httpClientFactory.CreateClient("rgs").GetAsync(uri, _cts.Token);
+                var response = await httpClientFactory.CreateClient("rgs").GetAsync(uri, _cts.Token);
                 if (!response.IsSuccessStatusCode)
                 {
-                    _logger.LogError("Failed to download snapshot from {uri}", uri);
+                    logger.LogError("Failed to download snapshot from {uri}", uri);
                     continue;
                 }
 
                 var snapshot = await response.Content.ReadAsByteArrayAsync();
                 var result =
-                    _rapidGossipSync.update_network_graph_no_std(snapshot,
+                    rapidGossipSync.update_network_graph_no_std(snapshot,
                         Option_u64Z.some(DateTime.Now.ToUnixTimestamp()));
                 if (result is Result_u32GraphSyncErrorZ.Result_u32GraphSyncErrorZ_Err err)
                 {
                     switch (err.err)
                     {
                         case GraphSyncError.GraphSyncError_DecodeError graphSyncErrorDecodeError:
-                            _logger.LogError(
+                            logger.LogError(
                                 $"Failed to decode snapshot from {uri} with error {graphSyncErrorDecodeError.decode_error.GetType().Name}");
                             break;
                         case GraphSyncError.GraphSyncError_LightningError graphSyncErrorLightningError:
-                            _logger.LogError(
+                            logger.LogError(
                                 $"Failed to update network graph with error {graphSyncErrorLightningError.lightning_error.get_err()}");
                             // config = await _ldkNode.GetConfig();
                             // await _ldkNode.UpdateConfig(config);
@@ -106,7 +95,7 @@ public class LDKRapidGossipSyncer : IScopedHostedService
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Error while updating network graph");
+                logger.LogError(e, "Error while updating network graph");
                 await Task.Delay(10000, _cts.Token);
             }
         }
@@ -114,7 +103,7 @@ public class LDKRapidGossipSyncer : IScopedHostedService
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        _ldkNode.ConfigUpdated -= OnConfigUpdated;
+        ldkNode.ConfigUpdated -= OnConfigUpdated;
         if (_cts is not null)
         {
             await _cts.CancelAsync();

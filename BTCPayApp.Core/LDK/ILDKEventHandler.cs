@@ -3,7 +3,7 @@
 namespace BTCPayApp.Core.LDK;
 
 /// <summary>
-/// A typed variant of <see cref="ILDKEventHandler"/> that handles a specific type of event 
+/// A typed variant of <see cref="ILDKEventHandler"/> that handles a specific type of event
 /// </summary>
 /// <typeparam name="TEvent"></typeparam>
 public interface ILDKEventHandler<in TEvent>: ILDKEventHandler where TEvent : Event
@@ -18,10 +18,10 @@ public interface ILDKEventHandler
     Task Handle(Event @event)
     {
         var eventType = @event.GetType();
-        
-        var result = this.GetType().GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ILDKEventHandler<>) && i.GetGenericArguments()[0] == eventType)
+
+        var result = GetType().GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ILDKEventHandler<>) && i.GetGenericArguments()[0] == eventType)
             ?.GetMethod(nameof(ILDKEventHandler<Event>.Handle))
-            ?.Invoke(this, new object[] {@event});
+            ?.Invoke(this, [@event]);
 
         if (result is Task task)
             return task;

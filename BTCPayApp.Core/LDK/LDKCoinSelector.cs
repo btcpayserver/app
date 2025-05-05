@@ -4,14 +4,8 @@ using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKCoinSelector : CoinSelectionSourceInterface
+public class LDKCoinSelector(OnChainWalletManager onChainWalletManager) : CoinSelectionSourceInterface
 {
-    private readonly OnChainWalletManager _onChainWalletManager;
-
-    public LDKCoinSelector(OnChainWalletManager onChainWalletManager)
-    {
-        _onChainWalletManager = onChainWalletManager;
-    }
     public Result_CoinSelectionNoneZ select_confirmed_utxos(byte[] claim_id, Input[] must_spend,
         org.ldk.structs.TxOut[] must_pay_to,
         int target_feerate_sat_per_1000_weight)
@@ -21,7 +15,7 @@ public class LDKCoinSelector : CoinSelectionSourceInterface
         var coins = must_spend.Select(x => x.Coin()).ToList();
         try
         {
-            var tx = _onChainWalletManager.CreateTransaction(
+            var tx = onChainWalletManager.CreateTransaction(
                 txouts, feerate,
                 coins).GetAwaiter().GetResult();
 
@@ -38,7 +32,7 @@ public class LDKCoinSelector : CoinSelectionSourceInterface
 
     public Result_TransactionNoneZ sign_psbt(byte[] psbtBytes)
     {
-       var signedPsbt =  _onChainWalletManager.SignTransaction(psbtBytes).GetAwaiter().GetResult();
+       var signedPsbt =  onChainWalletManager.SignTransaction(psbtBytes).GetAwaiter().GetResult();
        return signedPsbt is null
            ? Result_TransactionNoneZ.err()
            : Result_TransactionNoneZ.ok(signedPsbt.ExtractTransaction().ToBytes());

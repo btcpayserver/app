@@ -147,7 +147,6 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
             if (otherId == fundingId)
             {
                 otherId = null;
-
             }
             if (otherId != null)
             {
@@ -194,16 +193,7 @@ public class LDKPersistInterface : PersistInterface, IScopedHostedService
         AsyncExtensions.RunInOtherThread(() =>
             _node.ArchiveChannel(ChannelId.v1_from_funding_outpoint(channelFundingOutpoint))).GetAwaiter().GetResult();
     }
-    //
-    // public async Task StartAsync(CancellationToken cancellationToken)
-    // {
-    //     throw new NotImplementedException();
-    // }
-    //
-    // public async Task StopAsync(CancellationToken cancellationToken)
-    // {
-    //     throw new NotImplementedException();
-    // }
+
     public Task StartAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;

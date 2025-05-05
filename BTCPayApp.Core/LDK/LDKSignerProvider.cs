@@ -5,16 +5,9 @@ using UInt128 = org.ldk.util.UInt128;
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKSignerProvider : SignerProviderInterface
+public class LDKSignerProvider(KeysManager innerSigner, LDKNode ldkNode) : SignerProviderInterface
 {
-    private readonly LDKNode _ldkNode;
-    private readonly SignerProvider _innerSigner;
-
-    public LDKSignerProvider(KeysManager innerSigner, LDKNode ldkNode)
-    {
-        _ldkNode = ldkNode;
-        _innerSigner = innerSigner.as_SignerProvider();
-    }
+    private readonly SignerProvider _innerSigner = innerSigner.as_SignerProvider();
 
     public byte[] generate_channel_keys_id(bool inbound, long channel_value_satoshis, UInt128 user_channel_id)
     {
@@ -33,13 +26,13 @@ public class LDKSignerProvider : SignerProviderInterface
 
     public Result_CVec_u8ZNoneZ get_destination_script(byte[] channel_keys_id)
     {
-        var script = _ldkNode.DeriveScript().GetAwaiter().GetResult();
+        var script = ldkNode.DeriveScript().GetAwaiter().GetResult();
         return Result_CVec_u8ZNoneZ.ok(script.ToBytes());
     }
 
     public Result_ShutdownScriptNoneZ get_shutdown_scriptpubkey()
     {
-        var script = _ldkNode.DeriveScript().GetAwaiter().GetResult();
+        var script = ldkNode.DeriveScript().GetAwaiter().GetResult();
 
         if (!script.IsScriptType(ScriptType.Witness))
             throw new NotSupportedException("Generated a non witness script.");

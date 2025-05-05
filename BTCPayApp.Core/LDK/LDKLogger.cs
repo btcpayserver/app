@@ -4,16 +4,9 @@ using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKLogger : LoggerInterface, ILogger
+public class LDKLogger(ILoggerFactory loggerFactory) : LoggerInterface, ILogger
 {
-    private readonly ILoggerFactory _loggerFactory;
-    private readonly ILogger _baseLogger;
-
-    public LDKLogger(ILoggerFactory loggerFactory)
-    {
-        _loggerFactory = loggerFactory;
-        _baseLogger = loggerFactory.CreateLogger("");
-    }
+    private readonly ILogger _baseLogger = loggerFactory.CreateLogger("");
 
     public virtual void log(Record record)
     {
@@ -26,7 +19,7 @@ public class LDKLogger : LoggerInterface, ILogger
             Level.LDKLevel_Error => LogLevel.Error,
             Level.LDKLevel_Gossip => LogLevel.Trace,
         };
-         _loggerFactory.CreateLogger(record.get_module_path()).Log(level, "{Args}", record.get_args());
+         loggerFactory.CreateLogger(record.get_module_path()).Log(level, "{Args}", record.get_args());
     }
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull

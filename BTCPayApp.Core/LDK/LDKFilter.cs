@@ -5,17 +5,9 @@ using Script = NBitcoin.Script;
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKFilter : FilterInterface
+public class LDKFilter(LDKNode ldkNode, ConfigProvider configProvider) : FilterInterface
 {
-    private readonly LDKNode _ldkNode;
-    private readonly ConfigProvider _configProvider;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
-
-    public LDKFilter(LDKNode ldkNode, ConfigProvider configProvider)
-    {
-        _ldkNode = ldkNode;
-        _configProvider = configProvider;
-    }
 
     public void register_tx(byte[] txid, byte[] script_pubkey)
     {
@@ -33,7 +25,7 @@ public class LDKFilter : FilterInterface
 
     public async Task<List<LDKWatchedOutput>> GetWatchedOutputs()
     {
-        return await GetWatchedOutputs(_configProvider);
+        return await GetWatchedOutputs(configProvider);
     }
 
     public static async Task<List<LDKWatchedOutput>> GetWatchedOutputs(ConfigProvider configProvider)
@@ -54,7 +46,7 @@ public class LDKFilter : FilterInterface
             }
 
             watchedOutputs.Add(output);
-            await _configProvider.Set("ln:watchedOutputs", watchedOutputs, true);
+            await configProvider.Set("ln:watchedOutputs", watchedOutputs, true);
         }
         finally
         {
@@ -62,16 +54,15 @@ public class LDKFilter : FilterInterface
         }
     }
 
-
     private void Track(Script script)
     {
-        _ = _ldkNode.TrackScripts([script]);
+        _ = ldkNode.TrackScripts([script]);
     }
 
     public async Task OutputsSpent(List<LDKWatchedOutput> spentWatchedOutputs)
     {
         var watchedOutputs = await GetWatchedOutputs();
         watchedOutputs.RemoveAll(w => spentWatchedOutputs.Any(s => s.Outpoint == w.Outpoint));
-        await _configProvider.Set("ln:watchedOutputs", watchedOutputs, true);
+        await configProvider.Set("ln:watchedOutputs", watchedOutputs, true);
     }
 }

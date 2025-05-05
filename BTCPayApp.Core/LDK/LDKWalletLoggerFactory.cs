@@ -2,15 +2,8 @@
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKWalletLoggerFactory : ILoggerFactory
+public class LDKWalletLoggerFactory(ILoggerFactory loggerFactory) : ILoggerFactory
 {
-    private readonly ILoggerFactory _inner;
-
-    public LDKWalletLoggerFactory(ILoggerFactory loggerFactory)
-    {
-        _inner = loggerFactory;
-    }
-
     public void Dispose()
     {
         //ignore as this is scoped
@@ -18,7 +11,7 @@ public class LDKWalletLoggerFactory : ILoggerFactory
 
     public void AddProvider(ILoggerProvider provider)
     {
-        _inner.AddProvider(provider);
+        loggerFactory.AddProvider(provider);
     }
 
     public List<string> Logs { get; } = new List<string>();
@@ -26,7 +19,7 @@ public class LDKWalletLoggerFactory : ILoggerFactory
     public ILogger CreateLogger(string category)
     {
         var categoryName = string.IsNullOrWhiteSpace(category) ? "LDK" : $"LDK.{category}";
-        LoggerWrapper logger = new LoggerWrapper(_inner.CreateLogger(categoryName));
+        LoggerWrapper logger = new LoggerWrapper(loggerFactory.CreateLogger(categoryName));
 
         logger.LogEvent += (sender, message) =>
             Logs.Add(DateTime.Now.ToShortTimeString() + " " + categoryName + message);

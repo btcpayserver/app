@@ -2,30 +2,23 @@ using org.ldk.structs;
 
 namespace BTCPayApp.Core.LDK;
 
-public class LDKPersister : PersisterInterface
+public class LDKPersister(LDKNode ldkNode) : PersisterInterface
 {
-    private readonly LDKNode _ldkNode;
-
-    public LDKPersister(LDKNode ldkNode)
+    public Result_NoneIOErrorZ persist_manager(ChannelManager channelManager)
     {
-        _ldkNode = ldkNode;
-    }
-
-    public Result_NoneIOErrorZ persist_manager(ChannelManager channel_manager)
-    {
-        _ldkNode.UpdateChannelManager(channel_manager).ConfigureAwait(false).GetAwaiter().GetResult();
+        ldkNode.UpdateChannelManager(channelManager).ConfigureAwait(false).GetAwaiter().GetResult();
         return Result_NoneIOErrorZ.ok();
     }
 
-    public Result_NoneIOErrorZ persist_graph(NetworkGraph network_graph)
+    public Result_NoneIOErrorZ persist_graph(NetworkGraph networkGraph)
     {
-        _ldkNode.UpdateNetworkGraph(network_graph).ConfigureAwait(false).GetAwaiter().GetResult();
+        ldkNode.UpdateNetworkGraph(networkGraph).ConfigureAwait(false).GetAwaiter().GetResult();
         return Result_NoneIOErrorZ.ok();
     }
 
     public Result_NoneIOErrorZ persist_scorer(WriteableScore scorer)
     {
-        _ldkNode.UpdateScore(scorer).ConfigureAwait(false).GetAwaiter().GetResult();
+        ldkNode.UpdateScore(scorer).ConfigureAwait(false).GetAwaiter().GetResult();
         return Result_NoneIOErrorZ.ok();
     }
 }
