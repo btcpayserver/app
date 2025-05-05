@@ -313,7 +313,7 @@ public class BTCPayAppState : IHostedService
                 if (lastError != e.Message)
                 {
                     lastError = e.Message;
-                    _logger.LogError(e, "Error during node info update");
+                    _logger.LogError("Error during node info update: {Message}", e.Message);
                 }
             }
 
