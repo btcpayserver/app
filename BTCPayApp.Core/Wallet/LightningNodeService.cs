@@ -62,7 +62,11 @@ public class LightningNodeManager : BaseHostedService
     public async Task StartNode()
     {
         if (_nodeScope is not null || State is LightningNodeState.Loaded or LightningNodeState.NotConfigured)
+            return;
+
+        if (_onChainWalletManager.State is not OnChainWalletState.Loaded)
         {
+            State = LightningNodeState.WaitingForConnection;
             return;
         }
 
@@ -70,12 +74,6 @@ public class LightningNodeManager : BaseHostedService
         await ControlSemaphore.WaitAsync();
         try
         {
-            if (_onChainWalletManager.State is not OnChainWalletState.Loaded)
-            {
-                State = LightningNodeState.WaitingForConnection;
-
-                return;
-            }
             if (_nodeScope is null)
             {
                 _nodeScope = _serviceScopeFactory.CreateScope();

@@ -202,22 +202,20 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
             return;
         }
 
-        InvalidateCache();
-        var walletConfig = await _onChainWalletManager.GetConfig();
-        var lightningConfig = await _configProvider.Get<LightningConfig>(key: LightningConfig.Key) ?? new LightningConfig();
-
-        var keyPath = KeyPath.Parse(lightningConfig.LightningDerivationPath);
-
-        Seed = new Mnemonic(walletConfig.Mnemonic).DeriveExtKey().Derive(keyPath).PrivateKey.ToBytes();
-        var services = ServiceProvider.GetServices<IScopedHostedService>();
-
-        _logger.LogInformation("Starting LDKNode services");
         var bb = await _onChainWalletManager.GetBestBlock();
         if (bb is null)
         {
             throw new InvalidOperationException("Best block could not be retrieved. Killing the startup");
         }
 
+        InvalidateCache();
+        var walletConfig = await _onChainWalletManager.GetConfig();
+        var lightningConfig = await _configProvider.Get<LightningConfig>(key: LightningConfig.Key) ?? new LightningConfig();
+        var keyPath = KeyPath.Parse(lightningConfig.LightningDerivationPath);
+        Seed = new Mnemonic(walletConfig.Mnemonic).DeriveExtKey().Derive(keyPath).PrivateKey.ToBytes();
+        var services = ServiceProvider.GetServices<IScopedHostedService>();
+
+        _logger.LogInformation("Starting LDKNode services");
         foreach (var service in services)
         {
             _logger.LogInformation("Starting {Name}", service.GetType().Name);
