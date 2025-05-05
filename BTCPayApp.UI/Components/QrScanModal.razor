@@ -55,6 +55,7 @@
         var hide = new[] {"#ScanQrCodeModal", "hide.bs.modal", "OnHide"};
         try
         {
+            await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
             await JS.InvokeVoidAsync("Interop.removeEventListeners", [show, hide]);
         }
         catch (JSDisconnectedException)
