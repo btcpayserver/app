@@ -392,8 +392,8 @@ public class BTCPayAppState : IHostedService
             }
             else
             {
-                var strategy = _derivationSchemeParser.ParseOutputDescriptor(derivation.Value.Descriptor);
-                await _explorerClient.TrackAsync(strategy.Item1,
+                var strategy = _derivationSchemeParser.ParseOD(derivation.Value.Descriptor);
+                await _explorerClient.TrackAsync(strategy.AccountDerivation,
                     new TrackWalletRequest
                     {
                         DerivationOptions =
@@ -406,7 +406,7 @@ public class BTCPayAppState : IHostedService
                         ],
                         Wait = true
                     });
-                result.Add(derivation.Key, TrackedSource.Create(strategy.Item1).ToString());
+                result.Add(derivation.Key, TrackedSource.Create(strategy.AccountDerivation).ToString());
             }
             await _explorerClient.ImportUTXOs("BTC", new ImportUTXORequest { Utxos = derivation.Value?.KnownCoins });
         }
