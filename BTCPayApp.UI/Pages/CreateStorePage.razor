@@ -148,6 +148,7 @@
                 var result = await AccountManager.SetCurrentStoreId(store.Id);
                 if (!result.Succeeded)
                 {
+                    _sending = false;
                     _errorMessage = result.Messages != null
                         ? string.Join(",", result.Messages)
                         : "Store creation failed.";
@@ -157,11 +158,9 @@
         catch (Exception e)
         {
             _errorMessage = e.Message;
-        }
-        finally
-        {
             _sending = false;
         }
+        // on success, keep _sending = true to show the loading indicator until the redirect occurs
     }
 
     private class CreateStoreModel

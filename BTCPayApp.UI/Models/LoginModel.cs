@@ -10,12 +10,10 @@ public class LoginModel
     [Required]
     public string? Uri { get; set; }
 
-    [Required]
-    [EmailAddress]
+    [Required, EmailAddress]
     public string? Email { get; set; }
 
-    [Required]
-    [DataType(DataType.Password)]
+    [Required, DataType(DataType.Password)]
     public string? Password { get; set; }
 
     [RequiredIf(nameof(RequireTwoFactor), true)]
