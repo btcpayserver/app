@@ -5,6 +5,7 @@ using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
 using BTCPayApp.Core.LDK;
+using BTCPayApp.Core.Services;
 using BTCPayApp.Core.Wallet;
 using Laraue.EfCoreTriggers.SqlLite.Extensions;
 using Microsoft.AspNetCore.Authorization;
@@ -25,16 +26,17 @@ public static class StartupExtensions
             options.UseSqlite($"Data Source={dir}/app.db");
             options.UseSqlLiteTriggers();
         });
-        serviceCollection.AddHostedService<AppDatabaseMigrator>();
-        serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
 
         // Configure logging
         LoggingConfig.ConfigureLogging(serviceCollection);
 
+        serviceCollection.AddHostedService<AppDatabaseMigrator>();
+        serviceCollection.AddSingleton<ConfigProvider, DatabaseConfigProvider>();
         serviceCollection.AddMemoryCache();
         serviceCollection.AddHttpClient();
         serviceCollection.AddSingleton<BTCPayConnectionManager>();
         serviceCollection.AddSingleton<SyncService>();
+        serviceCollection.AddSingleton<LoggingService>();
         serviceCollection.AddSingleton<LightningNodeManager>();
         serviceCollection.AddSingleton<OnChainWalletManager>();
         serviceCollection.AddSingleton<BTCPayAppServerClient>();

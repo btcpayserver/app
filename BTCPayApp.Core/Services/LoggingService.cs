@@ -1,33 +1,23 @@
-﻿using BTCPayApp.Core.Contracts;
-using Serilog.Core;
+﻿using BTCPayApp.Core.Data;
+using Microsoft.EntityFrameworkCore;
 using Serilog.Events;
 
 namespace BTCPayApp.Core.Services;
 
-public class LoggingService(IDataDirectoryProvider dataDirectory, LoggingLevelSwitch levelSwitch)
+public class LoggingService(IDbContextFactory<AppDbContext> dbContextFactory)
 {
-    public async Task<string> GetLatestLogAsync()
-    {
-        try
-        {
-            var logDir = Path.Combine(await dataDirectory.GetAppDataDirectory(), "logs");
-            var latestLog = Directory.GetFiles(logDir)
-                .OrderByDescending(f => f)
-                .FirstOrDefault();
+    public static readonly LogEventLevel[] Levels = [LogEventLevel.Verbose, LogEventLevel.Debug, LogEventLevel.Information, LogEventLevel.Warning, LogEventLevel.Error];
 
-            return latestLog != null
-                ? await File.ReadAllTextAsync(latestLog)
-                : "No logs available";
-        }
-        catch (Exception ex)
-        {
-            return $"Error reading logs: {ex.Message}";
-        }
-    }
-
-    public LogEventLevel LogLevel
+    public async Task<string?> GetLatestLogAsync(LogEventLevel minLevel, int count = 100)
     {
-        get => levelSwitch.MinimumLevel;
-        set => levelSwitch.MinimumLevel = value;
+        await using var dbContext = await dbContextFactory.CreateDbContextAsync();
+        var levels = Levels.Skip((int)minLevel).Select(l => l.ToString());
+        var logs = await dbContext.Logs
+            .Where(e => levels.Contains(e.Level))
+            .OrderByDescending(e => e.TimeStamp)
+            .Take(count)
+            .ToArrayAsync();
+        var lines = logs.Select(l => $"[{l.TimeStamp:yyyy-MM-dd HH:mm:ss} {l.Level[..3].ToUpperInvariant()}] {l.RenderedMessage}").ToArray();
+        return logs.Length != 0 ? string.Join("\n", lines) : null;
     }
 }

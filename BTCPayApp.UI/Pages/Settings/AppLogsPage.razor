@@ -12,10 +12,16 @@
     <Titlebar Back>
         <h1>Logs</h1>
         <SectionContent SectionId="Titlebar.End">
-            <InputSelect @bind-Value="LogService.LogLevel" @bind-Value:after="() => PersistLogLevel(LogService.LogLevel)" id="LogLevel" class="form-select form-select-sm px-2 py-1 w-auto" style="padding-right: var(--btcpay-space-l) !important;background-position-x:90%;">
-                @foreach (var lvl in LogLevels)
+            <InputSelect @bind-Value="_logLevel" @bind-Value:after="LevelChanged" id="LogLevel" class="form-select form-select-sm px-2 py-1 w-auto" style="padding-right: var(--btcpay-space-l) !important;background-position-x:90%;">
+                @foreach (var lvl in LoggingService.Levels)
                 {
-                    <option value="@lvl" selected="@(LogService.LogLevel == lvl)">@lvl</option>
+                    <option value="@lvl" selected="@(_logLevel == lvl)">@(lvl == LogEventLevel.Information ? "Info" : lvl)</option>
+                }
+            </InputSelect>
+            <InputSelect @bind-Value="_logCount" @bind-Value:after="CountChanged" id="LogCount" class="form-select form-select-sm px-2 py-1 w-auto" style="padding-right: var(--btcpay-space-l) !important;background-position-x:90%;">
+                @foreach (var count in Counts)
+                {
+                    <option value="@count" selected="@(_logCount == count)">@count</option>
                 }
             </InputSelect>
         </SectionContent>
@@ -54,9 +60,10 @@
 @code {
     private bool _isLoading;
     private string? _logContent;
+    private int _logCount = Counts.First();
     private string? _errorMessage;
-
-    private static LogEventLevel[] LogLevels => [LogEventLevel.Error, LogEventLevel.Warning, LogEventLevel.Information, LogEventLevel.Debug, LogEventLevel.Verbose];
+    private LogEventLevel _logLevel = LogEventLevel.Information;
+    private static readonly int[] Counts = [50, 100, 200, 500];
     private bool HasLogs => !string.IsNullOrEmpty(_logContent);
 
     protected override async Task OnInitializedAsync()
@@ -64,7 +71,8 @@
         try
         {
             _isLoading = true;
-            _logContent = await LogService.GetLatestLogAsync();
+            _logLevel = await ConfigProvider.Get<LogEventLevel?>("logLevel") ?? LogEventLevel.Information;
+            await RefreshLogContent();
         }
         catch (Exception ex)
         {
@@ -76,8 +84,19 @@
         }
     }
 
-    private async Task PersistLogLevel(LogEventLevel logLevel)
+    private async Task LevelChanged()
     {
-        await ConfigProvider.Set("logLevel", logLevel, false);
+        await ConfigProvider.Set("logLevel", _logLevel, false);
+        await RefreshLogContent();
+    }
+
+    private async Task CountChanged()
+    {
+        await RefreshLogContent();
+    }
+
+    private async Task RefreshLogContent()
+    {
+        _logContent = await LogService.GetLatestLogAsync(_logLevel, _logCount);
     }
 }
