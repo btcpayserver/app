@@ -130,7 +130,7 @@
     {
         if (Stores?.Any() is not true)
             NavigationManager.NavigateTo(Routes.CreateStore);
-        else if (Stores?.Count() == 1)
+        else if (Stores?.Count() == 1 && string.IsNullOrEmpty(_initialStoreId))
             await SelectStore(Stores!.First().Id);
     }
 
