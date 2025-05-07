@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using BTCPayApp.Core.Backup;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Contracts;
@@ -729,6 +730,7 @@ public class OnChainWalletManager : BaseHostedService
     }
 }
 
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum OnChainWalletState
 {
     Init,
