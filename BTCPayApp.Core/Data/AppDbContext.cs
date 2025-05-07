@@ -13,7 +13,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ChannelAlias> ChannelAliases { get; set; }
     public DbSet<AppLightningPayment> LightningPayments { get; set; }
     public DbSet<Outbox> OutboxItems { get; set; }
-    public DbSet<LogEntry> Logs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
