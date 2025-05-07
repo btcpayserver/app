@@ -25,6 +25,11 @@ public class LoggingService(IDataDirectoryProvider dataDirectory, LoggingLevelSw
         }
     }
 
+    public async Task<string> GetAppLogFilePath()
+    {
+        return Path.Combine(await dataDirectory.GetAppDataDirectory(), "logs");
+    }
+
     public LogEventLevel LogLevel
     {
         get => levelSwitch.MinimumLevel;
