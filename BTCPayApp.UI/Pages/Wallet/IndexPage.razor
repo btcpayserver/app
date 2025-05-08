@@ -9,6 +9,7 @@
 @using BTCPayApp.UI.Util
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IJSRuntime JS
+@inject IState<RootState> State
 @inject NavigationManager NavigationManager
 @inject OnChainWalletManager OnChainWalletManager
 @inject IDispatcher Dispatcher
@@ -31,171 +32,179 @@
 <section class="container">
     <AuthorizeView Policy="@AppPolicies.CanModifySettings">
         <Authorized>
-            @if (!string.IsNullOrEmpty(ErrorMessage))
+            @if (!OnChainWalletManager.IsActive)
             {
-                <Alert Type="danger" Dismissible>@ErrorMessage</Alert>
+                <WalletStateAlert WalletState="State.Value.OnchainWalletState" ConnectionState="State.Value.ConnectionState" />
             }
-            <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
-                <h2 class="mb-0">Coins</h2>
-                @if (_totalBalance != null)
+            else
+            {
+                @if (!string.IsNullOrEmpty(ErrorMessage))
                 {
-                    <span class="badge bg-info ms-2">
-                    <AmountDisplay Sats="_totalBalance.Satoshi" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> total
-                </span>
+                    <Alert Type="danger" Dismissible>@ErrorMessage</Alert>
                 }
-            </header>
-            @if (_utxos?.Any() is true)
-            {
-                <div class="box">
-                    <ul class="list-group list-group-flush">
-                        @foreach (var utxo in _utxos)
-                        {
-                            <li class="list-group-item py-2">
-                                <AmountDisplay Sats="utxo.TxOut.Value.Satoshi" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            }
-            else
-            {
-                <div class="box py-4 text-center">
-                    @if (_loading)
-                    {
-                        <LoadingIndicator/>
-                    }
-                    else
-                    {
-                        <p class="text-muted">There are no UTXOs, yet.</p>
-                    }
-                </div>
-            }
 
-            <h2>Transactions</h2>
-            @if (TxGroups?.Any() is true)
-            {
-                <div class="transactions-list mb-l">
-                    @foreach (var txGroup in TxGroups)
+                <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                    <h2 class="mb-0">Coins</h2>
+                    @if (_totalBalance != null)
                     {
-                        <h3 class="mb-2">@txGroup.Key</h3>
-                        foreach (var tx in txGroup.Value)
+                        <span class="badge bg-info ms-2">
+                            <AmountDisplay Sats="_totalBalance.Satoshi" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> total
+                        </span>
+                    }
+                </header>
+                @if (_utxos?.Any() is true)
+                {
+                    <div class="box">
+                        <ul class="list-group list-group-flush">
+                            @foreach (var utxo in _utxos)
+                            {
+                                <li class="list-group-item py-2">
+                                    <AmountDisplay Sats="utxo.TxOut.Value.Satoshi" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                }
+                else
+                {
+                    <div class="box py-4 text-center">
+                        @if (_loading)
                         {
-                            <div class="box">
-                                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                <span class="text-end fw-semibold" @onclick="ToggleDisplayCurrency">
-                                    <AmountDisplay Sats="new Money(tx.BalanceChange, MoneyUnit.BTC).Satoshi" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
-                                </span>
-                                    <TruncateCenter Text="@tx.TransactionId" class="truncate-center-id" Copy/>
-                                    <span class="text-muted">
-                                    <DateDisplay DateTimeOffset="@tx.Timestamp"/>
-                                </span>
-                                    <span class="badge bg-info">
-                                    @tx.Confirmations confs
-                                </span>
-                                </div>
-                            </div>
-                        }
-                    }
-                </div>
-            }
-            else
-            {
-                <div class="box py-4 text-center">
-                    @if (_loading)
-                    {
-                        <LoadingIndicator/>
-                    }
-                    else
-                    {
-                        <p class="text-muted">There are no transactions, yet.</p>
-                    }
-                </div>
-            }
-
-            @if (_totalBalance?.ToDecimal(MoneyUnit.Satoshi) is > 0 && Model != null)
-            {
-                <h2>Send Bitcoin</h2>
-                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="Transact" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
-                    <DataAnnotationsValidator/>
-                    <fieldset class="box">
-                        <div class="form-group">
-                            <label for="Destination" class="form-label" data-required>Destination</label>
-                            <div class="d-flex gap-2">
-                                <InputText @bind-Value="Model.Destination" id="Destination" class="form-control flex-grow-1" placeholder="Bitcoin address"/>
-                                <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
-                                    <Icon Symbol="scan-qr"/>
-                                </button>
-                            </div>
-                            <ValidationMessage For="@(() => Model.Destination)"/>
-                        </div>
-                        <div class="form-group">
-                            <label for="Amount" class="form-label" data-required>Amount</label>
-                            <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" Max="@_totalBalance.ToDecimal(UnitMoney)" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
-                            <ValidationMessage For="@(() => Model.Amount)"/>
-                        </div>
-                        @if (Model.Transaction is null)
-                        {
-                            <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
-                                @if (Sending)
-                                {
-                                    <LoadingIndicator/>
-                                }
-                                else
-                                {
-                                    <span>Create transaction</span>
-                                }
-                            </button>
+                            <LoadingIndicator/>
                         }
                         else
                         {
-                            <pre>@Model.Transaction.Value.Tx.ToString()</pre>
-                            <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
-                                @if (Sending)
-                                {
-                                    <LoadingIndicator/>
-                                }
-                                else
-                                {
-                                    <span>Broadcast transaction</span>
-                                }
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary w-100 mt-2" disabled="@(Sending)" @onclick="CancelTx">
-                                @if (Sending)
-                                {
-                                    <LoadingIndicator/>
-                                }
-                                else
-                                {
-                                    <span>Cancel transaction</span>
-                                }
-                            </button>
+                            <p class="text-muted">There are no UTXOs, yet.</p>
                         }
-                    </fieldset>
-                </ValidationEditContext>
-                <QrScanModal OnScan="@OnQrCodeScan"/>
-            }
-
-            <h2>Receive Bitcoin</h2>
-            <div class="box">
-                @if (!string.IsNullOrEmpty(_address))
-                {
-                    <div class="form-floating form-group">
-                        <TruncateCenter Text="@_address" Padding="15" Copy="true" class="form-control-plaintext"/>
-                        <label>Bitcoin Address</label>
                     </div>
-                    <QrCode Data="@_address" class="mb-3"/>
                 }
-                <button type="button" class="btn btn-primary w-100" @onclick="GetAddress" disabled="@_gettingAddress">
-                    @if (_gettingAddress)
+
+                <h2>Transactions</h2>
+                @if (TxGroups?.Any() is true)
+                {
+                    <div class="transactions-list mb-l">
+                        @foreach (var txGroup in TxGroups)
+                        {
+                            <h3 class="mb-2">@txGroup.Key</h3>
+                            foreach (var tx in txGroup.Value)
+                            {
+                                <div class="box">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <span class="text-end fw-semibold" @onclick="ToggleDisplayCurrency">
+                                            <AmountDisplay Sats="new Money(tx.BalanceChange, MoneyUnit.BTC).Satoshi" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                        </span>
+                                        <TruncateCenter Text="@tx.TransactionId" class="truncate-center-id" Copy/>
+                                        <span class="text-muted">
+                                            <DateDisplay DateTimeOffset="@tx.Timestamp"/>
+                                        </span>
+                                        <span class="badge bg-info">
+                                            @tx.Confirmations confs
+                                        </span>
+                                    </div>
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="box py-4 text-center">
+                        @if (_loading)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <p class="text-muted">There are no transactions, yet.</p>
+                        }
+                    </div>
+                }
+
+                @if (_totalBalance?.ToDecimal(MoneyUnit.Satoshi) is > 0 && Model != null)
+                {
+                    <h2>Send Bitcoin</h2>
+                    <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="Transact" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage">
+                        <DataAnnotationsValidator/>
+                        <fieldset class="box">
+                            <div class="form-group">
+                                <label for="Destination" class="form-label" data-required>Destination</label>
+                                <div class="d-flex gap-2">
+                                    <InputText @bind-Value="Model.Destination" id="Destination" class="form-control flex-grow-1" placeholder="Bitcoin address"/>
+                                    <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
+                                        <Icon Symbol="scan-qr"/>
+                                    </button>
+                                </div>
+                                <ValidationMessage For="@(() => Model.Destination)"/>
+                            </div>
+                            <div class="form-group">
+                                <label for="Amount" class="form-label" data-required>Amount</label>
+                                <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" Max="@_totalBalance.ToDecimal(UnitMoney)" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                                <ValidationMessage For="@(() => Model.Amount)"/>
+                            </div>
+                            @if (Model.Transaction is null)
+                            {
+                                <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
+                                    @if (Sending)
+                                    {
+                                        <LoadingIndicator/>
+                                    }
+                                    else
+                                    {
+                                        <span>Create transaction</span>
+                                    }
+                                </button>
+                            }
+                            else
+                            {
+                                <pre>@Model.Transaction.Value.Tx.ToString()</pre>
+                                <button type="submit" class="btn btn-primary w-100" disabled="@(_validationEditContext!.Invalid || Sending)">
+                                    @if (Sending)
+                                    {
+                                        <LoadingIndicator/>
+                                    }
+                                    else
+                                    {
+                                        <span>Broadcast transaction</span>
+                                    }
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary w-100 mt-2" disabled="@(Sending)" @onclick="CancelTx">
+                                    @if (Sending)
+                                    {
+                                        <LoadingIndicator/>
+                                    }
+                                    else
+                                    {
+                                        <span>Cancel transaction</span>
+                                    }
+                                </button>
+                            }
+                        </fieldset>
+                    </ValidationEditContext>
+                    <QrScanModal OnScan="@OnQrCodeScan"/>
+                }
+
+                <h2>Receive Bitcoin</h2>
+                <div class="box">
+                    @if (!string.IsNullOrEmpty(_address))
                     {
-                        <LoadingIndicator/>
+                        <div class="form-floating form-group">
+                            <TruncateCenter Text="@_address" Padding="15" Copy="true" class="form-control-plaintext"/>
+                            <label>Bitcoin Address</label>
+                        </div>
+                        <QrCode Data="@_address" class="mb-3"/>
                     }
-                    else
-                    {
-                        <span>Get onchain address</span>
-                    }
-                </button>
-            </div>
+                    <button type="button" class="btn btn-primary w-100" @onclick="GetAddress" disabled="@_gettingAddress">
+                        @if (_gettingAddress)
+                        {
+                            <LoadingIndicator/>
+                        }
+                        else
+                        {
+                            <span>Get onchain address</span>
+                        }
+                    </button>
+                </div>
+            }
         </Authorized>
         <NotAuthorized>
             <Alert Type="danger">Unauthorized.</Alert>

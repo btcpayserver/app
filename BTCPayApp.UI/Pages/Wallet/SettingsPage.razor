@@ -2,7 +2,6 @@
 @using System.Text.Json
 @using BTCPayApp.UI.Features
 @using BTCPayApp.Core.Auth
-@using BTCPayApp.Core.BTCPayServer
 @using BTCPayApp.Core.Data
 @using BTCPayApp.Core.Helpers
 @using BTCPayApp.Core.Wallet
@@ -88,14 +87,7 @@
             }
             else
             {
-                <p>
-                    @(OnChainWalletManager.State switch
-                    {
-                        OnChainWalletState.NotConfigured => "Not configured",
-                        OnChainWalletState.WaitingForConnection => "Waiting for connection",
-                        _ => State.Value.OnchainWalletState.ToString()
-                    })
-                </p>
+                <WalletStateAlert WalletState="State.Value.OnchainWalletState" ConnectionState="State.Value.ConnectionState" />
             }
             @if (_canConfigureWallet)
             {

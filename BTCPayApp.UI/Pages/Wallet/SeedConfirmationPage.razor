@@ -5,7 +5,9 @@
 @using BTCPayApp.Core.Data
 @using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@inject IState<RootState> State
 @inject ConfigProvider ConfigProvider
 @inject OnChainWalletManager OnChainWalletManager
 
@@ -20,50 +22,58 @@
 <section class="container">
     <AuthorizeView Policy="@AppPolicies.CanModifySettings">
         <Authorized>
-            <p class="text-center">
-                Match the word to the number to verify.
-            </p>
-            <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
-                @if (Words is not null && Shuffled is not null)
-                {
-                    <div class="box my-4">
-                        <ol class="ask mt-3 mb-5">
-                            @for (var i = 0; i < _ask.Length; i++)
-                            {
-                                var j = i;
-                                var num = _ask[i];
-                                var word = Model.Words[i];
-                                <li value="@num" @onclick="() => Model.Index = j">
-                                    <div class="rounded-pill@(Model.Index == i ? " current" : "")">
-                                        @if (!string.IsNullOrEmpty(word))
-                                        {
-                                            <span>@word</span>
-                                        }
-                                        else
-                                        {
-                                            <span>&nbsp;</span>
-                                        }
-                                    </div>
-                                </li>
-                            }
-                        </ol>
-                        <div class="words">
-                            @foreach (var word in Shuffled)
-                            {
-                                <button type="button" class="btn bg-white rounded-pill" @onclick="() => SetWord(word)">@word</button>
-                            }
+            @if (!OnChainWalletManager.IsActive)
+            {
+                <WalletStateAlert WalletState="State.Value.OnchainWalletState" ConnectionState="State.Value.ConnectionState" />
+            }
+            else
+            {
+                <p class="text-center">
+                    Match the word to the number to verify.
+                </p>
+                <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="HandleValidSubmit" SuccessMessage="@_successMessage" ErrorMessage="@_errorMessage">
+                    @if (Words is not null && Shuffled is not null)
+                    {
+                        <div class="box my-4">
+                            <ol class="ask mt-3 mb-5">
+                                @for (var i = 0; i < _ask.Length; i++)
+                                {
+                                    var j = i;
+                                    var num = _ask[i];
+                                    var word = Model.Words[i];
+                                    <li value="@num" @onclick="() => Model.Index = j">
+                                        <div class="rounded-pill@(Model.Index == i ? " current" : "")">
+                                            @if (!string.IsNullOrEmpty(word))
+                                            {
+                                                <span>@word</span>
+                                            }
+                                            else
+                                            {
+                                                <span>&nbsp;</span>
+                                            }
+                                        </div>
+                                    </li>
+                                }
+                            </ol>
+                            <div class="words">
+                                @foreach (var word in Shuffled)
+                                {
+                                    <button type="button" class="btn bg-white rounded-pill" @onclick="() => SetWord(word)">@word</button>
+                                }
+                            </div>
                         </div>
-                    </div>
-                }
-                @if (!Model.IsVerified)
-                {
-                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
-                        <button class="btn btn-primary w-100 rounded-pill" type="submit" disabled="@(!Model.AllFilled)">
-                            <span>Verify recovery phrase</span>
-                        </button>
-                    </div>
-                }
-            </ValidationEditContext>
+                    }
+                    @if (!Model.IsVerified)
+                    {
+                        <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                            <button class="btn btn-primary w-100 rounded-pill" type="submit" disabled="@(!Model.AllFilled)">
+                                <span>Verify recovery phrase</span>
+                            </button>
+                        </div>
+                    }
+                    }
+                </ValidationEditContext>
+            }
         </Authorized>
         <NotAuthorized>
             <Alert Type="danger">Unauthorized.</Alert>

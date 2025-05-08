@@ -1,12 +1,12 @@
 @using BTCPayApp.Core.BTCPayServer
 @using BTCPayApp.Core.Wallet
 
-@if (NodeState == LightningNodeState.Error)
+@if (WalletState == OnChainWalletState.Error)
 {
     <div class="alert alert-danger" role="alert">
-        <h4 class="alert-heading">Lightning Node @(Status)</h4>
+        <h4 class="alert-heading">Onchain Wallet @(Status)</h4>
         <p class="mb-0">
-            There was an error with the lightning node. Please
+            There was an error with the onchain wallet. Please
             <NavLink href="@Routes.AppLogs">check the app logs</NavLink>
             and try again later.
         </p>
@@ -15,33 +15,32 @@
 else
 {
     <div class="alert alert-info" role="alert">
-        <h4 class="alert-heading">Lightning Node @(Status)</h4>
+        <h4 class="alert-heading">Onchain Wallet @(Status)</h4>
         <p class="mb-0">
             @if (ConnectionState == BTCPayConnectionState.ConnectedAsSecondary)
             {
                 <span>This device is currently connected as an additional device for communication with the BTCPay Server.</span>
             }
-            <span>The lightning node is currently @(Status).</span>
+            <span>The onchain wallet is currently @(Status).</span>
         </p>
     </div>
 }
 
 @code {
     [Parameter, EditorRequired]
-    public LightningNodeState? NodeState { get; set; }
+    public OnChainWalletState? WalletState { get; set; }
 
     [Parameter, EditorRequired]
     public BTCPayConnectionState? ConnectionState { get; set; }
 
     private string Status =>
-        NodeState switch
+        WalletState switch
         {
-            LightningNodeState.Init => "initializing",
-            LightningNodeState.NotConfigured => "not configured",
-            LightningNodeState.WaitingForConnection => ConnectionState == BTCPayConnectionState.ConnectedAsSecondary ? "inactive" : "waiting for connection",
-            LightningNodeState.Loaded => "loaded",
-            LightningNodeState.Stopped => "stopped",
-            LightningNodeState.Error => "in failure mode",
+            OnChainWalletState.Init => "initializing",
+            OnChainWalletState.NotConfigured => "not configured",
+            OnChainWalletState.WaitingForConnection => ConnectionState == BTCPayConnectionState.ConnectedAsSecondary ? "inactive" : "waiting for connection",
+            OnChainWalletState.Loaded => "loaded",
+            OnChainWalletState.Error => "in failure mode",
             _ => ConnectionState == BTCPayConnectionState.Syncing ? "syncing" : "loading"
         };
 }

@@ -3,8 +3,10 @@
 @using BTCPayApp.Core.Data
 @using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Features
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject OnChainWalletManager OnChainWalletManager
+@inject IState<RootState> State
 
 <PageTitle>Secure your recovery phrase</PageTitle>
 
@@ -17,7 +19,11 @@
 <section class="container">
     <AuthorizeView Policy="@AppPolicies.CanModifySettings">
         <Authorized>
-            @if (Words is not null)
+            @if (!OnChainWalletManager.IsActive)
+            {
+                <WalletStateAlert WalletState="State.Value.OnchainWalletState" ConnectionState="State.Value.ConnectionState" />
+            }
+            else if (Words is not null)
             {
                 <p>
                     The combination of words below are called your recovery phrase.

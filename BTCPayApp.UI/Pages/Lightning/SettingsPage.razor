@@ -5,6 +5,7 @@
 @using Microsoft.Extensions.Logging
 @using BTCPayApp.UI.Components.Layout
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.BTCPayServer
 @using BTCPayApp.Core.LDK
 @using BTCPayApp.Core.Wallet
 @using BTCPayServer.Client.Models
@@ -30,6 +31,10 @@
 <section class="container">
     <AuthorizeView Policy="@AppPolicies.CanModifySettings">
         <Authorized>
+            @if (State.Value.LightningNodeState is not LightningNodeState.Loaded)
+            {
+                <LightningNodeStateAlert NodeState="State.Value.LightningNodeState" ConnectionState="State.Value.ConnectionState" />
+            }
             @if (State.Value.LightningNodeState is LightningNodeState.NotConfigured)
             {
                 <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
@@ -45,7 +50,7 @@
                         <span class="badge bg-info">Lightning Payment Method</span>
                     }
                 </h2>
-                <div class="box mb-5">
+                <div class="box">
                     @if (Node is not null)
                     {
                         <div class="form-floating">
@@ -76,11 +81,7 @@
                     @* } *@
                 </div>
             }
-            else
-            {
-                <LightningNodeStateAlert State="State.Value.LightningNodeState" />
-            }
-            @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loaded or LightningNodeState.Stopped or LightningNodeState.Error)
+            @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loaded or LightningNodeState.Stopped or LightningNodeState.Error && State.Value.ConnectionState != BTCPayConnectionState.ConnectedAsSecondary)
             {
                 <h2>Lightning Control</h2>
                 <div class="box mb-2 d-grid d-sm-flex flex-wrap gap-3 buttons">
