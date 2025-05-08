@@ -41,13 +41,7 @@
     <EmbedAssembliesIntoApk>True</EmbedAssembliesIntoApk>
   </PropertyGroup>
 
-  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' And $(Configuration) == 'Debug'">
-    <DebugSymbols>True</DebugSymbols>
-  </PropertyGroup>
-
   <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android' And '$(Configuration)' == 'Release'">
-    <DebugSymbols>False</DebugSymbols>
-    <PublishTrimmed>False</PublishTrimmed>
     <AndroidKeyStore>True</AndroidKeyStore>
     <AndroidSigningKeyStore>../btcpayapp.keystore</AndroidSigningKeyStore>
     <AndroidSigningKeyAlias>btcpayapp</AndroidSigningKeyAlias>
