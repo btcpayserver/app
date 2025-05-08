@@ -78,6 +78,7 @@ jobs:
           name: org.btcpayserver.BTCPayApp-Signed.apk
           path: publish/android/org.btcpayserver.BTCPayApp-Signed.apk
       - name: Create pre-release
+        if: success() && github.ref == 'refs/heads/master'
         uses: marvinpinto/action-automatic-releases@latest
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
