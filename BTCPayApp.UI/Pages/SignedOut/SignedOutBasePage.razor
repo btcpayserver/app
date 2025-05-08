@@ -69,8 +69,6 @@
         if (code == _qrInput) return;
         _qrInput = code;
 
-        Logger.LogInformation("Scanned QR code: {QrCode}", code);
-
         await HandleInput(code);
         await InvokeAsync(StateHasChanged);
 

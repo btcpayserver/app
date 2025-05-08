@@ -141,7 +141,6 @@
         // prevent duplicate submission due to quirk in QR reader lib
         if (code == _qrInput) return;
         _qrInput = code;
-        Logger.LogInformation("Scanned QR code: {QrCode}", code);
 
         Model.EncryptionKey = code;
         StateHasChanged();
