@@ -25,6 +25,7 @@ public class LDKPeerHandler(
     private CancellationTokenSource? _cts;
     private TaskCompletionSource? _configTcs;
     private readonly ObservableConcurrentDictionary<string, LDKTcpDescriptor> _descriptors = new();
+    private readonly ConcurrentDictionary<string, Task<LDKTcpDescriptor?>> _connectionTasks = new();
     public EndPoint? Endpoint { get; set; }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -177,18 +178,13 @@ public class LDKPeerHandler(
         throw new ArgumentException($"Invalid endpoint: {remote}", nameof(nodeInfo));
     }
 
-    private readonly ConcurrentDictionary<string, Task<LDKTcpDescriptor?>> _connectionTasks = new();
-
     public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey peerNodeId, PeerInfo peerInfo, CancellationToken cancellationToken = default)
     {
-        if (peerInfo.Endpoint is {} endpoint)
-        {
-            if (peerInfo.Label is not null)
-                _logger.LogInformation("Attempting to connect to {NodeId} at {Endpoint} ({Label})", peerNodeId, endpoint.ToEndpointString(), peerInfo.Label);
-            return await ConnectAsync(peerNodeId, endpoint, cancellationToken);
-        }
+        if (peerInfo.Endpoint is not { } endpoint) return null;
+        if (peerInfo.Label is not null)
+            _logger.LogInformation("Attempting to connect to {NodeId} at {Endpoint} ({Label})", peerNodeId, endpoint.ToEndpointString(), peerInfo.Label);
+        return await ConnectAsync(peerNodeId, endpoint, cancellationToken);
 
-        return null;
     }
 
     public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey theirNodeId, EndPoint remote, CancellationToken cancellationToken = default)
@@ -235,10 +231,9 @@ public class LDKPeerHandler(
                 }
                 if (needsUpdate)
                     await node.Peer(theirNodeId, peer);
-                _descriptors.TryAdd(result.Id, result);
 
+                _descriptors.TryAdd(result.Id, result);
                 peerManager.process_events();
-                await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
             }
 
             tcs.TrySetResult(result);
@@ -266,6 +261,8 @@ public class LDKPeerHandler(
            peer.Persistent = false;
            await node.Peer(id, peer);
        }
+
+       peerManager.process_events();
        _logger.LogInformation("Disconnected from {NodeId}", id);
     }
 }

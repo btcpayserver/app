@@ -151,6 +151,7 @@
     private string? _connectSuccessMessage;
     private string? _connectErrorMessage;
     private ValidationEditContext? _connectEditContext;
+    private CancellationTokenSource _refreshCts;
     private ConnectPeerModel? PeerModel { get; set; } = new();
 
     private class OpenChannelModel
@@ -171,7 +172,28 @@
         if (await LightningNodeManager.CanConfigureLightningNode())
             NavigationManager.NavigateTo(Routes.LightningSettings);
         else
+        {
+            _refreshCts = new CancellationTokenSource();
+            _ = RefreshData(_refreshCts.Token);
+        }
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        _refreshCts.Cancel();
+
+        return ValueTask.CompletedTask;
+    }
+
+    private async Task RefreshData(CancellationToken token)
+    {
+        while (token.IsCancellationRequested is false)
+        {
             await FetchData();
+            await Task.Delay(TimeSpan.FromSeconds(15), token);
+        }
     }
 
     private async Task FetchData()
@@ -307,7 +329,8 @@
             }
 
             _connectingNewPeer = true;
-            var result = await Node.PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None);
+            var result = await AsyncExtensions.RunInOtherThread(async () =>
+                await Node.PeerHandler.ConnectAsync(nodeInfo, CancellationToken.None));
             if (result is not null)
             {
                 _connectSuccessMessage = $"Connection to {PeerModel.PeerUrl} initiated";
@@ -325,7 +348,16 @@
 
         _connectingNewPeer = false;
         if (string.IsNullOrEmpty(_connectErrorMessage))
-            await FetchData();
+            _ = RunAsyncWithDelay(FetchData);
+    }
+
+    // run with delay to allow peer manager to process events
+    private async Task RunAsyncWithDelay(Func<Task> t)
+    {
+        var token = _refreshCts.Token;
+        await Task.Delay(TimeSpan.FromSeconds(1), token);
+        await t();
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task ConnectPeer(LightningPeerModel peer)
@@ -337,7 +369,8 @@
         try
         {
             if (EndPointParser.TryParse(peer.Socket, 9735, out var endpoint))
-                await Node.PeerHandler.ConnectAsync(new PubKey(peer.NodeId), endpoint);
+                await AsyncExtensions.RunInOtherThread(async () =>
+                    await Node.PeerHandler.ConnectAsync(new PubKey(peer.NodeId), endpoint));
             else
                 _connectErrorMessage = $"Could not resolve endpoint for socket {peer.Socket}";
         }
@@ -347,7 +380,8 @@
         }
 
         _updatingPeer = null;
-        await FetchData();
+
+        _ = RunAsyncWithDelay(FetchData);
     }
 
     private async Task DisconnectPeer(LightningPeerModel peer)
@@ -358,7 +392,8 @@
 
         try
         {
-            await Node.PeerHandler.DisconnectAsync(new PubKey(peer.NodeId));
+            await AsyncExtensions.RunInOtherThread(async () =>
+                await Node.PeerHandler.DisconnectAsync(new PubKey(peer.NodeId)));
         }
         catch (Exception e)
         {
@@ -366,7 +401,8 @@
         }
 
         _updatingPeer = null;
-        await FetchData();
+
+        _ = RunAsyncWithDelay(FetchData);
     }
 
     private async Task UpdatePeer(LightningPeerModel peer)
@@ -406,7 +442,7 @@
 
         _openingChannel = false;
         if (string.IsNullOrEmpty(_channelErrorMessage))
-            await FetchData();
+            _ = RunAsyncWithDelay(FetchData);
     }
 
     private async Task ParseChannelRequest(string lnurl, string name, bool trusted)
@@ -446,7 +482,7 @@
         if (_channelSuccessMessage is null && _channelErrorMessage is null)
             _channelErrorMessage = "Error opening channel";
         else
-            await FetchData();
+            _ = RunAsyncWithDelay(FetchData);
     }
 
     private async Task CloseChannel(LightningChannelModel channel)
@@ -489,7 +525,7 @@
         }
 
         _updatingChannel = null;
-        await FetchData();
+        _ = RunAsyncWithDelay(FetchData);
     }
 
     private void ToggleDisplayCurrency()
