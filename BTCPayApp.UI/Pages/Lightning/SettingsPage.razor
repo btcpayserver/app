@@ -51,7 +51,7 @@
                     }
                 </h2>
                 <div class="box">
-                    @if (Node is not null)
+                    @if (LightningNodeManager.IsActive)
                     {
                         <div class="form-floating">
                             <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
