@@ -27,7 +27,7 @@ public partial class LDKNode :
         return (await _memoryCache.GetOrCreateAsync(nameof(GetChannels), async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            await using var dbContext =  await _dbContextFactory.CreateDbContextAsync(cancellationToken);
+            await using var dbContext = await _dbContextFactory.CreateDbContextAsync(cancellationToken);
             var dbChannels = dbContext.LightningChannels.AsNoTracking()
                 .Include(channel => channel.Aliases).AsAsyncEnumerable();
             var channels = ServiceProvider.GetRequiredService<ChannelManager>().list_channels();
@@ -49,7 +49,7 @@ public partial class LDKNode :
     public async Task Handle(Event.Event_ChannelClosed evt)
     {
         _logger.LogInformation("Channel {ChannelId} closed: {Reason}", Convert.ToHexString(evt.channel_id.get_a()).ToLowerInvariant(), evt.GetReason());
-        await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>()
+        await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>
         {
             {"CloseReason", JsonSerializer.SerializeToElement(evt.reason.write())},
             {"CloseReasonHuman", JsonSerializer.SerializeToElement(evt.GetReason())},
@@ -60,7 +60,7 @@ public partial class LDKNode :
 
     public async Task Handle(Event.Event_ChannelPending evt)
     {
-        await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>()
+        await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>
         {
             {"PendingTimestamp", JsonSerializer.SerializeToElement(DateTimeOffset.UtcNow.ToUnixTimeSeconds())}
         });
@@ -70,7 +70,7 @@ public partial class LDKNode :
 
     public async Task Handle(Event.Event_ChannelReady evt)
     {
-        await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>()
+        await AddChannelData(evt.channel_id, new Dictionary<string, JsonElement>
         {
             {"ReadyTimestamp", JsonSerializer.SerializeToElement(DateTimeOffset.UtcNow.ToUnixTimeSeconds())}
         });
@@ -279,8 +279,8 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
 
     public byte[] Seed { get; private set; }
 
-    public PaymentsManager? PaymentsManager => ServiceProvider.GetRequiredService<PaymentsManager>();
-    public LightningAPIKeyManager? ApiKeyManager => ServiceProvider.GetRequiredService<LightningAPIKeyManager>();
+    public PaymentsManager PaymentsManager => ServiceProvider.GetRequiredService<PaymentsManager>();
+    public LightningAPIKeyManager ApiKeyManager => ServiceProvider.GetRequiredService<LightningAPIKeyManager>();
     public LDKPeerHandler PeerHandler => ServiceProvider.GetRequiredService<LDKPeerHandler>();
     public PubKey NodeId => new(ServiceProvider.GetRequiredService<ChannelManager>().get_our_node_id());
 
@@ -300,7 +300,6 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
         if (!exists)
             return;
         // var identifier = _onChainWalletManager.WalletConfig.Derivations[WalletDerivation.LightningScripts].Identifier;
-
 
         _logger.LogInformation("Stopping LDKNode services");
         var services = ServiceProvider.GetServices<IScopedHostedService>();

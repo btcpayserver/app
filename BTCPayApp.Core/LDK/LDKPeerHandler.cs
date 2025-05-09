@@ -236,6 +236,7 @@ public class LDKPeerHandler(
                 if (needsUpdate)
                     await node.Peer(theirNodeId, peer);
                 _descriptors.TryAdd(result.Id, result);
+
                 peerManager.process_events();
                 await Task.Delay(TimeSpan.FromMilliseconds(250), cancellationToken);
             }
