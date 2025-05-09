@@ -11,7 +11,6 @@
 @using BTCPayServer.Lightning
 @using LNURL
 @using NBitcoin
-@using Newtonsoft.Json
 @using org.ldk.enums
 @using org.ldk.structs
 @using NodeInfo = BTCPayServer.Lightning.NodeInfo
@@ -71,7 +70,7 @@
                 }
 
                 <h2>Channels</h2>
-                <ChannelsList Channels="_channels" OnCloseChannel="CloseChannel" UpdatingPeerId="@_updatingPeer" class="mb-4"/>
+                <ChannelsList Channels="_channels" OnCloseChannel="CloseChannel" UpdatingChannelId="@_updatingChannel" class="mb-4"/>
 
                 @if (_peers?.Any() is true && ChannelModel != null)
                 {
