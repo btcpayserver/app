@@ -79,7 +79,7 @@
                 {
                     <AppSalesStats AppId="@PosAppId" Stats="PosSalesStats" Loading="PosSalesStatsLoading" Error="@PosSalesStatsError" class="mt-5"/>
                 }
-                @if (PosItemStatsLoading || PosItemStats is not null)
+                @if (ShowPosItemStats)
                 {
                     <AppItemStats AppId="@PosAppId" Stats="PosItemStats" Loading="PosItemStatsLoading" Error="@PosItemStatsError" class="mt-5"/>
                 }
@@ -143,4 +143,5 @@
     private List<AppItemStats>? PosItemStats => StoreState.Value.PosItemStats?.Data;
     private string? PosSalesStatsError => StoreState.Value.PosSalesStats?.Error;
     private string? PosItemStatsError => StoreState.Value.PosItemStats?.Error;
+    private bool ShowPosItemStats => PosItemStats is not null && PosItemStats is not [{ Title: "Keypad" }];
 }
