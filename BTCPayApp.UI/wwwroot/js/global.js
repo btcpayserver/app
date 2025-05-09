@@ -301,12 +301,17 @@ window.copyToClipboard = async function (e, data) {
     try {
       const permissionStatus = await navigator.permissions.query({ name: 'clipboard-write', allowWithoutGesture: false });
       hasPermission = permissionStatus.state === 'granted';
-    } catch (err) {}
+      alert("using navigator.clipboard - hasPermission: " + hasPermission);
+    } catch (err) {
+      alert("error: " + err);
+    }
   }
   if (navigator.clipboard && hasPermission) {
+    alert("using navigator.clipboard: " + navigator.clipboard.writeText);
     await navigator.clipboard.writeText(data);
     confirmCopy(confirm, message);
   } else {
+    alert("using fallback - hasPermission: " + hasPermission);
     const copyEl = document.createElement('textarea');
     copyEl.style.position = 'absolute';
     copyEl.style.opacity = '0';
