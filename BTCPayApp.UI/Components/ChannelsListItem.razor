@@ -49,32 +49,50 @@
                     <label>Funding Transaction</label>
                 </div>
             }
-            <dl>
+            <dl class="mb-0">
+                @if (!string.IsNullOrEmpty(Channel.State) || Channel.Announced.HasValue)
+                {
+                    <div>
+                        <dt>State:</dt>
+                        <dd class="d-inline-flex flex-wrap gap-2">
+                            @if (!string.IsNullOrEmpty(Channel.State))
+                            {
+                                <span class="badge bg-@(Channel.State == "Active" ? "success" : "info")">
+                                    @Channel.State
+                                </span>
+                            }
+                            @if (Channel.Announced.HasValue)
+                            {
+                                <span class="badge bg-@(Channel.Announced.Value ? "light" : "dark")">
+                                    @(Channel.Announced.Value ? "Announced" : "Unannounced")
+                                </span>
+                            }
+                        </dd>
+                    </div>
+                }
                 <div>
-                    <dt>State:</dt>
-                    <dd>@Channel.State</dd>
+                    <dt>@(Channel.Connected ? "Connected" : "Not connected")</dt>
+                    <span class="btcpay-status btcpay-status--@(Channel.Connected ? "enabled" : "disabled")"></span>
                 </div>
-                <div>
-                    <dt>Connected:</dt>
-                    <dd>@Channel.Connected</dd>
-                </div>
-                <div>
-                    <dt>Usable:</dt>
-                    <dd>@Channel.Usable</dd>
-                </div>
-                <div>
-                    <dt>Ready:</dt>
-                    <dd>@Channel.Ready</dd>
-                </div>
-                <div>
-                    <dt>Announced:</dt>
-                    <dd>@Channel.Announced</dd>
-                </div>
+                @if (Channel.Usable.HasValue)
+                {
+                    <div>
+                        <dt>@(Channel.Connected ? "Usable" : "Not usable")</dt>
+                        <span class="btcpay-status btcpay-status--@(Channel.Usable.Value ? "enabled" : "pending")"></span>
+                    </div>
+                }
+                @if (Channel.Ready.HasValue)
+                {
+                    <div>
+                        <dt>@(Channel.Connected ? "Ready" : "Not ready")</dt>
+                        <span class="btcpay-status btcpay-status--@(Channel.Ready.Value ? "enabled" : "pending")"></span>
+                    </div>
+                }
             </dl>
             @if (Channel.Active && OnCloseChannel.HasDelegate)
             {
                 <div class="d-grid d-sm-flex flex-wrap gap-3 buttons mt-3">
-                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="CloseChannel">Close</button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" @onclick="CloseChannel">@(Channel.Connected ? "Close" : "Force-close (not connected)")</button>
                 </div>
             }
         </div>
