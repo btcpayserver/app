@@ -1,10 +1,14 @@
 ﻿@attribute [Route(Routes.AppLogs)]
+@using System.Text
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.Core.Services
 @using BTCPayApp.UI.Components.Layout
 @using Serilog.Events
 @inject ConfigProvider ConfigProvider
 @inject LoggingService LogService
+@inject IJSRuntime JS
+@inject IEmailService EmailService
+
 
 <PageTitle>Application Logs</PageTitle>
 
@@ -52,7 +56,7 @@
     @if (HasLogs)
     {
         <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
-            <button type="button" class="btn btn-primary w-100" data-clipboard-target="#logs">Copy logs</button>
+            <button type="button" class="btn btn-primary w-100" @onclick="SaveLogs">Send logs</button>
         </div>
     }
 </section>
@@ -98,5 +102,13 @@
     private async Task RefreshLogContent()
     {
         _logContent = await LogService.GetLatestLogAsync(_logLevel, _logCount);
+    }
+
+    private async Task SaveLogs()
+    {
+        //var bytes = Encoding.UTF8.GetBytes(_logContent!);
+        //await JS.InvokeAsync<object>("Interop.saveAsFile", "btcpayapp.log", Convert.ToBase64String(bytes));
+        var logFilePath = await LogService.GetAppLogFilePath();
+        await EmailService.SendAsync("App Log File", _logContent!);
     }
 }

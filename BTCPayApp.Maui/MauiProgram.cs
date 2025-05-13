@@ -1,4 +1,6 @@
-﻿using BTCPayApp.Core.Extensions;
+﻿using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Extensions;
+using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
@@ -13,6 +15,7 @@ public static class MauiProgram
     {
         var builder = MauiApp.CreateBuilder();
         builder.UseMauiApp<App>()
+            .ConfigureEssentials()
             .ConfigureFonts(fonts =>
             {
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -22,6 +25,7 @@ public static class MauiProgram
         builder.Services.AddBTCPayAppUIServices();
         builder.Services.ConfigureBTCPayAppMaui();
         builder.Services.ConfigureBTCPayAppCore();
+        builder.Services.AddSingleton<IEmailService, EmailService>();
 
         builder.ConfigureLifecycleEvents(events =>
         {
