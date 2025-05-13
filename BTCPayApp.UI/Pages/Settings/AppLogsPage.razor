@@ -55,8 +55,9 @@
     }
     @if (HasLogs)
     {
-        <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
-            <button type="button" class="btn btn-primary w-100" @onclick="SaveLogs">Send logs</button>
+        <div id="CtaContainer" class="container d-flex align-items-center justify-content-around">
+            <button type="button" class="btn btn-primary" data-clipboard-target="#logs">Copy logs</button>
+            <button type="button" class="btn btn-primary" @onclick="SendLogs">Send logs</button>
         </div>
     }
 </section>
@@ -104,11 +105,8 @@
         _logContent = await LogService.GetLatestLogAsync(_logLevel, _logCount);
     }
 
-    private async Task SaveLogs()
+    private async Task SendLogs()
     {
-        //var bytes = Encoding.UTF8.GetBytes(_logContent!);
-        //await JS.InvokeAsync<object>("Interop.saveAsFile", "btcpayapp.log", Convert.ToBase64String(bytes));
-        var logFilePath = await LogService.GetAppLogFilePath();
         await EmailService.SendAsync("App Log File", _logContent!);
     }
 }
