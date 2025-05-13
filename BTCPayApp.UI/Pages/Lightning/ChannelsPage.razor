@@ -44,62 +44,76 @@
                 <h2>Peers</h2>
                 <PeersList Peers="_peers" OnConnectPeer="ConnectPeer" OnDisconnectPeer="DisconnectPeer" OnUpdatePeer="UpdatePeer" UpdatingPeerId="@_updatingPeer" class="mb-4"/>
 
-                @if (PeerModel != null)
-                {
-                    <h2>Connect Peer</h2>
-                    <ValidationEditContext @ref="_connectEditContext" Model="PeerModel" OnValidSubmit="ConnectToNewPeer" SuccessMessage="@_connectSuccessMessage" ErrorMessage="@_connectErrorMessage">
-                        <DataAnnotationsValidator/>
-                        <fieldset class="box">
-                            <div class="form-group">
-                                <label for="PeerUrl" class="form-label" data-required>Peer URL</label>
-                                <InputText @bind-Value="PeerModel.PeerUrl" id="PeerUrl" class="form-control"/>
-                                <ValidationMessage For="@(() => PeerModel.PeerUrl)"/>
-                            </div>
-                            <button type="submit" class="btn btn-primary w-100" disabled="@(_connectEditContext!.Invalid || _connectingNewPeer)">
-                                @if (_connectingNewPeer)
-                                {
-                                    <LoadingIndicator/>
-                                }
-                                else
-                                {
-                                    <span>Connect Peer</span>
-                                }
-                            </button>
-                        </fieldset>
-                    </ValidationEditContext>
-                }
+                <h2>Connect Peer</h2>
+                <ValidationEditContext @ref="_connectEditContext" Model="PeerModel" OnValidSubmit="ConnectToNewPeer" SuccessMessage="@_connectSuccessMessage" ErrorMessage="@_connectErrorMessage">
+                    <DataAnnotationsValidator/>
+                    <fieldset class="box">
+                        <div class="form-group">
+                            <label for="PeerUrl" class="form-label" data-required>Peer URL</label>
+                            <InputText @bind-Value="PeerModel.PeerUrl" id="PeerUrl" class="form-control"/>
+                            <ValidationMessage For="@(() => PeerModel.PeerUrl)"/>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" disabled="@(_connectEditContext!.Invalid || _connectingNewPeer)">
+                            @if (_connectingNewPeer)
+                            {
+                                <LoadingIndicator/>
+                            }
+                            else
+                            {
+                                <span>Connect Peer</span>
+                            }
+                        </button>
+                    </fieldset>
+                </ValidationEditContext>
 
                 <h2>Channels</h2>
                 <ChannelsList Channels="_channels" OnCloseChannel="CloseChannel" UpdatingChannelId="@_updatingChannel" class="mb-4"/>
 
-                @if (_peers?.Any() is true && ChannelModel != null)
+                @if (_peers?.Any() is true)
                 {
                     <h2>Open Channel</h2>
-                    <ValidationEditContext @ref="_openChannelEditContext" Model="ChannelModel" OnValidSubmit="() => OpenChannel()" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage">
+                    <ValidationEditContext @ref="_openChannelEditContext" Model="ChannelModel" OnValidSubmit="HandleOpenChannel" SuccessMessage="@_channelSuccessMessage" ErrorMessage="@_channelErrorMessage">
                         <DataAnnotationsValidator/>
                         <fieldset class="box">
-                            <div class="form-group">
-                                <label for="PeerId" class="form-label" data-required>Peer</label>
-                                <InputSelect @bind-Value="ChannelModel.PeerId" id="PeerId" class="form-select">
-                                    <option>Select peer</option>
-                                    @foreach (var peer in _peers)
-                                    {
-                                        <option value="@peer.NodeId">
-                                            @peer.NodeId
-                                            @if (!string.IsNullOrEmpty(peer.Info?.Label))
-                                            {
-                                                @($" - {peer.Info.Label}")
-                                            }
-                                        </option>
-                                    }
-                                </InputSelect>
-                                <ValidationMessage For="@(() => ChannelModel.PeerId)"/>
-                            </div>
-                            <div class="form-group">
-                                <label for="Amount" class="form-label" data-required>Amount</label>
-                                <InputAmount Id="Amount" @bind-Value="ChannelModel.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" OnToggleDisplayCurrency="ToggleDisplayCurrency" />
-                                <ValidationMessage For="@(() => ChannelModel.Amount)"/>
-                            </div>
+                            @if (!ChannelModel.UseLNURL)
+                            {
+                                <div class="form-group">
+                                    <div class="d-flex justify-content-between">
+                                        <label for="PeerId" class="form-label" data-required>Peer</label>
+                                        <button type="button" class="btn btn-link p-0" @onclick="() => { ChannelModel.UseLNURL = true; }">Use LNURL</button>
+                                    </div>
+                                    <InputSelect @bind-Value="ChannelModel.PeerId" id="PeerId" class="form-select">
+                                        <option>Select peer</option>
+                                        @foreach (var peer in _peers)
+                                        {
+                                            <option value="@peer.NodeId">
+                                                @peer.NodeId
+                                                @if (!string.IsNullOrEmpty(peer.Info?.Label))
+                                                {
+                                                    @($" - {peer.Info.Label}")
+                                                }
+                                            </option>
+                                        }
+                                    </InputSelect>
+                                    <ValidationMessage For="@(() => ChannelModel.PeerId)"/>
+                                </div>
+                                <div class="form-group">
+                                    <label for="Amount" class="form-label" data-required>Amount</label>
+                                    <InputAmount Id="Amount" @bind-Value="ChannelModel.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+                                    <ValidationMessage For="@(() => ChannelModel.Amount)"/>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="form-group">
+                                    <div class="d-flex justify-content-between">
+                                        <label for="PeerId" class="form-label" data-required>LNURL Channel Request</label>
+                                        <button type="button" class="btn btn-link p-0" @onclick="() => { ChannelModel.UseLNURL = false; }">Select peer</button>
+                                    </div>
+                                    <InputText @bind-Value="ChannelModel.LNURL" id="LNURL" class="form-control"/>
+                                    <ValidationMessage For="@(() => ChannelModel.LNURL)"/>
+                                </div>
+                            }
                             <button type="submit" class="btn btn-primary w-100" disabled="@(_openChannelEditContext!.Invalid || _openingChannel)">
                                 @if (_openingChannel)
                                 {
@@ -144,7 +158,7 @@
     private string? _channelSuccessMessage;
     private string? _channelErrorMessage;
     private ValidationEditContext? _openChannelEditContext;
-    private OpenChannelModel? ChannelModel { get; set; } = new();
+    private OpenChannelModel ChannelModel { get; set; } = new();
 
     private bool _connectingNewPeer;
     private string? _connectSuccessMessage;
@@ -155,13 +169,19 @@
 
     private class OpenChannelModel
     {
-        [Required] public string? PeerId { get; set; }
-        [Required] public decimal? Amount { get; set; }
+        public bool UseLNURL { get; set; }
+        [RequiredIf(nameof(UseLNURL), false)]
+        public string? PeerId { get; set; }
+        [RequiredIf(nameof(UseLNURL), false)]
+        public decimal? Amount { get; set; }
+        [RequiredIf(nameof(UseLNURL), true)]
+        public string? LNURL { get; set; }
     }
 
     private class ConnectPeerModel
     {
-        [Required] public string? PeerUrl { get; set; }
+        [Required]
+        public string? PeerUrl { get; set; }
     }
 
     protected override async Task OnInitializedAsync()
@@ -316,7 +336,7 @@
 
     private async Task ConnectToNewPeer()
     {
-        if (Node == null || PeerModel == null) return;
+        if (Node == null) return;
         _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
 
         try
@@ -414,9 +434,17 @@
         await FetchData();
     }
 
+    private async Task HandleOpenChannel()
+    {
+        if (ChannelModel.UseLNURL)
+            await ParseChannelRequest();
+        else
+            await OpenChannel();
+    }
+
     private async Task OpenChannel()
     {
-        if (Loading || Node == null || ChannelModel?.Amount is null || string.IsNullOrEmpty(ChannelModel.PeerId)) return;
+        if (Loading || Node == null || ChannelModel.Amount is null || string.IsNullOrEmpty(ChannelModel.PeerId)) return;
 
         _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
         _openingChannel = true;
@@ -426,7 +454,7 @@
             var result = await Node.OpenChannel(amount, new PubKey(ChannelModel.PeerId));
             if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
             {
-                _channelSuccessMessage = $"Channel creation started with id {Convert.ToHexString(ok.res.get_a())}";
+                _channelSuccessMessage = $"Channel open initiated with id {Convert.ToHexString(ok.res.get_a())}";
                 ChannelModel = new OpenChannelModel();
             }
             else if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
@@ -444,22 +472,21 @@
             _ = RunAsyncWithDelay(FetchData);
     }
 
-    private async Task ParseChannelRequest(string lnurl, string name, bool trusted)
+    private async Task ParseChannelRequest()
     {
-        if (Loading || Node == null || ChannelModel?.Amount is null || string.IsNullOrEmpty(ChannelModel.PeerId)) return;
+        if (Loading || Node == null || string.IsNullOrEmpty(ChannelModel.LNURL)) return;
         _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
 
         try
         {
-            var uri = LNURL.Parse(lnurl, out var tag);
+            var uri = LNURL.Parse(ChannelModel.LNURL, out var tag);
             var http = HttpClientFactory.CreateClient();
             var channelRequest = (LNURLChannelRequest) await LNURL.FetchInformation(uri, tag, http, new CancellationTokenSource(TimeSpan.FromSeconds(5)).Token);
             if (channelRequest is null)
             {
-                _channelErrorMessage = "The channel request is invalid";
+                _openChannelEditContext!.MessageStore!.Add(() => ChannelModel.LNURL, "The channel request is invalid");
                 return;
             }
-
             if (!EndPointParser.TryParse($"{channelRequest.Uri.Host}:{channelRequest.Uri.Port}", 9735, out var endpoint))
             {
                 _channelErrorMessage = "The channel request provided an invalid endpoint for the peer";
@@ -467,14 +494,14 @@
             }
 
             _openingChannel = true;
-            await Node.Peer(channelRequest.Uri.NodeId, new PeerInfo { Endpoint = endpoint, Label = name, Trusted = trusted });
+            await Node.Peer(channelRequest.Uri.NodeId, new PeerInfo { Endpoint = endpoint, Trusted = true });
             await ConnectPeer(new LightningPeerModel { NodeId = channelRequest.Uri.NodeId.ToString(), Socket = endpoint.ToEndpointString() });
             await channelRequest.SendRequest(Node.NodeId, true, http, new CancellationTokenSource(TimeSpan.FromSeconds(10)).Token);
             _channelSuccessMessage = "Successfully initiated channel creation. Please wait for the peer to execute.";
         }
         catch (Exception e)
         {
-            _channelErrorMessage = e.Message;
+            _openChannelEditContext!.MessageStore!.Add(() => ChannelModel.LNURL, e.Message);
         }
 
         _openingChannel = false;
