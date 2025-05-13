@@ -234,6 +234,7 @@
         return chans.Select(channel =>
         {
             var details = channel.channelDetails;
+            var counterpartyId = details?.get_counterparty().get_node_id();
             var channelId = details?.get_channel_id().get_a();
             var outbound = details?.get_outbound_capacity_msat();
             var inbound = details?.get_inbound_capacity_msat();
@@ -242,7 +243,7 @@
             {
                 Id = channel.channel.Id,
                 ChannelId = channelId,
-                Connected = _peers?.Any(p => string.Equals(p.NodeId, details?.get_counterparty().get_node_id().ToString(), StringComparison.InvariantCultureIgnoreCase)) is true,
+                Connected = counterpartyId is not null && _peers?.Any(p => string.Equals(p.NodeId, Convert.ToHexString(counterpartyId), StringComparison.InvariantCultureIgnoreCase)) is true,
                 Confirmations = details?.get_confirmations() is Option_u32Z.Option_u32Z_Some x1 ? x1.some : null,
                 ConfirmationsRequired = details?.get_confirmations_required() is Option_u32Z.Option_u32Z_Some x2 ? x2.some : null,
                 FundingTxHash = details != null ? Convert.ToHexString(details.get_funding_txo().get_txid()).ToLowerInvariant() : null,

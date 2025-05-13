@@ -74,17 +74,17 @@
                     <dt>@(Channel.Connected ? "Connected" : "Not connected")</dt>
                     <span class="btcpay-status btcpay-status--@(Channel.Connected ? "enabled" : "disabled")"></span>
                 </div>
-                @if (Channel.Usable.HasValue)
+                @if (Channel is { Connected: true, Usable: not null })
                 {
                     <div>
-                        <dt>@(Channel.Connected ? "Usable" : "Not usable")</dt>
+                        <dt>@(Channel.Usable.Value ? "Usable" : "Not usable")</dt>
                         <span class="btcpay-status btcpay-status--@(Channel.Usable.Value ? "enabled" : "pending")"></span>
                     </div>
                 }
-                @if (Channel.Ready.HasValue)
+                @if (Channel is { Connected: true, Ready: not null })
                 {
                     <div>
-                        <dt>@(Channel.Connected ? "Ready" : "Not ready")</dt>
+                        <dt>@(Channel.Ready.Value ? "Ready" : "Not ready")</dt>
                         <span class="btcpay-status btcpay-status--@(Channel.Ready.Value ? "enabled" : "pending")"></span>
                     </div>
                 }
