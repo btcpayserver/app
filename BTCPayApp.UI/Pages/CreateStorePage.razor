@@ -104,8 +104,9 @@
             _errorMessage = null;
             _data = await AccountManager.GetClient().GetCreateStore();
 
+            Model.Name = _data?.Name;
             Model.DefaultCurrency = _data?.DefaultCurrency;
-            Model.PreferredExchange = _data?.RecommendedExchangeId;
+            Model.PreferredExchange = _data?.PreferredExchangeId;
         }
         catch (Exception e)
         {
@@ -143,7 +144,7 @@
                 var rateConfig = new StoreRateConfiguration { PreferredSource = Model.PreferredExchange };
                 await AccountManager.GetClient().UpdateStoreRateConfiguration(store.Id, rateConfig);
 
-                // refresh store info and set id of new store
+                // refresh store info and set id of the new store
                 await AccountManager.CheckAuthenticated(true);
                 var result = await AccountManager.SetCurrentStoreId(store.Id);
                 if (!result.Succeeded)

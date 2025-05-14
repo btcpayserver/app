@@ -353,12 +353,12 @@
             BrandColor = data.BrandColor,
             LogoUrl = data.LogoUrl,
             DefaultCurrency = data.DefaultCurrency,
-            AnyoneCanCreateInvoice = data.AnyoneCanCreateInvoice,
+            AnyoneCanCreateInvoice = data.AnyoneCanCreateInvoice is true,
             NetworkFeeMode = data.NetworkFeeMode,
-            PaymentTolerance = data.PaymentTolerance,
-            InvoiceExpiration = data.InvoiceExpiration.Minutes,
-            LightningAmountInSatoshi = data.LightningAmountInSatoshi,
-            OnChainWithLnInvoiceFallback = data.OnChainWithLnInvoiceFallback,
+            PaymentTolerance = data.PaymentTolerance ?? 0,
+            InvoiceExpiration = data.InvoiceExpiration?.Minutes ?? 15,
+            LightningAmountInSatoshi = data.LightningAmountInSatoshi is true,
+            OnChainWithLnInvoiceFallback = data.OnChainWithLnInvoiceFallback is true,
             CelebratePayment = data.CelebratePayment is true,
             ShowPayInWalletButton = data.ShowPayInWalletButton is true,
             ShowStoreHeader = data.ShowStoreHeader is true,
@@ -427,7 +427,7 @@
         public bool AnyoneCanCreateInvoice { get; set; }
         public bool LightningAmountInSatoshi { get; set; }
         public bool OnChainWithLnInvoiceFallback { get; set; }
-        public NetworkFeeMode NetworkFeeMode { get; set; }
+        public NetworkFeeMode? NetworkFeeMode { get; set; }
         public double PaymentTolerance { get; set; }
         public int InvoiceExpiration { get; set; }
         public bool CelebratePayment { get; set; }

@@ -9,7 +9,6 @@ using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
 using BTCPayServer.Data;
 using BTCPayServer.Events;
-using BTCPayServer.Models.AppViewModels;
 using BTCPayServer.Plugins.App.Extensions;
 using BTCPayServer.Plugins.PointOfSale;
 using BTCPayServer.Security.Greenfield;
