@@ -235,15 +235,18 @@
         {
             var details = channel.channelDetails;
             var counterpartyId = details?.get_counterparty().get_node_id();
+            var counterpartyNodeId = counterpartyId is not null ? Convert.ToHexString(counterpartyId).ToLowerInvariant() : null;
             var channelId = details?.get_channel_id().get_a();
             var outbound = details?.get_outbound_capacity_msat();
             var inbound = details?.get_inbound_capacity_msat();
-
+            var peer = peers.FirstOrDefault(p => string.Equals(p.NodeId, counterpartyNodeId, StringComparison.InvariantCultureIgnoreCase));
             var chan = new LightningChannelModel
             {
                 Id = channel.channel.Id,
+                CounterpartyNodeId = counterpartyNodeId,
+                CounterpartyLabel = peer?.Info?.Label,
                 ChannelId = channelId,
-                Connected = counterpartyId is not null && _peers?.Any(p => string.Equals(p.NodeId, Convert.ToHexString(counterpartyId), StringComparison.InvariantCultureIgnoreCase)) is true,
+                Connected = counterpartyId is not null && peer is not null,
                 Confirmations = details?.get_confirmations() is Option_u32Z.Option_u32Z_Some x1 ? x1.some : null,
                 ConfirmationsRequired = details?.get_confirmations_required() is Option_u32Z.Option_u32Z_Some x2 ? x2.some : null,
                 FundingTxHash = details != null ? Convert.ToHexString(details.get_funding_txo().get_txid()).ToLowerInvariant() : null,
@@ -265,12 +268,6 @@
 
             alternates.Remove(channel.channel.Id);
             chan.AlternateIds = alternates.ToArray();
-
-            if (details?.get_counterparty() is { } counterparty)
-            {
-                chan.CounterpartyNodeId = Convert.ToHexString(counterparty.get_node_id()).ToLowerInvariant();
-                chan.CounterpartyLabel = peers.FirstOrDefault(p => p.NodeId == chan.CounterpartyNodeId && !string.IsNullOrEmpty(p.Info?.Label))?.Info?.Label;
-            }
 
             if (channel.channel.Archived)
             {

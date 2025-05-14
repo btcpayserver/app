@@ -16,6 +16,13 @@
     </div>
     <div id="peer-@Peer.NodeId-details" class="accordion-collapse collapse" aria-labelledby="peer-@Peer.NodeId">
         <div class="pt-2">
+            @if (OnUpdatePeer.HasDelegate)
+            {
+                <div class="form-group mb-2">
+                    <label for="Label" class="form-label">Label</label>
+                    <InputText @bind-Value="Label" @bind-Value:after="UpdatePeerLabel" id="Label" class="form-control"/>
+                </div>
+            }
             <div class="form-floating">
                 <TruncateCenter Text="@Peer.NodeId" Padding="10" Copy="true" Elastic="true" class="form-control-plaintext"/>
                 <label>Node ID</label>
@@ -69,6 +76,16 @@
     [Parameter]
     public bool Loading { get; set; }
 
+    private string Label
+    {
+        get => Peer.Info?.Label ?? string.Empty;
+        set
+        {
+            Peer.Info ??= new PeerInfo();
+            Peer.Info.Label = value;
+        }
+    }
+
     private async Task ConnectPeer()
     {
         if (OnConnectPeer.HasDelegate)
@@ -86,6 +103,15 @@
         if (OnUpdatePeer.HasDelegate)
         {
             Peer.Info = info;
+            await OnUpdatePeer.InvokeAsync(Peer);
+        }
+    }
+
+    private async Task UpdatePeerLabel()
+    {
+        if (OnUpdatePeer.HasDelegate)
+        {
+            Peer.Info = (Peer.Info ?? new PeerInfo()) with { Label = Label };
             await OnUpdatePeer.InvokeAsync(Peer);
         }
     }

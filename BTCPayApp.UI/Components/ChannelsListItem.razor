@@ -5,11 +5,13 @@
 <div class="accordion-item">
     <div id="channel-@Channel.Id" class="d-flex flex-column gap-2 accordion-header">
         <div class="d-flex align-items-center justify-content-between gap-2">
-            <TruncateCenter Text="@Channel.Id" Padding="10" class="fw-semibold me-auto"/>
-            @if (!string.IsNullOrEmpty(Channel.CounterpartyLabel))
-            {
-                <span class="me-auto">@Channel.CounterpartyLabel</span>
-            }
+            <div>
+                <TruncateCenter Text="@Channel.Id" Padding="10" class="fw-semibold me-auto"/>
+                @if (!string.IsNullOrEmpty(Channel.CounterpartyLabel))
+                {
+                    <div class="text-muted">@Channel.CounterpartyLabel</div>
+                }
+            </div>
             @if (Loading)
             {
                 <LoadingIndicator/>
@@ -35,6 +37,13 @@
     </div>
     <div id="peer-@Channel.Id-details" class="accordion-collapse collapse" aria-labelledby="peer-@Channel.Id">
         <div class="pt-2">
+            @if (!string.IsNullOrEmpty(Channel.CounterpartyLabel))
+            {
+                <div class="form-floating">
+                    <TruncateCenter Text="@Channel.CounterpartyLabel" Padding="20" Elastic="true" class="form-control-plaintext"/>
+                    <label>Counterparty</label>
+                </div>
+            }
             @if (!string.IsNullOrEmpty(Channel.CounterpartyNodeId))
             {
                 <div class="form-floating">
