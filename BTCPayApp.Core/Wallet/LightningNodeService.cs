@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using BTCPayApp.Core.BTCPayServer;
 using BTCPayApp.Core.Data;
 using BTCPayApp.Core.Helpers;
@@ -17,15 +18,28 @@ public class LightningNodeManager(
     : BaseHostedService(logger)
 {
     public const string PaymentMethodId = "BTC-LN";
-
     private IServiceScope? _nodeScope;
-    public LDKNode? Node => _nodeScope?.ServiceProvider.GetService<LDKNode>();
     private LightningNodeState _state = LightningNodeState.Init;
+    public bool IsActive => State == LightningNodeState.Loaded;
     public bool IsHubConnected => btcPayConnectionManager.ConnectionState is BTCPayConnectionState.ConnectedAsPrimary;
     private async Task<bool> IsOnchainLightningDerivationConfigured () => (await onChainWalletManager.GetConfig())?.Derivations.ContainsKey(WalletDerivation.LightningScripts) is true;
-    public  async Task<bool> CanConfigureLightningNode () => IsHubConnected && await onChainWalletManager.IsConfigured() && !await IsOnchainLightningDerivationConfigured() && State == LightningNodeState.NotConfigured;
-
-    public bool IsActive => State == LightningNodeState.Loaded;
+    public async Task<bool> CanConfigureLightningNode () => IsHubConnected && await onChainWalletManager.IsConfigured() && !await IsOnchainLightningDerivationConfigured() && State == LightningNodeState.NotConfigured;
+    public event AsyncEventHandler<(LightningNodeState Old, LightningNodeState New)>? StateChanged;
+    public LDKNode? Node
+    {
+        get
+        {
+            try
+            {
+                return _nodeScope?.ServiceProvider.GetService<LDKNode>();
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "Error while getting LDKNode");
+                return null;
+            }
+        }
+    }
 
     public LightningNodeState State
     {
@@ -40,8 +54,6 @@ public class LightningNodeManager(
             StateChanged?.Invoke(this, (old, value));
         }
     }
-
-    public event AsyncEventHandler<(LightningNodeState Old, LightningNodeState New)>? StateChanged;
 
     public async Task StartNode()
     {

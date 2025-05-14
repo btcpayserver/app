@@ -383,9 +383,8 @@ public static class LDKExtensions
         var reason = evt.reason.GetType().Name;
         switch (evt.reason)
         {
-
             case ClosureReason.ClosureReason_CounterpartyForceClosed closureReasonCounterpartyForceClosed:
-                reason += " with msg from peer: " +closureReasonCounterpartyForceClosed.peer_msg.get_a();
+                reason += " with msg from peer: " + closureReasonCounterpartyForceClosed.peer_msg.get_a();
                 break;
             case ClosureReason.ClosureReason_ProcessingError closureReasonProcessingError:
                 reason += " " + closureReasonProcessingError.err;
@@ -393,7 +392,6 @@ public static class LDKExtensions
         }
         return reason;
     }
-
 
     public static byte[]? GetPreimage(this PaymentPurpose purpose, out byte[]? secret)
     {
