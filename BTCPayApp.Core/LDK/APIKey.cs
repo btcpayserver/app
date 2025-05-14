@@ -8,8 +8,8 @@
 /// <param name="Permission">Read or Write permissions, read implies being able to receive payments, write enables spending as well</param>
 public record APIKey(string Key, string Name, APIKeyPermission Permission)
 {
-    public string ConnectionString(string user)
+    public string ConnectionString(string userId)
     {
-        return $"type=app;key={Key};user={user}";
+        return $"type=app;user={userId};key={Key}";
     }
 }

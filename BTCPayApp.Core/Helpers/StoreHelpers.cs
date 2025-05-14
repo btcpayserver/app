@@ -51,7 +51,7 @@ public static class StoreHelpers
         // lightning
         if (applyLighting && lightning is null && lightningNodeService is { IsActive: true, Node.ApiKeyManager: { } apiKeyManager })
         {
-            var key = await apiKeyManager.Create("Automated BTCPay Store Setup", APIKeyPermission.Write);
+            var key = await apiKeyManager.GetKeyForStore(storeId, APIKeyPermission.Write);
             lightning = await accountManager.GetClient().UpdateStorePaymentMethod(storeId,
                 LightningNodeManager.PaymentMethodId, new UpdatePaymentMethodRequest
                 {
@@ -72,9 +72,7 @@ public static class StoreHelpers
             if (jsonDoc.RootElement.TryGetProperty("accountDerivation", out var derivationSchemeElement) &&
                 derivationSchemeElement.GetString() is { } derivationScheme &&
                 config?.Derivations.Any(pair => pair.Value.Identifier == $"DERIVATIONSCHEME:{derivationScheme}") is true)
-            {
                 return true;
-            }
         }
 
         return false;
@@ -92,10 +90,8 @@ public static class StoreHelpers
                 connectionStringElement.GetString() is { } connectionString &&
                 LightningConnectionStringHelper.ExtractValues(connectionString, out var lnConnectionString) is { } lnValues &&
                 lnConnectionString == "app" && lnValues.TryGetValue("key", out var key) && key is not null &&
-                await node!.ApiKeyManager!.CheckPermission(key, APIKeyPermission.Read))
-            {
+                await node!.ApiKeyManager.CheckPermission(key, APIKeyPermission.Read))
                 return true;
-            }
         }
 
         return false;

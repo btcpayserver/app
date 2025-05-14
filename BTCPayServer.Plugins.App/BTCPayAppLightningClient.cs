@@ -20,7 +20,7 @@ public class BTCPayAppLightningClient(
 {
     public override string ToString()
     {
-        return $"type=app;key={key};user={user}".ToLower();
+        return $"type=app;user={user};key={key}".ToLower();
     }
 
     private IBTCPayAppHubClient HubClient => appState.Connections.FirstOrDefault(pair => pair.Value.Master && pair.Value.UserId == user) is { Key: not null } connection

@@ -43,9 +43,7 @@
             {
                 <h2 class="d-flex flex-wrap align-items-center gap-2">
                     <span>@(_config?.Alias ?? "Lightning Node")</span>
-                    @if (!string.IsNullOrEmpty(_storePaymentMethodIdentifier)
-                         // && _storePaymentMethodIdentifier == ConnectionString
-                )
+                    @if (IsStorePaymentMethod is true)
                     {
                         <span class="badge bg-info">Lightning Payment Method</span>
                     }
@@ -67,18 +65,17 @@
                         </div>
                     }
 
-                    @* @if (!string.IsNullOrEmpty(ConnectionString)) *@
-                    @* { *@
-                    @*     <div class="form-floating"> *@
-                    @*         <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/> *@
-                    @*         <label>Connection String</label> *@
-                    @*     </div> *@
-                    @* *@
-                    @*     @if (!string.IsNullOrEmpty(StoreId) && _storePaymentMethodIdentifier != ConnectionString) *@
-                    @*     { *@
-                    @*         <button class="btn btn-primary my-3" @onclick="SetStorePaymentMethod">Set as lightning payment method for store</button> *@
-                    @*     } *@
-                    @* } *@
+                    @if (!string.IsNullOrEmpty(ConnectionString))
+                    {
+                        <div class="form-floating">
+                            <TruncateCenter Text="@ConnectionString" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
+                            <label>Connection String</label>
+                        </div>
+                        @if (IsStorePaymentMethod is false)
+                        {
+                            <button class="btn btn-primary my-3" @onclick="SetStorePaymentMethod">Set as lightning payment method for store</button>
+                        }
+                    }
                 </div>
             }
             @if (State.Value.LightningNodeState is LightningNodeState.Init or LightningNodeState.Loaded or LightningNodeState.Stopped or LightningNodeState.Error && State.Value.ConnectionState != BTCPayConnectionState.ConnectedAsSecondary)
@@ -152,12 +149,14 @@
 @code {
     private LightningConfig? _config;
     private LDKNode? Node => LightningNodeManager.Node;
+    private APIKey? _apiKey;
     private string? StoreId => AccountManager.CurrentStore?.Id;
     private static string PaymentMethodId => LightningNodeManager.PaymentMethodId;
     private string? _storePaymentMethodIdentifier;
-    // We need a ui/component for the api keys now.
-    // private string? ConnectionString => LightningNodeManager.ConnectionString;
+    private string? ConnectionString => AccountManager.UserInfo?.UserId is {} userId && _apiKey is not null ? _apiKey.ConnectionString(userId) : null;
+    private bool? IsStorePaymentMethod => !string.IsNullOrEmpty(ConnectionString) && string.Equals(_storePaymentMethodIdentifier, ConnectionString);
     private string[]? _jitOptions;
+
     private SettingsModel Model { get; set; } = new();
     private string? SuccessMessage { get; set; }
     private string? ErrorMessage { get; set; }
@@ -181,6 +180,9 @@
 
         if (!string.IsNullOrEmpty(StoreId))
             await GetStorePaymentMethod();
+
+        if (!string.IsNullOrEmpty(StoreId) && Node?.ApiKeyManager is not null)
+            _apiKey = await Node.ApiKeyManager.GetKeyForStore(StoreId, APIKeyPermission.Write);
     }
 
     protected override ValueTask DisposeAsyncCore(bool disposing)
@@ -235,29 +237,29 @@
             Logger.LogDebug(ex, "Payment method {PaymentMethodId} unset for store {StoreId}", PaymentMethodId, StoreId);
         }
     }
-    //
-    // private async Task SetStorePaymentMethod()
-    // {
-    //     if (string.IsNullOrEmpty(StoreId) || string.IsNullOrEmpty(ConnectionString)) return;
-    //     _successMessage = _errorMessage = null;
-    //     try
-    //     {
-    //         var pm = await AccountManager.GetClient().UpdateStorePaymentMethod(StoreId, PaymentMethodId, new UpdatePaymentMethodRequest
-    //         {
-    //             Enabled = true,
-    //             Config = ConnectionString
-    //         });
-    //         _storePaymentMethodIdentifier = GetConnectionString(pm);
-    //         _successMessage = "Store payment method set.";
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         _errorMessage = $"Error setting store payment method: {ex.Message}";
-    //         Logger.LogError(ex, "Error setting payment method {PaymentMethodId} for store {StoreId}", PaymentMethodId, StoreId);
-    //     }
-    //
-    //     await InvokeAsync(StateHasChanged);
-    // }
+
+    private async Task SetStorePaymentMethod()
+    {
+         if (string.IsNullOrEmpty(StoreId) || string.IsNullOrEmpty(ConnectionString)) return;
+         SuccessMessage = ErrorMessage = null;
+         try
+         {
+             var pm = await AccountManager.GetClient().UpdateStorePaymentMethod(StoreId, PaymentMethodId, new UpdatePaymentMethodRequest
+             {
+                 Enabled = true,
+                 Config = ConnectionString
+             });
+             _storePaymentMethodIdentifier = GetConnectionString(pm);
+             SuccessMessage = "Store payment method set.";
+         }
+         catch (Exception ex)
+         {
+             ErrorMessage = $"Error setting store payment method: {ex.Message}";
+             Logger.LogError(ex, "Error setting payment method {PaymentMethodId} for store {StoreId}", PaymentMethodId, StoreId);
+         }
+
+         await InvokeAsync(StateHasChanged);
+    }
 
     private async Task ConfigureLNWallet()
     {
