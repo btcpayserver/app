@@ -55,6 +55,7 @@
                             <TruncateCenter Text="@Node.NodeId.ToString()" Padding="15" Copy="true" Elastic="true" class="form-control-plaintext"/>
                             <label>Node ID</label>
                         </div>
+                        <code class="text-wrap">@Node.NodeId.ToString()</code>
                     }
 
                     @if (!string.IsNullOrEmpty(_config?.LightningDerivationPath))
