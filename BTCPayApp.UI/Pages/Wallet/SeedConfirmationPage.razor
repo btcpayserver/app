@@ -1,4 +1,4 @@
-@attribute [Route(Routes.WalletSeedConfirm)]
+﻿@attribute [Route(Routes.WalletSeedConfirm)]
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Contracts
@@ -42,8 +42,10 @@
                                     var j = i;
                                     var num = _ask[i];
                                     var word = Model.Words[i];
+                                    var incorrect = !string.IsNullOrEmpty(word) && !IsCorrect(num - 1, word);
+                                    var clss = $"rounded-pill {(Model.Index == i ? "current" : "")} {(incorrect ? "incorrect" : "")}".Trim();
                                     <li value="@num" @onclick="() => Model.Index = j">
-                                        <div class="rounded-pill@(Model.Index == i ? " current" : "")">
+                                        <div class="@clss">
                                             @if (!string.IsNullOrEmpty(word))
                                             {
                                                 <span>@word</span>
@@ -131,12 +133,10 @@
             {
                 var num = _ask[i] - 1;
                 var word = Model.Words[i];
-                var expected = Words[num];
-                if (word != expected)
-                {
-                    _errorMessage = "Please check the words. Tap a word to replace it.";
-                    return;
-                }
+                if (IsCorrect(num, word)) continue;
+
+                _errorMessage = "Please check the words. Tap a word to replace it.";
+                return;
             }
 
             Model.IsVerified = true;
@@ -149,6 +149,11 @@
                 new Dictionary<string, object?> { {"success", "Good job, your recovery phrase is verified!" } } );
             NavigationManager.NavigateTo(redirectUri);
         }
+    }
+
+    private bool IsCorrect(int num, string word)
+    {
+        return word == Words![num];
     }
 
     private void SetWord(string word)

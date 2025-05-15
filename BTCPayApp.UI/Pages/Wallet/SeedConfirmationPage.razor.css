@@ -31,7 +31,15 @@
 }
 
 .ask li .rounded-pill.current {
-  border-color: 1px dashed var(--btcpay-body-border-light);
+  border-color: var(--btcpay-body-border-light);
+}
+
+.ask li .rounded-pill.incorrect {
+  border-color: var(--btcpay-danger);
+}
+
+.ask li .rounded-pill.incorrect.current {
+  border-color: rgba(var(--btcpay-danger-rgb), .5);
 }
 
 .words {
