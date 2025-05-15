@@ -16,7 +16,7 @@
             {
                 <LoadingIndicator/>
             }
-            <span class="btcpay-status btcpay-status--@(Channel.Active ? "enabled" : "pending")"></span>
+            <span class="btcpay-status btcpay-status--@(Channel.Active ? (Channel.Ready is true ? "enabled" : "pending") : Channel.Connected ? "pending" : "disabled")"></span>
             <button class="accordion-button collapsed w-auto p-0" type="button" data-bs-toggle="collapse" data-bs-target="#peer-@Channel.Id-details" aria-expanded="false" aria-controls="peer-@Channel.Id-details">
                 <Icon Symbol="caret-down"/>
             </button>
@@ -61,41 +61,37 @@
             <dl class="mb-0">
                 @if (!string.IsNullOrEmpty(Channel.State) || Channel.Announced.HasValue)
                 {
-                    <div>
+                    <div class="align-items-center">
                         <dt>State:</dt>
                         <dd class="d-inline-flex flex-wrap gap-2">
                             @if (!string.IsNullOrEmpty(Channel.State))
                             {
-                                <span class="badge bg-@(Channel.State == "Active" ? "success" : "info")">
-                                    @Channel.State
-                                </span>
+                                <span>@Channel.State</span>
                             }
                             @if (Channel.Announced.HasValue)
                             {
-                                <span class="badge bg-@(Channel.Announced.Value ? "light" : "dark")">
-                                    @(Channel.Announced.Value ? "Announced" : "Unannounced")
-                                </span>
+                                <span>(@(Channel.Announced.Value ? "Announced" : "Unannounced"))</span>
                             }
                         </dd>
                     </div>
                 }
-                <div>
+                <div class="align-items-center">
                     <dt>@(Channel.Connected ? "Connected" : "Not connected")</dt>
                     <span class="btcpay-status btcpay-status--@(Channel.Connected ? "enabled" : "disabled")"></span>
                 </div>
-                @if (Channel is { Connected: true, Usable: not null })
-                {
-                    <div>
-                        <dt>@(Channel.Usable.Value ? "Usable" : "Not usable")</dt>
-                        <span class="btcpay-status btcpay-status--@(Channel.Usable.Value ? "enabled" : "pending")"></span>
-                    </div>
-                }
                 @if (Channel is { Connected: true, Ready: not null })
                 {
-                    <div>
-                        <dt>@(Channel.Ready.Value ? "Ready" : "Not ready")</dt>
+                    <div class="align-items-center">
+                        <dt class="text-wrap">@(Channel.Ready.Value ? "Ready" : $"Not ready: {Channel.Confirmations} of {Channel.ConfirmationsRequired} confirmations")</dt>
                         <span class="btcpay-status btcpay-status--@(Channel.Ready.Value ? "enabled" : "pending")"></span>
                     </div>
+                    @if (Channel is { Connected: true, Ready: true, Usable: not null })
+                    {
+                        <div class="align-items-center">
+                            <dt>@(Channel.Usable.Value ? "Usable" : "Not usable")</dt>
+                            <span class="btcpay-status btcpay-status--@(Channel.Usable.Value ? "enabled" : "pending")"></span>
+                        </div>
+                    }
                 }
             </dl>
             @if (Channel.Active && OnCloseChannel.HasDelegate)

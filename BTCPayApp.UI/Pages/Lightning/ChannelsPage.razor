@@ -1,4 +1,5 @@
 @attribute [Route(Routes.ChannelsPeers)]
+@using System.Text.RegularExpressions
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Data
 @using BTCPayApp.UI.Components.Layout
@@ -275,9 +276,15 @@
             }
             else if (details is null)
             {
-                chan.State = channel.channel.AdditionalData.TryGetValue("CloseReasonHuman", out var reasonHuman)
-                    ? reasonHuman.GetString()
-                    : "Unknown but probably closed";
+                if (channel.channel.AdditionalData.TryGetValue("CloseReasonHuman", out var reasonHuman))
+                {
+                    var state = reasonHuman.GetString()?.Replace("ClosureReason_", "") ?? "Closed";
+                    chan.State = Regex.Replace(state, "([A-Z])", " $1", RegexOptions.Compiled).Trim();
+                }
+                else
+                {
+                    chan.State =  "Unknown, probably closed";
+                }
             }
             else if (details.get_channel_shutdown_state() is Option_ChannelShutdownStateZ.Option_ChannelShutdownStateZ_Some some && some.some != ChannelShutdownState.LDKChannelShutdownState_NotShuttingDown)
             {
@@ -457,7 +464,7 @@
             }
             else if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
             {
-                _channelErrorMessage = $"Error: {err.err.GetError()}";
+                _channelErrorMessage = err.err.GetError();
             }
         }
         catch (Exception e)
