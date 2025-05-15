@@ -1,4 +1,4 @@
-﻿@attribute [Route(Routes.WalletSeedConfirm)]
+@attribute [Route(Routes.WalletSeedConfirm)]
 @using BTCPayApp.Core
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Contracts
@@ -10,6 +10,7 @@
 @inject IState<RootState> State
 @inject ConfigProvider ConfigProvider
 @inject OnChainWalletManager OnChainWalletManager
+@inject NavigationManager NavigationManager
 
 <PageTitle>Confirm your recovery phrase</PageTitle>
 
@@ -70,7 +71,6 @@
                                 <span>Verify recovery phrase</span>
                             </button>
                         </div>
-                    }
                     }
                 </ValidationEditContext>
             }
@@ -139,14 +139,15 @@
                 }
             }
 
-            _successMessage = "Good job, these are correct!";
             Model.IsVerified = true;
-
             if (!_config!.RecoveryPhraseVerified)
             {
                 _config!.RecoveryPhraseVerified = true;
                 await ConfigProvider.Set(BTCPayAppConfig.Key, _config, true);
             }
+            var redirectUri = NavigationManager.GetUriWithQueryParameters(Routes.Dashboard,
+                new Dictionary<string, object?> { {"success", "Good job, your recovery phrase is verified!" } } );
+            NavigationManager.NavigateTo(redirectUri);
         }
     }
 

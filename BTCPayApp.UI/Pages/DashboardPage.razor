@@ -22,7 +22,7 @@
 <section class="container py-4">
     @if (!string.IsNullOrEmpty(_successMessage))
     {
-        <Alert Type="success" Margin="0" Dismissible>@_successMessage</Alert>
+        <Alert Type="success" Margin="0" Dismissible class="mb-4">@_successMessage</Alert>
     }
     @if (string.IsNullOrEmpty(StoreId))
     {
