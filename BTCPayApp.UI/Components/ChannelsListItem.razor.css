@@ -1,0 +1,12 @@
+.progress {
+  background-color: var(--btcpay-neutral-400);
+}
+
+.progress-bar-enabled {
+    background-color: var(--btcpay-success);
+}
+
+.progress-bar-pending,
+.progress-bar-disabled {
+   background-color: var(--btcpay-neutral-500);
+}

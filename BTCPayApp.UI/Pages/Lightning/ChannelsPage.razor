@@ -88,11 +88,11 @@
                                         @foreach (var peer in _peers)
                                         {
                                             <option value="@peer.NodeId">
-                                                @peer.NodeId
                                                 @if (!string.IsNullOrEmpty(peer.Info?.Label))
                                                 {
-                                                    @($" - {peer.Info.Label}")
+                                                    @($"{peer.Info.Label} - ")
                                                 }
+                                                @peer.NodeId
                                             </option>
                                         }
                                     </InputSelect>
@@ -165,8 +165,8 @@
     private string? _connectSuccessMessage;
     private string? _connectErrorMessage;
     private ValidationEditContext? _connectEditContext;
-    private CancellationTokenSource _refreshCts;
-    private ConnectPeerModel? PeerModel { get; set; } = new();
+    private CancellationTokenSource _refreshCts = new ();
+    private ConnectPeerModel PeerModel { get; set; } = new();
 
     private class OpenChannelModel
     {
@@ -192,10 +192,7 @@
         if (await LightningNodeManager.CanConfigureLightningNode())
             NavigationManager.NavigateTo(Routes.LightningSettings);
         else
-        {
-            _refreshCts = new CancellationTokenSource();
             _ = RefreshData(_refreshCts.Token);
-        }
     }
 
     protected override ValueTask DisposeAsyncCore(bool disposing)
@@ -300,7 +297,7 @@
         });
     }
 
-    private async Task<IEnumerable<LightningPeerModel>?> GetPeers(Dictionary<string, PeerInfo> peerInfos)
+    private async Task<IEnumerable<LightningPeerModel>> GetPeers(Dictionary<string, PeerInfo> peerInfos)
     {
         if (Node == null) return [];
         var peers = await Node.GetPeers();

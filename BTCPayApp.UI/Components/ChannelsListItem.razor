@@ -5,7 +5,7 @@
 <div class="accordion-item">
     <div id="channel-@Channel.Id" class="d-flex flex-column gap-2 accordion-header">
         <div class="d-flex align-items-center justify-content-between gap-2">
-            <div>
+            <div class="me-auto">
                 <TruncateCenter Text="@Channel.Id" Padding="10" class="fw-semibold me-auto"/>
                 @if (!string.IsNullOrEmpty(Channel.CounterpartyLabel))
                 {
@@ -16,7 +16,7 @@
             {
                 <LoadingIndicator/>
             }
-            <span class="btcpay-status btcpay-status--@(Channel.Active ? (Channel.Ready is true ? "enabled" : "pending") : Channel.Connected ? "pending" : "disabled")"></span>
+            <span class="btcpay-status btcpay-status--@ChannelState"></span>
             <button class="accordion-button collapsed w-auto p-0" type="button" data-bs-toggle="collapse" data-bs-target="#peer-@Channel.Id-details" aria-expanded="false" aria-controls="peer-@Channel.Id-details">
                 <Icon Symbol="caret-down"/>
             </button>
@@ -26,17 +26,19 @@
             var inbound = (long)Channel.CapacityInbound.ToUnit(LightMoneyUnit.Satoshi);
             var outbound = (long)Channel.CapacityOutbound.ToUnit(LightMoneyUnit.Satoshi);
             var ourPerc = (int)(outbound * 100 / (inbound + outbound));
-            <div class="d-flex align-items-center justify-content-between gap-2">
-                <AmountDisplay Sats="@outbound" Currency="@CurrencyDisplay.SATS" />
-                <AmountDisplay Sats="@inbound" Currency="@CurrencyDisplay.SATS" />
-            </div>
-            <div class="progress w-100" role="progressbar" aria-label="Channel Capacity" aria-valuenow="@ourPerc" aria-valuemin="0" aria-valuemax="100">
-                <div class="progress-bar bg-success" style="width:@(ourPerc)%"></div>
+            <div class="mt-2">
+                <div class="d-flex align-items-center justify-content-between gap-2">
+                    <AmountDisplay Sats="@outbound" Currency="@CurrencyDisplay.SATS" />
+                    <AmountDisplay Sats="@inbound" Currency="@CurrencyDisplay.SATS" />
+                </div>
+                <div class="progress w-100" role="progressbar" aria-label="Channel Capacity" aria-valuenow="@ourPerc" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar progress-bar-@(ChannelState)" style="width:@(ourPerc)%"></div>
+                </div>
             </div>
         }
     </div>
     <div id="peer-@Channel.Id-details" class="accordion-collapse collapse" aria-labelledby="peer-@Channel.Id">
-        <div class="pt-2">
+        <div class="pt-3">
             @if (!string.IsNullOrEmpty(Channel.CounterpartyLabel))
             {
                 <div class="form-floating">
@@ -58,12 +60,12 @@
                     <label>Funding Transaction</label>
                 </div>
             }
-            <dl class="mb-0">
+            <dl class="mt-2 mb-0">
                 @if (!string.IsNullOrEmpty(Channel.State) || Channel.Announced.HasValue)
                 {
                     <div class="align-items-center">
                         <dt>State:</dt>
-                        <dd class="d-inline-flex flex-wrap gap-2">
+                        <dd class="d-inline-flex flex-wrap gap-1">
                             @if (!string.IsNullOrEmpty(Channel.State))
                             {
                                 <span>@Channel.State</span>
@@ -113,6 +115,10 @@
 
     [Parameter]
     public bool Loading { get; set; }
+
+    private string ChannelState => Channel.Active
+        ? Channel.Ready is true ? "enabled" : "pending"
+        : Channel.Connected ? "pending" : "disabled";
 
     private async Task CloseChannel()
     {
