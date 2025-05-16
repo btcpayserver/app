@@ -478,6 +478,7 @@
     {
         if (Loading || Node == null || string.IsNullOrEmpty(ChannelModel.LNURL)) return;
         _connectSuccessMessage = _connectErrorMessage = _channelSuccessMessage = _channelErrorMessage = null;
+        _openChannelEditContext!.MessageStore!.Clear();
 
         try
         {
@@ -487,6 +488,7 @@
             if (channelRequest is null)
             {
                 _openChannelEditContext!.MessageStore!.Add(() => ChannelModel.LNURL, "The channel request is invalid");
+                _openChannelEditContext!.NotifyValidationStateChanged();
                 return;
             }
             if (!EndPointParser.TryParse($"{channelRequest.Uri.Host}:{channelRequest.Uri.Port}", 9735, out var endpoint))
@@ -504,6 +506,7 @@
         catch (Exception e)
         {
             _openChannelEditContext!.MessageStore!.Add(() => ChannelModel.LNURL, e.Message);
+            _openChannelEditContext!.NotifyValidationStateChanged();
         }
 
         _openingChannel = false;

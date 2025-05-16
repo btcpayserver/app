@@ -67,14 +67,19 @@
 
     private void EditContextOnOnFieldChanged(object? sender, FieldChangedEventArgs e)
     {
-        if (!EditContext?.GetValidationMessages(e.FieldIdentifier).Any() is true) return;
-        MessageStore?.Clear(e.FieldIdentifier);
+        if (EditContext?.GetValidationMessages(e.FieldIdentifier).Any() is false)
+            MessageStore?.Clear(e.FieldIdentifier);
         EditContext?.NotifyValidationStateChanged();
     }
 
     public void NotifyFieldChanged(Expression<Func<object>> field)
     {
         EditContext?.NotifyFieldChanged(FieldIdentifier.Create(field));
+    }
+
+    public void NotifyValidationStateChanged()
+    {
+        EditContext?.NotifyValidationStateChanged();
     }
 
     private void EditContextOnOnValidationStateChanged(object? sender, ValidationStateChangedEventArgs e)

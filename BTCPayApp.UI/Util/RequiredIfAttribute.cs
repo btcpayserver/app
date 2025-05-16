@@ -14,7 +14,9 @@ public class RequiredIfAttribute(string otherProperty, object? targetValue) : Va
         var otherPropertyValue = validationContext.ObjectType
             .GetProperty(otherProperty)?
             .GetValue(validationContext.ObjectInstance);
-        var requiresValue = otherPropertyValue is null || otherPropertyValue.Equals(targetValue) || targetValue is RequiredIfTargetValue.NotNull;
+        var requiresValue = targetValue is RequiredIfTargetValue.NotNull
+            ? otherPropertyValue is not null
+            : otherPropertyValue?.Equals(targetValue) is true;
         if (!requiresValue) return ValidationResult.Success;
         return string.IsNullOrWhiteSpace(value?.ToString())
             ? new ValidationResult(ErrorMessage ?? "This field is required.")
