@@ -173,7 +173,6 @@ public class LDKChannelSync(
     private async Task OnTransactionUpdate(TransactionDetectedRequest txUpdate, CancellationToken cancellationToken)
     {
         logger.LogInformation("Transaction update {TxId}", txUpdate.TxId);
-
         await PollForTransactionUpdates([new uint256(txUpdate.TxId)]);
         logger.LogInformation("Transaction update {TxId} processed", txUpdate.TxId);
     }

@@ -165,7 +165,7 @@
     private string? _connectSuccessMessage;
     private string? _connectErrorMessage;
     private ValidationEditContext? _connectEditContext;
-    private CancellationTokenSource _refreshCts = new ();
+    private readonly CancellationTokenSource _refreshCts = new ();
     private ConnectPeerModel PeerModel { get; set; } = new();
 
     private class OpenChannelModel
@@ -454,9 +454,9 @@
         {
             var amount = new Money(ChannelModel.Amount.Value, MoneyUnit.Satoshi);
             var result = await Node.OpenChannel(amount, new PubKey(ChannelModel.PeerId));
-            if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK ok)
+            if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_OK)
             {
-                _channelSuccessMessage = $"Channel open initiated with id {Convert.ToHexString(ok.res.get_a())}";
+                _channelSuccessMessage = "Channel open initiated";
                 ChannelModel = new OpenChannelModel();
             }
             else if (result is Result_ChannelIdAPIErrorZ.Result_ChannelIdAPIErrorZ_Err err)
