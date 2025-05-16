@@ -3,6 +3,7 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.BTCPayServer
 @using BTCPayApp.Core.Contracts
+@using BTCPayApp.Core.Helpers
 @using BTCPayApp.Core.Models
 @using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Features
@@ -308,12 +309,10 @@
                                 </button>
                             }
                         </div>
-                    </li>
-                    @if (InstanceInfo != null)
-                    {
-                        <li class="list-group-item">
+                        @if (InstanceInfo != null)
+                        {
                             <div class="justify-content-start">
-                                <span class="m-2 me-3 btcpay-status btcpay-status--@(State.Value.ConnectionState switch { BTCPayConnectionState.ConnectedAsPrimary or BTCPayConnectionState.ConnectedAsSecondary or BTCPayConnectionState.ConnectedFinishedInitialSync => "enabled", BTCPayConnectionState.Disconnected => "disabled", _ => "pending" })"></span>
+                                <span class="ms-2 me-3 btcpay-status invisible"></span>
                                 <span>
                                     Instance: @InstanceInfo.BaseUrl
                                     @if (!string.IsNullOrEmpty(InstanceInfo.ServerName))
@@ -322,8 +321,17 @@
                                     }
                                 </span>
                             </div>
-                        </li>
-                    }
+                        }
+                        @if (_deviceId != 0)
+                        {
+                            <div class="justify-content-start">
+                                <span class="m-2 me-3 btcpay-status invisible"></span>
+                                <span>
+                                    Device ID: @_deviceId
+                                </span>
+                            </div>
+                        }
+                    </li>
                     @if (State.Value.ConnectionState == BTCPayConnectionState.ConnectedAsPrimary)
                     {
                         <li class="list-group-item">
@@ -415,6 +423,7 @@
     private bool _sending;
     private string? _errorMessage;
     private int[]? _fees;
+    private long _deviceId;
 
     private class SettingsModel
     {
@@ -439,6 +448,7 @@
 
         _account = AccountManager.Account;
         _config = await ConfigProvider.Get<BTCPayAppConfig>(BTCPayAppConfig.Key);
+        _deviceId = await ConfigProvider.GetDeviceIdentifier();
 
         Model.Theme = UiState.Value.SelectedTheme;
         ConnectionManager.ConnectionChanged += OnConnectionChanged;
