@@ -97,12 +97,12 @@
                             </div>
                             <ValidationMessage For="@(() => Model.Destination)"/>
                         </div>
-                        <div class="form-group">
-                            <label for="Amount" class="form-label" data-required>Amount</label>
-                            <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" Max="@MaxAvailable" Readonly="@(!CanAdjustAmount)" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
-                            <ValidationMessage For="@(() => Model.Amount)"/>
-                            @if (Model.Address != null || Model.Bolt11 != null)
-                            {
+                        @if (Model.Address != null || Model.Bolt11 != null)
+                        {
+                            <div class="form-group">
+                                <label for="Amount" class="form-label" data-required>Amount</label>
+                                <InputAmount Id="Amount" @bind-Value="Model.Amount" Unit="@UnitMoney" Rate="@Rate" Currency="@Currency" Max="@MaxAvailable" Readonly="@(!CanAdjustAmount)" />
+                                <ValidationMessage For="@(() => Model.Amount)"/>
                                 <div class="form-text d-flex flex-wrap gap-1 align-items-center">
                                     @if (MaxAvailable.HasValue)
                                     {
@@ -117,8 +117,8 @@
                                         <button type="button" class="btn btn-link p-0" @onclick="() => Model.Amount = MaxAvailable">Withdraw maximum</button>
                                     }
                                 </div>
-                            }
-                        </div>
+                            </div>
+                        }
                         @if (Model.Address != null)
                         {
                             <div class="form-group">
@@ -511,6 +511,8 @@
 
     private async Task UpdateForDestination(string? destination)
     {
+        _validationEditContext!.MessageStore!.Clear();
+
         var network = ConnectionManager.ReportedNetwork;
         if (string.IsNullOrEmpty(destination) || network == null)
         {
@@ -525,6 +527,7 @@
         {
             Model.Bolt11 = BOLT11PaymentRequest.Parse(destination, network);
             Model.Amount = Model.Bolt11.MinimumAmount.MilliSatoshi / 1000;
+            Model.Address = null;
             return;
         }
         catch
@@ -535,6 +538,7 @@
         try
         {
             Model.Address = BitcoinAddress.Create(destination, network);
+            Model.Bolt11 = null;
         }
         catch
         {
@@ -546,6 +550,11 @@
         {
             var feeRate = await OnChainWalletManager.GetFeeRate(1);
             Model.FeeRate = feeRate.SatoshiPerByte;
+        }
+
+        if (Model is { Address: null, Bolt11: null })
+        {
+            _validationEditContext!.MessageStore!.Add(() => Model.Destination!, $"Invalid destination for {network}");
         }
     }
 

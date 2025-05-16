@@ -1,0 +1,5 @@
+::deep .form-control[readonly] {
+  background-color: var(--btcpay-form-bg-addon);
+  border-color: var(--btcpay-form-bg-addon);
+  pointer-events: none;
+}
