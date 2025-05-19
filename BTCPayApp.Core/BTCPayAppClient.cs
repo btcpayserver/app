@@ -37,6 +37,12 @@ public class BTCPayAppClient(string baseUri, string? apiKey = null, HttpClient? 
         return await SendHttpRequest<JObject>("btcpayapp/register", payload, HttpMethod.Post, cancellation);
     }
 
+    public async Task<LoginInfoResult> LoginInfo(string email, CancellationToken cancellation = default)
+    {
+        var payload = new Dictionary<string, object> { { "email", email } };
+        return await SendHttpRequest<LoginInfoResult>("btcpayapp/login-info", payload, HttpMethod.Get, cancellation);
+    }
+
     public async Task<AuthenticationResponse> Login(LoginRequest payload, CancellationToken cancellation = default)
     {
         return await SendHttpRequest<AuthenticationResponse>("btcpayapp/login", payload, HttpMethod.Post, cancellation);

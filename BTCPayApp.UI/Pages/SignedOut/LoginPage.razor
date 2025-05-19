@@ -27,7 +27,7 @@
             </div>
             <div class="form-group" hidden="@Model.RequireTwoFactor">
                 <label for="Email" class="form-label">Email</label>
-                <InputText @bind-Value="Model.Email" type="email" id="Email" class="form-control" disabled="@UseExistingAccount"/>
+                <InputText @bind-Value="Model.Email" @bind-Value:after="() => ResolveLoginInfo(Model.Email)" type="email" id="Email" class="form-control" disabled="@UseExistingAccount"/>
                 <ValidationMessage For="@(() => Model.Email)" />
             </div>
             <div class="form-group" hidden="@Model.RequireTwoFactor">
@@ -131,6 +131,21 @@
                 ErrorMessage = result.Messages?.Contains("Failed") is false
                     ? string.Join(",", result.Messages)
                     : "Invalid login attempt.";
+        }
+    }
+
+    private async Task ResolveLoginInfo(string? email)
+    {
+        if (string.IsNullOrEmpty(email)) return;
+
+        var serverUrl = GetBaseUri(Model.Uri);
+        var result = await AccountManager.LoginInfo(serverUrl, Model.Email!);
+        if (result is { Succeeded: true, Response.HasPassword: false })
+        {
+            var message = "In order to set a password for your account, please request a reset code.";
+            var param = new Dictionary<string, object?> { { "serverUrl", serverUrl }, { "email", email }, { "success", message }, { "mode", nameof(ForgotPasswordPage.PasswordMode.Forgot)} };
+            var forgotPassword = NavigationManager.GetUriWithQueryParameters(Routes.ForgotPassword, param);
+            NavigationManager.NavigateTo(forgotPassword);
         }
     }
 

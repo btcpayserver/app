@@ -243,6 +243,19 @@ public class AuthStateProvider(
         }
     }
 
+    public async Task<FormResult<LoginInfoResult>> LoginInfo(string serverUrl, string email, CancellationToken? cancellation = default)
+    {
+        try
+        {
+            var response = await GetClient(serverUrl).LoginInfo(email, cancellation.GetValueOrDefault());
+            return new FormResult<LoginInfoResult>(true, string.Empty, response);
+        }
+        catch (Exception e)
+        {
+            return new FormResult<LoginInfoResult>(false, e.Message, null);
+        }
+    }
+
     public async Task<FormResult> Login(string serverUrl, string email, string password, string? otp = null, CancellationToken? cancellation = default)
     {
         var payload = new LoginRequest

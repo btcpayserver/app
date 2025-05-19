@@ -290,6 +290,29 @@ public partial class AppApiController
         return Ok();
     }
 
+    [AllowAnonymous]
+    [HttpGet("login-info")]
+    [RateLimitsFilter(ZoneLimits.Login, Scope = RateLimitsScope.RemoteAddress)]
+    public async Task<IActionResult> LoginInfo(string email)
+    {
+        if (string.IsNullOrEmpty(email))
+            ModelState.AddModelError(nameof(email), "Missing email");
+        if (!ModelState.IsValid)
+            return this.CreateValidationError(ModelState);
+
+        var user = await userManager.FindByEmailAsync(email);
+        return user == null
+            ? NotFound()
+            : Ok(new LoginInfoResult
+            {
+                Email = user.Email,
+                IsEmailConfirmed = user.EmailConfirmed || !user.RequiresEmailConfirmation,
+                IsApproved = user.Approved || !user.RequiresApproval,
+                IsDisabled = user.IsDisabled,
+                HasPassword = await userManager.HasPasswordAsync(user)
+            });
+    }
+
     private async Task<IActionResult> UserAuthenticated(ApplicationUser user)
     {
         const string identifier = "BTCPay App";

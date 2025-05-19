@@ -16,6 +16,7 @@ public interface IAccountManager
     public Task<bool> IsAuthorized(string policy, object? resource = null);
     public Task<FormResult> AddAccountWithEncyptionKey(string serverUrl, string email, string key);
     public Task<FormResult<AcceptInviteResult>> AcceptInvite(string inviteUrl, CancellationToken? cancellation = default);
+    public Task<FormResult<LoginInfoResult>> LoginInfo(string serverUrl, string email, CancellationToken? cancellation = default);
     public Task<FormResult> Login(string serverUrl, string email, string password, string? otp, CancellationToken? cancellation = default);
     public Task<FormResult> LoginWithCode(string serverUrl, string email, string code, CancellationToken? cancellation = default);
     public Task<FormResult> Register(string serverUrl, string email, string password, CancellationToken? cancellation = default);
