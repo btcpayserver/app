@@ -9,7 +9,7 @@
     <Product>App</Product>
     <Description>Server-side code for the BTCPay mobile app.</Description>
     <Authors>BTCPay Server</Authors>
-    <Version>0.3.0.0</Version>
+    <Version>0.3.1.0</Version>
   </PropertyGroup>
 
   <!-- Plugin development properties -->
