@@ -52,7 +52,9 @@ public class VSSController(
         {
             Value = new KeyValue
             {
-                Key = store.Key, Value = ByteString.CopyFrom(store.Value), Version = store.Version
+                Key = store.Key,
+                Value = ByteString.CopyFrom(store.Value),
+                Version = store.Version
             }
         };
     }
@@ -61,14 +63,20 @@ public class VSSController(
     [MediaTypeConstraint("application/octet-stream")]
     public async Task<PutObjectResponse> PutObjectAsync(PutObjectRequest request, CancellationToken cancellationToken = default)
     {
-        //TODO: change to use the jwt claims for the device identifier and remove this usage of GlobalVersion
-        if (!await VerifyMaster(request.GlobalVersion))
+        var deviceId = request.GlobalVersion;
+        if (!await VerifyMaster(deviceId))
             return SetResult<PutObjectResponse>(BadRequest(new ErrorResponse
             {
-                ErrorCode = ErrorCode.ConflictException, Message = "Global version mismatch"
+                ErrorCode = ErrorCode.ConflictException,
+                Message = "Global version mismatch"
             }));
 
         var userId = userManager.GetUserId(User)!;
+
+        // TODO: Log with debug level once we solve the issue #208
+        logger.LogInformation("VSS backup request for user {UserId} ({DeviceId}): {TransactionItems} / {DeleteItems}", userId, deviceId,
+            request.TransactionItems.Count != 0 ? string.Join(", ", request.TransactionItems.Select(data => data.Key)) : "no transaction items",
+            request.DeleteItems.Count != 0 ? string.Join(", ", request.DeleteItems.Select(data => data.Key)) : "no delete items");
 
         await using var dbContext = dbContextFactory.CreateContext();
         return await dbContext.Database.CreateExecutionStrategy().ExecuteAsync(async _ =>
@@ -88,25 +96,26 @@ public class VSSController(
                     await dbContext.AppStorageItems.AddRangeAsync(items, cancellationToken);
                 }
 
+                var deleted = 0;
                 if (request.DeleteItems.Count != 0)
                 {
                     var deleteQuery = request.DeleteItems.Aggregate(
                         dbContext.AppStorageItems.Where(data => data.UserId == userId),
                         (current, key) => current.Where(data => data.Key == key.Key && data.Version == key.Version));
-                    await deleteQuery.ExecuteDeleteAsync(cancellationToken: cancellationToken);
+                    deleted = await deleteQuery.ExecuteDeleteAsync(cancellationToken: cancellationToken);
                 }
 
                 await dbContext.SaveChangesAsync(cancellationToken);
                 await dbContextTransaction.CommitAsync(cancellationToken);
-                logger.LogInformation("VSS backup request processed: {Items}", string.Join(", ", request.TransactionItems.Select(data => data.Key)));
+                logger.LogInformation("VSS backup request for user {UserId} ({DeviceId}) processed: {TCount} items added, {DCount} items deleted", userId, deviceId, request.TransactionItems.Count, deleted);
                 await appState.GracefulDisconnect(userId);
                 return new PutObjectResponse();
             }
             catch (Exception e)
             {
-                logger.LogError(e, "Error while processing vss backup request");
+                logger.LogError(e, "VSS backup request for user {UserId} ({DeviceId}) failed: {Message}", userId, deviceId, e.Message);
                 await dbContextTransaction.RollbackAsync(cancellationToken);
-                return SetResult<PutObjectResponse>(BadRequest(new ErrorResponse()
+                return SetResult<PutObjectResponse>(BadRequest(new ErrorResponse
                 {
                     ErrorCode = ErrorCode.ConflictException,
                     Message = e.Message
@@ -120,11 +129,14 @@ public class VSSController(
     public async Task<DeleteObjectResponse> DeleteObjectAsync(DeleteObjectRequest request, CancellationToken cancellationToken = default)
     {
         var userId = userManager.GetUserId(User);
+        var key = request.KeyValue.Key;
+        var ver = request.KeyValue.Version;
+        logger.LogInformation("VSS delete request from user {UserId} with key {Key} and version {Version}", userId, key, ver);
         await using var dbContext = dbContextFactory.CreateContext();
         var store = await dbContext.AppStorageItems
-            .Where(data => data.Key == request.KeyValue.Key && data.UserId == userId &&
-                           data.Version == request.KeyValue.Version)
+            .Where(data => data.Key == key && data.UserId == userId && data.Version == ver)
             .ExecuteDeleteAsync(cancellationToken: cancellationToken);
+        logger.LogInformation("VSS delete request from user {UserId} with key {Key} and version {Version} processed: {Count} items deleted", userId, key, ver, store);
         return store == 0
             ? SetResult<DeleteObjectResponse>(
                 new NotFoundObjectResult(new ErrorResponse
