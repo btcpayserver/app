@@ -153,12 +153,13 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
     {
         try
         {
-            _readSemaphore.Release();
+            //_readSemaphore.Release();
             _logger.LogDebug("Resuming read");
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             // ignored
+            Console.WriteLine(ex.ToString());
         }
     }
 
