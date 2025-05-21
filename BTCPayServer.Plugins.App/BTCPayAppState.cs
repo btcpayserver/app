@@ -456,7 +456,7 @@ public class BTCPayAppState : IHostedService
                 if (Connections.Values.Any(c => c.UserId == connectedInstance.UserId && c.Master))
                 {
                     _logger.LogWarning(
-                        "DeviceMasterSignal called with active state but there is already a master connection");
+                        "DeviceMasterSignal called with active state but there is already a master connection with device identifier {DeviceIdentifier}", deviceIdentifier);
                     result = false;
                     return result;
                 }
@@ -464,7 +464,7 @@ public class BTCPayAppState : IHostedService
                          dI != deviceIdentifier)
                 {
                     _logger.LogWarning(
-                        "DeviceMasterSignal called with active state but the master connection was ungracefully disconnected");
+                        "DeviceMasterSignal called with active state but the master connection with device identifier {DeviceIdentifier} was ungracefully disconnected", deviceIdentifier);
 
                     connectedInstance = connectedInstance with { Master = false };
                     Connections[contextConnectionId] = connectedInstance;
@@ -520,7 +520,7 @@ public class BTCPayAppState : IHostedService
 
     public async Task Connected(string contextConnectionId, string userId)
     {
-        Connections.TryAdd(contextConnectionId, new ConnectedInstance(userId, null, false, new HashSet<string>()));
+        Connections.TryAdd(contextConnectionId, new ConnectedInstance(userId, null, false, []));
 
         if (_nodeInfo.Length > 0)
             await _hubContext.Clients.Client(contextConnectionId).NotifyServerNode(_nodeInfo);
