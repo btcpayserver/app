@@ -149,19 +149,6 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
         }
     }
 
-    private void Resume()
-    {
-        try
-        {
-            _readSemaphore.Release();
-            _logger.LogDebug("Resuming read");
-        }
-        catch (Exception)
-        {
-            // ignored
-        }
-    }
-
     public long send_data(byte[] data, bool resumeRead)
     {
         try
@@ -169,7 +156,6 @@ public class LDKTcpDescriptor : SocketDescriptorInterface
             _logger.LogTrace("Sending {Bytes} bytes of data to peer", data.Length);
             var result = _tcpClient.Client.Send(data);
             _logger.LogTrace("Sent {Bytes} bytes of data to peer", result);
-            if (resumeRead) Resume();
             return result;
         }
         catch (Exception e)
