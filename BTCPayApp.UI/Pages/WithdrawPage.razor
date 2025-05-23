@@ -2,14 +2,12 @@
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.BTCPayServer
-@using BTCPayApp.Core.Data
 @using BTCPayApp.Core.Helpers
 @using BTCPayApp.Core.LDK
 @using BTCPayApp.Core.Models
 @using BTCPayApp.Core.Wallet
 @using BTCPayApp.UI.Features
 @using BTCPayApp.UI.Components.Layout
-@using BTCPayApp.UI.Models
 @using BTCPayApp.UI.Util
 @using BTCPayServer.Client
 @using NBitcoin
@@ -36,17 +34,19 @@
     <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
         @if (Model.Transaction == null)
         {
-            <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
-                <h2 class="mb-0">Withdraw from @(StoreInfo?.Name ?? "Store") Funds</h2>
+            <header class="d-flex align-items-center justify-content-center gap-3 mb-3">
                 @if (BalanceLoading)
                 {
                     <LoadingIndicator/>
                 }
+                else if (TotalBalance != null)
+                {
+                    <AmountDisplay Sats="@TotalBalance.Value" Rate="@Rate" Currency="@Currency" OnChangeDisplayCurrency="ToggleDisplayCurrency" class="fw-bold fs-1" />
+                }
             </header>
         }
-        @if (TotalBalance > 0 && (LightningOffchainLocalBalance is > 0 || OnchainConfirmedBalance is > 0) &&
-             (OnchainState == SourceState.Supported && OnChainWalletManager.IsActive ||
-              LightningState == SourceState.Supported && LightningNodeManager.IsActive))
+        @if (TotalBalance > 0 && (LightningOffchainTotalBalance is > 0 || OnchainTotalBalance is not null) &&
+             (OnchainState == SourceState.Supported && OnChainWalletManager.IsActive || LightningState == SourceState.Supported && LightningNodeManager.IsActive))
         {
             @if (InsufficientFunds || NotSupported)
             {
@@ -86,17 +86,133 @@
                             }
                         </button>
                     </div>
-                    <fieldset class="box mb-5">
-                        <div class="form-group">
-                            <label for="Destination" class="form-label" data-required>Destination</label>
-                            <div class="d-flex gap-2">
-                                <InputText @bind-Value="Model.Destination" @bind-Value:after="() => UpdateForDestination(Model.Destination)" id="Destination" class="form-control flex-grow-1" placeholder="@DestinationPlaceholder"/>
-                                <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
-                                    <Icon Symbol="scan-qr"/>
-                                </button>
-                            </div>
-                            <ValidationMessage For="@(() => Model.Destination)"/>
+                    <div class="form-group mb-3">
+                        <label for="Destination" class="form-label" data-required>Destination</label>
+                        <div class="d-flex gap-2">
+                            <InputText @bind-Value="Model.Destination" @bind-Value:after="() => UpdateForDestination(Model.Destination)" id="Destination" class="form-control flex-grow-1" placeholder="@DestinationPlaceholder"/>
+                            <button type="button" class="btn btn-secondary px-3" data-testid="ScanButton" data-bs-toggle="modal" data-bs-target="#ScanQrCodeModal">
+                                <Icon Symbol="scan-qr"/>
+                            </button>
                         </div>
+                        <ValidationMessage For="@(() => Model.Destination)"/>
+                    </div>
+
+                    @if (OnchainTotalBalance is not null)
+                    {
+                        <div class="box mb-2">
+                            <header>
+                                <span>Onchain</span>
+                                <AmountDisplay Sats="OnchainConfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                            </header>
+                            @if (OnchainState == SourceState.NotSupported || !OnChainWalletManager.IsActive || !OnChainWalletManager.IsHubConnected)
+                            {
+                                <p class="d-flex gap-2 text-warning">
+                                    <Icon Symbol="warning"/>
+                                    @if (OnchainState == SourceState.NotSupported)
+                                    {
+                                        <span>
+                                            The store's onchain wallet is not provided by the app.
+                                            Currently, the app does not support sending from external wallets.
+                                            Please try sending from the server instead.
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span>
+                                            The store's onchain wallet is currently not active.
+                                        </span>
+                                    }
+                                </p>
+                            }
+                            else
+                            {
+                                <dl class="mt-2 mb-0">
+                                    @if (OnchainUnconfirmedBalance is not null)
+                                    {
+                                        <div class="align-items-center text-warning">
+                                            <dt>Pending Transactions</dt>
+                                            <dd>
+                                                <AmountDisplay Sats="OnchainUnconfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                            </dd>
+                                        </div>
+                                    }
+                                    @if (OnchainConfirmedBalance is not null)
+                                    {
+                                        <div class="align-items-center text-body">
+                                            <dt>Available</dt>
+                                            <dd>
+                                                <AmountDisplay Sats="OnchainTotalBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                            </dd>
+                                        </div>
+                                    }
+                                </dl>
+                            }
+                        </div>
+                    }
+
+                    @if (LightningOffchainTotalBalance is > 0)
+                    {
+                        <div class="box mb-2">
+                            <header>
+                                <span>Lightning</span>
+                                <AmountDisplay Sats="LightningOffchainTotalBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                            </header>
+                            @if (LightningState == SourceState.NotSupported || !LightningNodeManager.IsActive || !LightningNodeManager.IsHubConnected)
+                            {
+                                <p class="d-flex gap-2 text-warning">
+                                    <Icon Symbol="warning"/>
+                                    @if (LightningState == SourceState.NotSupported)
+                                    {
+                                        <span>
+                                            The store's Lightning node is not provided by the app.
+                                            Currently, the app does not support sending from external Lightning nodes.
+                                            Please try sending from the server instead.
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span>
+                                            The store's Lightning node is currently not active.
+                                        </span>
+                                    }
+                                </p>
+                            }
+                            else
+                            {
+                                <dl class="mt-2 mb-0">
+                                    @if (LightningOffchainOpeningBalance is > 0)
+                                    {
+                                        <div class="align-items-center text-warning">
+                                            <dt>Opening Channels</dt>
+                                            <dd>
+                                                <AmountDisplay Sats="LightningOffchainOpeningBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                            </dd>
+                                        </div>
+                                    }
+                                    @if (LightningOffchainClosingBalance is > 0)
+                                    {
+                                        <div class="align-items-center text-warning">
+                                            <dt>Closing Channels</dt>
+                                            <dd>
+                                                <AmountDisplay Sats="LightningOffchainClosingBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                            </dd>
+                                        </div>
+                                    }
+                                    @if (LightningOffchainLocalBalance is > 0)
+                                    {
+                                        <div class="align-items-center text-body">
+                                            <dt>Available</dt>
+                                            <dd>
+                                                <AmountDisplay Sats="LightningOffchainLocalBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                            </dd>
+                                        </div>
+                                    }
+                                </dl>
+                            }
+                        </div>
+                    }
+
+                    <fieldset class="my-3">
                         @if (Model.Address != null || Model.Bolt11 != null)
                         {
                             <div class="form-group">
@@ -188,140 +304,6 @@
         {
             <Alert Type="danger">@BalanceError</Alert>
         }
-
-        @if (Model.Transaction == null)
-        {
-            @if (OnchainConfirmedBalance is > 0 || OnchainUnconfirmedBalance is > 0)
-            {
-                <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
-                    <h2 class="mb-0">Onchain</h2>
-                    <span class="text-muted">
-                        <AmountDisplay Sats="OnchainConfirmedBalance!.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> available
-                    </span>
-                </header>
-                @if (OnchainState == SourceState.NotSupported || !OnChainWalletManager.IsActive || !OnChainWalletManager.IsHubConnected)
-                {
-                    <p class="d-flex gap-2 text-warning">
-                        <Icon Symbol="warning"/>
-                        @if (OnchainState == SourceState.NotSupported)
-                        {
-                            <span>
-                                The store's onchain wallet is not provided by the app.
-                                Currently, the app does not support sending from external wallets.
-                                Please try sending from the server instead.
-                            </span>
-                        }
-                        else
-                        {
-                            <span>
-                                The store's onchain wallet is currently not active.
-                            </span>
-                        }
-                    </p>
-                }
-
-                <div class="box mb-5">
-                    <ul class="list-group list-group-flush list-group-links">
-                        @if (OnchainConfirmedBalance is > 0)
-                        {
-                            <li class="list-group-item py-2">
-                                <AmountDisplay Sats="OnchainConfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> confirmed
-                            </li>
-                        }
-                        @if (OnchainUnconfirmedBalance is > 0)
-                        {
-                            <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Sats="OnchainUnconfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> unconfirmed
-                            </li>
-                        }
-                    </ul>
-                </div>
-            }
-
-            @if (LightningOffchainOpeningBalance is > 0 || LightningOffchainLocalBalance is > 0 || LightningOffchainRemoteBalance is > 0 || LightningOffchainClosingBalance is > 0 ||
-                 LightningOnchainConfirmedBalance is > 0 || LightningOnchainUnconfirmedBalance is > 0 || LightningOnchainReservedBalance is > 0)
-            {
-                <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
-                    <h2 class="mb-0">Lightning</h2>
-                    <span class="text-muted">
-                        <AmountDisplay Sats="(LightningOffchainLocalBalance ?? 0) + (LightningOnchainConfirmedBalance ?? 0)" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> available
-                    </span>
-                </header>
-                @if (LightningState == SourceState.NotSupported || !LightningNodeManager.IsActive || !LightningNodeManager.IsHubConnected)
-                {
-                    <p class="d-flex gap-2 text-warning">
-                        <Icon Symbol="warning"/>
-                        @if (LightningState == SourceState.NotSupported)
-                        {
-                            <span>
-                                The store's Lightning node is not provided by the app.
-                                Currently, the app does not support sending from external Lightning nodes.
-                                Please try sending from the server instead.
-                            </span>
-                        }
-                        else
-                        {
-                            <span>
-                                The store's Lightning node is currently not active.
-                            </span>
-                        }
-                    </p>
-                }
-
-                <div class="box mb-5">
-                    <ul class="list-group list-group-flush list-group-links">
-                        @if (LightningOffchainOpeningBalance is > 0)
-                        {
-                            <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Sats="LightningOffchainOpeningBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> opening channels
-                            </li>
-                        }
-                        @if (LightningOffchainLocalBalance is > 0)
-                        {
-                            <li class="list-group-item py-2">
-                                <AmountDisplay Sats="LightningOffchainLocalBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> local / outbound capacity
-                            </li>
-                        }
-                        @if (LightningOffchainClosingBalance is > 0)
-                        {
-                            <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Sats="LightningOffchainClosingBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> closing channels
-                            </li>
-                        }
-                        @if (LightningOnchainConfirmedBalance is > 0)
-                        {
-                            <li class="list-group-item py-2">
-                                <AmountDisplay Sats="LightningOnchainConfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> confirmed onchain
-                            </li>
-                        }
-                        @if (LightningOnchainUnconfirmedBalance is > 0)
-                        {
-                            <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Sats="LightningOnchainUnconfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> unconfirmed onchain
-                            </li>
-                        }
-                        @if (LightningOnchainReservedBalance is > 0)
-                        {
-                            <li class="list-group-item py-2 disabled">
-                                <AmountDisplay Sats="LightningOnchainReservedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/> reserved onchain
-                            </li>
-                        }
-                    </ul>
-                </div>
-            }
-
-            @if (Transactions?.Any() is true)
-            {
-                <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
-                    <h2 class="mb-0">Recent Payments</h2>
-                    @if (TransactionsLoading)
-                    {
-                        <LoadingIndicator/>
-                    }
-                </header>
-                <TransactionsList Transactions="Transactions" Rate="@Rate" Currency="@DisplayCurrency" Error="@TransactionsError" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
-            }
-        }
     </AuthorizeView>
 </section>
 
@@ -329,21 +311,25 @@
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private LDKNode? Node => LightningNodeManager.Node;
     private PaymentsManager? PaymentsManager => Node?.PaymentsManager;
-    private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private string? StoreId => StoreState.Value.StoreInfo?.Id;
+
     private OnChainWalletOverviewData? OnchainBalance => StoreState.Value.OnchainBalance?.Data;
+    private long? OnchainTotalBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance + OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).Satoshi;
     private long? OnchainConfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.ConfirmedBalance, MoneyUnit.BTC).Satoshi;
     private long? OnchainUnconfirmedBalance => OnchainBalance == null ? null : new Money(OnchainBalance.UnconfirmedBalance, MoneyUnit.BTC).Satoshi;
+
     private LightningNodeBalanceData? LightningBalance => StoreState.Value.LightningBalance?.Data;
-    private long? LightningOnchainBalance => LightningBalance?.OnchainBalance?.Confirmed.Satoshi;
+    private long? LightningOffchainTotalBalance => LightningBalance == null ? null : (LightningOffchainOpeningBalance ?? 0) + (LightningOffchainClosingBalance ?? 0) + (LightningOffchainLocalBalance ?? 0);
     private long? LightningOffchainBalance => LightningBalance?.OffchainBalance.Local.MilliSatoshi / 1000;
+    private long? LightningOffchainOpeningBalance => LightningBalance?.OffchainBalance.Opening?.MilliSatoshi / 1000;
+    private long? LightningOffchainLocalBalance => LightningBalance?.OffchainBalance.Local.MilliSatoshi / 1000;
+    private long? LightningOffchainClosingBalance => LightningBalance?.OffchainBalance.Opening?.MilliSatoshi / 1000;
+    private long? LightningOffchainRemoteBalance => LightningBalance?.OffchainBalance.Remote.MilliSatoshi / 1000;
     private long? LightningOnchainConfirmedBalance => LightningBalance?.OnchainBalance?.Confirmed.Satoshi;
     private long? LightningOnchainUnconfirmedBalance => LightningBalance?.OnchainBalance?.Unconfirmed.Satoshi;
     private long? LightningOnchainReservedBalance => LightningBalance?.OnchainBalance?.Reserved.Satoshi;
-    private long? LightningOffchainOpeningBalance => LightningBalance?.OffchainBalance.Opening?.MilliSatoshi / 1000;
-    private long? LightningOffchainLocalBalance => LightningBalance?.OffchainBalance.Local.MilliSatoshi / 1000;
-    private long? LightningOffchainRemoteBalance => LightningBalance?.OffchainBalance.Remote.MilliSatoshi / 1000;
-    private long? LightningOffchainClosingBalance => LightningBalance?.OffchainBalance.Opening?.MilliSatoshi / 1000;
+    private long? LightningOnchainBalance => LightningBalance?.OnchainBalance?.Confirmed.Satoshi;
+
     private long? TotalBalance => OnchainBalance == null && LightningBalance == null
         ? null
         : (OnchainConfirmedBalance ?? 0) + (OnchainUnconfirmedBalance ?? 0) + (LightningOnchainBalance ?? 0) + (LightningOffchainBalance ?? 0);
@@ -355,7 +341,7 @@
     private string DisplayCurrency => UIState.Value.DisplayCurrency;
     private MoneyUnit UnitMoney => DisplayCurrency == CurrencyDisplay.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private LightMoneyUnit UnitLightMoney => DisplayCurrency == CurrencyDisplay.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
-    private string GetTitle() => Model.Transaction == null ? "Withdraw Bitcoin" : "Review Withdrawal";
+    private string GetTitle() => Model.Transaction == null ? "Withdraw" : "Review Withdrawal";
     private bool InsufficientFunds => Model.Amount is > 0 && MaxAvailable < Model.Amount;
     private bool NotSupported => Model.Bolt11 != null && LightningState != SourceState.Supported || Model.Address != null && OnchainState != SourceState.Supported;
     private bool CanAdjustAmount => Model.Bolt11?.MinimumAmount == null && MaxAvailable > 0;
@@ -382,8 +368,6 @@
     }
 
     private bool Sending { get; set; }
-    private bool TransactionsLoading { get; set; }
-    private string? TransactionsError { get; set; }
     private string? _qrInput;
     private string? SuccessMessage { get; set; }
     private string? ErrorMessage { get; set; }
@@ -391,7 +375,6 @@
     private WithdrawModel Model { get; set; } = new();
     private SourceState OnchainState { get; set; }
     private SourceState LightningState { get; set; }
-    private List<TransactionModel>? Transactions { get; set; }
 
     private enum SourceState
     {
@@ -425,26 +408,6 @@
         LightningState = lightning != null
             ? await LightningNodeManager.IsLightningOurs(lightning) ? SourceState.Supported : SourceState.NotSupported
             : SourceState.NotConfigured;
-
-        OnChainWalletManager.OnSnapshotUpdate += OnTransactionUpdated;
-        if (PaymentsManager != null) PaymentsManager.OnPaymentUpdate += OnTransactionUpdated;
-
-        _ = LoadTransactions();
-    }
-
-    protected override ValueTask DisposeAsyncCore(bool disposing)
-    {
-        base.DisposeAsyncCore(disposing);
-
-        OnChainWalletManager.OnSnapshotUpdate -= OnTransactionUpdated;
-        if (PaymentsManager != null) PaymentsManager.OnPaymentUpdate -= OnTransactionUpdated;
-
-        return ValueTask.CompletedTask;
-    }
-
-    private async Task OnTransactionUpdated(object? sender, object _)
-    {
-        await LoadTransactions();
     }
 
     private async Task OnBackClick()
@@ -453,60 +416,6 @@
             await JS.InvokeVoidAsync("history.back");
         else
             await CancelTx();
-    }
-
-    private async Task LoadTransactions()
-    {
-        TransactionsError = null;
-        TransactionsLoading = true;
-        await InvokeAsync(StateHasChanged);
-        try
-        {
-            // load
-            var onchain = OnChainWalletManager != null ? await OnChainWalletManager.GetTransactions() : null;
-            var lightning = PaymentsManager != null ? await PaymentsManager.List(payments => payments.Where(p => p.Inbound == false)) : null;
-            // aggregate
-            var list = new List<TransactionModel>();
-            if (onchain?.Any() is true)
-            {
-                list.AddRange(onchain[WalletDerivation.NativeSegwit]
-                    .Where(tx => tx.BalanceChange < 0)
-                    .Select(tx => new TransactionModel
-                    {
-                        PaymentMethod = TransactionPaymentMethod.Onchain,
-                        Type = tx.BalanceChange > 0 ? TransactionType.Receive : TransactionType.Send,
-                        Id = tx.TransactionId,
-                        Timestamp = tx.Timestamp,
-                        Value = new LightMoney(tx.BalanceChange, LightMoneyUnit.BTC),
-                        Status = tx.Confirmations > 0 ? "Confirmed" + (tx.Confirmations <= 5 ? $" ({tx.Confirmations})" : "") : "Unconfirmed",
-                        OnchainTransaction = tx
-                    }));
-            }
-            if (lightning?.Any() is true)
-            {
-                list.AddRange(lightning.Select(tx => new TransactionModel
-                {
-                    PaymentMethod = TransactionPaymentMethod.Lightning,
-                    Type = tx.Inbound ? TransactionType.Receive : TransactionType.Send,
-                    Id = tx.PaymentId,
-                    Timestamp = tx.Timestamp,
-                    Value = tx.Value * (tx.Inbound ? 1 : -1),
-                    Status = tx.Status.ToString(),
-                    LightningPayment = tx
-                }));
-            }
-            // order and update
-            Transactions = list.OrderByDescending(p => p.Timestamp).ToList();
-        }
-        catch (Exception ex)
-        {
-            TransactionsError = ex.Message;
-        }
-        finally
-        {
-            TransactionsLoading = false;
-            await InvokeAsync(StateHasChanged);
-        }
     }
 
     private async Task UpdateForDestination(string? destination)
@@ -681,6 +590,25 @@
         }
     }
 
+    private void ToggleDisplayCurrency()
+    {
+        Dispatcher.Dispatch(new UIState.ToggleDisplayCurrency());
+    }
+
+    // ReSharper disable once AsyncVoidMethod
+    private async void OnQrCodeScan(string code)
+    {
+        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
+        // prevent duplicate submission due to quirk in QR reader lib
+        if (code == _qrInput) return;
+
+        _qrInput = code;
+        Model.Destination = code;
+        await UpdateForDestination(Model.Destination);
+        StateHasChanged();
+    }
+
+    /*
     // TODO: Implement external lightning payment, integrate and test this
     private async Task<FormResult> SendLightningExternal(BOLT11PaymentRequest bolt11, LightMoney amount)
     {
@@ -727,22 +655,5 @@
             return new FormResult(false, "Payment failed: " + ex.Message);
         }
     }
-
-    private void ToggleDisplayCurrency()
-    {
-        Dispatcher.Dispatch(new UIState.ToggleDisplayCurrency());
-    }
-
-    // ReSharper disable once AsyncVoidMethod
-    private async void OnQrCodeScan(string code)
-    {
-        await JS.InvokeVoidAsync("Interop.closeModal", "#ScanQrCodeModal");
-        // prevent duplicate submission due to quirk in QR reader lib
-        if (code == _qrInput) return;
-
-        _qrInput = code;
-        Model.Destination = code;
-        await UpdateForDestination(Model.Destination);
-        StateHasChanged();
-    }
+    */
 }

@@ -53,7 +53,7 @@
                     <label class="btn btn-link" for="BalancePeriodTwoYears">2Y</label>
                 </InputRadioGroup>
             </div>
-            @if (true || TotalBalance is > 0)
+            @if (TotalBalance is > 0)
             {
                 <div class="text-center my-5">
                     <NavLink href="@Routes.Withdraw" class="d-inline-flex align-items-center gap-1 fs-5 bg-light rounded-pill px-5 py-2 fw-semibold">
