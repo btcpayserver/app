@@ -46,7 +46,7 @@ public class LDKPeerHandler(
 
     private void DescriptorsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        node.PeersChanged();
+        node.InvalidateCache();
     }
 
     private async Task PeerBtcPayServerHost(object? sender, string? e)
