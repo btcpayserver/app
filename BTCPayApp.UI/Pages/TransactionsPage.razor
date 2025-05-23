@@ -1,0 +1,132 @@
+﻿@attribute [Route(Routes.Transactions)]
+@inherits Fluxor.Blazor.Web.Components.FluxorComponent
+@using BTCPayApp.Core.Data
+@using BTCPayApp.Core.LDK
+@using BTCPayApp.Core.Wallet
+@using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Components.Layout
+@using BTCPayApp.UI.Models
+@using BTCPayServer.Client
+@using BTCPayServer.Lightning
+@inject IDispatcher Dispatcher
+@inject IState<UIState> UIState
+@inject IState<StoreState> StoreState
+@inject OnChainWalletManager OnChainWalletManager
+@inject LightningNodeManager LightningNodeManager
+
+<PageTitle>Recent Payments</PageTitle>
+
+<SectionContent SectionId="_Layout.Top">
+    <Titlebar Back>
+        <h1>Recent Payments</h1>
+    </Titlebar>
+</SectionContent>
+<section class="container">
+    <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
+        @if (Transactions?.Any() is true)
+        {
+            <header class="d-flex align-items-center justify-content-between gap-3 mb-3">
+                <h2 class="mb-0"></h2>
+                @if (TransactionsLoading)
+                {
+                    <LoadingIndicator/>
+                }
+            </header>
+            <TransactionsList Transactions="Transactions" Rate="@Rate" Currency="@DisplayCurrency" Error="@TransactionsError" OnToggleDisplayCurrency="ToggleDisplayCurrency"/>
+        }
+    </AuthorizeView>
+</section>
+
+@code {
+    private LDKNode? Node => LightningNodeManager.Node;
+    private PaymentsManager? PaymentsManager => Node?.PaymentsManager;
+    private string? StoreId => StoreState.Value.StoreInfo?.Id;
+    private decimal? Rate => StoreState.Value.Rates?.Data?.FirstOrDefault()?.Rate;
+    private string DisplayCurrency => UIState.Value.DisplayCurrency;
+    private bool TransactionsLoading { get; set; }
+    private string? TransactionsError { get; set; }
+    private List<TransactionModel>? Transactions { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        OnChainWalletManager.OnSnapshotUpdate += OnTransactionUpdated;
+        if (PaymentsManager != null) PaymentsManager.OnPaymentUpdate += OnTransactionUpdated;
+
+        _ = LoadTransactions();
+    }
+
+    protected override ValueTask DisposeAsyncCore(bool disposing)
+    {
+        base.DisposeAsyncCore(disposing);
+
+        OnChainWalletManager.OnSnapshotUpdate -= OnTransactionUpdated;
+        if (PaymentsManager != null) PaymentsManager.OnPaymentUpdate -= OnTransactionUpdated;
+
+        return ValueTask.CompletedTask;
+    }
+
+    private async Task OnTransactionUpdated(object? sender, object _)
+    {
+        await LoadTransactions();
+    }
+
+    private async Task LoadTransactions()
+    {
+        TransactionsError = null;
+        TransactionsLoading = true;
+        await InvokeAsync(StateHasChanged);
+        try
+        {
+            // load
+            var onchain = OnChainWalletManager != null ? await OnChainWalletManager.GetTransactions() : null;
+            var lightning = PaymentsManager != null ? await PaymentsManager.List(payments => payments.Where(p => p.Inbound == false)) : null;
+            // aggregate
+            var list = new List<TransactionModel>();
+            if (onchain?.Any() is true)
+            {
+                list.AddRange(onchain[WalletDerivation.NativeSegwit]
+                    .Where(tx => tx.BalanceChange < 0)
+                    .Select(tx => new TransactionModel
+                    {
+                        PaymentMethod = TransactionPaymentMethod.Onchain,
+                        Type = tx.BalanceChange > 0 ? TransactionType.Receive : TransactionType.Send,
+                        Id = tx.TransactionId,
+                        Timestamp = tx.Timestamp,
+                        Value = new LightMoney(tx.BalanceChange, LightMoneyUnit.BTC),
+                        Status = tx.Confirmations > 0 ? "Confirmed" + (tx.Confirmations <= 5 ? $" ({tx.Confirmations})" : "") : "Unconfirmed",
+                        OnchainTransaction = tx
+                    }));
+            }
+            if (lightning?.Any() is true)
+            {
+                list.AddRange(lightning.Select(tx => new TransactionModel
+                {
+                    PaymentMethod = TransactionPaymentMethod.Lightning,
+                    Type = tx.Inbound ? TransactionType.Receive : TransactionType.Send,
+                    Id = tx.PaymentId,
+                    Timestamp = tx.Timestamp,
+                    Value = tx.Value * (tx.Inbound ? 1 : -1),
+                    Status = tx.Status.ToString(),
+                    LightningPayment = tx
+                }));
+            }
+            // order and update
+            Transactions = list.OrderByDescending(p => p.Timestamp).ToList();
+        }
+        catch (Exception ex)
+        {
+            TransactionsError = ex.Message;
+        }
+        finally
+        {
+            TransactionsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    private void ToggleDisplayCurrency()
+    {
+        Dispatcher.Dispatch(new UIState.ToggleDisplayCurrency());
+    }
+}
