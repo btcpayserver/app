@@ -82,7 +82,13 @@
                             }
                             else
                             {
-                                <span>Withdraw @(Model.Bolt11 != null ? "via Lightning" : Model.Address != null ? "onchain" : "")</span>
+                                <span>Withdraw @(SendNetwork switch
+                                               {
+                                                   SendMode.Lightning => "via Lightning",
+                                                   SendMode.Onchain => "onchain",
+                                                   _ => ""
+                                               })
+                                </span>
                             }
                         </button>
                     </div>
@@ -97,12 +103,15 @@
                         <ValidationMessage For="@(() => Model.Destination)"/>
                     </div>
 
-                    @if (OnchainTotalBalance is not null)
+                    @if (SendNetwork is null or SendMode.Onchain && OnchainBalance is not null)
                     {
                         <div class="box mb-2">
                             <header>
                                 <span>Onchain</span>
-                                <AmountDisplay Sats="OnchainConfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                @if (OnchainConfirmedBalance.HasValue)
+                                {
+                                    <AmountDisplay Sats="OnchainConfirmedBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                }
                             </header>
                             @if (OnchainState == SourceState.NotSupported || !OnChainWalletManager.IsActive || !OnChainWalletManager.IsHubConnected)
                             {
@@ -127,7 +136,7 @@
                             else
                             {
                                 <dl class="mt-2 mb-0">
-                                    @if (OnchainUnconfirmedBalance is not null)
+                                    @if (OnchainUnconfirmedBalance is not null and not 0)
                                     {
                                         <div class="align-items-center text-warning">
                                             <dt>Pending Transactions</dt>
@@ -150,12 +159,15 @@
                         </div>
                     }
 
-                    @if (LightningOffchainTotalBalance is > 0)
+                    @if (SendNetwork is null or SendMode.Lightning && LightningBalance is not null)
                     {
                         <div class="box mb-2">
                             <header>
                                 <span>Lightning</span>
-                                <AmountDisplay Sats="LightningOffchainTotalBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                @if (LightningOffchainTotalBalance.HasValue)
+                                {
+                                    <AmountDisplay Sats="LightningOffchainTotalBalance.Value" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                                }
                             </header>
                             @if (LightningState == SourceState.NotSupported || !LightningNodeManager.IsActive || !LightningNodeManager.IsHubConnected)
                             {
@@ -213,7 +225,7 @@
                     }
 
                     <fieldset class="my-3">
-                        @if (Model.Address != null || Model.Bolt11 != null)
+                        @if (SendNetwork is not null)
                         {
                             <div class="form-group">
                                 <label for="Amount" class="form-label" data-required>Amount</label>
@@ -235,7 +247,7 @@
                                 </div>
                             </div>
                         }
-                        @if (Model.Address != null)
+                        @if (SendNetwork == SendMode.Onchain)
                         {
                             <div class="form-group">
                                 <label for="FeeRate" class="form-label" data-required>Fee Rate</label>
@@ -348,9 +360,9 @@
     private long? MaxAvailable => Model.Bolt11 != null
         ? (LightningOffchainLocalBalance ?? 0)
         : (OnchainConfirmedBalance ?? 0);
-    private bool IsValidForm => !_validationEditContext!.Invalid && !InsufficientFunds && !string.IsNullOrEmpty(Model.Destination) && (
-        (Model.Bolt11 != null && LightningState == SourceState.Supported) ||
-        (Model.Address != null && OnchainState == SourceState.Supported));
+
+    private bool IsValidForm => !_validationEditContext!.Invalid && !InsufficientFunds && !string.IsNullOrEmpty(Model.Destination) && SendNetwork is not null;
+
     private string DestinationPlaceholder
     {
         get
@@ -375,6 +387,18 @@
     private WithdrawModel Model { get; set; } = new();
     private SourceState OnchainState { get; set; }
     private SourceState LightningState { get; set; }
+
+    private SendMode? SendNetwork => Model.Bolt11 != null && LightningState == SourceState.Supported
+        ? SendMode.Lightning
+        : Model.Address != null && OnchainState == SourceState.Supported
+            ? SendMode.Onchain
+            : null;
+
+    private enum SendMode
+    {
+        Onchain,
+        Lightning
+    }
 
     private enum SourceState
     {
@@ -477,12 +501,12 @@
             await InvokeAsync(StateHasChanged);
             FormResult? result = null;
             var amount = Model.Amount!.Value;
-            if (Model.Bolt11 != null)
+            if (SendNetwork == SendMode.Lightning)
             {
                 // TODO: Implement send via external node: SendLightningExternal(Model.Bolt11, new LightMoney(amount, UnitLightMoney));
                 result = await SendLightning(Model.Bolt11, new LightMoney(amount, UnitLightMoney));
             }
-            else if (Model.Address != null)
+            else if (SendNetwork == SendMode.Onchain)
             {
                 // TODO: Implement send via external wallet: SendOnchainExternal(Model.Address, new Money(amount, UnitMoney));
                 result = await SendOnchain(Model.Address, new Money(amount, UnitMoney), Model.FeeRate);
