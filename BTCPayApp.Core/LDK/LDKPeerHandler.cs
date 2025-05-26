@@ -46,7 +46,7 @@ public class LDKPeerHandler(
 
     private void DescriptorsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        node.PeersChanged();
+        node.InvalidateCache();
     }
 
     private async Task PeerBtcPayServerHost(object? sender, string? e)
@@ -81,7 +81,6 @@ public class LDKPeerHandler(
                 var chans = await node.GetChannels(ctsToken);
                 var channels = chans?.Where(pair => pair.channelDetails is not null)
                     .Select(pair => pair.channelDetails!).ToList() ?? [];
-
                 var channelPeers = channels
                     .Select(details => Convert.ToHexString(details.get_counterparty().get_node_id()).ToLower()).Distinct();
                 var config = await node.GetConfig();
@@ -93,21 +92,25 @@ public class LDKPeerHandler(
                 foreach (var persistentPeer in missingConnections)
                 {
                     var kv = config.Peers[persistentPeer];
-                    var nodeid = new PubKey(persistentPeer);
-                    if (kv.Endpoint is {} endpoint)
-                    {
-                        var cts = CancellationTokenSource.CreateLinkedTokenSource(ctsToken);
-                        cts.CancelAfter(10000);
-                        tasks.Add(ConnectAsync(nodeid, endpoint, cts.Token));
-                    }
+                    if (kv.Endpoint is not { } endpoint) continue;
+                    var nodeId = new PubKey(persistentPeer);
+                    var cts = CancellationTokenSource.CreateLinkedTokenSource(ctsToken);
+                    cts.CancelAfter(10000);
+                    tasks.Add(ConnectAsync(nodeId, endpoint, cts.Token));
                 }
-
                 await Task.WhenAll(tasks);
-                await Task.Delay(5000, ctsToken);
+            }
+            catch (Exception e) when (e is { InnerException: SocketException })
+            {
+                _logger.LogError(e.Message);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {
                 _logger.LogError(e, "Error while attempting to connect to persistent peers");
+            }
+            finally
+            {
+                await Task.Delay(5000, ctsToken);
             }
         }
     }
@@ -154,7 +157,7 @@ public class LDKPeerHandler(
             using var listener = new TcpListener(new IPEndPoint(IPAddress.Any, 0));
             listener.Start();
             var ip = listener.LocalEndpoint;
-            Endpoint = new IPEndPoint(IPAddress.Loopback, (int) ip.Port());
+            Endpoint = new IPEndPoint(IPAddress.Loopback, (int)ip.Port());
             while (!cancellationToken.IsCancellationRequested)
             {
                 var result = LDKTcpDescriptor.Inbound(peerManager,
@@ -184,22 +187,22 @@ public class LDKPeerHandler(
         if (peerInfo.Label is not null)
             _logger.LogInformation("Attempting to connect to {NodeId} at {Endpoint} ({Label})", peerNodeId, endpoint.ToEndpointString(), peerInfo.Label);
         return await ConnectAsync(peerNodeId, endpoint, cancellationToken);
-
     }
 
     public async Task<LDKTcpDescriptor?> ConnectAsync(PubKey theirNodeId, EndPoint remote, CancellationToken cancellationToken = default)
     {
+        var nodeId = theirNodeId.ToString();
         //cache this task so that we don't have multiple attempts to connect to the same place
-        if (_connectionTasks.TryGetValue(theirNodeId.ToString(), out var task))
+        if (_connectionTasks.TryGetValue(nodeId, out var task))
         {
-            _logger.LogInformation("Already attempting to connect to {NodeId}", theirNodeId);
+            _logger.LogInformation("Already attempting to connect to {NodeId}", nodeId);
             return await task.WithCancellation(cancellationToken);
         }
 
         var tcs = new TaskCompletionSource<LDKTcpDescriptor?>();
         try
         {
-            if (!_connectionTasks.TryAdd(theirNodeId.ToString(), tcs.Task))
+            if (!_connectionTasks.TryAdd(nodeId, tcs.Task))
                 return null;
 
             if (channelManager.get_our_node_id().SequenceEqual(theirNodeId.ToBytes()))
@@ -214,7 +217,7 @@ public class LDKPeerHandler(
             {
                 var needsUpdate = false;
                 var config = await node.GetConfig();
-                if (!config.Peers.TryGetValue(theirNodeId.ToString(), out var peer))
+                if (!config.Peers.TryGetValue(nodeId, out var peer))
                 {
                     peer = new PeerInfo { Trusted = true };
                     needsUpdate = true;
@@ -238,13 +241,18 @@ public class LDKPeerHandler(
 
             tcs.TrySetResult(result);
         }
+        catch (SocketException e)
+        {
+            // wrap the original exception to report on the failing node URI
+            tcs.TrySetException(new Exception($"Socket connection to {nodeId}@{remote} failed: {e.Message}", e));
+        }
         catch (Exception e)
         {
             tcs.TrySetException(e);
         }
         finally
         {
-            _connectionTasks.TryRemove(theirNodeId.ToString(), out _);
+            _connectionTasks.TryRemove(nodeId, out _);
         }
 
         return await tcs.Task;

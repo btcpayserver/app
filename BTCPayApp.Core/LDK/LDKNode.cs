@@ -31,7 +31,6 @@ public partial class LDKNode :
             var dbChannels = dbContext.LightningChannels.AsNoTracking()
                 .Include(channel => channel.Aliases).AsAsyncEnumerable();
             var channels = ServiceProvider.GetRequiredService<ChannelManager>().list_channels();
-
             var result = new List<(Channel channel, ChannelDetails? channelDetails)>();
             await foreach (var dbChannel in dbChannels)
             {
@@ -64,7 +63,6 @@ public partial class LDKNode :
         {
             {"PendingTimestamp", JsonSerializer.SerializeToElement(DateTimeOffset.UtcNow.ToUnixTimeSeconds())}
         });
-
         _memoryCache.Remove(nameof(GetChannels));
     }
 
@@ -86,12 +84,7 @@ public partial class LDKNode :
         }).WithCancellation(cancellationToken);
     }
 
-    public void PeersChanged()
-    {
-        _memoryCache.Remove(nameof(GetPeers));
-    }
-
-    private void InvalidateCache()
+    public void InvalidateCache()
     {
         _memoryCache.Remove(nameof(GetPeers));
         _memoryCache.Remove(nameof(GetChannels));

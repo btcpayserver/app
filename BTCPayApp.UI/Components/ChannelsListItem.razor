@@ -26,13 +26,13 @@
             var inbound = (long)Channel.CapacityInbound.ToUnit(LightMoneyUnit.Satoshi);
             var outbound = (long)Channel.CapacityOutbound.ToUnit(LightMoneyUnit.Satoshi);
             var ourPerc = (int)(outbound * 100 / (inbound + outbound));
-            <div class="mt-2">
+            <div>
+                <div class="progress w-100 mb-1" role="progressbar" aria-label="Channel Capacity" aria-valuenow="@ourPerc" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar progress-bar-@(ChannelState)" style="width:@(ourPerc)%"></div>
+                </div>
                 <div class="d-flex align-items-center justify-content-between gap-2">
                     <AmountDisplay Sats="@outbound" Currency="@CurrencyDisplay.SATS" />
                     <AmountDisplay Sats="@inbound" Currency="@CurrencyDisplay.SATS" />
-                </div>
-                <div class="progress w-100" role="progressbar" aria-label="Channel Capacity" aria-valuenow="@ourPerc" aria-valuemin="0" aria-valuemax="100">
-                    <div class="progress-bar progress-bar-@(ChannelState)" style="width:@(ourPerc)%"></div>
                 </div>
             </div>
         }
@@ -61,22 +61,6 @@
                 </div>
             }
             <dl class="mt-2 mb-0">
-                @if (!string.IsNullOrEmpty(Channel.State) || Channel.Announced.HasValue)
-                {
-                    <div class="align-items-center">
-                        <dt>State:</dt>
-                        <dd class="d-inline-flex flex-wrap gap-1">
-                            @if (!string.IsNullOrEmpty(Channel.State))
-                            {
-                                <span>@Channel.State</span>
-                            }
-                            @if (Channel.Announced.HasValue)
-                            {
-                                <span>(@(Channel.Announced.Value ? "Announced" : "Unannounced"))</span>
-                            }
-                        </dd>
-                    </div>
-                }
                 <div class="align-items-center">
                     <dt>@(Channel.Connected ? "Connected" : "Not connected")</dt>
                     <span class="btcpay-status btcpay-status--@(Channel.Connected ? "enabled" : "disabled")"></span>
@@ -94,6 +78,22 @@
                             <span class="btcpay-status btcpay-status--@(Channel.Usable.Value ? "enabled" : "pending")"></span>
                         </div>
                     }
+                }
+                @if (!string.IsNullOrEmpty(Channel.State) || Channel.Announced.HasValue)
+                {
+                    <div class="align-items-center">
+                        <dt>State:</dt>
+                        <dd class="d-inline-flex flex-wrap gap-1">
+                            @if (!string.IsNullOrEmpty(Channel.State))
+                            {
+                                <span>@Channel.State</span>
+                            }
+                            @if (Channel.Announced.HasValue)
+                            {
+                                <span>(@(Channel.Announced.Value ? "Announced" : "Unannounced"))</span>
+                            }
+                        </dd>
+                    </div>
                 }
             </dl>
             @if (Channel.Active && OnCloseChannel.HasDelegate)

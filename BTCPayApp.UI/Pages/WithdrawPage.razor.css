@@ -4,6 +4,24 @@
   flex-direction: column;
 }
 
+.container .box header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--btcpay-space-m);
+  margin-bottom: var(--btcpay-space-s);
+  font-size: 1rem;
+  font-weight: var(--btcpay-font-weight-semibold);
+}
+
+.container .box dl > div {
+  font-weight: var(--btcpay-font-weight-semibold);
+}
+
+.container .box dl > div dt {
+  color: inherit;
+}
+
 .container ::deep form.confirm {
   flex: 1 0 100%;
   display: flex;

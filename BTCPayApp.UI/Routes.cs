@@ -17,6 +17,7 @@ public static class Routes
     public const string Notifications = "/notifications";
     public const string EnterPasscode = "/passcode";
     public const string Withdraw = "/withdraw";
+    public const string Transactions = "/transactions";
     public const string Invoices = "/invoices";
     public const string Invoice = "/invoices/{InvoiceId}";
     public const string Checkout = "/checkout/{InvoiceId}";

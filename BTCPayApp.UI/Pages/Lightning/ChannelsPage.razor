@@ -206,7 +206,7 @@
 
     private async Task RefreshData(CancellationToken token)
     {
-        while (token.IsCancellationRequested is false)
+        while (!token.IsCancellationRequested)
         {
             await FetchData();
             await Task.Delay(TimeSpan.FromSeconds(15), token);
