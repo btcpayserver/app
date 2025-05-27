@@ -542,12 +542,12 @@
             var result = await Node.CloseChannel(channelId, counterparty, force);
             if (result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_OK)
             {
-                _channelSuccessMessage = $"{(force ? "Force-closing" : "Closing")} channel {channelId} with {counterparty}.";
+                _channelSuccessMessage = $"{(force ? "Force-closing" : "Closing")} channel with {counterparty}.";
                 ChannelModel = new OpenChannelModel();
             }
             else if (result is Result_NoneAPIErrorZ.Result_NoneAPIErrorZ_Err err)
             {
-                _channelErrorMessage = $"{(force ? "Force-closing" : "Closing")} channel {channelId} with {counterparty} failed: {err.err.GetError()}";
+                _channelErrorMessage = $"{(force ? "Force-closing" : "Closing")} channel with {counterparty} failed: {err.err.GetError()}";
             }
         }
         catch (Exception e)
