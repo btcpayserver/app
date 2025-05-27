@@ -220,12 +220,17 @@ public class BTCPayAppServerClient(ILogger<BTCPayAppServerClient> _logger, IServ
             .Select(channel => channel.channelDetails)
             .OfType<ChannelDetails>()
             .ToArray();
+        var balances = Node.ClaimableBalances;
+        var closing = balances
+            .Where(b => b is Balance.Balance_ClaimableAwaitingConfirmations)
+            .ToArray();
         return new LightningNodeBalance
         {
             OffchainBalance = new OffchainBalance
             {
                 Local = LightMoney.MilliSatoshis(channels.Sum(channel => channel.get_outbound_capacity_msat())),
                 Remote = LightMoney.MilliSatoshis(channels.Sum(channel => channel.get_inbound_capacity_msat())),
+                Closing = LightMoney.Satoshis(closing.Sum(balance => balance.claimable_amount_satoshis()))
             }
         };
     }
