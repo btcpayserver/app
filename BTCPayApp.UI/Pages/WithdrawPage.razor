@@ -32,7 +32,7 @@
 </SectionContent>
 <section class="container">
     <AuthorizeView Policy="@Policies.CanModifyStoreSettings" Resource="StoreId">
-        @if (Model.Transaction == null)
+        @if (Model.Transaction == null && Model.Payment == null)
         {
             <header class="d-flex align-items-center justify-content-center gap-3 mb-3">
                 @if (BalanceLoading)
@@ -72,23 +72,17 @@
             }
             <ValidationEditContext @ref="_validationEditContext" Model="Model" OnValidSubmit="SendFunds" SuccessMessage="@SuccessMessage" ErrorMessage="@ErrorMessage" class="@(Model.Transaction == null ? "send" : "confirm")">
                 <DataAnnotationsValidator/>
-                @if (Model.Transaction == null)
+                @if (Model.Transaction == null && Model.Payment == null)
                 {
                     <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
-                        <button type="submit" class="btn btn-primary w-100" disabled="@(!IsValidForm || Sending)">
+                        <button type="submit" class="btn btn-secondary w-100" disabled="@(!IsValidForm || Sending)">
                             @if (Sending)
                             {
                                 <LoadingIndicator/>
                             }
                             else
                             {
-                                <span>Withdraw @(SendNetwork switch
-                                               {
-                                                   SendMode.Lightning => "via Lightning",
-                                                   SendMode.Onchain => "onchain",
-                                                   _ => ""
-                                               })
-                                </span>
+                                <span>Next</span>
                             }
                         </button>
                     </div>
@@ -260,7 +254,7 @@
                         }
                     </fieldset>
                 }
-                else
+                else if (Model.Transaction != null)
                 {
                     var transaction = Model.Transaction.Value;
                     var spendingAmount = transaction.SpentCoins.Sum(c => c.TxOut.Value.Satoshi);
@@ -277,7 +271,7 @@
                             {
                                 <LoadingIndicator/>
                             }
-                            else if (Model.Transaction != null)
+                            else
                             {
                                 <span>Send</span>
                             }
@@ -306,6 +300,39 @@
                         <div>
                             <dt>RBF</dt>
                             <dd>@Model.Transaction!.Value.Tx.RBF</dd>
+                        </div>
+                    </dl>
+                }
+                else if (Model.Payment != null)
+                {
+                    var totalAmount = (long)Model.Payment.Amount.ToUnit(LightMoneyUnit.Satoshi);
+                    <h2 class="fs-2 fw-bold mt-4 mb-5 text-center">
+                        <AmountDisplay Sats="totalAmount" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                    </h2>
+                    <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
+                        <button type="submit" class="btn btn-primary w-100 mt-auto" disabled="@(!IsValidForm || Sending)">
+                            @if (Sending)
+                            {
+                                <LoadingIndicator/>
+                            }
+                            else
+                            {
+                                <span>Send</span>
+                            }
+                        </button>
+                    </div>
+                    <dl class="box">
+                        <div>
+                            <dt>Recipient gets</dt>
+                            <dd>
+                                <AmountDisplay Sats="totalAmount" Rate="@Rate" Currency="@DisplayCurrency" OnChangeDisplayCurrency="ToggleDisplayCurrency"/>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt>To</dt>
+                            <dd>
+                                <TruncateCenter Text="@Model.Destination" Padding="10" Copy="true" />
+                            </dd>
                         </div>
                     </dl>
                 }
@@ -353,7 +380,7 @@
     private string DisplayCurrency => UIState.Value.DisplayCurrency;
     private MoneyUnit UnitMoney => DisplayCurrency == CurrencyDisplay.BTC ? MoneyUnit.BTC : MoneyUnit.Satoshi;
     private LightMoneyUnit UnitLightMoney => DisplayCurrency == CurrencyDisplay.BTC ? LightMoneyUnit.BTC : LightMoneyUnit.Satoshi;
-    private string GetTitle() => Model.Transaction == null ? "Withdraw" : "Review Withdrawal";
+    private string GetTitle() => Model.Transaction == null && Model.Payment == null ? "Withdraw" : "Review Withdrawal";
     private bool InsufficientFunds => Model.Amount is > 0 && MaxAvailable < Model.Amount;
     private bool NotSupported => Model.Bolt11 != null && LightningState != SourceState.Supported || Model.Address != null && OnchainState != SourceState.Supported;
     private bool CanAdjustAmount => Model.Bolt11?.MinimumAmount == null && MaxAvailable > 0;
@@ -417,6 +444,7 @@
         public decimal? FeeRate { get; set; }
 
         public BOLT11PaymentRequest? Bolt11 { get; set; }
+        public LightningPayment? Payment { get; set; } // "draft" for a LN payment
         public BitcoinAddress? Address { get; set; }
         public (Transaction Tx, ICoin[] SpentCoins, BitcoinAddress Change)? Transaction { get; set; }
     }
@@ -436,10 +464,12 @@
 
     private async Task OnBackClick()
     {
-        if (Model.Transaction == null)
-            await JS.InvokeVoidAsync("history.back");
-        else
+        if (Model.Transaction != null)
             await CancelTx();
+        else if (Model.Payment != null)
+            await CancelPayment();
+        else
+            await JS.InvokeVoidAsync("history.back");
     }
 
     private async Task UpdateForDestination(string? destination)
@@ -453,6 +483,7 @@
             Model.Address = null;
             Model.FeeRate = null;
             Model.Transaction = null;
+            Model.Payment = null;
             return;
         }
 
@@ -466,12 +497,14 @@
         catch
         {
             Model.Bolt11 = null;
+            Model.Payment = null;
         }
 
         try
         {
             Model.Address = BitcoinAddress.Create(destination, network);
             Model.Bolt11 = null;
+            Model.Payment = null;
         }
         catch
         {
@@ -593,9 +626,32 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task CancelPayment()
+    {
+        if (Model.Payment is null) return;
+
+        SuccessMessage = ErrorMessage = null;
+        Model.Payment = null;
+        await InvokeAsync(StateHasChanged);
+    }
+
     private async Task<FormResult> SendLightning(BOLT11PaymentRequest bolt11, LightMoney amount)
     {
-        if (PaymentsManager is null) return new FormResult(false, "Payment failed: Lightning payments unavailable");
+        if (PaymentsManager is null)
+            return new FormResult(false, "Payment failed: Lightning payments unavailable");
+
+        if (Model.Payment == null)
+        {
+            // set draft payment for reviewing
+            Model.Payment = new LightningPayment
+            {
+                BOLT11 = bolt11.ToString(),
+                Amount = amount
+            };
+            return new FormResult(true);
+        }
+
+        // send payment after confirmation
         try
         {
             await _semaphore.WaitAsync();
@@ -606,7 +662,7 @@
         }
         catch (Exception ex)
         {
-            return new FormResult(false, "Lightning p failed: " + ex.Message);
+            return new FormResult(false, "Lightning payment failed: " + ex.Message);
         }
         finally
         {
