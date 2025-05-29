@@ -276,6 +276,7 @@ public partial class LDKNode : IAsyncDisposable, IHostedService, IDisposable
     public LightningAPIKeyManager ApiKeyManager => ServiceProvider.GetRequiredService<LightningAPIKeyManager>();
     public LDKPeerHandler PeerHandler => ServiceProvider.GetRequiredService<LDKPeerHandler>();
     public PubKey NodeId => new(ServiceProvider.GetRequiredService<ChannelManager>().get_our_node_id());
+    public Balance[] ClaimableBalances => ServiceProvider.GetRequiredService<ChainMonitor>().get_claimable_balances([]);
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
