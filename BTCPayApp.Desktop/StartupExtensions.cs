@@ -1,6 +1,5 @@
 ﻿using BTCPayApp.Core.Contracts;
-using BTCPayApp.Core.Data;
-using BTCPayApp.Core.Helpers;
+using BTCPayApp.Desktop.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Plugin.Fingerprint.Abstractions;
 
@@ -15,9 +14,9 @@ public static class StartupExtensions
             options.ApplicationDiscriminator = "BTCPayApp";
         });
         serviceCollection.AddSingleton<IDataDirectoryProvider, DesktopDataDirectoryProvider>();
-        // serviceCollection.AddSingleton<IConfigProvider, DesktopConfigProvider>();
         serviceCollection.AddSingleton<ISecureConfigProvider, DesktopSecureConfigProvider>();
         serviceCollection.AddSingleton<IFingerprint, StubFingerprintProvider>();
+        serviceCollection.AddScoped<IEmailService, EmailService>();
 
         return serviceCollection;
     }

@@ -75,7 +75,7 @@
                 @if (Model.Transaction == null && Model.Payment == null)
                 {
                     <div id="CtaContainer" class="container d-flex align-items-center justify-content-between">
-                        <button type="submit" class="btn btn-secondary w-100" disabled="@(!IsValidForm || Sending)">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@(!IsValidForm || Sending)">
                             @if (Sending)
                             {
                                 <LoadingIndicator/>

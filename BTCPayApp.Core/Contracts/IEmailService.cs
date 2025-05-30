@@ -2,6 +2,6 @@
 {
     public interface IEmailService
     {
-        Task SendAsync(string subject, string body, string? recipient = null, string? attachFilePath = null);
+        Task SendAsync(string subject, string body, string recipient, string? attachFilePath = null);
     }
 }
