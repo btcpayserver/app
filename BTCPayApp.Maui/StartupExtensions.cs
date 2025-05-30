@@ -1,6 +1,4 @@
 ﻿using BTCPayApp.Core.Contracts;
-using BTCPayApp.Core.Data;
-using BTCPayApp.Core.Helpers;
 using BTCPayApp.Maui.Services;
 using Plugin.Fingerprint;
 
@@ -16,6 +14,7 @@ public static class StartupExtensions
         serviceCollection.AddSingleton(CrossFingerprint.Current);
         serviceCollection.AddSingleton<HostedServiceInitializer>();
         serviceCollection.AddSingleton<IMauiInitializeService, HostedServiceInitializer>();
+        serviceCollection.AddScoped<IEmailService, EmailService>();
 
         return serviceCollection;
     }

@@ -29,7 +29,6 @@ public static class MauiProgram
         builder.Services.AddBTCPayAppUIServices();
         builder.Services.ConfigureBTCPayAppMaui();
         builder.Services.ConfigureBTCPayAppCore();
-        builder.Services.AddSingleton<IEmailService, EmailService>();
 
         var serviceProvider = builder.Services.BuildServiceProvider();
         var logger = serviceProvider.GetRequiredService<ILogger<MauiApp>>();

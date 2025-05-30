@@ -1,14 +1,11 @@
 ﻿@attribute [Route(Routes.AppLogs)]
-@using System.Text
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.Core.Services
 @using BTCPayApp.UI.Components.Layout
 @using Serilog.Events
 @inject ConfigProvider ConfigProvider
 @inject LoggingService LogService
-@inject IJSRuntime JS
 @inject IEmailService EmailService
-
 
 <PageTitle>Application Logs</PageTitle>
 
@@ -45,19 +42,16 @@
     }
     @if (HasLogs)
     {
+        <div id="CtaContainer" class="container d-flex flex-column gap-3">
+            <button type="button" class="btn btn-secondary" data-clipboard-target="#logs">Copy logs</button>
+            <button type="button" class="btn btn-primary" @onclick="SendLogs">Send via email</button>
+        </div>
         <pre><code id="logs">@_logContent</code></pre>
     }
     else
     {
         <div class="box">
             <p class="text-muted my-0">There are no logs, yet.</p>
-        </div>
-    }
-    @if (HasLogs)
-    {
-        <div id="CtaContainer" class="container d-flex align-items-center justify-content-around">
-            <button type="button" class="btn btn-primary" data-clipboard-target="#logs">Copy logs</button>
-            <button type="button" class="btn btn-primary" @onclick="SendLogs">Send logs</button>
         </div>
     }
 </section>
@@ -107,6 +101,6 @@
 
     private async Task SendLogs()
     {
-        await EmailService.SendAsync("App Log File", _logContent!);
+        await EmailService.SendAsync("App Log File", _logContent!, "app@btcpayserver.org");
     }
 }

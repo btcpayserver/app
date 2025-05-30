@@ -13,24 +13,15 @@ namespace BTCPayApp.Maui.Services
                     Subject = subject, //"App Log File",
                     Body = body, //"Attached is the log file for review.",
                     BodyFormat = EmailBodyFormat.PlainText,
-                    To = new List<string> { recipient }
+                    To = [recipient]
                 };
 
-                if(!string.IsNullOrWhiteSpace(attachFilePath))
+                if (!string.IsNullOrWhiteSpace(attachFilePath))
                 {
                     message.Attachments?.Add(new EmailAttachment(attachFilePath));
                 }
 
-                try
-                {
-                    await Email.Default.ComposeAsync(message);
-
-                }
-                catch (Exception ex)
-                {
-
-                    throw;
-                }
+                await Email.Default.ComposeAsync(message);
             }
             else
             {

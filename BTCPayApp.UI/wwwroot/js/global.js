@@ -89,7 +89,7 @@ Interop = {
         }
     },
     sendEmail(subject, body, to) {
-        window.location.href = 'mailto:' + to + '?subject=' + subject + '& body=' + body + ';';
+        window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + body + ';';
     },
     saveAsFile(filename, data) {
         const $link = document.createElement('a');
