@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using BTCPayApp.Core.Data;
 using Microsoft.EntityFrameworkCore;
 using Serilog.Events;
@@ -27,7 +27,8 @@ public class LoggingService(IDbContextFactory<LogDbContext> dbContextFactory)
             var props = JsonSerializer.Deserialize<Dictionary<string, object>>(l.Properties);
             var properties = props?.Select(p => new LogEventProperty(p.Key, new ScalarValue(p.Value))) ?? [];
             var e = new LogEvent(l.TimeStamp, level, null, tmpl, properties);
-            return $"[{e.Timestamp:yyyy-MM-dd HH:mm:ss} {e.Level.ToString()[..3].ToUpperInvariant()}] {e.RenderMessage()} ({e.Properties["SourceContext"]}){Environment.NewLine}{e.Exception}";
+            var end = string.IsNullOrEmpty(l.Exception) ? string.Empty : $"{Environment.NewLine}{l.Exception}";
+            return $"[{e.Timestamp:yyyy-MM-dd HH:mm:ss} {e.Level.ToString()[..3].ToUpperInvariant()}] {e.RenderMessage()} ({e.Properties["SourceContext"]}){end}{Environment.NewLine}";
         });
         return logs.Length != 0 ? string.Join("", lines.Reverse()) : null;
     }
