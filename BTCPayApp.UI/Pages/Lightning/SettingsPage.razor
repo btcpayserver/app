@@ -35,7 +35,7 @@
             {
                 <LightningNodeStateAlert NodeState="State.Value.LightningNodeState" ConnectionState="State.Value.ConnectionState" />
             }
-            @if (State.Value.LightningNodeState is LightningNodeState.NotConfigured)
+            @if (State.Value.LightningNodeState is LightningNodeState.NotConfigured && AppSettings.AllowWalletGeneration)
             {
                 <button class="btn btn-primary" @onclick="ConfigureLNWallet">Configure Lightning Wallet</button>
             }

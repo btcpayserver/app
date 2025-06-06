@@ -8,6 +8,7 @@
 @using BTCPayApp.Core.Models
 @using BTCPayApp.UI.Features
 @using Microsoft.Extensions.Logging
+@using System.Web
 @inject IJSRuntime JS
 @inject IAccountManager AccountManager
 @inject BTCPayConnectionManager ConnectionManager
@@ -93,6 +94,10 @@
         {
             return await HandleLoginCode(urlOrLoginCode);
         }
+        if (urlOrLoginCode.Contains(Constants.POSQRLoginSeparator))
+        {
+            return await HandlePOSQRLoginCode(urlOrLoginCode);
+        }
         if (urlOrLoginCode.Contains(Constants.EncryptionKeySeparator))
         {
             return await HandleEncryptionKey(urlOrLoginCode);
@@ -160,6 +165,42 @@
         return false;
     }
 
+    private async Task<bool> HandlePOSQRLoginCode(string url)  
+    {  
+        var uri = new Uri(url);
+        var baseUrl = uri.GetLeftPart(UriPartial.Authority);
+        var queryParams = HttpUtility.ParseQueryString(new Uri(url).Query);  
+
+        if (queryParams is not null)
+        {  
+            var loginCode = queryParams[Constants.POSQRLoginSeparator];
+            if(string.IsNullOrEmpty(loginCode))  
+            {  
+                ErrorMessage = "Invalid employee login code";  
+                StateHasChanged();  
+                return false;  
+            }
+
+            ErrorMessage = null;  
+            Sending = true;  
+            StateHasChanged();  
+            var result = await AccountManager.LoginWithCode(baseUrl, null, loginCode);  
+            Sending = false; 
+
+            if (result.Succeeded) return true;  
+
+            ErrorMessage = result.Messages?.Contains("Failed") is false  
+                ? string.Join(",", result.Messages)  
+                : "Invalid login attempt.";  
+        }  
+        else  
+        {  
+            ErrorMessage = "Invalid login code";  
+        }  
+        StateHasChanged();  
+        return false;  
+    }
+
     private async Task<bool> HandleEncryptionKey(string code)
     {
         var parts = code.Split(Constants.EncryptionKeySeparator);
@@ -206,25 +247,29 @@
             switch (ConnectionManager.ConnectionState)
             {
                 case BTCPayConnectionState.Connecting or BTCPayConnectionState.Syncing:
-                {
-                    route = Routes.Index;
-                    break;
-                }
+                    {
+                        route = Routes.Index;
+                        break;
+                    }
                 case BTCPayConnectionState.WaitingForEncryptionKey:
                     route = Routes.Pairing;
                     break;
                 default:
-                {
-                    if (storeId == null)
                     {
-                        route = AccountManager.UserInfo?.Stores?.Any() is true
-                            ? Routes.SelectStore
-                            : Routes.CreateStore;
-                    }
-                    else if (current == Routes.Index)
-                    {
-                        route = Routes.PointOfSale;
-                    }
+                        if (storeId == null)
+                        {
+                            route = AccountManager.UserInfo?.Stores?.Any() is true
+                                ? Routes.SelectStore
+                                : Routes.CreateStore;
+                        }
+                        else if (current == Routes.Index)
+                        {
+                            route = Routes.PointOfSale;
+                            if(AccountManager.CurrentStore?.RoleId == "Employee")
+                            {
+                                await AccountManager.SwitchMode(storeId, "Cashier");
+                            }
+                        }
                     else
                     {
                         // do not redirect if the user is already on the correct page

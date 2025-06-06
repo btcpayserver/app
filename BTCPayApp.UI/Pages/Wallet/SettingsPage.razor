@@ -139,7 +139,7 @@
     {
         Config = await OnChainWalletManager.GetConfig();
         Derivation = Config?.Derivations.FirstOrDefault(d => d.Key == WalletDerivation.NativeSegwit).Value;
-        _canConfigureWallet = await OnChainWalletManager.CanConfigureWallet();
+        _canConfigureWallet = AppSettings.AllowWalletGeneration && await OnChainWalletManager.CanConfigureWallet();
     }
 
     private async Task SetStorePaymentMethod()

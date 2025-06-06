@@ -22,6 +22,7 @@ public class StateMiddleware(
     IDispatcher _dispatcher)
     : Middleware
 {
+
     public const string UiStateConfigKey = "uistate";
     private CancellationTokenSource? _ratesCts;
     private bool _previouslyConnected;
@@ -69,9 +70,11 @@ public class StateMiddleware(
             dispatcher.Dispatch(new RootState.ConnectionStateUpdatedAction(btcPayConnectionManager.ConnectionState));
 
             // initial wallet generation
-            if (onChainWalletManager is { State: OnChainWalletState.NotConfigured } && await onChainWalletManager.CanConfigureWallet())
+            if (AppSettings.AutoGenerateWallets &&
+                onChainWalletManager is { State: OnChainWalletState.NotConfigured } && 
+                await onChainWalletManager.CanConfigureWallet())
             {
-                await onChainWalletManager.Generate();
+                 await onChainWalletManager.Generate();
             }
 
             // refresh after returning from the background
@@ -100,8 +103,8 @@ public class StateMiddleware(
                             _dispatcher.Dispatch(new StoreState.FetchOnchainHistogram(store.Id));
                         }
                         break;
-                    case OnChainWalletState.NotConfigured when await onChainWalletManager.CanConfigureWallet():
-                        await onChainWalletManager.Generate();
+                    case OnChainWalletState.NotConfigured when await onChainWalletManager.CanConfigureWallet() && AppSettings.AutoGenerateWallets:
+                         await onChainWalletManager.Generate();
                         break;
                 }
             }
@@ -119,11 +122,13 @@ public class StateMiddleware(
         lightningNodeService.StateChanged += async (_, _) =>
         {
             dispatcher.Dispatch(new RootState.LightningNodeStateUpdatedAction(lightningNodeService.State));
-            if (lightningNodeService is {State: LightningNodeState.NotConfigured} && await lightningNodeService.CanConfigureLightningNode())
+            if (lightningNodeService is {State: LightningNodeState.NotConfigured} && 
+                await lightningNodeService.CanConfigureLightningNode() && 
+                AppSettings.AutoGenerateWallets)
             {
                 try
                 {
-                    await lightningNodeService.Generate();
+                    // await lightningNodeService.Generate();
                 }
                 catch (Exception ex)
                 {
@@ -241,7 +246,9 @@ public class StateMiddleware(
         _ = RefreshRates(dispatcher, _ratesCts.Token);
 
         // initial wallet generation
-        if (onChainWalletManager is { State: OnChainWalletState.NotConfigured } && await onChainWalletManager.CanConfigureWallet())
+        if (onChainWalletManager is { State: OnChainWalletState.NotConfigured } && 
+            await onChainWalletManager.CanConfigureWallet() && 
+            AppSettings.AutoGenerateWallets)
         {
             await onChainWalletManager.Generate();
         }

@@ -55,11 +55,11 @@ public class AuthStateProvider(
         }
     }
 
-    public BTCPayAppClient GetClient(string? baseUri = null)
+    public BTCPayAppClient GetClient(string? baseUri = null, string? token = null)
     {
         if (string.IsNullOrEmpty(baseUri) && string.IsNullOrEmpty(Account?.BaseUri))
             throw new ArgumentException("No base URI present or provided.", nameof(baseUri));
-        var token = Account?.ModeToken ?? Account?.OwnerToken;
+        token ??= Account?.ModeToken ?? Account?.OwnerToken;
         return new BTCPayAppClient(baseUri ?? Account!.BaseUri, token, clientFactory.CreateClient());
     }
 
@@ -199,7 +199,7 @@ public class AuthStateProvider(
                 await CheckAuthenticated(true);
                 store = GetUserStore(store.Id)!;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // ignored
             }
@@ -278,13 +278,19 @@ public class AuthStateProvider(
         }
     }
 
-    public async Task<FormResult> LoginWithCode(string serverUrl, string email, string code, CancellationToken? cancellation = default)
+    public async Task<FormResult> LoginWithCode(string serverUrl, string? email, string code, CancellationToken? cancellation = default)
     {
         try
         {
             var client = GetClient(serverUrl);
             var response = await client.Login(code, cancellation.GetValueOrDefault());
             if (string.IsNullOrEmpty(response.AccessToken)) throw new Exception("Did not obtain valid API token.");
+            if (string.IsNullOrEmpty(email))
+            {
+                var clientWithToken = GetClient(serverUrl, response.AccessToken);
+                var userInfo = await clientWithToken.GetUserInfo();
+                email = userInfo?.Email!;
+            }
             var account = new BTCPayAccount(serverUrl, email, response.AccessToken);
             await SetAccount(account);
             return new FormResult(true);

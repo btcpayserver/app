@@ -390,22 +390,22 @@
                     </li>
                 </ul>
             </div>
-            <h2>Logout</h2>
-            <div class="box">
-                @switch (State.Value.ConnectionState)
-                {
-                    case BTCPayConnectionState.ConnectedAsPrimary:
-                        <p>This device is currently connected as the primary device for communication with the BTCPay Server.</p>
-                        <p>Please note that when you sign out of the account on this device, your Lightning node will go offline, and you will not be able to receive any payments.</p>
-                        break;
-                    case BTCPayConnectionState.ConnectedAsSecondary:
-                        <p>This device is currently connected as an additional device for communication with the BTCPay Server.</p>
-                        <p>Please ensure that your primary device is still connected to the BTCPay Server, because otherwise you will not be able to receive any payments.</p>
-                        break;
-                }
-                <button class="btn btn-outline-danger w-100 mt-2" type="button" @onclick="Logout">Logout</button>
-            </div>
         </AuthorizeView>
+        <h2>Logout</h2>
+        <div class="box">
+            @switch (State.Value.ConnectionState)
+            {
+                case BTCPayConnectionState.ConnectedAsPrimary:
+                    <p>This device is currently connected as the primary device for communication with the BTCPay Server.</p>
+                    <p>Please note that when you sign out of the account on this device, your Lightning node will go offline, and you will not be able to receive any payments.</p>
+                    break;
+                case BTCPayConnectionState.ConnectedAsSecondary:
+                    <p>This device is currently connected as an additional device for communication with the BTCPay Server.</p>
+                    <p>Please ensure that your primary device is still connected to the BTCPay Server, because otherwise you will not be able to receive any payments.</p>
+                    break;
+            }
+            <button class="btn btn-outline-danger w-100 mt-2" type="button" @onclick="Logout">Logout</button>
+        </div>
     </section>
 }
 
