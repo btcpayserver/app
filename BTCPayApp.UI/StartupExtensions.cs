@@ -27,3 +27,11 @@ public static class StartupExtensions
         return serviceCollection;
     }
 }
+
+public static class AppSettings
+{
+    public const bool AutoGenerateWallets = false;
+    public const bool AllowWalletGeneration = false;
+    
+    
+}
