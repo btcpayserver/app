@@ -1,7 +1,9 @@
 @attribute [Route(Routes.Checkout)]
 @using BTCPayApp.Core.Auth
+@using BTCPayApp.Core.BTCPayServer
 @inject IJSRuntime JS
 @inject IAccountManager AccountManager
+@inject INfcService NfcService
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 
 <PageTitle>Checkout</PageTitle>
@@ -23,10 +25,33 @@
 
     private string BaseUri => AccountManager.Account!.BaseUri;
     private string? CheckoutUrl => string.IsNullOrEmpty(InvoiceId) ? null : $"{BaseUri}i/{InvoiceId}";
+    //private string nfcMessage = "Ready to scan NFC tags...";
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        // Subscribe to NFC events
+       // NfcService.TagDetected += OnTagDetected;
+    }
 
     private async Task OnIframeLoad()
     {
         _iframeLoaded = true;
+        //NfcService.StartListening();
         await JS.InvokeVoidAsync("Interop.setContext", "#AppCheckout", BaseUri);
+    }
+
+    private void OnTagDetected(string message)
+    {
+        //nfcMessage = message;
+        //JS.InvokeVoidAsync("Interop.setContext", "#AppCheckout", BaseUri).GetAwaiter();
+        Console.WriteLine($"NFC Tag Detected: {message}");
+        //StateHasChanged(); // Update UI
+    }
+
+    public void Dispose()
+    {
+        // Unsubscribe to prevent memory leaks
+        //NfcService.TagDetected -= OnTagDetected;
     }
 }

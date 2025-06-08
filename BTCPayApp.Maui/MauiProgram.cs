@@ -1,10 +1,12 @@
-﻿using BTCPayApp.Core.Contracts;
-using BTCPayApp.Core.Extensions;
+﻿using BTCPayApp.Core.Extensions;
 using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 using Plugin.Fingerprint;
+using BTCPayApp.Core.BTCPayServer;
+
+
 #if ANDROID
 using Android.Content;
 #endif
@@ -29,6 +31,7 @@ public static class MauiProgram
         builder.Services.AddBTCPayAppUIServices();
         builder.Services.ConfigureBTCPayAppMaui();
         builder.Services.ConfigureBTCPayAppCore();
+        builder.Services.AddSingleton<INfcService, NfcService>();
 
         var serviceProvider = builder.Services.BuildServiceProvider();
         var logger = serviceProvider.GetRequiredService<ILogger<MauiApp>>();
