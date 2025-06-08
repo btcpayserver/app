@@ -15,7 +15,7 @@
         <div class="fs-4">Loading</div>
     </section>
 }
-<iframe id="AppCheckout" name="checkout" allow="clipboard-read;clipboard-write" allowfullscreen src="@CheckoutUrl" @onload="OnIframeLoad"></iframe>
+<iframe id="AppCheckout" name="checkout" allow="clipboard-read;clipboard-write;web-nfc" allowfullscreen src="@CheckoutUrl" @onload="OnIframeLoad"></iframe>
 
 @code {
     [Parameter, EditorRequired]
