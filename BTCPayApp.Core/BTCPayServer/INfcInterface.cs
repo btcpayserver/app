@@ -1,11 +1,8 @@
-﻿using System;
-
-namespace BTCPayApp.Core.BTCPayServer
-{
+﻿
+namespace BTCPayApp.Core.BTCPayServer;
     public interface INfcService
-    {
-        event EventHandler<string> OnNfcDataReceived;
-        void StartNfc();
-        void Dispose();
-    }
+{
+    event EventHandler<string> OnNfcDataReceived;
+    void StartNfc();
+    void Dispose();
 }
