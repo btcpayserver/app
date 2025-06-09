@@ -10,6 +10,26 @@ Interop = {
         if (!$el) return console.warn('Selector does not exist:', selector);
         $el.contentWindow.postMessage(JSON.stringify({ context: 'btcpayapp' }), origin);
     },
+    sendNfcDataToIframe: function (iframeId, data) {
+        const iframe = document.getElementById(iframeId);
+        if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+                action: 'nfc:data',
+                data: data
+            }, window.location.origin);
+        } else {
+            console.error('Iframe not found or inaccessible');
+        }
+    },
+    sendNfcErrorToIframe: function (iframeId, error) {
+        const iframe = document.getElementById(iframeId);
+        if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+                action: 'nfc:error',
+                data: error
+            }, window.location.origin);
+        }
+    },
     openModal(selector) {
         const $el = document.querySelector(selector);
         if (!$el) return console.warn('Selector does not exist:', selector);
