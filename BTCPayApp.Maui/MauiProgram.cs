@@ -1,10 +1,11 @@
 ﻿using BTCPayApp.Core.Extensions;
-using BTCPayApp.Maui.Services;
 using BTCPayApp.UI;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.LifecycleEvents;
 using Plugin.Fingerprint;
-using BTCPayApp.Core.BTCPayServer;
+using BTCPayApp.Core.Contracts;
+
+
 
 
 #if ANDROID

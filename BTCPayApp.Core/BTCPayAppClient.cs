@@ -80,6 +80,11 @@ public class BTCPayAppClient(string baseUri, string? apiKey = null, HttpClient? 
         return await SendHttpRequest<JObject?>($"apps/{req.AppId}/pos/light", query, HttpMethod.Post, cancellation);
     }
 
+    public async Task<string> SubmitLNURLWithdrawForInvoice(SubmitLnUrlRequest req, CancellationToken cancellation = default)
+    {
+        return await SendHttpRequest<string>($"plugins/NFC", req, HttpMethod.Post, cancellation);
+    }
+
     public virtual async Task<T> UploadFileRequest<T>(string apiPath, StreamContent fileContent, string fileName, string mimeType, CancellationToken token = default)
     {
         using MultipartFormDataContent multipartContent = new();

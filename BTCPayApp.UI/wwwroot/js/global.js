@@ -10,24 +10,26 @@ Interop = {
         if (!$el) return console.warn('Selector does not exist:', selector);
         $el.contentWindow.postMessage(JSON.stringify({ context: 'btcpayapp' }), origin);
     },
-    sendNfcDataToIframe: function (iframeId, data) {
+    sendNfcDataToIframe: function (iframeId, data, origin) {
         const iframe = document.getElementById(iframeId);
         if (iframe && iframe.contentWindow) {
             iframe.contentWindow.postMessage({
                 action: 'nfc:data',
-                data: data
-            }, window.location.origin);
+                data: data,
+                origin: origin
+            }, origin);
         } else {
             console.error('Iframe not found or inaccessible');
         }
     },
-    sendNfcErrorToIframe: function (iframeId, error) {
+    sendNfcErrorToIframe: function (iframeId, error, origin) {
         const iframe = document.getElementById(iframeId);
         if (iframe && iframe.contentWindow) {
             iframe.contentWindow.postMessage({
                 action: 'nfc:error',
-                data: error
-            }, window.location.origin);
+                data: error,
+                origin: origin
+            }, origin);
         }
     },
     openModal(selector) {

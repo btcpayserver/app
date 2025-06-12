@@ -1,7 +1,6 @@
 ﻿using Android.App;
 using Android.Content;
 using Android.Content.PM;
-using Android.Nfc;
 using Android.OS;
 using Plugin.NFC;
 
@@ -16,6 +15,15 @@ public class MainActivity : MauiAppCompatActivity
     {
         CrossNFC.Init(this);
         base.OnCreate(savedInstanceState);
+
+#if DEBUG
+        // Enable WebView debugging
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.Kitkat)
+        {
+            Android.Webkit.WebView.SetWebContentsDebuggingEnabled(true); // Fully qualify the WebView class
+        }
+#endif
+
     }
 
     protected override void OnResume()
