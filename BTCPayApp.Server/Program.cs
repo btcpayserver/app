@@ -1,5 +1,7 @@
+using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Extensions;
 using BTCPayApp.Desktop;
+using BTCPayApp.Server.Services;
 using BTCPayApp.UI;
 using Serilog;
 
@@ -16,6 +18,8 @@ builder.Services.ConfigureBTCPayAppCore();
 #if DEBUG
 builder.Services.AddDangerousSSLSettingsForDev();
 #endif
+
+builder.Services.AddSingleton<INfcService, NfcService>();
 
 // Configure the HTTP request pipeline.
 var app = builder.Build();

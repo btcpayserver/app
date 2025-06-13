@@ -1,15 +1,28 @@
 .container {
-  max-width: 560px;
-  padding-top: var(--btcpay-space-l);
-  padding-bottom: var(--btcpay-space-l);
+    max-width: 560px;
+    padding-top: var(--btcpay-space-l);
+    padding-bottom: var(--btcpay-space-l);
 }
 
 iframe {
-  position: fixed;
-  z-index: 1;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%; /* fallback for older webviews */
-  height: calc(100% - var(--navbar-bottom-height));
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%; /* fallback for older webviews */
+    height: calc(100% - var(--navbar-bottom-height));
+}
+
+
+.section-complete ::deep .checkout-complete {
+    width: 110px; /* Increase size */
+    height: 100px;
+    fill: var(--btcpay-primary) !important; /* Change fill color */
+    stroke: var(--btcpay-primary) !important; /* Change stroke color */
+    /*fill: var(--btcpay-primary);*/
+}
+
+.section-complete {
+    height: 80vh;
 }

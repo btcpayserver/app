@@ -5,4 +5,5 @@ namespace BTCPayApp.Core.Contracts;
 {
     event EventHandler<NfcLnUrlRecord> OnNfcDataReceived;
     void StartNfc();
+    void EndNfc();
 }

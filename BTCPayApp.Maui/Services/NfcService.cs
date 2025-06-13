@@ -21,6 +21,11 @@ public class NfcService : INfcService, IDisposable
         CrossNFC.Current.OnMessageReceived += Current_OnMessageReceived;
         CrossNFC.Current.StartListening();
     }
+    public void EndNfc()
+    {
+        CrossNFC.Current.StopListening();
+        Dispose();
+    }
 
     private void Current_OnMessageReceived(ITagInfo tagInfo)
     {
@@ -30,6 +35,9 @@ public class NfcService : INfcService, IDisposable
         }
 
         var record = tagInfo.Records[0];
+
+        //no need to proceed if the record is not a valid LNURL record
+        if (!record.Message.Contains("lnurl")) return;
 
         var lnUrlRecord = new NfcLnUrlRecord
         {
