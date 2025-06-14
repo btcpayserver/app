@@ -63,14 +63,14 @@ printf "\n=====> Build BTCPayApp.Core\n\n"
 
 cd BTCPayApp.Core
 rm -rf ./tmp/**
-dotnet publish -c Release -o "tmp/publish" /p:RazorCompileOnBuild=true
+dotnet publish -c Release -o "tmp/publish"
 cd -
 
 printf "\n=====> Build BTCPayServer.Plugins.App\n\n"
 
 cd BTCPayServer.Plugins.App
 rm -rf ./tmp/**
-dotnet publish -c Release -o "tmp/publish" /p:RazorCompileOnBuild=true
+dotnet publish -c Release -o "tmp/publish"
 cd -
 
 printf "\n=====> Add BTCPayApp.Core files to BTCPayServer.Plugins.App\n"
