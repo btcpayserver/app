@@ -61,7 +61,7 @@ public static class MauiProgram
 
                     var context = Android.App.Application.Context;
                     var intent = new Intent(context, typeof(HubConnectionForegroundService));
-                    context.StartForegroundService(intent); // App is in background — start service
+                    //context.StartForegroundService(intent); // App is in background — start service
                 })
                 .OnDestroy(activity =>
                 {
