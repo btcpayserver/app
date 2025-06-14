@@ -45,6 +45,7 @@ else
 
     private bool _iframeLoaded;
     private bool _success;
+    private bool _scanInProgress;
 
     private string BaseUri => AccountManager.Account!.BaseUri;
     private string? CheckoutUrl => string.IsNullOrEmpty(InvoiceId) ? null : $"{BaseUri}i/{InvoiceId}";
@@ -60,6 +61,10 @@ else
 
     private async void OnNfcDataReceived(object? sender, NfcLnUrlRecord nFCNdefRecord)
     {
+        if(_scanInProgress)
+            return; // Ignore if already scanning
+
+        _scanInProgress = true;
         try
         {
             var btcPayClient = new BTCPayAppClient(BaseUri);
@@ -82,6 +87,7 @@ else
                 EndNFCScan();
             } else
             {
+                _scanInProgress = false;
                 throw ex;
             }
         }
@@ -91,6 +97,7 @@ else
 
     void EndNFCScan()
     {
+        _scanInProgress = false;
         Dispose();
         NfcService.EndNfc();
     }
