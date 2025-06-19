@@ -4,7 +4,6 @@
 @using BTCPayApp.Core.BTCPayServer
 @using BTCPayApp.Core.Contracts
 @using BTCPayApp.Core.Models
-@using BTCPayApp.UI.Components.Layout
 @inject IJSRuntime JS
 @inject IAccountManager AccountManager
 @inject INfcService NfcService
@@ -14,38 +13,75 @@
 
 <PageTitle>Checkout</PageTitle>
 
-@if (!_iframeLoaded && !_success)
+<iframe id="AppCheckout" name="checkout" allowfullscreen src="@CheckoutUrl" @onload="OnIframeLoad"></iframe>
+
+@if (!_iframeLoaded)
 {
     <section class="loading-container">
         <LoadingIndicator Size="lg" />
         <div class="fs-4">Loading</div>
     </section>
 }
-@if (_success)
+
+@if (_toast.IsVisible)
 {
-    <section class="d-flex align-items-center flex-column section-complete">
-        <div class="text-center p-2">
-            <Icon Symbol="checkout-complete" class="checkout-complete" />
-            <h1 class="py-4">Invoice Paid</h1>
-        </div>
-        <div class="mt-auto p-2">
-            <button id="pay-button" class="btn btn-lg btn-primary mx-3" @onclick="(() => NavigationManager.NavigateTo(Routes.PointOfSale))">Return to Checkout</button>
-        </div>
-    </section>
-}
-else
-{
-    <iframe id="AppCheckout" name="checkout" allow="nfc" allowfullscreen src="@CheckoutUrl" @onload="OnIframeLoad"></iframe>
+    <div class="toast-container @(_toast.IsError ? "toast-error" : "toast-success")">
+        <div class="toast-message">@_toast.Message</div>
+    </div>
 }
 
+<style>
+    .toast-container {
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 9999;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        max-width: 90%;
+        min-width: 200px;
+        text-align: center;
+        animation: slideUp 0.3s ease-out;
+    }
+
+    .toast-success {
+        background-color: #28a745;
+        color: white;
+        border: 1px solid #1e7e34;
+    }
+
+    .toast-error {
+        background-color: #dc3545;
+        color: white;
+        border: 1px solid #c82333;
+    }
+
+    .toast-message {
+        font-size: 14px;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+
+    @@keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
+</style>
 
 @code {
-    [Parameter, EditorRequired]
-    public string? InvoiceId { get; set; }
+    [Parameter, EditorRequired] public string? InvoiceId { get; set; }
 
     private bool _iframeLoaded;
-    private bool _success;
     private bool _scanInProgress;
+    private Toast _toast = new();
 
     private string BaseUri => AccountManager.Account!.BaseUri;
     private string? CheckoutUrl => string.IsNullOrEmpty(InvoiceId) ? null : $"{BaseUri}i/{InvoiceId}";
@@ -57,49 +93,63 @@ else
 
         NfcService.OnNfcDataReceived += OnNfcDataReceived;
         NfcService.StartNfc();
+        _toast.OnUpdated = StateHasChanged;
     }
 
-    private async void OnNfcDataReceived(object? sender, NfcLnUrlRecord nFCNdefRecord)
+    private async void OnNfcDataReceived(object? sender, NfcCardData record)
     {
-        if(_scanInProgress)
-            return; // Ignore if already scanning
+        if (_scanInProgress)
+            return;
 
         _scanInProgress = true;
         try
         {
+            if (record == null || record.Message == null)
+            {
+                _toast.ShowError("No NFC data found");
+                return;
+            }
+
+            var message = record.Message;
+            if (string.IsNullOrEmpty(message))
+            {
+                _toast.ShowError("Empty NFC message");
+                return;
+            }
+
             var btcPayClient = new BTCPayAppClient(BaseUri);
-            var req = new SubmitLnUrlRequest()
+            var req = new SubmitLnUrlRequest
             {
                 InvoiceId = InvoiceId,
-                Lnurl = nFCNdefRecord.LnUrl
+                Lnurl = message
             };
 
-            var result = await btcPayClient.SubmitLNURLWithdrawForInvoice(req);
+            _toast.ShowSuccess("Submitting NFC data to Server", 5000);
 
-            _success = true;
-            EndNFCScan();
+            var result = await btcPayClient.SubmitLNURLWithdrawForInvoice(req);
+            if (result == null)
+            {
+                _toast.Hide();
+                NfcService.EndNfc();
+                NfcService.OnNfcDataReceived -= OnNfcDataReceived;
+            }
         }
         catch (Exception ex)
         {
-            if (ex.Message.Contains("A tag identifying the LNURL endpoint was not received."))
+            try
             {
-                _success = true;
-                EndNFCScan();
-            } else
+                var errorFromServer = ex.Message.Split("\"")[1].Trim('"');
+                _toast.ShowError("ERROR: " + errorFromServer);
+            }
+            catch
             {
-                _scanInProgress = false;
-                throw ex;
+                _toast.ShowError("NFC call to server ERROR");
             }
         }
-
-        StateHasChanged();
-    }
-
-    void EndNFCScan()
-    {
-        _scanInProgress = false;
-        Dispose();
-        NfcService.EndNfc();
+        finally
+        {
+            _scanInProgress = false;
+        }
     }
 
     public void Dispose()
@@ -107,4 +157,59 @@ else
         NfcService.OnNfcDataReceived -= OnNfcDataReceived;
     }
 
+    public class Toast
+    {
+        private CancellationTokenSource? _cts;
+
+        public bool IsVisible { get; private set; }
+        public bool IsError { get; private set; }
+        public string Message { get; private set; } = string.Empty;
+
+        public Action? OnUpdated { get; set; }
+
+        public void ShowSuccess(string message, int delayTime = 3000)
+        {
+            Show(message, false);
+        }
+
+        public void ShowError(string message, int delayTime = 3000)
+        {
+            Show(message, true);
+        }
+
+        private void Show(string message, bool isError, int delayTime = 3000)
+        {
+            _cts?.Cancel();
+            _cts = new CancellationTokenSource();
+
+            Message = message;
+            IsError = isError;
+            IsVisible = true;
+            OnUpdated?.Invoke();
+
+            var token = _cts.Token;
+            _ = HideAfterDelayAsync(token);
+        }
+
+        private async Task HideAfterDelayAsync(CancellationToken token, int delayTime = 3000)
+        {
+            try
+            {
+                await Task.Delay(delayTime, token);
+                if (!token.IsCancellationRequested)
+                {
+                    IsVisible = false;
+                    OnUpdated?.Invoke();
+                }
+            }
+            catch (TaskCanceledException) { }
+        }
+
+        public void Hide()
+        {
+            _cts?.Cancel();
+            IsVisible = false;
+            OnUpdated?.Invoke();
+        }
+    }
 }

@@ -12,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Photino.Blazor;
 using Photino.NET;
+using Size = System.Drawing.Size;
 
 namespace BTCPayApp.Photino;
 

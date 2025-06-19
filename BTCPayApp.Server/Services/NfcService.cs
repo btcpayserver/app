@@ -5,7 +5,7 @@ namespace BTCPayApp.Server.Services
 {
     public class NfcService : INfcService
     {
-        public event EventHandler<NfcLnUrlRecord> OnNfcDataReceived = delegate { };
+        public event EventHandler<NfcCardData> OnNfcDataReceived = delegate { };
 
         public void Dispose()
         {

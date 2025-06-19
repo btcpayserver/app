@@ -1,10 +1,10 @@
-﻿using BTCPayApp.Core.Contracts;
+using BTCPayApp.Core.Contracts;
 using BTCPayApp.Core.Models;
 using Plugin.NFC;
 
 public class NfcService : INfcService, IDisposable
 {
-    public event EventHandler<NfcLnUrlRecord> OnNfcDataReceived = delegate { };
+    public event EventHandler<NfcCardData> OnNfcDataReceived = delegate { };
 
     public void StartNfc()
     {
@@ -31,21 +31,18 @@ public class NfcService : INfcService, IDisposable
     {
         if (tagInfo == null || tagInfo.Records == null || !tagInfo.Records.Any())
         {
-            throw new ArgumentException("No NFC records found in the tag info.");
+            //throw new ArgumentException("No NFC records found in the tag info.");
+            return;
         }
-
+        
         var record = tagInfo.Records[0];
 
-        //no need to proceed if the record is not a valid LNURL record
-        if (!record.Message.Contains("lnurl")) return;
-
-        var lnUrlRecord = new NfcLnUrlRecord
+        // Pass the raw tag info up - let the consumer decide what to do with it
+        OnNfcDataReceived?.Invoke(this, new NfcCardData
         {
-            Payload = record.Payload,
-            LnUrl = record.Message,
-        };
-
-        OnNfcDataReceived?.Invoke(this, lnUrlRecord);
+            Message = record.Message,
+            Payload = record.Payload
+        });
     }
 
     public void Dispose()
