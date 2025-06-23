@@ -36,6 +36,10 @@
                 {
                     <Alert Type="danger">@Error</Alert>
                 }
+                @if (!string.IsNullOrEmpty(_successMessage))
+                {
+                    <Alert Type="success">@_successMessage</Alert>
+                }
                 @if (Invoice is not null)
                 {
                     @if (CanCheckout)
@@ -56,45 +60,64 @@
                             <InvoiceStatusDisplay Invoice="@Invoice"/>
                         </div>
 
+                        <div class="invoice-actions mt-3 mb-3">
+                            <div class="row g-2">
+                                @if (!string.IsNullOrEmpty(ReceiptUrl))
+                                {
+                                    <div class="col-4">
+                                        <a class="btn btn-outline-secondary btn-sm w-100" href="@ReceiptUrl" rel="noreferrer noopener" target="_blank">Receipt</a>
+                                    </div>
+                                }
+                                @if (!Invoice.Archived)
+                                {
+                                    <div class="col-4">
+                                        <button class="btn btn-outline-secondary btn-sm w-100" @onclick="ToggleArchive">
+                                            Archive
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
                         <h4 class="mt-4">General Information</h4>
                         <div class="box">
                             <table class="table my-0">
                                 <tbody>
-                                @if (Invoice.Metadata.TryGetValue("orderId", out var orderId))
-                                {
+                                    @if (Invoice.Metadata.TryGetValue("orderId", out var orderId))
+                                    {
+                                        <tr>
+                                            <th>Order Id</th>
+                                            <td>
+                                                @if (Invoice.Metadata.TryGetValue("orderUrl", out var orderUrl))
+                                                {
+                                                    <a href="@orderUrl" rel="noreferrer noopener" target="_blank">@orderId</a>
+                                                }
+                                                else
+                                                {
+                                                    <span>@orderId</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                    @if (Invoice.Metadata.TryGetValue("paymentRequestId", out var paymentRequestId))
+                                    {
+                                        <tr>
+                                            <th>Payment Request Id</th>
+                                            <td>@paymentRequestId</td>
+                                        </tr>
+                                    }
                                     <tr>
-                                        <th>Order Id</th>
+                                        <th>Created</th>
                                         <td>
-                                            @if (Invoice.Metadata.TryGetValue("orderUrl", out var orderUrl))
-                                            {
-                                                <a href="@orderUrl" rel="noreferrer noopener" target="_blank">@orderId</a>
-                                            }
-                                            else
-                                            {
-                                                <span>@orderId</span>
-                                            }
+                                            <DateDisplay DateTimeOffset="@Invoice.CreatedTime"/>
                                         </td>
                                     </tr>
-                                }
-                                @if (Invoice.Metadata.TryGetValue("paymentRequestId", out var paymentRequestId))
-                                {
                                     <tr>
-                                        <th>Payment Request Id</th>
-                                        <td>@paymentRequestId</td>
+                                        <th>Expired</th>
+                                        <td>
+                                            <DateDisplay DateTimeOffset="@Invoice.ExpirationTime"/>
+                                        </td>
                                     </tr>
-                                }
-                                <tr>
-                                    <th>Created</th>
-                                    <td>
-                                        <DateDisplay DateTimeOffset="@Invoice.CreatedTime"/>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th>Expired</th>
-                                    <td>
-                                        <DateDisplay DateTimeOffset="@Invoice.ExpirationTime"/>
-                                    </td>
-                                </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -111,27 +134,27 @@
                             <div class="box">
                                 <table class="table my-0">
                                     <tbody>
-                                    @if (!string.IsNullOrEmpty(itemCode?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>Item code</th>
-                                            <td>@itemCode</td>
-                                        </tr>
-                                    }
-                                    @if (!string.IsNullOrEmpty(itemDesc?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>Item Description</th>
-                                            <td>@itemDesc</td>
-                                        </tr>
-                                    }
-                                    @if (taxIncluded is not null)
-                                    {
-                                        <tr>
-                                            <th>Tax Included</th>
-                                            <td>@taxIncluded</td>
-                                        </tr>
-                                    }
+                                        @if (!string.IsNullOrEmpty(itemCode?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>Item code</th>
+                                                <td>@itemCode</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(itemDesc?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>Item Description</th>
+                                                <td>@itemDesc</td>
+                                            </tr>
+                                        }
+                                        @if (taxIncluded is not null)
+                                        {
+                                            <tr>
+                                                <th>Tax Included</th>
+                                                <td>@taxIncluded</td>
+                                            </tr>
+                                        }
                                     </tbody>
                                 </table>
                             </div>
@@ -150,80 +173,80 @@
                             Invoice.Metadata.TryGetValue("buyerZip", out var buyerZip);
                         }
                         @if (!string.IsNullOrEmpty(buyerName?.ToString()) || !string.IsNullOrEmpty(buyerEmail?.ToString()) ||
-                             !string.IsNullOrEmpty(buyerPhone?.ToString()) || !string.IsNullOrEmpty(buyerAddress1?.ToString()) ||
-                             !string.IsNullOrEmpty(buyerAddress2?.ToString()) || !string.IsNullOrEmpty(buyerCity?.ToString()) ||
-                             !string.IsNullOrEmpty(buyerState?.ToString()) || !string.IsNullOrEmpty(buyerCountry?.ToString()) ||
-                             !string.IsNullOrEmpty(buyerZip?.ToString()))
+                          !string.IsNullOrEmpty(buyerPhone?.ToString()) || !string.IsNullOrEmpty(buyerAddress1?.ToString()) ||
+                          !string.IsNullOrEmpty(buyerAddress2?.ToString()) || !string.IsNullOrEmpty(buyerCity?.ToString()) ||
+                          !string.IsNullOrEmpty(buyerState?.ToString()) || !string.IsNullOrEmpty(buyerCountry?.ToString()) ||
+                          !string.IsNullOrEmpty(buyerZip?.ToString()))
                         {
                             <h4 class="mt-4">Buyer Information</h4>
                             <div class="box">
                                 <table class="table my-0">
                                     <tbody>
-                                    @if (!string.IsNullOrEmpty(buyerName?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>Name</th>
-                                            <td>@buyerName</td>
-                                        </tr>
-                                    }
-                                    @if (!string.IsNullOrEmpty(buyerEmail?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>Email</th>
-                                            <td>
-                                                <a href="mailto:@buyerEmail">@buyerEmail</a>
-                                            </td>
-                                        </tr>
-                                    }
-                                    @if (!string.IsNullOrEmpty(buyerPhone?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>Phone</th>
-                                            <td>@buyerPhone</td>
-                                        </tr>
-                                    }
-                                    @if (!string.IsNullOrEmpty(buyerAddress1?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>Address 1</th>
-                                            <td>@buyerAddress1</td>
-                                        </tr>
-                                    }
-                                    @if (!string.IsNullOrEmpty(buyerAddress2?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>Address 2</th>
-                                            <td>@buyerAddress2</td>
-                                        </tr>
-                                    }
-                                    @if (!string.IsNullOrEmpty(buyerCity?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>City</th>
-                                            <td>@buyerCity</td>
-                                        </tr>
-                                    }
-                                    @if (!string.IsNullOrEmpty(buyerState?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>State</th>
-                                            <td>@buyerState</td>
-                                        </tr>
-                                    }
-                                    @if (!string.IsNullOrEmpty(buyerCountry?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>Country</th>
-                                            <td>@buyerCountry</td>
-                                        </tr>
-                                    }
-                                    @if (!string.IsNullOrEmpty(buyerZip?.ToString()))
-                                    {
-                                        <tr>
-                                            <th>Zip</th>
-                                            <td>@buyerZip</td>
-                                        </tr>
-                                    }
+                                        @if (!string.IsNullOrEmpty(buyerName?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>Name</th>
+                                                <td>@buyerName</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(buyerEmail?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>Email</th>
+                                                <td>
+                                                    <a href="mailto:@buyerEmail">@buyerEmail</a>
+                                                </td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(buyerPhone?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>Phone</th>
+                                                <td>@buyerPhone</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(buyerAddress1?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>Address 1</th>
+                                                <td>@buyerAddress1</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(buyerAddress2?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>Address 2</th>
+                                                <td>@buyerAddress2</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(buyerCity?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>City</th>
+                                                <td>@buyerCity</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(buyerState?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>State</th>
+                                                <td>@buyerState</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(buyerCountry?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>Country</th>
+                                                <td>@buyerCountry</td>
+                                            </tr>
+                                        }
+                                        @if (!string.IsNullOrEmpty(buyerZip?.ToString()))
+                                        {
+                                            <tr>
+                                                <th>Zip</th>
+                                                <td>@buyerZip</td>
+                                            </tr>
+                                        }
                                     </tbody>
                                 </table>
                             </div>
@@ -327,13 +350,13 @@
 
         if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
         {
-            if (Invoice == null)
-                Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
+            Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
             if (PaymentMethods == null)
                 Dispatcher.Dispatch(new StoreState.FetchInvoicePaymentMethods(StoreId, InvoiceId));
         }
     }
 
+    private string? _successMessage;
     private string? StoreId => AccountManager.CurrentStore?.Id;
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private InvoiceData? Invoice => !string.IsNullOrEmpty(InvoiceId) ? StoreState.Value.GetInvoice(InvoiceId!)?.Data : null;
@@ -353,4 +376,14 @@
 
     private string GetTitle() => $"Invoice {Invoice?.Id}".Trim();
     private bool CanCheckout => Invoice is { Status: InvoiceStatus.New };
+
+    private async Task ToggleArchive()
+    {
+        await AccountManager.GetClient().ArchiveInvoice(StoreId, InvoiceId);
+        _successMessage = "The invoice has been archived and will no longer appear in the invoice list by default";
+        if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
+        {
+            Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
+        }
+    }
 }

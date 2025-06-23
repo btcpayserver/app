@@ -1,4 +1,8 @@
+@using BTCPayApp.Core.Auth
+@using BTCPayApp.UI.Features
 @using BTCPayServer.Client.Models
+@inject IAccountManager AccountManager
+@inject IDispatcher Dispatcher
 <div @attributes="InputAttributes" class="@CssClass">
     @if (Invoices is not null)
     {
@@ -44,4 +48,21 @@
     public Dictionary<string, object>? InputAttributes { get; set; }
 
     private string CssClass => $"invoice-list {(InputAttributes?.ContainsKey("class") is true ? InputAttributes["class"] : "")}".Trim();
+
+    private string? StoreId => AccountManager.CurrentStore?.Id;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            if (!string.IsNullOrEmpty(StoreId))
+            {
+                Dispatcher.Dispatch(new StoreState.FetchInvoices(StoreId));
+            }
+        }
+    }
+    private async void OnStateChanged(object? sender, EventArgs e)
+    {
+        await InvokeAsync(StateHasChanged);
+    }
 }
