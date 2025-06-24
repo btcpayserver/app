@@ -80,7 +80,7 @@
         ActionSubscriber.SubscribeToAction<NotificationState.UpdatedSettings>(this, action =>
         {
             if (action.Settings == null || action.Error != null) return;
-            _successMessage = "Settingss successfully updated";
+            _successMessage = "Settings successfully updated";
             InvokeAsync(StateHasChanged);
         });
 
