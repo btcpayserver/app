@@ -24,7 +24,7 @@ docker-compose up dev
 Now you can open up the IDE and run `DEV ALL` profile which builds both the App and the BTCPay Server.
 
 The app should open in the browser and you should see the Welcome screen.
-Click the Connect button, use `http://localhost:14142` as the server URL and an existing account for the server.
+Click the Connect button, use `https://localhost:14142` as the server URL and an existing account for the server.
 
 ## Lightning Channels
 
