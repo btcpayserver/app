@@ -2,6 +2,7 @@
 @using System.Globalization
 @using System.Text.Json
 @using System.Text.Json.Nodes
+@using BTCPayApp.Core.Models
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @inject IJSRuntime JS
@@ -436,8 +437,6 @@
     {
         var data = new JsonObject
         {
-            ["subTotal"] = GetAmount(),
-            ["total"] = GetTotal(),
             ["cart"] = JsonValue.Create(Model.Cart)
         };
 
@@ -671,12 +670,8 @@
             {
                 Cart = Model.Cart,
                 DiscountPercent = Model.DiscountPercent,
-                TipPercent = Model.TipPercent,
                 Tip = GetTip(),
-                Amounts = GetAmounts(),
                 DiscountAmount = GetDiscount(),
-                Subtotal = GetAmount(),
-                Total = GetTotal(),
                 PosData = GetData()
             };
             await CreateInvoice.InvokeAsync(req);
