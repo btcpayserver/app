@@ -24,13 +24,7 @@
 </SectionContent>
 
 <section class="container @(CanCheckout ? "" : "no-cta")">
-    <script>
-        window.setDivDisplay = function (elementId, displayValue) {
-            const el = document.getElementById(elementId);
-            if (!el) return;
-            el.style.display = displayValue;
-        }
-    </script>
+    
 
     @if (string.IsNullOrEmpty(StoreId))
     {
@@ -88,16 +82,20 @@
                                         </button>
                                     </div>
                                     <div class="modal-body pt-0">
+                                        @if (!string.IsNullOrEmpty(RefundError))
+                                        {
+                                            <Alert Type="danger">@RefundError</Alert>
+                                        }
                                         <h6>How much to refund?</h6>
-                                        <InputRadioGroup Name="RefundVariant" @bind-Value="@RefundRequest.RefundVariant" @onchange="() => ToggleCustomRefund()">
+                                        <InputRadioGroup Name="RefundVariant" @bind-Value="@RefundRequest.RefundVariant">
                                             <ul class="list-group list-group-flush">
                                                 @foreach (RefundVariant refundVariant in refundStatuses)
                                                 {
                                                     <li class="list-group-item">
-                                                        <label class="form-check-label stretched-link d-flex flex-wrap align-items-left justify-content-start">
-                                                            <InputRadio Name="RefundVariant" Value="@refundVariant" class="form-check-input m-0" />
+                                                        <label class="form-check-label ml-5">
+                                                            <InputRadio Name="RefundVariant" Value="@refundVariant" class="form-check-input mr-3" @onclick="() => ToggleCustomRefund()" />
                                                             
-                                                            <strong class="pl-3">@refundVariant.ToString()</strong>
+                                                            <strong>@refundVariant.ToString()</strong>
                                                             <p class="small">
                                                                 @(refundVariant == RefundVariant.CurrentRate ? "The crypto currency price, at the current rate." :
                                                             refundVariant == RefundVariant.RateThen ? "The crypto currency price, at the rate the invoice got paid." :
@@ -108,7 +106,7 @@
                                                 }
                                             </ul>
                                         </InputRadioGroup>
-                                        <div class="form-group" id="customAmountAndCurrency">
+                                        <div class="form-group" id="CustomAmountAndCurrency" style="display:none">
                                                 <label for="CustomAmount" class="form-label me-1">Specify the amount and currency for the refund.</label>
                                                 <div class="input-group">
                                                     <InputNumber @bind-Value="RefundRequest.CustomAmount" id="CustomAmount" class="form-control" inputmode="decimal" style="max-width:20ch;" />
@@ -127,7 +125,16 @@
                                                 <span class="input-group-text">%</span> 
                                             </div>
                                         </div>
-                                        <button class="btn btn-primary w-100" type="submit" @onclick="TriggerRefund">Create Refund</button>
+                                        <button class="btn btn-primary w-100" type="submit" @onclick="TriggerRefund" disabled="@(RefundRequest.RefundVariant == null || Sending)">
+                                            @if (Sending)
+                                            {
+                                                <LoadingIndicator/>
+                                            }
+                                            else
+                                            {
+                                                <span>Create Refund</span>
+                                            }
+                                            </button>
                                     </div>
                                 </div>
                             </div>
@@ -433,41 +440,51 @@
 
     private List<RefundVariant> refundStatuses = Enum.GetValues(typeof(RefundVariant)).Cast<RefundVariant>().ToList(); // new List<RefundVariant> { RefundVariant.CurrentRate, RefundVariant.RateThen, RefundVariant.Fiat, RefundVariant.Custom}; //Enum.GetValues(typeof(RefundVariant))
     private RefundInvoiceRequest RefundRequest { get; set; } = new();
+    private bool Sending => StoreState.Value.Invoice?.Sending is true;
+    private string? RefundError => StoreState.Value.Invoice?.Error;
 
     private async Task TriggerRefund()
     {
-        // TODO: Validation
-        // if(RefundRequest.RefundVariant == RefundVariant.Custom && (RefundRequest.CustomAmount <= 0m || string.IsNullOrEmpty(RefundRequest.CustomCurrency)))
-        //     Error = "Custom amount and currency is required"
-        RefundRequest.Name = InvoiceId;
-        RefundRequest.PayoutMethodId = PaymentMethods?.FirstOrDefault()?.PaymentMethodId;
-        var pullPaymentData = await AccountManager.GetClient().RefundInvoice(StoreId, InvoiceId, RefundRequest);
-        if (string.IsNullOrEmpty(pullPaymentData.ViewLink))
+        try
         {
-            // TODO: Show Failure
-        }
-        else
-        {
-            NavigationManager.NavigateTo(pullPaymentData.ViewLink);
-        }
+            Dispatcher.Dispatch(new StoreState.RefundRequest(true));
+            
+            if (RefundRequest.RefundVariant == RefundVariant.Custom && (RefundRequest.CustomAmount <= 0m || string.IsNullOrEmpty(RefundRequest.CustomCurrency)))
+            {
+                Dispatcher.Dispatch(new StoreState.RefundResponse("Amount and Currency are required for custom refund."));
+                return;
+            }
+            RefundRequest.Name = InvoiceId;
+            RefundRequest.PayoutMethodId = PaymentMethods?.FirstOrDefault()?.PaymentMethodId;
+            var pullPaymentData = await AccountManager.GetClient().RefundInvoice(StoreId, InvoiceId, RefundRequest);
+            if (string.IsNullOrEmpty(pullPaymentData.ViewLink))
+            {
+                Dispatcher.Dispatch(new StoreState.RefundResponse("Failed to initiate refund"));
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("Interop.closeModal", "#RefundInvoice");
+                NavigationManager.NavigateTo(pullPaymentData.ViewLink);
 
-        if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
+                if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
+                {
+                    Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
+                }
+            }
+        }
+        catch(Exception ex)
         {
-            Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
+            Dispatcher.Dispatch(new StoreState.RefundResponse(ex.Message));
+            if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
+            {
+                Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
+            }
         }
     }
 
     private async Task ToggleCustomRefund()
     {   
         var display = RefundRequest.RefundVariant == RefundVariant.Custom ? "block" : "none";
-        await JS.InvokeVoidAsync("setDivDisplay", "customAmountAndCurrency", display);
-        return;
+        await JS.InvokeVoidAsync("Interop.setDivDisplay", "#CustomAmountAndCurrency", display);
     }
-
-    // private async Task PrepareForInvoiceRefund()
-    // {
-    //     var paymentMethod = await AccountManager.GetClient().GetInvoicePaymentMethods(StoreId, InvoiceId);
-    //     var accounting = await AccountManager.GetClient()
-
-    // }
 }
