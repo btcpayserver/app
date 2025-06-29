@@ -3,8 +3,6 @@ using System.Net.Http.Headers;
 using BTCPayApp.Core.Models;
 using BTCPayServer.Client;
 using BTCPayServer.Client.Models;
-using BTCPayServer.JsonConverters;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
 namespace BTCPayApp.Core;
@@ -72,7 +70,7 @@ public class BTCPayAppClient(string baseUri, string? apiKey = null, HttpClient? 
         return await SendHttpRequest<JObject?>(path, payload, HttpMethod.Post, cancellation);
     }
 
-    public async Task<JObject?> CreatePosInvoice(CreatePosInvoiceRequest req, CancellationToken cancellation = default)
+    public async Task<JObject?> CreatePosInvoice(Models.CreatePosInvoiceRequest req, CancellationToken cancellation = default)
     {
         var query = new Dictionary<string, object>();
         if (req.DiscountPercent != null) query.Add("discount", req.DiscountPercent.Value.ToString(CultureInfo.InvariantCulture));
