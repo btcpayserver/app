@@ -11,6 +11,7 @@ public record StoreState
 {
     public AppUserStoreInfo? StoreInfo;
     public RemoteData<StoreData>? Store;
+    public RemoteData<InvoiceData>? Invoice;
     public RemoteData<OnChainWalletOverviewData>? OnchainBalance;
     public RemoteData<HistogramData>? OnchainHistogram;
     public RemoteData<LightningNodeBalanceData>? LightningBalance;
@@ -30,6 +31,8 @@ public record StoreState
 
     private static readonly string[] BitcoinUnits = [CurrencyDisplay.BTC, CurrencyDisplay.SATS];
 
+    public record RefundRequest(bool sending);
+    public record RefundResponse(string message);
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
     public record SetHistogramType(HistogramType Type);
     public record FetchStore(string StoreId);
@@ -218,6 +221,11 @@ public record StoreState
                 state._invoicesById.Remove(action.InvoiceId);
             return state with
             {
+                Invoice = (state.Invoice ?? new RemoteData<InvoiceData>()) with
+                {
+                    Sending = false,
+                    Error = string.Empty
+                },
                 _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
                 {
                     { action.InvoiceId, new RemoteData<InvoiceData>(invoice, null, true) }
@@ -289,6 +297,35 @@ public record StoreState
         }
     }
 
+    protected class RefundRequestReducer : Reducer<StoreState, RefundRequest>
+    {
+        public override StoreState Reduce(StoreState state, RefundRequest action)
+        {
+            return state with
+            {
+                Invoice = (state.Invoice ?? new RemoteData<InvoiceData>()) with
+                {
+                    Sending = true,
+                    Error = string.Empty
+                }
+            };
+        }
+    }
+
+    protected class RefundResponseReducer : Reducer<StoreState, RefundResponse>
+    {
+        public override StoreState Reduce(StoreState state, RefundResponse action)
+        {
+            return state with
+            {
+                Invoice = (state.Invoice ?? new RemoteData<InvoiceData>()) with
+                {
+                    Sending = false,
+                    Error = action.message
+                }
+            };
+        }
+    }
     protected class SetStoreReducer : Reducer<StoreState, SetStore>
     {
         public override StoreState Reduce(StoreState state, SetStore action)
