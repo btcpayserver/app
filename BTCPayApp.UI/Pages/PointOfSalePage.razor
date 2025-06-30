@@ -82,7 +82,7 @@ else
         return ValueTask.CompletedTask;
     }
 
-    private async Task CreateInvoice(CreatePosInvoiceRequest req)
+    private async Task CreateInvoice(Core.Models.CreatePosInvoiceRequest req)
     {
         _errorMessage = null;
         req.AppId = AppId;

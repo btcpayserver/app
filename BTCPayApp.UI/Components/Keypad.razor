@@ -2,6 +2,7 @@
 @using System.Globalization
 @using System.Text.Json
 @using System.Text.Json.Nodes
+@using BTCPayApp.Core.Models
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @inject IJSRuntime JS
@@ -248,7 +249,7 @@
 </div>
 
 @code {
-#nullable enable
+    #nullable enable
     [Parameter, EditorRequired]
     public string StoreId { get; set; } = null!;
     [Parameter, EditorRequired]
@@ -274,7 +275,7 @@
     [Parameter]
     public EventCallback LoadRecentTransactions { get; set; }
     [Parameter]
-    public EventCallback<CreatePosInvoiceRequest> CreateInvoice { get; set; }
+    public EventCallback<Core.Models.CreatePosInvoiceRequest> CreateInvoice { get; set; }
     [Parameter]
     public IEnumerable<RecentTransaction>? RecentTransactions { get; set; }
     [Parameter]
@@ -436,8 +437,6 @@
     {
         var data = new JsonObject
         {
-            ["subTotal"] = GetAmount(),
-            ["total"] = GetTotal(),
             ["cart"] = JsonValue.Create(Model.Cart)
         };
 
@@ -667,16 +666,12 @@
         StateHasChanged();
         if (CreateInvoice.HasDelegate)
         {
-            var req = new CreatePosInvoiceRequest
+            var req = new Core.Models.CreatePosInvoiceRequest
             {
                 Cart = Model.Cart,
                 DiscountPercent = Model.DiscountPercent,
-                TipPercent = Model.TipPercent,
                 Tip = GetTip(),
-                Amounts = GetAmounts(),
                 DiscountAmount = GetDiscount(),
-                Subtotal = GetAmount(),
-                Total = GetTotal(),
                 PosData = GetData()
             };
             await CreateInvoice.InvokeAsync(req);
