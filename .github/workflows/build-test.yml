@@ -67,6 +67,9 @@ jobs:
           dotnet-version: 8.0.x
       - name: Install workloads
         run: dotnet workload install maui
+      - name: Clean before build
+        run: |
+          dotnet clean BTCPayApp.Maui/BTCPayApp.Maui.csproj
       - name: Build
         # TODO: Use proper keystore once we switch to real releases
         # https://learn.microsoft.com/en-us/dotnet/maui/android/deployment/publish-cli?view=net-maui-8.0#code-try-4
