@@ -24,8 +24,6 @@
 </SectionContent>
 
 <section class="container @(CanCheckout ? "" : "no-cta")">
-    
-
     @if (string.IsNullOrEmpty(StoreId))
     {
         <section class="container">
@@ -64,7 +62,7 @@
                                 @if (CanRefund)
                                 {
                                     <div class="col-4">
-                                        <button class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#RefundInvoice" id="RefundInvoiceToggle">
+                                        <button class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#RefundInvoice" id="RefundInvoiceToggle" @onclick="InitRefund">
                                             Refund
                                         </button>
                                     </div>
@@ -86,55 +84,77 @@
                                         {
                                             <Alert Type="danger">@RefundError</Alert>
                                         }
-                                        <h6>How much to refund?</h6>
-                                        <InputRadioGroup Name="RefundVariant" @bind-Value="@RefundRequest.RefundVariant">
-                                            <ul class="list-group list-group-flush">
-                                                @foreach (RefundVariant refundVariant in refundStatuses)
-                                                {
-                                                    <li class="list-group-item">
-                                                        <label class="form-check-label ml-5">
-                                                            <InputRadio Name="RefundVariant" Value="@refundVariant" class="form-check-input mr-3" @onclick="() => ToggleCustomRefund()" />
-                                                            
-                                                            <strong>@refundVariant.ToString()</strong>
-                                                            <p class="small">
-                                                                @(refundVariant == RefundVariant.CurrentRate ? "The crypto currency price, at the current rate." :
-                                                            refundVariant == RefundVariant.RateThen ? "The crypto currency price, at the rate the invoice got paid." :
-                                                                refundVariant == RefundVariant.Fiat ? "The invoice currency, at the rate when the refund will be sent." : "The specified amount with the specified currency, at the rate when the refund will be sent.")
-                                                            </p>
-                                                        </label>
-                                                    </li>
-                                                }
-                                            </ul>
-                                        </InputRadioGroup>
-                                        <div class="form-group" id="CustomAmountAndCurrency" style="display:none">
-                                                <label for="CustomAmount" class="form-label me-1">Specify the amount and currency for the refund.</label>
-                                                <div class="input-group">
-                                                    <InputNumber @bind-Value="RefundRequest.CustomAmount" id="CustomAmount" class="form-control" inputmode="decimal" style="max-width:20ch;" />
-                                                    <InputSelect @bind-Value="RefundRequest.CustomCurrency" class="form-select">
-                                                        @foreach(var currency in DisplayFormatter.Currencies)
+
+                                        @if(RefundLoading){
+                                            <div class="p-3 text-center">
+                                                <LoadingIndicator />
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <h6>How much to refund?</h6>
+                                            <InputRadioGroup Name="RefundVariant" @bind-Value="@RefundRequest.RefundVariant">
+                                                <ul class="list-group list-group-flush">
+                                                    @foreach (RefundVariant refundVariant in refundStatuses)
+                                                    {
+                                                        if (refundVariant != RefundVariant.OverpaidAmount || IsOverpaid)
                                                         {
-                                                            <option value="@currency.Code">@currency.Code</option>
+                                                            <li class="list-group-item">
+                                                                <label class="form-check-label ml-5">
+                                                                    <InputRadio Name="RefundVariant" Value="@refundVariant" class="form-check-input mr-3" @onclick="@(() => ToggleCustomRefund(refundVariant))" />
+
+                                                                    <strong>
+                                                                        @(
+                                                                            refundVariant == RefundVariant.CurrentRate ? DisplayFormatter.Currency(InvoiceAccounting.CryptoAmountNow, InvoiceAccounting.CryptoCode, DisplayFormatter.CurrencyFormat.Symbol) :
+                                                                            refundVariant == RefundVariant.RateThen ? DisplayFormatter.Currency(InvoiceAccounting.CryptoAmountThen, InvoiceAccounting.CryptoCode, DisplayFormatter.CurrencyFormat.Symbol) :
+                                                                            refundVariant == RefundVariant.Fiat ? DisplayFormatter.Currency(InvoiceAccounting.FiatAmount, InvoiceAccounting.InvoiceCurrency, DisplayFormatter.CurrencyFormat.Symbol) :
+                                                                            refundVariant == RefundVariant.OverpaidAmount ? DisplayFormatter.Currency(InvoiceAccounting.OverpaidAmount ?? 0m, InvoiceAccounting.CryptoCode, DisplayFormatter.CurrencyFormat.Symbol) : refundVariant.ToString()
+                                                                        )
+                                                                    </strong>
+                                                                    <p class="small">
+                                                                        @(
+                                                                            refundVariant == RefundVariant.CurrentRate ? "The crypto currency price, at the current rate." :
+                                                                            refundVariant == RefundVariant.RateThen ? "The crypto currency price, at the rate the invoice got paid." :
+                                                                            refundVariant == RefundVariant.Fiat ? "The invoice currency, at the rate when the refund will be sent." :
+                                                                            refundVariant == RefundVariant.OverpaidAmount ? "The crypto currency amount that was overpaid." : "The specified amount with the specified currency, at the rate when the refund will be sent."
+                                                                        )
+                                                                    </p>
+                                                            </label>
+                                                        </li>
                                                         }
-                                                    </InputSelect>
+                                                    }
+                                                </ul>
+                                            </InputRadioGroup>
+                                            <div class="form-group" id="CustomAmountAndCurrency" style="display:none">
+                                                    <label for="CustomAmount" class="form-label me-1">Specify the amount and currency for the refund.</label>
+                                                    <div class="input-group">
+                                                        <InputNumber @bind-Value="RefundRequest.CustomAmount" id="CustomAmount" class="form-control" inputmode="decimal" style="max-width:20ch;" />
+                                                        <InputSelect @bind-Value="RefundRequest.CustomCurrency" class="form-select">
+                                                            @foreach(var currency in DisplayFormatter.Currencies)
+                                                            {
+                                                                <option value="@currency.Code">@currency.Code</option>
+                                                            }
+                                                        </InputSelect>
+                                                    </div>
+                                                </div>
+                                            <div class="form-group">
+                                                <label for="SubtractPercentage" class="form-label me-1 small">Optional: Specify the percentage by which to reduce the refund, e.g. as processing charge or to compensate for the mining fee.</label>
+                                                <div class="input-group">
+                                                    <InputNumber @bind-Value="RefundRequest.SubtractPercentage" id="SubtractPercentage" class="form-control" inputmode="decimal" />
+                                                    <span class="input-group-text">%</span> 
                                                 </div>
                                             </div>
-                                        <div class="form-group">
-                                            <label for="SubtractPercentage" class="form-label me-1 small">Optional: Specify the percentage by which to reduce the refund, e.g. as processing charge or to compensate for the mining fee.</label>
-                                            <div class="input-group">
-                                                <InputNumber @bind-Value="RefundRequest.SubtractPercentage" id="SubtractPercentage" class="form-control" inputmode="decimal" />
-                                                <span class="input-group-text">%</span> 
-                                            </div>
-                                        </div>
-                                        <button class="btn btn-primary w-100" type="submit" @onclick="TriggerRefund" disabled="@(RefundRequest.RefundVariant == null || Sending)">
-                                            @if (Sending)
-                                            {
-                                                <LoadingIndicator/>
-                                            }
-                                            else
-                                            {
-                                                <span>Create Refund</span>
-                                            }
+                                            <button class="btn btn-primary w-100" type="submit" @onclick="TriggerRefund" disabled="@(RefundRequest.RefundVariant == null || RefundSending)">
+                                                @if (RefundSending)
+                                                {
+                                                    <LoadingIndicator/>
+                                                }
+                                                else
+                                                {
+                                                    <span>Create Refund</span>
+                                                }
                                             </button>
+                                        }
                                     </div>
                                 </div>
                             </div>
@@ -437,54 +457,70 @@
     private string GetTitle() => $"Invoice {Invoice?.Id}".Trim();
     private bool CanCheckout => Invoice is { Status: InvoiceStatus.New };
     private bool CanRefund => Invoice is { Status: InvoiceStatus.Settled or InvoiceStatus.Invalid } or { Status: InvoiceStatus.Expired, AdditionalStatus: InvoiceExceptionStatus.PaidLate or InvoiceExceptionStatus.PaidOver or InvoiceExceptionStatus.PaidPartial };
+    private bool IsOverpaid => Invoice is { AdditionalStatus: InvoiceExceptionStatus.PaidOver };
 
-    private List<RefundVariant> refundStatuses = Enum.GetValues(typeof(RefundVariant)).Cast<RefundVariant>().ToList(); // new List<RefundVariant> { RefundVariant.CurrentRate, RefundVariant.RateThen, RefundVariant.Fiat, RefundVariant.Custom}; //Enum.GetValues(typeof(RefundVariant))
+    private List<RefundVariant> refundStatuses = Enum.GetValues(typeof(RefundVariant)).Cast<RefundVariant>().ToList();
     private RefundInvoiceRequest RefundRequest { get; set; } = new();
-    private bool Sending => StoreState.Value.Invoice?.Sending is true;
-    private string? RefundError => StoreState.Value.Invoice?.Error;
+    private bool RefundSending => StoreState.Value.InvoiceAccounting?.Sending is true;
+    private bool RefundLoading => StoreState.Value.InvoiceAccounting?.Loading is true;
+    private string? RefundError => StoreState.Value.InvoiceAccounting?.Error;
+    private InvoiceRefundAccounting? InvoiceAccounting { get; set; } = new();
 
     private async Task TriggerRefund()
     {
         try
         {
             Dispatcher.Dispatch(new StoreState.RefundRequest(true));
-            
+
             if (RefundRequest.RefundVariant == RefundVariant.Custom && (RefundRequest.CustomAmount <= 0m || string.IsNullOrEmpty(RefundRequest.CustomCurrency)))
             {
                 Dispatcher.Dispatch(new StoreState.RefundResponse("Amount and Currency are required for custom refund."));
                 return;
             }
-            RefundRequest.Name = InvoiceId;
+            RefundRequest.Name = $"Refund {InvoiceId}";
             RefundRequest.PayoutMethodId = PaymentMethods?.FirstOrDefault()?.PaymentMethodId;
             var pullPaymentData = await AccountManager.GetClient().RefundInvoice(StoreId, InvoiceId, RefundRequest);
             if (string.IsNullOrEmpty(pullPaymentData.ViewLink))
-            {
                 Dispatcher.Dispatch(new StoreState.RefundResponse("Failed to initiate refund"));
-            }
             else
             {
                 await JS.InvokeVoidAsync("Interop.closeModal", "#RefundInvoice");
                 NavigationManager.NavigateTo(pullPaymentData.ViewLink);
 
                 if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
-                {
                     Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
-                }
             }
         }
         catch(Exception ex)
         {
             Dispatcher.Dispatch(new StoreState.RefundResponse(ex.Message));
             if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
-            {
                 Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
-            }
         }
     }
 
-    private async Task ToggleCustomRefund()
+    private async Task ToggleCustomRefund(RefundVariant refundVariant)
     {   
-        var display = RefundRequest.RefundVariant == RefundVariant.Custom ? "block" : "none";
-        await JS.InvokeVoidAsync("Interop.setDivDisplay", "#CustomAmountAndCurrency", display);
+        var display = refundVariant == RefundVariant.Custom ? "block" : "none";
+        await JS.InvokeVoidAsync("Interop.setDisplay", "#CustomAmountAndCurrency", display);
+    }
+
+    private async Task InitRefund()
+    {
+        try
+        {
+            Dispatcher.Dispatch(new StoreState.InitRefund(true));
+            var accounting = await AccountManager.GetClient().GetInvoiceAccounting(StoreId, InvoiceId, PaymentMethods?.FirstOrDefault()?.PaymentMethodId);
+            if(accounting == null)
+                Dispatcher.Dispatch(new StoreState.RefundResponse("Failed to retrieve invoice accounting info"));
+
+            InvoiceAccounting = accounting;
+
+            Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.Dispatch(new StoreState.RefundResponse(ex.Message));
+        }
     }
 }
