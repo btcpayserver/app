@@ -51,18 +51,11 @@
 
     private string? StoreId => AccountManager.CurrentStore?.Id;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override async Task OnInitializedAsync()
     {
-        if (firstRender)
+        if (!string.IsNullOrEmpty(StoreId))
         {
-            if (!string.IsNullOrEmpty(StoreId))
-            {
-                Dispatcher.Dispatch(new StoreState.FetchInvoices(StoreId));
-            }
+            Dispatcher.Dispatch(new StoreState.FetchInvoices(StoreId));
         }
-    }
-    private async void OnStateChanged(object? sender, EventArgs e)
-    {
-        await InvokeAsync(StateHasChanged);
     }
 }
