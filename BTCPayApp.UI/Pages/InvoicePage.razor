@@ -64,6 +64,14 @@
 
                         <div class="invoice-actions mt-3 mb-3">
                             <div class="row g-2">
+                                @if (CanRefund)
+                                {
+                                    <div class="col-4">
+                                        <button class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#RefundInvoice" id="RefundInvoiceToggle" @onclick="InitRefund">
+                                            Refund
+                                        </button>
+                                    </div>
+                                }
                                 @if (!string.IsNullOrEmpty(ReceiptUrl))
                                 {
                                     <div class="col-4">
@@ -81,18 +89,6 @@
                             </div>
                         </div>
 
-                        <div class="invoice-actions mt-3 mb-3">
-                            <div class="row g-2">
-                                @if (CanRefund)
-                                {
-                                    <div class="col-4">
-                                        <button class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#RefundInvoice" id="RefundInvoiceToggle" @onclick="InitRefund">
-                                            Refund
-                                        </button>
-                                    </div>
-                                }
-                            </div>
-                        </div>
                         <div class="modal" tabindex="-1" id="RefundInvoice" ref="RefundInvoice" data-bs-backdrop="static">
                             <div class="modal-dialog modal-dialog-centered">
                                 <div class="modal-content">
@@ -539,15 +535,14 @@
                 Dispatcher.Dispatch(new StoreState.RefundResponse("Failed to retrieve invoice accounting info"));
 
             InvoiceAccounting = accounting;
-
-            Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
+            if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
+                Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
         }
         catch (Exception ex)
         {
             Dispatcher.Dispatch(new StoreState.RefundResponse(ex.Message));
         }
     }
-}
 
     private async Task ToggleArchive()
     {
