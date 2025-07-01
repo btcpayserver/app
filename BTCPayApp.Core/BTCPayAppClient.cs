@@ -70,10 +70,9 @@ public class BTCPayAppClient(string baseUri, string? apiKey = null, HttpClient? 
         return await SendHttpRequest<JObject?>(path, payload, HttpMethod.Post, cancellation);
     }
 
-    public async Task<JObject?> CreatePosInvoice(CreatePosInvoiceRequest req, CancellationToken cancellation = default)
+    public async Task<JObject?> CreatePosInvoice(Models.CreatePosInvoiceRequest req, CancellationToken cancellation = default)
     {
         var query = new Dictionary<string, object>();
-        if (req.Total != null) query.Add("amount", req.Total.Value.ToString(CultureInfo.InvariantCulture));
         if (req.DiscountPercent != null) query.Add("discount", req.DiscountPercent.Value.ToString(CultureInfo.InvariantCulture));
         if (req.Tip != null) query.Add("tip", req.Tip.Value.ToString(CultureInfo.InvariantCulture));
         if (req.PosData != null) query.Add("posData", req.PosData);
