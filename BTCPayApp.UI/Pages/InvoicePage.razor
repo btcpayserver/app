@@ -68,14 +68,11 @@
                                         <a class="btn btn-outline-secondary btn-sm w-100" href="@ReceiptUrl" rel="noreferrer noopener" target="_blank">Receipt</a>
                                     </div>
                                 }
-                                @if (!Invoice.Archived)
-                                {
-                                    <div class="col-4">
-                                        <button class="btn btn-outline-secondary btn-sm w-100" @onclick="ToggleArchive">
-                                            Archive
-                                        </button>
-                                    </div>
-                                }
+                                <div class="col-4">
+                                    <button class="btn btn-outline-secondary btn-sm w-100" @onclick="ToggleArchive">
+                                        @(Invoice.Archived ? "Unarchive" : "Archive")
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -379,10 +376,18 @@
 
     private async Task ToggleArchive()
     {
-        await AccountManager.GetClient().ArchiveInvoice(StoreId, InvoiceId);
-        _successMessage = "The invoice has been archived and will no longer appear in the invoice list by default";
         if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
         {
+            if (Invoice.Archived)
+            {
+                await AccountManager.GetClient().UnarchiveInvoice(StoreId, InvoiceId);
+                _successMessage = "The invoice has been unarchived and will appear in the invoice list by default again";
+            }
+            else
+            {
+                await AccountManager.GetClient().ArchiveInvoice(StoreId, InvoiceId);
+                _successMessage = "The invoice has been archived and will no longer appear in the invoice list by default";
+            }
             Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
         }
     }
