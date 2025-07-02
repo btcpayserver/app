@@ -4,11 +4,129 @@
 @inject IAccountManager AccountManager
 @inject IDispatcher Dispatcher
 <div @attributes="InputAttributes" class="@CssClass">
+    @{
+        var archivedCount = Invoices?.Count(i => i.Archived) ?? 0;
+        var shownArchivedCount = FilteredInvoices?.Count(i => i.Archived) ?? 0;
+    }
+    <div class="d-none">Archived: DB=@archivedCount, Shown=@shownArchivedCount</div>
     @if (Invoices is not null)
     {
         @if (Invoices.Any())
         {
-            @foreach (var i in Invoices)
+            <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-3">
+                <input type="text"
+                class="form-control border-0 text-white"
+                placeholder="Search invoices..."
+                @bind="_searchText"
+                @bind:event="oninput" />
+
+                <div class="d-flex gap-3">
+                    <div class="dropdown">
+                        <button class="btn btn-outline-success rounded-pill" type="button" data-bs-toggle="dropdown">
+                            @GetSelectedStatusText()
+                        </button>
+                        <ul class="dropdown-menu p-2" style="min-width: 200px;">
+                            @foreach (var status in Enum.GetValues<InvoiceStatus>())
+                            {
+                                bool isSelected = _selectedStatuses.Contains(status);
+                                <li>
+                                    <div class="form-check d-flex align-items-center">
+                                        <input class="form-check-input d-none"
+                                        type="checkbox"
+                                        id="status-@status"
+                                        @onchange="() => ToggleStatus(status)" />
+                                        <label class="form-check-label w-100 dropdown-item justify-content-between align-items-center @(isSelected ? "custom-active" : "")"
+                                        for="status-@status">
+                                            @status
+                                        </label>
+                                    </div>
+                                </li>
+                            }
+                            <hr class="dropdown-divider" />
+                            @foreach (var exceptionStatus in Enum.GetValues<InvoiceExceptionStatus>()
+                              .Where(s => s != InvoiceExceptionStatus.None &&
+                               s != InvoiceExceptionStatus.Marked))
+                            {
+                                bool isSelected = _selectedExceptionStatuses.Contains(exceptionStatus);
+                                string displayName = exceptionStatus switch
+                                {
+                                    InvoiceExceptionStatus.PaidLate => "Settled Late",
+                                    InvoiceExceptionStatus.PaidPartial => "Settled Partial",
+                                    InvoiceExceptionStatus.PaidOver => "Settled Over",
+                                    _ => exceptionStatus.ToString()
+                                };
+                                <li>
+                                    <div class="form-check d-flex align-items-center">
+                                        <input class="form-check-input d-none"
+                                        type="checkbox"
+                                        id="status-@exceptionStatus"
+                                        @onchange="() => ToggleExceptionStatus(exceptionStatus)" />
+                                        <label class="form-check-label w-100 dropdown-item justify-content-between align-items-center @(isSelected ? "custom-active" : "")"
+                                        for="status-@exceptionStatus">
+                                            @displayName
+                                        </label>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+
+                    <div class="dropdown">
+                        <button class="btn btn-outline-success rounded-pill" type="button" data-bs-toggle="dropdown">
+                            @GetSelectedTimeText()
+                        </button>
+                        <ul class="dropdown-menu p-2" style="min-width: 200px;">
+                            @foreach (var period in _timePeriods)
+                            {
+                                bool isSelected = _selectedTime == period.Key;
+                                <li>
+                                    <div class="form-check d-flex align-items-center">
+                                        <input class="form-check-input d-none"
+                                        type="radio"
+                                        name="timePeriod"
+                                        id="time-@period.Key"
+                                        @onchange="() => SelectTimePeriod(period.Key)" />
+                                        <label class="form-check-label w-100 dropdown-item justify-content-between align-items-center @(isSelected ? "custom-active" : "")"
+                                        for="time-@period.Key">
+                                            @period.Value
+                                        </label>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    </div>
+
+                    @if (_showCustomDateModal)
+                    {
+                        <div class="modal fade show" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Select Date Range</h5>
+                                        <button type="button" class="btn-close" @onclick="CloseCustomDateModal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Start Date</label>
+                                            <InputDate class="form-control" @bind-value="_customStartDate" />
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">End Date</label>
+                                            <InputDate class="form-control" @bind-value="_customEndDate" />
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" @onclick="CloseCustomDateModal">Cancel</button>
+                                        <button type="button" class="btn btn-primary" @onclick="ApplyCustomDateFilter">Filter</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @foreach (var i in FilteredInvoices)
             {
                 <InvoiceItem Invoice="@i" class="box"/>
             }
@@ -35,6 +153,14 @@
 </div>
 
 @code {
+    private DateTimeOffset? _customStartDate;
+    private DateTimeOffset? _customEndDate;
+    private bool _showCustomDateModal;
+    private string? _searchText;
+    private string _selectedTime = "all";
+    private HashSet<InvoiceStatus> _selectedStatuses = new();
+    private HashSet<InvoiceExceptionStatus> _selectedExceptionStatuses = new();
+
     [Parameter]
     public IEnumerable<InvoiceData>? Invoices { get; set; }
 
@@ -51,6 +177,97 @@
 
     private string? StoreId => AccountManager.CurrentStore?.Id;
 
+    private IEnumerable<InvoiceData> FilteredInvoices => Invoices?
+    .Where(i => string.IsNullOrEmpty(_searchText) || i.Id.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+    .Where(i => _selectedStatuses.Count == 0 || _selectedStatuses.Contains(i.Status))
+    .Where(i => _selectedExceptionStatuses.Count == 0 || _selectedExceptionStatuses.Contains(i.AdditionalStatus))
+    .Where(i => FilterByTime(i))
+    ?? Enumerable.Empty<InvoiceData>();
+
+
+    private string GetSelectedStatusText()
+    {
+        var count = _selectedStatuses.Count + _selectedExceptionStatuses.Count;
+        return count switch
+        {
+            0 => "All Status",
+            _ => $"{count} Status"
+        };
+    }
+
+    private void ToggleExceptionStatus(InvoiceExceptionStatus status)
+    {
+        bool wasPresent = _selectedExceptionStatuses.Remove(status);
+        if (!wasPresent)
+            _selectedExceptionStatuses.Add(status);
+
+        StateHasChanged();
+    }
+
+    private void ToggleStatus(InvoiceStatus status)
+    {
+        bool wasPresent = _selectedStatuses.Remove(status);
+        if (!wasPresent)
+            _selectedStatuses.Add(status);
+
+        StateHasChanged();
+    }
+
+    private void SelectTimePeriod(string period)
+    {
+        if (period == "custom")
+        {
+            _showCustomDateModal = true;
+        }
+        else
+        {
+            _selectedTime = period;
+            StateHasChanged();
+        }
+    }
+
+    private Dictionary<string, string> _timePeriods = new()
+    {
+        ["24h"] = "24 Hours",
+        ["3d"] = "3 Days",
+        ["7d"] = "7 Days",
+        ["custom"] = "Custom Range",
+        ["all"] = "All Time"
+    };
+
+    private string GetSelectedTimeText()
+    {
+        return _timePeriods.TryGetValue(_selectedTime, out var text) ? text : "All Time";
+    }
+
+    private void CloseCustomDateModal()
+    {
+        _showCustomDateModal = false;
+        StateHasChanged();
+    }
+
+    private void ApplyCustomDateFilter()
+    {
+        _selectedTime = "custom";
+        CloseCustomDateModal();
+    }
+
+    private bool FilterByTime(InvoiceData invoice)
+    {
+        DateTimeOffset now = DateTimeOffset.Now;
+        DateTimeOffset created = invoice.CreatedTime;
+        TimeSpan timeSinceCreation = now - created;
+        return _selectedTime switch
+        {
+            "24h" => timeSinceCreation <= TimeSpan.FromHours(24),
+            "3d" => timeSinceCreation <= TimeSpan.FromDays(3),
+            "7d" => timeSinceCreation <= TimeSpan.FromDays(7),
+            "custom" => (_customStartDate == null || created >= _customStartDate) &&
+                         (_customEndDate == null || created <= _customEndDate),
+            _ => true
+        };
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -64,5 +281,10 @@
     private async void OnStateChanged(object? sender, EventArgs e)
     {
         await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnFilterChanged(ChangeEventArgs e)
+    {
+        StateHasChanged();
     }
 }
