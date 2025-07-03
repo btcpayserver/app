@@ -2,15 +2,17 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Models
 @using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Models
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject IState<StoreState> StoreState
+@inject IDispatcher Dispatcher
 
 <PageTitle>Invoices</PageTitle>
 
-<section class="container">
+<section class="container py-4">
     <header class="d-flex align-items-center justify-content-between gap-3 my-4">
         <h1>Invoices</h1>
     </header>
@@ -22,7 +24,48 @@
     {
         <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="@StoreInfo.Id">
             <Authorized>
-                <InvoiceList Invoices="Invoices" Loading="Loading" Error="@Error"/>
+                <div class="container p-0 m-0 mt-4">
+                    <ul class="nav nav-tabs" id="activityTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="invoice_tab" data-bs-toggle="tab" data-bs-target="#invoice_tab_pane"
+                                    type="button" role="tab" aria-controls="invoice_tab_pane" aria-selected="true">
+                                Invoices
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="report_tab" data-bs-toggle="tab" data-bs-target="#report_tab_pane"
+                                    type="button" role="tab" aria-controls="report_tab_pane" aria-selected="false">
+                                Reports
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                    <div class="tab-content border-top-0 pt-3" id="activityTabContent">
+                        <div class="tab-pane fade show active" id="invoice_tab_pane" role="tabpanel" aria-labelledby="invoice_tab">
+                            <InvoiceList Invoices="Invoices" Loading="Loading" Error="@Error" />
+                        </div>
+                        <div class="tab-pane fade container" id="report_tab_pane" role="tabpanel" aria-labelledby="report_tab">
+                            <div class="btn-group d-flex flex-wrap justify-content-center w-100" role="group" aria-label="Period">
+                                <InputRadioGroup Name="ReportPeriod" @bind-Value="@ReportPeriod">
+                                @foreach (ReportPeriodEnum reportPeriod in ReportPeriods)
+                                    {
+                                        <InputRadio Name="ReportPeriod" Value="@reportPeriod" class="btn-check" id="@reportPeriod.ToString()" />
+                                        <label class="btn btn-link btn-sm fw-bold" for="@reportPeriod.ToString()">
+                                            @(
+                                        reportPeriod == ReportPeriodEnum.Day ? "1D" :
+                                        reportPeriod == ReportPeriodEnum.Week ? "1W" :
+                                        reportPeriod == ReportPeriodEnum.Month ? "1M" :
+                                        reportPeriod == ReportPeriodEnum.ThreeMonths ? "3M" :
+                                        reportPeriod == ReportPeriodEnum.Year ? "1Y" :
+                                        reportPeriod == ReportPeriodEnum.Custom ? "CUSTOM" : reportPeriod.ToString()
+                                            )
+                                        </label>
+                                    }
+                                </InputRadioGroup>
+                            </div>
+                            <SalesSummary Summary="SalesSummary" />
+                        </div>
+                    </div>
             </Authorized>
             <NotAuthorized>
                 <Alert Type="danger">Unauthorized.</Alert>
@@ -43,4 +86,12 @@
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data;
     private bool Loading => StoreState.Value.Invoices?.Loading is true;
     private string? Error => StoreState.Value.Invoices?.Error;
+
+    private List<ReportPeriodEnum> ReportPeriods = Enum.GetValues(typeof(ReportPeriodEnum)).Cast<ReportPeriodEnum>().ToList();
+    private ReportPeriodEnum ReportPeriod
+    {
+        get => StoreState.Value.ReportPeriod;
+        set => Dispatcher.Dispatch(new StoreState.SetReportPeriod(value));
+    }
+    private SalesReportModel SalesSummary { get; set; } = new SalesReportModel();
 }

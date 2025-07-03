@@ -1,5 +1,6 @@
 ﻿using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Models;
+using BTCPayApp.UI.Models;
 using BTCPayApp.UI.Util;
 using BTCPayServer.Client.Models;
 using Fluxor;
@@ -27,11 +28,13 @@ public record StoreState
     private IDictionary<string,RemoteData<InvoicePaymentMethodDataModel[]>?> _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>();
     public HistogramData? UnifiedHistogram;
     public HistogramType? HistogramType;
+    public ReportPeriodEnum ReportPeriod { get; set; } = ReportPeriodEnum.Day;
 
     private static readonly string[] BitcoinUnits = [CurrencyDisplay.BTC, CurrencyDisplay.SATS];
 
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
     public record SetHistogramType(HistogramType Type);
+    public record SetReportPeriod(ReportPeriodEnum Period);
     public record FetchStore(string StoreId);
     public record FetchOnchainBalance(string StoreId);
     public record FetchLightningBalance(string StoreId);
@@ -107,6 +110,16 @@ public record StoreState
             return state with
             {
                 HistogramType = action.Type,
+            };
+        }
+    }
+    protected class SetReportPeriodReducer : Reducer<StoreState, SetReportPeriod>
+    {
+        public override StoreState Reduce(StoreState state, SetReportPeriod action)
+        {
+            return state with
+            {
+                ReportPeriod = action.Period,
             };
         }
     }
@@ -958,6 +971,13 @@ public record StoreState
             var storeInfo = state.Value.StoreInfo;
             if (storeInfo != null)
                 dispatcher.Dispatch(new FetchHistograms(storeInfo.Id, action.Type));
+            return Task.CompletedTask;
+        }
+
+        [EffectMethod]
+        public Task SetReportPeriodEffect(SetReportPeriod action, IDispatcher dispatcher)
+        {
+            dispatcher.Dispatch(new SetReportPeriod(action.Period));
             return Task.CompletedTask;
         }
     }
