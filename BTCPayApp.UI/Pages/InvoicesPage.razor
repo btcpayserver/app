@@ -2,11 +2,14 @@
 @using BTCPayApp.Core.Auth
 @using BTCPayApp.Core.Models
 @using BTCPayApp.UI.Features
+@using BTCPayApp.UI.Models
 @using BTCPayServer.Client
 @using BTCPayServer.Client.Models
 @inherits Fluxor.Blazor.Web.Components.FluxorComponent
 @inject IAccountManager AccountManager
 @inject IState<StoreState> StoreState
+@inject IDispatcher Dispatcher
+@inject IJSRuntime JS
 
 <PageTitle>Invoices</PageTitle>
 
@@ -22,7 +25,87 @@
     {
         <AuthorizeView Policy="@Policies.CanViewInvoices" Resource="@StoreInfo.Id">
             <Authorized>
-                <InvoiceList Invoices="Invoices" Loading="Loading" Error="@Error"/>
+                <div class="container p-0 m-0 mt-4">
+                    <ul class="nav" id="activityTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active fs-5 fw-semibold" id="invoice_tab" data-bs-toggle="tab" data-bs-target="#invoice_tab_pane"
+                                    type="button" role="tab" aria-controls="invoice_tab_pane" aria-selected="true">
+                                Invoices
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link fs-5 fw-semibold" id="report_tab" data-bs-toggle="tab" data-bs-target="#report_tab_pane"
+                                    type="button" role="tab" aria-controls="report_tab_pane" aria-selected="false">
+                                Reports
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="tab-content border-top-0 pt-3 m-0 p-0" id="activityTabContent">
+                    <div class="tab-pane fade show active" id="invoice_tab_pane" role="tabpanel" aria-labelledby="invoice_tab">
+                        <InvoiceList Invoices="Invoices" Loading="Loading" Error="@Error" />
+                    </div>
+                    <div class="tab-pane fade container m-0 p-0" id="report_tab_pane" role="tabpanel" aria-labelledby="report_tab">
+                        @if (ReportSending)
+                        {
+                            <div class="p-3 text-center">
+                                <LoadingIndicator />
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(ReportError))
+                        {
+                            <Alert Type="danger">@ReportError</Alert>
+                        }
+                        else
+                        {
+                            <div class="btn-group d-flex flex-wrap justify-content-center w-100 m-0 px-0 pt-2 pb-4" role="group" aria-label="Period">
+                                <InputRadioGroup Name="ReportPeriod" @bind-Value="@ReportPeriod">
+                                    @foreach (ReportPeriodEnum reportPeriod in ReportPeriods)
+                                    {
+                                        <InputRadio Name="ReportPeriod" Value="@reportPeriod" class="btn-check" id="@reportPeriod.ToString()" @onclick="@(() => FilterSummary(reportPeriod))" />
+                                        <label class="px-3 @(ReportPeriod == reportPeriod ? "active fw-bold label-highlight" : "")" for="@reportPeriod.ToString()">
+                                            @(
+                                            reportPeriod == ReportPeriodEnum.Day ? "1D" :
+                                            reportPeriod == ReportPeriodEnum.Week ? "1W" :
+                                            reportPeriod == ReportPeriodEnum.Month ? "1M" :
+                                            reportPeriod == ReportPeriodEnum.ThreeMonths ? "3M" :
+                                            reportPeriod == ReportPeriodEnum.Year ? "1Y" :
+                                            reportPeriod == ReportPeriodEnum.Custom ? "CUSTOM" : reportPeriod.ToString()
+                                            )
+                                        </label>
+                                    }
+                                </InputRadioGroup>
+                            </div>
+                            <SalesSummary Summary="SalesSummary" />
+
+                            <div class="modal" tabindex="-1" id="CustomReportFilter" ref="CustomReportFilter" data-bs-backdrop="static">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Select Date Range</h5>
+                                            <button type="button" class="btn-close py-3" data-bs-dismiss="modal" aria-label="Close">
+                                                <Icon Symbol="close" />
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Start Date</label>
+                                                <InputDate class="form-control" @bind-Value="start" />
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">End Date</label>
+                                                <InputDate class="form-control" @bind-Value="end" />
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-primary w-100" @onclick="FetchStoreSalesStats">Filter</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
             </Authorized>
             <NotAuthorized>
                 <Alert Type="danger">Unauthorized.</Alert>
@@ -38,9 +121,59 @@
 </section>
 
 @code {
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await FilterSummary(ReportPeriodEnum.Day);
+    }
     private string? StoreId => AccountManager.CurrentStore?.Id;
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data;
     private bool Loading => StoreState.Value.Invoices?.Loading is true;
     private string? Error => StoreState.Value.Invoices?.Error;
+
+    private DateTimeOffset start = DateTimeOffset.Now.AddDays(-1);
+    private DateTimeOffset end = DateTimeOffset.Now;
+    private List<ReportPeriodEnum> ReportPeriods = Enum.GetValues(typeof(ReportPeriodEnum)).Cast<ReportPeriodEnum>().ToList();
+    private ReportPeriodEnum ReportPeriod { get; set; } = ReportPeriodEnum.Day;
+    private SalesReportModel SalesSummary => StoreState.Value.Report?.Data ?? new();
+    private bool ReportSending => StoreState.Value.Report?.Sending is true;
+    private string? ReportError => StoreState.Value.Report?.Error;
+
+    private async Task FilterSummary(ReportPeriodEnum period)
+    {
+        ReportPeriod = period;
+        (start, end) = period switch
+        {
+            ReportPeriodEnum.Day => (DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now),
+            ReportPeriodEnum.Week => (DateTimeOffset.Now.AddDays(-7), DateTimeOffset.Now),
+            ReportPeriodEnum.Month => (DateTimeOffset.Now.AddMonths(-1), DateTimeOffset.Now),
+            ReportPeriodEnum.ThreeMonths => (DateTimeOffset.Now.AddMonths(-3), DateTimeOffset.Now),
+            ReportPeriodEnum.Year => (DateTimeOffset.Now.AddYears(-1), DateTimeOffset.Now),
+            _ => (start, end),
+        };
+
+        if (period == ReportPeriodEnum.Custom)
+            await JS.InvokeVoidAsync("Interop.openModal", "#CustomReportFilter");
+        else
+            await FetchStoreSalesStats();
+    }
+
+    private async Task FetchStoreSalesStats()
+    {
+        try
+        {
+            Dispatcher.Dispatch(new StoreState.ReportRequest(true));
+            await JS.InvokeVoidAsync("Interop.closeModal", "#CustomReportFilter");
+            SalesReportModel salesSummary = new(); // await AccountManager.GetClient().StoreSalesStats(StoreId, start, end);
+            if (salesSummary == null)
+                Dispatcher.Dispatch(new StoreState.ReportResponse("Failed to retrieve report data", null));
+            else
+                Dispatcher.Dispatch(new StoreState.ReportResponse(string.Empty, salesSummary));
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.Dispatch(new StoreState.ReportResponse($"Failed to retrieve report data - {ex.Message}", null));
+        }
+    }
 }

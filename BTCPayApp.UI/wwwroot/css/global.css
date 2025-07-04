@@ -431,3 +431,8 @@ dl > div dd {
   color: inherit;
   cursor: pointer;
 }
+
+.label-highlight {
+    background-color: var(--btcpay-neutral-dark-400);
+    border-radius: 1rem;
+}
