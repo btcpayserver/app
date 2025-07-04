@@ -9,10 +9,11 @@
 @inject IAccountManager AccountManager
 @inject IState<StoreState> StoreState
 @inject IDispatcher Dispatcher
+@inject IJSRuntime JS
 
 <PageTitle>Invoices</PageTitle>
 
-<section class="container py-4">
+<section class="container">
     <header class="d-flex align-items-center justify-content-between gap-3 my-4">
         <h1>Invoices</h1>
     </header>
@@ -40,32 +41,71 @@
                         </li>
                     </ul>
                 </div>
-                    <div class="tab-content border-top-0 pt-3" id="activityTabContent">
-                        <div class="tab-pane fade show active" id="invoice_tab_pane" role="tabpanel" aria-labelledby="invoice_tab">
-                            <InvoiceList Invoices="Invoices" Loading="Loading" Error="@Error" />
-                        </div>
-                        <div class="tab-pane fade container" id="report_tab_pane" role="tabpanel" aria-labelledby="report_tab">
+                <div class="tab-content border-top-0 pt-3" id="activityTabContent">
+                    <div class="tab-pane fade show active" id="invoice_tab_pane" role="tabpanel" aria-labelledby="invoice_tab">
+                        <InvoiceList Invoices="Invoices" Loading="Loading" Error="@Error" />
+                    </div>
+                    <div class="tab-pane fade container" id="report_tab_pane" role="tabpanel" aria-labelledby="report_tab">
+                        @if (ReportSending)
+                        {
+                            <div class="p-3 text-center">
+                                <LoadingIndicator />
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(ReportError))
+                        {
+                            <Alert Type="danger">@ReportError</Alert>
+                        }
+                        else
+                        {
                             <div class="btn-group d-flex flex-wrap justify-content-center w-100" role="group" aria-label="Period">
                                 <InputRadioGroup Name="ReportPeriod" @bind-Value="@ReportPeriod">
-                                @foreach (ReportPeriodEnum reportPeriod in ReportPeriods)
+                                    @foreach (ReportPeriodEnum reportPeriod in ReportPeriods)
                                     {
-                                        <InputRadio Name="ReportPeriod" Value="@reportPeriod" class="btn-check" id="@reportPeriod.ToString()" />
-                                        <label class="btn btn-link btn-sm fw-bold" for="@reportPeriod.ToString()">
+                                        <InputRadio Name="ReportPeriod" Value="@reportPeriod" class="btn-check" id="@reportPeriod.ToString()" @onclick="@(() => FilterSummary(reportPeriod))" />
+                                        <label class="btn btn-link btn-sm fw-bold @(ReportPeriod == reportPeriod ? "active" : "")" for="@reportPeriod.ToString()">
                                             @(
-                                        reportPeriod == ReportPeriodEnum.Day ? "1D" :
-                                        reportPeriod == ReportPeriodEnum.Week ? "1W" :
-                                        reportPeriod == ReportPeriodEnum.Month ? "1M" :
-                                        reportPeriod == ReportPeriodEnum.ThreeMonths ? "3M" :
-                                        reportPeriod == ReportPeriodEnum.Year ? "1Y" :
-                                        reportPeriod == ReportPeriodEnum.Custom ? "CUSTOM" : reportPeriod.ToString()
+                                            reportPeriod == ReportPeriodEnum.Day ? "1D" :
+                                            reportPeriod == ReportPeriodEnum.Week ? "1W" :
+                                            reportPeriod == ReportPeriodEnum.Month ? "1M" :
+                                            reportPeriod == ReportPeriodEnum.ThreeMonths ? "3M" :
+                                            reportPeriod == ReportPeriodEnum.Year ? "1Y" :
+                                            reportPeriod == ReportPeriodEnum.Custom ? "CUSTOM" : reportPeriod.ToString()
                                             )
                                         </label>
                                     }
                                 </InputRadioGroup>
                             </div>
                             <SalesSummary Summary="SalesSummary" />
-                        </div>
+
+                            <div class="modal" tabindex="-1" id="CustomReportFilter" ref="CustomReportFilter" data-bs-backdrop="static">
+                                <div class="modal-dialog modal-dialog-centered">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Select Date Range</h5>
+                                            <button type="button" class="btn-close py-3" data-bs-dismiss="modal" aria-label="Close">
+                                                <Icon Symbol="close" />
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <div class="mb-3">
+                                                <label class="form-label">Start Date</label>
+                                                <InputDate class="form-control" @bind-Value="start" />
+                                            </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">End Date</label>
+                                                <InputDate class="form-control" @bind-Value="end" />
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="submit" class="btn btn-primary w-100" @onclick="FetchStoreSalesStats">Filter</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
                     </div>
+                </div>
             </Authorized>
             <NotAuthorized>
                 <Alert Type="danger">Unauthorized.</Alert>
@@ -81,17 +121,59 @@
 </section>
 
 @code {
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        await FilterSummary(ReportPeriodEnum.Day);
+    }
     private string? StoreId => AccountManager.CurrentStore?.Id;
     private AppUserStoreInfo? StoreInfo => StoreState.Value.StoreInfo;
     private IEnumerable<InvoiceData>? Invoices => StoreState.Value.Invoices?.Data;
     private bool Loading => StoreState.Value.Invoices?.Loading is true;
     private string? Error => StoreState.Value.Invoices?.Error;
 
+    private DateTimeOffset start = DateTimeOffset.Now.AddDays(-1);
+    private DateTimeOffset end = DateTimeOffset.Now;
     private List<ReportPeriodEnum> ReportPeriods = Enum.GetValues(typeof(ReportPeriodEnum)).Cast<ReportPeriodEnum>().ToList();
-    private ReportPeriodEnum ReportPeriod
+    private ReportPeriodEnum ReportPeriod { get; set; } = ReportPeriodEnum.Day;
+    private SalesReportModel SalesSummary => StoreState.Value.Report?.Data ?? new();
+    private bool ReportSending => StoreState.Value.Report?.Sending is true;
+    private string? ReportError => StoreState.Value.Report?.Error;
+
+    private async Task FilterSummary(ReportPeriodEnum period)
     {
-        get => StoreState.Value.ReportPeriod;
-        set => Dispatcher.Dispatch(new StoreState.SetReportPeriod(value));
+        ReportPeriod = period;
+        (start, end) = period switch
+        {
+            ReportPeriodEnum.Day => (DateTimeOffset.Now.AddDays(-1), DateTimeOffset.Now),
+            ReportPeriodEnum.Week => (DateTimeOffset.Now.AddDays(-7), DateTimeOffset.Now),
+            ReportPeriodEnum.Month => (DateTimeOffset.Now.AddMonths(-1), DateTimeOffset.Now),
+            ReportPeriodEnum.ThreeMonths => (DateTimeOffset.Now.AddMonths(-3), DateTimeOffset.Now),
+            ReportPeriodEnum.Year => (DateTimeOffset.Now.AddYears(-1), DateTimeOffset.Now),
+            _ => (start, end),
+        };
+
+        if (period == ReportPeriodEnum.Custom)
+            await JS.InvokeVoidAsync("Interop.openModal", "#CustomReportFilter");
+        else
+            await FetchStoreSalesStats();
     }
-    private SalesReportModel SalesSummary { get; set; } = new SalesReportModel();
+
+    private async Task FetchStoreSalesStats()
+    {
+        try
+        {
+            Dispatcher.Dispatch(new StoreState.ReportRequest(true));
+            await JS.InvokeVoidAsync("Interop.closeModal", "#CustomReportFilter");
+            SalesReportModel salesSummary = new(); // await AccountManager.GetClient().StoreSalesStats(StoreId, start, end);
+            if (salesSummary == null)
+                Dispatcher.Dispatch(new StoreState.ReportResponse("Failed to retrieve report data", null));
+            else
+                Dispatcher.Dispatch(new StoreState.ReportResponse(string.Empty, salesSummary));
+        }
+        catch (Exception ex)
+        {
+            Dispatcher.Dispatch(new StoreState.ReportResponse($"Failed to retrieve report data - {ex.Message}", null));
+        }
+    }
 }
