@@ -28,24 +28,24 @@
                 <div class="container p-0 m-0 mt-4">
                     <ul class="nav nav-tabs" id="activityTab" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="invoice_tab" data-bs-toggle="tab" data-bs-target="#invoice_tab_pane"
+                            <button class="nav-link active fs-5" id="invoice_tab" data-bs-toggle="tab" data-bs-target="#invoice_tab_pane"
                                     type="button" role="tab" aria-controls="invoice_tab_pane" aria-selected="true">
                                 Invoices
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="report_tab" data-bs-toggle="tab" data-bs-target="#report_tab_pane"
+                            <button class="nav-link fs-5" id="report_tab" data-bs-toggle="tab" data-bs-target="#report_tab_pane"
                                     type="button" role="tab" aria-controls="report_tab_pane" aria-selected="false">
                                 Reports
                             </button>
                         </li>
                     </ul>
                 </div>
-                <div class="tab-content border-top-0 pt-3" id="activityTabContent">
+                <div class="tab-content border-top-0 pt-3 m-0 p-0" id="activityTabContent">
                     <div class="tab-pane fade show active" id="invoice_tab_pane" role="tabpanel" aria-labelledby="invoice_tab">
                         <InvoiceList Invoices="Invoices" Loading="Loading" Error="@Error" />
                     </div>
-                    <div class="tab-pane fade container" id="report_tab_pane" role="tabpanel" aria-labelledby="report_tab">
+                    <div class="tab-pane fade container m-0 p-0" id="report_tab_pane" role="tabpanel" aria-labelledby="report_tab">
                         @if (ReportSending)
                         {
                             <div class="p-3 text-center">
@@ -58,12 +58,12 @@
                         }
                         else
                         {
-                            <div class="btn-group d-flex flex-wrap justify-content-center w-100" role="group" aria-label="Period">
+                            <div class="btn-group d-flex flex-wrap justify-content-center w-100 m-0 px-0 py-4" role="group" aria-label="Period">
                                 <InputRadioGroup Name="ReportPeriod" @bind-Value="@ReportPeriod">
                                     @foreach (ReportPeriodEnum reportPeriod in ReportPeriods)
                                     {
                                         <InputRadio Name="ReportPeriod" Value="@reportPeriod" class="btn-check" id="@reportPeriod.ToString()" @onclick="@(() => FilterSummary(reportPeriod))" />
-                                        <label class="btn btn-link btn-sm fw-bold @(ReportPeriod == reportPeriod ? "active" : "")" for="@reportPeriod.ToString()">
+                                        <label class="px-3 @(ReportPeriod == reportPeriod ? "active fw-bold label-highlight" : "")" for="@reportPeriod.ToString()">
                                             @(
                                             reportPeriod == ReportPeriodEnum.Day ? "1D" :
                                             reportPeriod == ReportPeriodEnum.Week ? "1W" :
