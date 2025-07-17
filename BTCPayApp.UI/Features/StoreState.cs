@@ -11,7 +11,7 @@ public record StoreState
 {
     public AppUserStoreInfo? StoreInfo;
     public RemoteData<StoreData>? Store;
-    public RemoteData<InvoiceRefundAccounting>? InvoiceAccounting;
+    public RemoteData<InvoiceRefundTriggerData>? RefundTriggerData;
     public RemoteData<OnChainWalletOverviewData>? OnchainBalance;
     public RemoteData<HistogramData>? OnchainHistogram;
     public RemoteData<LightningNodeBalanceData>? LightningBalance;
@@ -94,7 +94,7 @@ public record StoreState
                 PosSalesStats = new RemoteData<AppSalesStats>(),
                 Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(),
-                InvoiceAccounting = new RemoteData<InvoiceRefundAccounting>(),
+                RefundTriggerData = new RemoteData<InvoiceRefundTriggerData>(),
                 Notifications = new RemoteData<IEnumerable<NotificationData>>(),
                 _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(),
                 _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(),
@@ -223,7 +223,7 @@ public record StoreState
                 state._invoicesById.Remove(action.InvoiceId);
             return state with
             {
-                InvoiceAccounting = (state.InvoiceAccounting ?? new RemoteData<InvoiceRefundAccounting>()) with
+                RefundTriggerData = (state.RefundTriggerData ?? new RemoteData<InvoiceRefundTriggerData>()) with
                 {
                     Loading = false,
                     Sending = false,
@@ -306,7 +306,7 @@ public record StoreState
         {
             return state with
             {
-                InvoiceAccounting = (state.InvoiceAccounting ?? new RemoteData<InvoiceRefundAccounting>()) with
+                RefundTriggerData = (state.RefundTriggerData ?? new RemoteData<InvoiceRefundTriggerData>()) with
                 {
                     Sending = false,
                     Loading = true,
@@ -322,7 +322,7 @@ public record StoreState
         {
             return state with
             {
-                InvoiceAccounting = (state.InvoiceAccounting ?? new RemoteData<InvoiceRefundAccounting>()) with
+                RefundTriggerData = (state.RefundTriggerData ?? new RemoteData<InvoiceRefundTriggerData>()) with
                 {
                     Sending = true,
                     Loading = false,
@@ -338,7 +338,7 @@ public record StoreState
         {
             return state with
             {
-                InvoiceAccounting = (state.InvoiceAccounting ?? new RemoteData<InvoiceRefundAccounting>()) with
+                RefundTriggerData = (state.RefundTriggerData ?? new RemoteData<InvoiceRefundTriggerData>()) with
                 {
                     Loading = false,
                     Sending = false,

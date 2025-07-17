@@ -125,10 +125,10 @@
 
                                                                     <strong>
                                                                         @(
-                                                                            refundVariant == RefundVariant.CurrentRate ? DisplayFormatter.Currency(InvoiceAccounting.CryptoAmountNow, InvoiceAccounting.CryptoCode, DisplayFormatter.CurrencyFormat.Symbol) :
-                                                                            refundVariant == RefundVariant.RateThen ? DisplayFormatter.Currency(InvoiceAccounting.CryptoAmountThen, InvoiceAccounting.CryptoCode, DisplayFormatter.CurrencyFormat.Symbol) :
-                                                                            refundVariant == RefundVariant.Fiat ? DisplayFormatter.Currency(InvoiceAccounting.FiatAmount, InvoiceAccounting.InvoiceCurrency, DisplayFormatter.CurrencyFormat.Symbol) :
-                                                                            refundVariant == RefundVariant.OverpaidAmount ? DisplayFormatter.Currency(InvoiceAccounting.OverpaidAmount ?? 0m, InvoiceAccounting.CryptoCode, DisplayFormatter.CurrencyFormat.Symbol) : refundVariant.ToString()
+                                                                            refundVariant == RefundVariant.CurrentRate ? DisplayFormatter.Currency(RefundTriggerData.PaymentAmountNow, RefundTriggerData.PaymentCurrency, DisplayFormatter.CurrencyFormat.Symbol) :
+                                                                            refundVariant == RefundVariant.RateThen ? DisplayFormatter.Currency(RefundTriggerData.PaymentAmountThen, RefundTriggerData.PaymentCurrency, DisplayFormatter.CurrencyFormat.Symbol) :
+                                                                            refundVariant == RefundVariant.Fiat ? DisplayFormatter.Currency(RefundTriggerData.InvoiceAmount, RefundTriggerData.InvoiceCurrency, DisplayFormatter.CurrencyFormat.Symbol) :
+                                                                            refundVariant == RefundVariant.OverpaidAmount ? DisplayFormatter.Currency(RefundTriggerData.OverpaidPaymentAmount ?? 0m, RefundTriggerData.PaymentCurrency, DisplayFormatter.CurrencyFormat.Symbol) : refundVariant.ToString()
                                                                         )
                                                                     </strong>
                                                                     <p class="small">
@@ -481,10 +481,10 @@
 
     private List<RefundVariant> refundStatuses = Enum.GetValues(typeof(RefundVariant)).Cast<RefundVariant>().ToList();
     private RefundInvoiceRequest RefundRequest { get; set; } = new();
-    private bool RefundSending => StoreState.Value.InvoiceAccounting?.Sending is true;
-    private bool RefundLoading => StoreState.Value.InvoiceAccounting?.Loading is true;
-    private string? RefundError => StoreState.Value.InvoiceAccounting?.Error;
-    private InvoiceRefundAccounting? InvoiceAccounting { get; set; } = new();
+    private bool RefundSending => StoreState.Value.RefundTriggerData?.Sending is true;
+    private bool RefundLoading => StoreState.Value.RefundTriggerData?.Loading is true;
+    private string? RefundError => StoreState.Value.RefundTriggerData?.Error;
+    private InvoiceRefundTriggerData? RefundTriggerData { get; set; } = new();
 
     private async Task TriggerRefund()
     {
@@ -530,11 +530,11 @@
         try
         {
             Dispatcher.Dispatch(new StoreState.InitRefund(true));
-            var accounting = await AccountManager.GetClient().GetInvoiceAccounting(StoreId, InvoiceId, PaymentMethods?.FirstOrDefault()?.PaymentMethodId);
+            var accounting = await AccountManager.GetClient().GetInvoiceRefundTriggerData(StoreId, InvoiceId, PaymentMethods?.FirstOrDefault()?.PaymentMethodId);
             if(accounting == null)
                 Dispatcher.Dispatch(new StoreState.RefundResponse("Failed to retrieve invoice accounting info"));
 
-            InvoiceAccounting = accounting;
+            RefundTriggerData = accounting;
             if (!string.IsNullOrEmpty(StoreId) && !string.IsNullOrEmpty(InvoiceId))
                 Dispatcher.Dispatch(new StoreState.FetchInvoice(StoreId, InvoiceId));
         }
