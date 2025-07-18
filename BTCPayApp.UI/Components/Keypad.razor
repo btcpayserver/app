@@ -98,18 +98,21 @@
             </button>
         }
     </div>
-    <button class="btn btn-lg btn-primary mx-3" type="submit" disabled="@(IsSubmitting || amount == 0)" id="pay-button" @onclick="HandleSubmit">
-        @if (IsSubmitting)
-        {
-            <div class="spinner-border spinner-border-sm" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        }
-        else
-        {
-            <span>Charge</span>
-        }
-    </button>
+
+    <div class="d-flex justify-content-center">
+        <button class="btn btn-lg btn-primary mx-3" type="submit" disabled="@(IsSubmitting || amount == 0)" id="pay-button" @onclick="HandleSubmit">
+            @if (IsSubmitting)
+            {
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            }
+            else
+            {
+                <span>Charge</span>
+            }
+        </button>
+    </div>
 
     @if (CanAccessRecentTransactions)
     {
