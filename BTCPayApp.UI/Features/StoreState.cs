@@ -1,5 +1,6 @@
 ﻿using BTCPayApp.Core.Auth;
 using BTCPayApp.Core.Models;
+using BTCPayApp.UI.Models;
 using BTCPayApp.UI.Util;
 using BTCPayServer.Client.Models;
 using Fluxor;
@@ -11,6 +12,7 @@ public record StoreState
 {
     public AppUserStoreInfo? StoreInfo;
     public RemoteData<StoreData>? Store;
+    public RemoteData<SalesReportModel>? Report;
     public RemoteData<OnChainWalletOverviewData>? OnchainBalance;
     public RemoteData<HistogramData>? OnchainHistogram;
     public RemoteData<LightningNodeBalanceData>? LightningBalance;
@@ -30,6 +32,8 @@ public record StoreState
 
     private static readonly string[] BitcoinUnits = [CurrencyDisplay.BTC, CurrencyDisplay.SATS];
 
+    public record ReportRequest(bool Sending);
+    public record ReportResponse(string Error, SalesReportModel? Data);
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
     public record SetHistogramType(HistogramType Type);
     public record FetchStore(string StoreId);
@@ -90,6 +94,7 @@ public record StoreState
                 PosSalesStats = new RemoteData<AppSalesStats>(),
                 Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(),
+                Report = new RemoteData<SalesReportModel>(),
                 Notifications = new RemoteData<IEnumerable<NotificationData>>(),
                 _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(),
                 _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(),
@@ -314,6 +319,39 @@ public record StoreState
                 Store = (state.Store ?? new RemoteData<StoreData>()) with
                 {
                     Sending = true
+                }
+            };
+        }
+    }
+
+    protected class ReportRequestReducer : Reducer<StoreState, ReportRequest>
+    {
+        public override StoreState Reduce(StoreState state, ReportRequest action)
+        {
+            return state with
+            {
+                Report = (state.Report ?? new RemoteData<SalesReportModel>()) with
+                {
+                    Sending = true,
+                    Loading = false,
+                    Error = string.Empty
+                }
+            };
+        }
+    }
+
+    protected class ReportResponseReducer : Reducer<StoreState, ReportResponse>
+    {
+        public override StoreState Reduce(StoreState state, ReportResponse action)
+        {
+            return state with
+            {
+                Report = (state.Report ?? new RemoteData<SalesReportModel>()) with
+                {
+                    Loading = false,
+                    Sending = false,
+                    Error = action.Error,
+                    Data = action.Data
                 }
             };
         }
