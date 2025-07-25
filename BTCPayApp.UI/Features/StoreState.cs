@@ -11,6 +11,7 @@ public record StoreState
 {
     public AppUserStoreInfo? StoreInfo;
     public RemoteData<StoreData>? Store;
+    public RemoteData<InvoiceRefundTriggerData>? RefundTriggerData;
     public RemoteData<OnChainWalletOverviewData>? OnchainBalance;
     public RemoteData<HistogramData>? OnchainHistogram;
     public RemoteData<LightningNodeBalanceData>? LightningBalance;
@@ -30,6 +31,9 @@ public record StoreState
 
     private static readonly string[] BitcoinUnits = [CurrencyDisplay.BTC, CurrencyDisplay.SATS];
 
+    public record RefundRequest(bool sending);
+    public record InitRefund(bool loading);
+    public record RefundResponse(string message);
     public record SetStoreInfo(AppUserStoreInfo? StoreInfo);
     public record SetHistogramType(HistogramType Type);
     public record FetchStore(string StoreId);
@@ -90,6 +94,7 @@ public record StoreState
                 PosSalesStats = new RemoteData<AppSalesStats>(),
                 Rates = new RemoteData<IEnumerable<StoreRateResult>>(),
                 Invoices = new RemoteData<IEnumerable<InvoiceData>>(),
+                RefundTriggerData = new RemoteData<InvoiceRefundTriggerData>(),
                 Notifications = new RemoteData<IEnumerable<NotificationData>>(),
                 _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(),
                 _invoicePaymentMethodsById = new Dictionary<string, RemoteData<InvoicePaymentMethodDataModel[]>?>(),
@@ -218,6 +223,12 @@ public record StoreState
                 state._invoicesById.Remove(action.InvoiceId);
             return state with
             {
+                RefundTriggerData = (state.RefundTriggerData ?? new RemoteData<InvoiceRefundTriggerData>()) with
+                {
+                    Loading = false,
+                    Sending = false,
+                    Error = string.Empty
+                },
                 _invoicesById = new Dictionary<string, RemoteData<InvoiceData>?>(state._invoicesById)
                 {
                     { action.InvoiceId, new RemoteData<InvoiceData>(invoice, null, true) }
@@ -289,6 +300,53 @@ public record StoreState
         }
     }
 
+    protected class InitRefundReducer : Reducer<StoreState, InitRefund>
+    {
+        public override StoreState Reduce(StoreState state, InitRefund action)
+        {
+            return state with
+            {
+                RefundTriggerData = (state.RefundTriggerData ?? new RemoteData<InvoiceRefundTriggerData>()) with
+                {
+                    Sending = false,
+                    Loading = true,
+                    Error = string.Empty
+                }
+            };
+        }
+    }
+
+    protected class RefundRequestReducer : Reducer<StoreState, RefundRequest>
+    {
+        public override StoreState Reduce(StoreState state, RefundRequest action)
+        {
+            return state with
+            {
+                RefundTriggerData = (state.RefundTriggerData ?? new RemoteData<InvoiceRefundTriggerData>()) with
+                {
+                    Sending = true,
+                    Loading = false,
+                    Error = string.Empty
+                }
+            };
+        }
+    }
+
+    protected class RefundResponseReducer : Reducer<StoreState, RefundResponse>
+    {
+        public override StoreState Reduce(StoreState state, RefundResponse action)
+        {
+            return state with
+            {
+                RefundTriggerData = (state.RefundTriggerData ?? new RemoteData<InvoiceRefundTriggerData>()) with
+                {
+                    Loading = false,
+                    Sending = false,
+                    Error = action.message
+                }
+            };
+        }
+    }
     protected class SetStoreReducer : Reducer<StoreState, SetStore>
     {
         public override StoreState Reduce(StoreState state, SetStore action)

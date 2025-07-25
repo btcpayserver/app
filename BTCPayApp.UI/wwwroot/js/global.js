@@ -10,6 +10,11 @@ Interop = {
         if (!$el) return console.warn('Selector does not exist:', selector);
         $el.contentWindow.postMessage(JSON.stringify({ context: 'btcpayapp' }), origin);
     },
+    setDisplay(selector, display) {
+        const $el = document.querySelector(selector);
+        if (!$el) return console.warn('selector does not exist:', selector);;
+        $el.style.display = display;
+    },
     sendNfcDataToIframe: function (iframeId, data, origin) {
         const iframe = document.getElementById(iframeId);
         if (iframe && iframe.contentWindow) {
